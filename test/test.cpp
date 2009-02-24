@@ -2,11 +2,10 @@
 #include "jitasm.h"
 
 
-struct test_func : jitasm::function0<void>
+struct test_add : jitasm::function0<void>
 {
 	virtual void main()
 	{
-#if 0
 		add(al, 1);
 		add(ax, 1);
 		add(eax, 1);
@@ -33,8 +32,13 @@ struct test_func : jitasm::function0<void>
 		add(rax, qword_ptr[r8]);
 		add(qword_ptr[rax], r8);
 #	endif
-#endif
-#if 0
+	}
+};
+
+struct test_inc_dec : jitasm::function0<void>
+{
+	virtual void main()
+	{
 		inc(al);
 		inc(ax);
 		inc(eax);
@@ -45,9 +49,14 @@ struct test_func : jitasm::function0<void>
 		dec(eax);
 		dec(word_ptr[eax]);
 		dec(dword_ptr[eax]);
-#endif
-#if 0
-#	ifdef JITASM64
+	}
+};
+
+struct test_push_pop : jitasm::function0<void>
+{
+	virtual void main()
+	{
+#ifdef JITASM64
 		push(ax);
 		push(rax);
 		push(1);
@@ -60,7 +69,7 @@ struct test_func : jitasm::function0<void>
 		pop(word_ptr[eax]);
 		pop(qword_ptr[eax]);
 		pop(qword_ptr[rax]);
-#	else
+#else
 		push(ax);
 		push(eax);
 		push(1);
@@ -71,10 +80,14 @@ struct test_func : jitasm::function0<void>
 		pop(eax);
 		pop(word_ptr[eax]);
 		pop(dword_ptr[eax]);
-#	endif
 #endif
+	}
+};
 
-#if 0
+struct test_lea : jitasm::function0<void>
+{
+	virtual void main()
+	{
 		lea(ax, word_ptr[eax]);
 		lea(eax, dword_ptr[eax]);
 		lea(eax, dword_ptr[eax + 1]);
@@ -83,7 +96,7 @@ struct test_func : jitasm::function0<void>
 		lea(eax, dword_ptr[eax + ecx]);
 		lea(eax, dword_ptr[eax + ecx * 4]);
 		lea(eax, dword_ptr[eax + ecx * 4 + 1]);
-#	ifdef JITASM64
+#ifdef JITASM64
 		lea(ax, word_ptr[rax]);
 		lea(eax, dword_ptr[rax]);
 		lea(eax, dword_ptr[rax + 1]);
@@ -92,10 +105,14 @@ struct test_func : jitasm::function0<void>
 		lea(eax, dword_ptr[rax + rcx]);
 		lea(eax, dword_ptr[rax + rcx * 4]);
 		lea(eax, dword_ptr[rax + rcx * 4 + 1]);
-#	endif
 #endif
+	}
+};
 
-#if 0
+struct test_mov : jitasm::function0<void>
+{
+	virtual void main()
+	{
 		mov(al, cl);
 		mov(byte_ptr[eax], cl);
 		mov(al, byte_ptr[ecx]);
@@ -108,7 +125,13 @@ struct test_func : jitasm::function0<void>
 		mov(dword_ptr[eax], ecx);
 		mov(eax, dword_ptr[ecx]);
 		mov(eax, -1);
-#	ifdef JITASM64
+		movzx(ax, cl);
+		movzx(ax, byte_ptr[ecx]);
+		movzx(eax, ch);
+		movzx(eax, byte_ptr[ecx]);
+		movzx(eax, cx);
+		movzx(eax, word_ptr[ecx]);
+#ifdef JITASM64
 		mov(rax, rcx);
 		mov(qword_ptr[rax], rcx);
 		mov(rax, qword_ptr[rcx]);
@@ -118,11 +141,23 @@ struct test_func : jitasm::function0<void>
 		mov(rax, 0x80000000);
 		mov(rax, 0x100000000);
 		mov(rax, 0x800000000);
-#	endif
+		movzx(rax, cl);
+		movzx(rax, byte_ptr[rcx]);
+		movzx(rax, cx);
+		movzx(rax, word_ptr[rcx]);
+		movzx(r8, cl);
+		movzx(r8, byte_ptr[rcx]);
+		movzx(r8, cx);
+		movzx(r8, word_ptr[rcx]);
 #endif
+	}
+};
 
-#if 0
-#	ifdef JITASM64
+struct test_mmx_sse2 : jitasm::function0<void>
+{
+	virtual void main()
+	{
+#ifdef JITASM64
 		movdqa(xmm0, xmm1);
 		movdqa(xmm8, xmm1);
 		movdqa(xmm0, xmm9);
@@ -154,7 +189,7 @@ struct test_func : jitasm::function0<void>
 		pxor(xmm0, xmmword_ptr[rcx]);
 		pxor(xmm8, xmmword_ptr[ecx]);
 		pxor(xmm8, xmmword_ptr[rcx]);
-#	else
+#else
 		movdqa(xmm0, xmm1);
 		movdqa(xmm0, xmmword_ptr[ecx]);
 		movdqa(xmmword_ptr[eax], xmm1);
@@ -208,10 +243,14 @@ struct test_func : jitasm::function0<void>
 		pxor(mm0, mmword_ptr[ecx]);
 		pxor(xmm0, xmm1);
 		pxor(xmm0, xmmword_ptr[ecx]);
-#	endif
 #endif
+	}
+};
 
-#if 0	// JMP
+struct test_jmp : jitasm::function0<void>
+{
+	virtual void main()
+	{
 		jmp("1");
 		ja("1");
 		jae("1");
@@ -249,15 +288,13 @@ struct test_func : jitasm::function0<void>
 		for (int i = 0; i < 256; i++) nop();
 		jmp("1");
 		jz("1");
-#endif
+	}
+};
 
-#if 0
-		movzx(ax, cl);
-		movzx(ax, byte_ptr[ecx]);
-		movzx(eax, ch);
-		movzx(eax, byte_ptr[ecx]);
-		movzx(eax, cx);
-		movzx(eax, word_ptr[ecx]);
+struct test_xchg : jitasm::function0<void>
+{
+	virtual void main()
+	{
 		xchg(al, cl);
 		xchg(cl, al);
 		xchg(al, byte_ptr[ecx]);
@@ -270,24 +307,21 @@ struct test_func : jitasm::function0<void>
 		xchg(ecx, eax);
 		xchg(eax, dword_ptr[ecx]);
 		xchg(dword_ptr[eax], ecx);
-#	ifdef JITASM64
-		movzx(rax, cl);
-		movzx(rax, byte_ptr[rcx]);
-		movzx(rax, cx);
-		movzx(rax, word_ptr[rcx]);
-		movzx(r8, cl);
-		movzx(r8, byte_ptr[rcx]);
-		movzx(r8, cx);
-		movzx(r8, word_ptr[rcx]);
+#ifdef JITASM64
 		xchg(rax, r8);
 		xchg(rax, qword_ptr[r8]);
 		xchg(qword_ptr[rax], r8);
 		xchg(r8, rax);
 		xchg(r8, qword_ptr[rax]);
 		xchg(qword_ptr[r8], rax);
-#	endif
 #endif
-#if 0
+	}
+};
+
+struct test_test : jitasm::function0<void>
+{
+	virtual void main()
+	{
 		test(al, 1);
 		test(cl, 1);
 		test(ax, 1);
@@ -313,9 +347,13 @@ struct test_func : jitasm::function0<void>
 		test(qword_ptr[r8], r9);
 		test(qword_ptr[r8], r9);
 #	endif
-#endif
+	}
+};
 
-#if 1
+struct test_func : jitasm::function0<void>
+{
+	virtual void main()
+	{
 		xor(eax, eax);
 		mov(ecx, 100);
 		label("loop_beg");
@@ -330,7 +368,6 @@ struct test_func : jitasm::function0<void>
 		//call(printf);
 		//add(esp, 8);
 		ret();
-#endif
 	}
 };
 

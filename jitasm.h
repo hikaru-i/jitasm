@@ -45,7 +45,8 @@
 #define JITASM64
 #endif
 
-namespace jitasm {
+namespace jitasm
+{
 
 
 typedef signed __int8		sint8;
@@ -192,133 +193,124 @@ typedef MemT<Opd32>		Mem32;
 typedef MemT<Opd64>		Mem64;
 typedef MemT<Opd128>	Mem128;
 
-namespace Addressing
+struct Expr32_None
 {
-	struct Expr32_None
-	{
-		RegID reg_;
-		sint64 disp_;
-		Expr32_None(const Reg32& obj) : reg_(obj.reg_), disp_(0) {}	// implicit
-		Expr32_None(RegID reg, sint64 disp) : reg_(reg), disp_(disp) {}
-	};
-	Expr32_None operator+(const Reg32& lhs, sint64 rhs) {return Expr32_None(lhs.reg_, rhs);}
-	Expr32_None operator+(sint64 lhs, const Reg32& rhs) {return rhs + lhs;}
-	Expr32_None operator+(const Expr32_None& lhs, sint64 rhs) {return Expr32_None(lhs.reg_, lhs.disp_ + rhs);}
-	Expr32_None operator+(sint64 lhs, const Expr32_None& rhs) {return rhs + lhs;}
+	RegID reg_;
+	sint64 disp_;
+	Expr32_None(const Reg32& obj) : reg_(obj.reg_), disp_(0) {}	// implicit
+	Expr32_None(RegID reg, sint64 disp) : reg_(reg), disp_(disp) {}
+};
+Expr32_None operator+(const Reg32& lhs, sint64 rhs) {return Expr32_None(lhs.reg_, rhs);}
+Expr32_None operator+(sint64 lhs, const Reg32& rhs) {return rhs + lhs;}
+Expr32_None operator+(const Expr32_None& lhs, sint64 rhs) {return Expr32_None(lhs.reg_, lhs.disp_ + rhs);}
+Expr32_None operator+(sint64 lhs, const Expr32_None& rhs) {return rhs + lhs;}
 
-	struct Expr32_BI
-	{
-		RegID base_;
-		RegID index_;
-		sint64 disp_;
-		Expr32_BI(RegID base, RegID index, sint64 disp) : base_(base), index_(index), disp_(disp) {}
-	};
-	Expr32_BI operator+(const Expr32_None& lhs, const Expr32_None& rhs) {return Expr32_BI(lhs.reg_, rhs.reg_, lhs.disp_ + rhs.disp_);}
-	Expr32_BI operator+(const Expr32_BI& lhs, sint64 rhs) {return Expr32_BI(lhs.base_, lhs.index_, lhs.disp_ + rhs);}
-	Expr32_BI operator+(sint64 lhs, const Expr32_BI& rhs) {return rhs + lhs;}
+struct Expr32_BI
+{
+	RegID base_;
+	RegID index_;
+	sint64 disp_;
+	Expr32_BI(RegID base, RegID index, sint64 disp) : base_(base), index_(index), disp_(disp) {}
+};
+Expr32_BI operator+(const Expr32_None& lhs, const Expr32_None& rhs) {return Expr32_BI(lhs.reg_, rhs.reg_, lhs.disp_ + rhs.disp_);}
+Expr32_BI operator+(const Expr32_BI& lhs, sint64 rhs) {return Expr32_BI(lhs.base_, lhs.index_, lhs.disp_ + rhs);}
+Expr32_BI operator+(sint64 lhs, const Expr32_BI& rhs) {return rhs + lhs;}
 
-	struct Expr32_SI
-	{
-		RegID index_;
-		sint64 scale_;
-		sint64 disp_;
-		Expr32_SI(RegID index, sint64 scale, sint64 disp) : index_(index), scale_(scale), disp_(disp) {}
-	};
-	Expr32_SI operator*(const Reg32& lhs, sint64 rhs) {return Expr32_SI(lhs.reg_, rhs, 0);}
-	Expr32_SI operator*(sint64 lhs, const Reg32& rhs) {return rhs * lhs;}
-	Expr32_SI operator*(const Expr32_SI& lhs, sint64 rhs) {return Expr32_SI(lhs.index_, lhs.scale_ * rhs, lhs.disp_);}
-	Expr32_SI operator*(sint64 lhs, const Expr32_SI& rhs) {return rhs * lhs;}
-	Expr32_SI operator+(const Expr32_SI& lhs, sint64 rhs) {return Expr32_SI(lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
-	Expr32_SI operator+(sint64 lhs, const Expr32_SI& rhs) {return rhs + lhs;}
+struct Expr32_SI
+{
+	RegID index_;
+	sint64 scale_;
+	sint64 disp_;
+	Expr32_SI(RegID index, sint64 scale, sint64 disp) : index_(index), scale_(scale), disp_(disp) {}
+};
+Expr32_SI operator*(const Reg32& lhs, sint64 rhs) {return Expr32_SI(lhs.reg_, rhs, 0);}
+Expr32_SI operator*(sint64 lhs, const Reg32& rhs) {return rhs * lhs;}
+Expr32_SI operator*(const Expr32_SI& lhs, sint64 rhs) {return Expr32_SI(lhs.index_, lhs.scale_ * rhs, lhs.disp_);}
+Expr32_SI operator*(sint64 lhs, const Expr32_SI& rhs) {return rhs * lhs;}
+Expr32_SI operator+(const Expr32_SI& lhs, sint64 rhs) {return Expr32_SI(lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
+Expr32_SI operator+(sint64 lhs, const Expr32_SI& rhs) {return rhs + lhs;}
 
-	struct Expr32_SIB
-	{
-		RegID base_;
-		RegID index_;
-		sint64 scale_;
-		sint64 disp_;
-		Expr32_SIB(RegID base, RegID index, sint64 scale, sint64 disp) : base_(base), index_(index), scale_(scale), disp_(disp) {}
-	};
-	Expr32_SIB operator+(const Expr32_None& lhs, const Expr32_SI& rhs) {return Expr32_SIB(lhs.reg_, rhs.index_, rhs.scale_, lhs.disp_ + rhs.disp_);}
-	Expr32_SIB operator+(const Expr32_SI& lhs, const Expr32_None& rhs) {return rhs + lhs;}
-	Expr32_SIB operator+(const Expr32_SIB& lhs, sint64 rhs) {return Expr32_SIB(lhs.base_, lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
-	Expr32_SIB operator+(sint64 lhs, const Expr32_SIB& rhs) {return rhs + lhs;}
+struct Expr32_SIB
+{
+	RegID base_;
+	RegID index_;
+	sint64 scale_;
+	sint64 disp_;
+	Expr32_SIB(RegID base, RegID index, sint64 scale, sint64 disp) : base_(base), index_(index), scale_(scale), disp_(disp) {}
+};
+Expr32_SIB operator+(const Expr32_None& lhs, const Expr32_SI& rhs) {return Expr32_SIB(lhs.reg_, rhs.index_, rhs.scale_, lhs.disp_ + rhs.disp_);}
+Expr32_SIB operator+(const Expr32_SI& lhs, const Expr32_None& rhs) {return rhs + lhs;}
+Expr32_SIB operator+(const Expr32_SIB& lhs, sint64 rhs) {return Expr32_SIB(lhs.base_, lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
+Expr32_SIB operator+(sint64 lhs, const Expr32_SIB& rhs) {return rhs + lhs;}
 
 #ifdef JITASM64
-	struct Expr64_None
-	{
-		RegID reg_;
-		sint64 disp_;
-		Expr64_None(const Reg64& obj) : reg_(obj.reg_), disp_(0) {}	// implicit
-		Expr64_None(RegID reg, sint64 disp) : reg_(reg), disp_(disp) {}
-	};
-	Expr64_None operator+(const Reg64& lhs, sint64 rhs) {return Expr64_None(lhs.reg_, rhs);}
-	Expr64_None operator+(sint64 lhs, const Reg64& rhs) {return rhs + lhs;}
-	Expr64_None operator+(const Expr64_None& lhs, sint64 rhs) {return Expr64_None(lhs.reg_, lhs.disp_ + rhs);}
-	Expr64_None operator+(sint64 lhs, const Expr64_None& rhs) {return rhs + lhs;}
+struct Expr64_None
+{
+	RegID reg_;
+	sint64 disp_;
+	Expr64_None(const Reg64& obj) : reg_(obj.reg_), disp_(0) {}	// implicit
+	Expr64_None(RegID reg, sint64 disp) : reg_(reg), disp_(disp) {}
+};
+Expr64_None operator+(const Reg64& lhs, sint64 rhs) {return Expr64_None(lhs.reg_, rhs);}
+Expr64_None operator+(sint64 lhs, const Reg64& rhs) {return rhs + lhs;}
+Expr64_None operator+(const Expr64_None& lhs, sint64 rhs) {return Expr64_None(lhs.reg_, lhs.disp_ + rhs);}
+Expr64_None operator+(sint64 lhs, const Expr64_None& rhs) {return rhs + lhs;}
 
-	struct Expr64_BI
-	{
-		RegID base_;
-		RegID index_;
-		sint64 disp_;
-		Expr64_BI(RegID base, RegID index, sint64 disp) : base_(base), index_(index), disp_(disp) {}
-	};
-	Expr64_BI operator+(const Expr64_None& lhs, const Expr64_None& rhs) {return Expr64_BI(lhs.reg_, rhs.reg_, lhs.disp_ + rhs.disp_);}
-	Expr64_BI operator+(const Expr64_BI& lhs, sint64 rhs) {return Expr64_BI(lhs.base_, lhs.index_, lhs.disp_ + rhs);}
-	Expr64_BI operator+(sint64 lhs, const Expr64_BI& rhs) {return rhs + lhs;}
+struct Expr64_BI
+{
+	RegID base_;
+	RegID index_;
+	sint64 disp_;
+	Expr64_BI(RegID base, RegID index, sint64 disp) : base_(base), index_(index), disp_(disp) {}
+};
+Expr64_BI operator+(const Expr64_None& lhs, const Expr64_None& rhs) {return Expr64_BI(lhs.reg_, rhs.reg_, lhs.disp_ + rhs.disp_);}
+Expr64_BI operator+(const Expr64_BI& lhs, sint64 rhs) {return Expr64_BI(lhs.base_, lhs.index_, lhs.disp_ + rhs);}
+Expr64_BI operator+(sint64 lhs, const Expr64_BI& rhs) {return rhs + lhs;}
 
-	struct Expr64_SI
-	{
-		RegID index_;
-		sint64 scale_;
-		sint64 disp_;
-		Expr64_SI(RegID index, sint64 scale, sint64 disp) : index_(index), scale_(scale), disp_(disp) {}
-	};
-	Expr64_SI operator*(const Reg64& lhs, sint64 rhs) {return Expr64_SI(lhs.reg_, rhs, 0);}
-	Expr64_SI operator*(sint64 lhs, const Reg64& rhs) {return rhs * lhs;}
-	Expr64_SI operator*(const Expr64_SI& lhs, sint64 rhs) {return Expr64_SI(lhs.index_, lhs.scale_ * rhs, lhs.disp_);}
-	Expr64_SI operator*(sint64 lhs, const Expr64_SI& rhs) {return rhs * lhs;}
-	Expr64_SI operator+(const Expr64_SI& lhs, sint64 rhs) {return Expr64_SI(lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
-	Expr64_SI operator+(sint64 lhs, const Expr64_SI& rhs) {return rhs + lhs;}
+struct Expr64_SI
+{
+	RegID index_;
+	sint64 scale_;
+	sint64 disp_;
+	Expr64_SI(RegID index, sint64 scale, sint64 disp) : index_(index), scale_(scale), disp_(disp) {}
+};
+Expr64_SI operator*(const Reg64& lhs, sint64 rhs) {return Expr64_SI(lhs.reg_, rhs, 0);}
+Expr64_SI operator*(sint64 lhs, const Reg64& rhs) {return rhs * lhs;}
+Expr64_SI operator*(const Expr64_SI& lhs, sint64 rhs) {return Expr64_SI(lhs.index_, lhs.scale_ * rhs, lhs.disp_);}
+Expr64_SI operator*(sint64 lhs, const Expr64_SI& rhs) {return rhs * lhs;}
+Expr64_SI operator+(const Expr64_SI& lhs, sint64 rhs) {return Expr64_SI(lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
+Expr64_SI operator+(sint64 lhs, const Expr64_SI& rhs) {return rhs + lhs;}
 
-	struct Expr64_SIB
-	{
-		RegID base_;
-		RegID index_;
-		sint64 scale_;
-		sint64 disp_;
-		Expr64_SIB(RegID base, RegID index, sint64 scale, sint64 disp) : base_(base), index_(index), scale_(scale), disp_(disp) {}
-	};
-	Expr64_SIB operator+(const Expr64_None& lhs, const Expr64_SI& rhs) {return Expr64_SIB(lhs.reg_, rhs.index_, rhs.scale_, lhs.disp_ + rhs.disp_);}
-	Expr64_SIB operator+(const Expr64_SI& lhs, const Expr64_None& rhs) {return rhs + lhs;}
-	Expr64_SIB operator+(const Expr64_SIB& lhs, sint64 rhs) {return Expr64_SIB(lhs.base_, lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
-	Expr64_SIB operator+(sint64 lhs, const Expr64_SIB& rhs) {return rhs + lhs;}
+struct Expr64_SIB
+{
+	RegID base_;
+	RegID index_;
+	sint64 scale_;
+	sint64 disp_;
+	Expr64_SIB(RegID base, RegID index, sint64 scale, sint64 disp) : base_(base), index_(index), scale_(scale), disp_(disp) {}
+};
+Expr64_SIB operator+(const Expr64_None& lhs, const Expr64_SI& rhs) {return Expr64_SIB(lhs.reg_, rhs.index_, rhs.scale_, lhs.disp_ + rhs.disp_);}
+Expr64_SIB operator+(const Expr64_SI& lhs, const Expr64_None& rhs) {return rhs + lhs;}
+Expr64_SIB operator+(const Expr64_SIB& lhs, sint64 rhs) {return Expr64_SIB(lhs.base_, lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
+Expr64_SIB operator+(sint64 lhs, const Expr64_SIB& rhs) {return rhs + lhs;}
 #endif
 
-	template<typename MemTy>
-	struct Ptr
-	{
-		// 32bit-Addressing
-		MemTy operator[](const Expr32_None& obj) {return MemTy(SIZE_INT32, obj.reg_, INVALID, 0, obj.disp_);}
-		MemTy operator[](const Expr32_BI& obj) {return MemTy(SIZE_INT32, obj.base_, obj.index_, 0, obj.disp_);}
-		MemTy operator[](const Expr32_SI& obj) {return MemTy(SIZE_INT32, INVALID, obj.index_, obj.scale_, obj.disp_);}
-		MemTy operator[](const Expr32_SIB& obj) {return MemTy(SIZE_INT32, obj.base_, obj.index_, obj.scale_, obj.disp_);}
+template<typename MemTy>
+struct AddressingPtr
+{
+	// 32bit-Addressing
+	MemTy operator[](const Expr32_None& obj) {return MemTy(SIZE_INT32, obj.reg_, INVALID, 0, obj.disp_);}
+	MemTy operator[](const Expr32_BI& obj) {return MemTy(SIZE_INT32, obj.base_, obj.index_, 0, obj.disp_);}
+	MemTy operator[](const Expr32_SI& obj) {return MemTy(SIZE_INT32, INVALID, obj.index_, obj.scale_, obj.disp_);}
+	MemTy operator[](const Expr32_SIB& obj) {return MemTy(SIZE_INT32, obj.base_, obj.index_, obj.scale_, obj.disp_);}
 #ifdef JITASM64
-		// 64bit-Addressing
-		MemTy operator[](const Expr64_None& obj) {return MemTy(SIZE_INT64, obj.reg_, INVALID, 0, obj.disp_);}
-		MemTy operator[](const Expr64_BI& obj) {return MemTy(SIZE_INT64, obj.base_, obj.index_, 0, obj.disp_);}
-		MemTy operator[](const Expr64_SI& obj) {return MemTy(SIZE_INT64, INVALID, obj.index_, obj.scale_, obj.disp_);}
-		MemTy operator[](const Expr64_SIB& obj) {return MemTy(SIZE_INT64, obj.base_, obj.index_, obj.scale_, obj.disp_);}
+	// 64bit-Addressing
+	MemTy operator[](const Expr64_None& obj) {return MemTy(SIZE_INT64, obj.reg_, INVALID, 0, obj.disp_);}
+	MemTy operator[](const Expr64_BI& obj) {return MemTy(SIZE_INT64, obj.base_, obj.index_, 0, obj.disp_);}
+	MemTy operator[](const Expr64_SI& obj) {return MemTy(SIZE_INT64, INVALID, obj.index_, obj.scale_, obj.disp_);}
+	MemTy operator[](const Expr64_SIB& obj) {return MemTy(SIZE_INT64, obj.base_, obj.index_, obj.scale_, obj.disp_);}
 #endif
-	};
-}	// namespace Addressing {
-Addressing::Ptr<Mem8>	byte_ptr;
-Addressing::Ptr<Mem16>	word_ptr;
-Addressing::Ptr<Mem32>	dword_ptr;
-Addressing::Ptr<Mem64>	qword_ptr;
-Addressing::Ptr<Mem64>	mmword_ptr;
-Addressing::Ptr<Mem128>	xmmword_ptr;
+};
 
 //----------------------------------------
 // Instruction
@@ -1148,6 +1140,13 @@ struct Frontend
 	Reg64 zax, zcx, zdx, zbx, zsp, zbp, zsi, zdi;
 #endif
 
+	AddressingPtr<Mem8>		byte_ptr;
+	AddressingPtr<Mem16>	word_ptr;
+	AddressingPtr<Mem32>	dword_ptr;
+	AddressingPtr<Mem64>	qword_ptr;
+	AddressingPtr<Mem64>	mmword_ptr;
+	AddressingPtr<Mem128>	xmmword_ptr;
+
 	Frontend()
 		: al(AL), cl(CL), dl(DL), bl(BL), ah(AH), ch(CH), dh(DH), bh(BH),
 		ax(AX), cx(CX), dx(DX), bx(BX), sp(SP), bp(BP), si(SI), di(DI),
@@ -1826,9 +1825,9 @@ struct Frontend
 
 
 #ifdef JITASM64
-typedef Addressing::Expr64_None Var;
+typedef Expr64_None Var;
 #else
-typedef Addressing::Expr32_None Var;
+typedef Expr32_None Var;
 #endif
 
 
@@ -1863,5 +1862,5 @@ struct function1 : Frontend
 };
 
 
-}	// namespace jitasm {
+}	// namespace jitasm
 #endif	// #ifndef JITASM_H
