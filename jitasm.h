@@ -1277,11 +1277,6 @@ struct Frontend
 		} while (retry);
 
 		// JMP‚Ì‹——£‚ðŒˆ’è‚·‚é
-		Backend pre;
-		for (InstrList::iterator it = instrs_.begin(); it != instrs_.end(); ++it) {
-			pre.Assemble(*it);
-			offsets.push_back((int) pre.GetSize());
-		}
 		for (size_t i = 0; i < instrs_.size(); i++) {
 			Instr& instr = instrs_[i];
 			if (IsJmpOrJcc(instr.GetID())) {
