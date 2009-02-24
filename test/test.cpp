@@ -1,0 +1,344 @@
+#include "StdAfx.h"
+#include "jitasm.h"
+
+
+struct test_func : jitasm::function0<void>
+{
+	virtual void main()
+	{
+#if 0
+		add(al, 1);
+		add(ax, 1);
+		add(eax, 1);
+		add(ax, 0x100);
+		add(eax, 0x10000);
+		add(eax, ecx);
+		add(ecx, eax);
+		add(eax, dword_ptr[ecx]);
+		add(dword_ptr[eax], ecx);
+		or(eax, ecx);
+		adc(eax, ecx);
+		sbb(eax, ecx);
+		and(eax, ecx);
+		sub(eax, ecx);
+		xor(eax, ecx);
+		cmp(eax, ecx);
+#	ifdef JITASM64
+		add(rax, 1);
+		add(r8, 1);
+		add(rax, 0x100);
+		add(rax, 0x10000);
+		add(rax, r8);
+		add(r8, rax);
+		add(rax, qword_ptr[r8]);
+		add(qword_ptr[rax], r8);
+#	endif
+#endif
+#if 0
+		inc(al);
+		inc(ax);
+		inc(eax);
+		inc(word_ptr[eax]);
+		inc(dword_ptr[eax]);
+		dec(al);
+		dec(ax);
+		dec(eax);
+		dec(word_ptr[eax]);
+		dec(dword_ptr[eax]);
+#endif
+#if 0
+#	ifdef JITASM64
+		push(ax);
+		push(rax);
+		push(1);
+		push(0x100);
+		push(word_ptr[eax]);
+		push(qword_ptr[eax]);
+		push(qword_ptr[rax]);
+		pop(ax);
+		pop(rax);
+		pop(word_ptr[eax]);
+		pop(qword_ptr[eax]);
+		pop(qword_ptr[rax]);
+#	else
+		push(ax);
+		push(eax);
+		push(1);
+		push(0x100);
+		push(word_ptr[eax]);
+		push(dword_ptr[eax]);
+		pop(ax);
+		pop(eax);
+		pop(word_ptr[eax]);
+		pop(dword_ptr[eax]);
+#	endif
+#endif
+
+#if 0
+		lea(ax, word_ptr[eax]);
+		lea(eax, dword_ptr[eax]);
+		lea(eax, dword_ptr[eax + 1]);
+		lea(eax, dword_ptr[ecx * 4]);
+		lea(eax, dword_ptr[ecx * 4 + 1]);
+		lea(eax, dword_ptr[eax + ecx]);
+		lea(eax, dword_ptr[eax + ecx * 4]);
+		lea(eax, dword_ptr[eax + ecx * 4 + 1]);
+#	ifdef JITASM64
+		lea(ax, word_ptr[rax]);
+		lea(eax, dword_ptr[rax]);
+		lea(eax, dword_ptr[rax + 1]);
+		lea(eax, dword_ptr[rcx * 4]);
+		lea(eax, dword_ptr[rcx * 4 + 1]);
+		lea(eax, dword_ptr[rax + rcx]);
+		lea(eax, dword_ptr[rax + rcx * 4]);
+		lea(eax, dword_ptr[rax + rcx * 4 + 1]);
+#	endif
+#endif
+
+#if 0
+		mov(al, cl);
+		mov(byte_ptr[eax], cl);
+		mov(al, byte_ptr[ecx]);
+		mov(al, -1);
+		mov(ax, cx);
+		mov(word_ptr[eax], cx);
+		mov(ax, word_ptr[ecx]);
+		mov(ax, -1);
+		mov(eax, ecx);
+		mov(dword_ptr[eax], ecx);
+		mov(eax, dword_ptr[ecx]);
+		mov(eax, -1);
+#	ifdef JITASM64
+		mov(rax, rcx);
+		mov(qword_ptr[rax], rcx);
+		mov(rax, qword_ptr[rcx]);
+		mov(rax, 1);
+		mov(rax, -1);
+		mov(rax, 0x10000000);
+		mov(rax, 0x80000000);
+		mov(rax, 0x100000000);
+		mov(rax, 0x800000000);
+#	endif
+#endif
+
+#if 0
+#	ifdef JITASM64
+		movdqa(xmm0, xmm1);
+		movdqa(xmm8, xmm1);
+		movdqa(xmm0, xmm9);
+		movdqa(xmm0, xmmword_ptr[ecx]);
+		movdqa(xmm0, xmmword_ptr[rcx]);
+		movdqa(xmm8, xmmword_ptr[ecx]);
+		movdqa(xmm8, xmmword_ptr[rcx]);
+		movdqa(xmmword_ptr[eax], xmm1);
+		movdqa(xmmword_ptr[rax], xmm1);
+		movdqa(xmmword_ptr[eax], xmm9);
+		movdqa(xmmword_ptr[rax], xmm9);
+
+		movdqu(xmm0, xmm1);
+		movdqu(xmm8, xmm1);
+		movdqu(xmm0, xmm9);
+		movdqu(xmm0, xmmword_ptr[ecx]);
+		movdqu(xmm0, xmmword_ptr[rcx]);
+		movdqu(xmm8, xmmword_ptr[ecx]);
+		movdqu(xmm8, xmmword_ptr[rcx]);
+		movdqu(xmmword_ptr[eax], xmm1);
+		movdqu(xmmword_ptr[rax], xmm1);
+		movdqu(xmmword_ptr[eax], xmm9);
+		movdqu(xmmword_ptr[rax], xmm9);
+
+		pxor(xmm0, xmm1);
+		pxor(xmm8, xmm1);
+		pxor(xmm0, xmm9);
+		pxor(xmm0, xmmword_ptr[ecx]);
+		pxor(xmm0, xmmword_ptr[rcx]);
+		pxor(xmm8, xmmword_ptr[ecx]);
+		pxor(xmm8, xmmword_ptr[rcx]);
+#	else
+		movdqa(xmm0, xmm1);
+		movdqa(xmm0, xmmword_ptr[ecx]);
+		movdqa(xmmword_ptr[eax], xmm1);
+
+		movdqu(xmm0, xmm1);
+		movdqu(xmm0, xmmword_ptr[ecx]);
+		movdqu(xmmword_ptr[eax], xmm1);
+
+		pabsb(mm0, mm1);
+		pabsb(mm0, mmword_ptr[ecx]);
+		pabsb(xmm0, xmm1);
+		pabsb(xmm0, xmmword_ptr[ecx]);
+		pabsw(mm0, mm1);
+		pabsw(mm0, mmword_ptr[ecx]);
+		pabsw(xmm0, xmm1);
+		pabsw(xmm0, xmmword_ptr[ecx]);
+		pabsd(mm0, mm1);
+		pabsd(mm0, mmword_ptr[ecx]);
+		pabsd(xmm0, xmm1);
+		pabsd(xmm0, xmmword_ptr[ecx]);
+
+		packsswb(mm0, mm1);
+		packsswb(mm0, mmword_ptr[ecx]);
+		packsswb(xmm0, xmm1);
+		packsswb(xmm0, xmmword_ptr[ecx]);
+		packssdw(mm0, mm1);
+		packssdw(mm0, mmword_ptr[ecx]);
+		packssdw(xmm0, xmm1);
+		packssdw(xmm0, xmmword_ptr[ecx]);
+		packuswb(mm0, mm1);
+		packuswb(mm0, mmword_ptr[ecx]);
+		packuswb(xmm0, xmm1);
+		packuswb(xmm0, xmmword_ptr[ecx]);
+		packusdw(xmm0, xmm1);
+		packusdw(xmm0, xmmword_ptr[ecx]);
+
+		paddb(mm0, mm1);
+		paddb(mm0, mmword_ptr[ecx]);
+		paddb(xmm0, xmm1);
+		paddb(xmm0, xmmword_ptr[ecx]);
+		paddw(mm0, mm1);
+		paddw(mm0, mmword_ptr[ecx]);
+		paddw(xmm0, xmm1);
+		paddw(xmm0, xmmword_ptr[ecx]);
+		paddd(mm0, mm1);
+		paddd(mm0, mmword_ptr[ecx]);
+		paddd(xmm0, xmm1);
+		paddd(xmm0, xmmword_ptr[ecx]);
+
+		pxor(mm0, mm1);
+		pxor(mm0, mmword_ptr[ecx]);
+		pxor(xmm0, xmm1);
+		pxor(xmm0, xmmword_ptr[ecx]);
+#	endif
+#endif
+
+#if 0	// JMP
+		jmp("1");
+		ja("1");
+		jae("1");
+		jb("1");
+		jbe("1");
+		jc("1");
+		jcxz("1");
+		jecxz("1");
+		je("1");
+		jg("1");
+		jge("1");
+		jl("1");
+		jle("1");
+		jna("1");
+		jnae("1");
+		jnb("1");
+		jnbe("1");
+		jnc("1");
+		jne("1");
+		jng("1");
+		jnge("1");
+		jnl("1");
+		jnle("1");
+		jno("1");
+		jnp("1");
+		jns("1");
+		jnz("1");
+		jo("1");
+		jp("1");
+		jpe("1");
+		jpo("1");
+		js("1");
+		jz("1");
+		label("1");
+		for (int i = 0; i < 256; i++) nop();
+		jmp("1");
+		jz("1");
+#endif
+
+#if 0
+		movzx(ax, cl);
+		movzx(ax, byte_ptr[ecx]);
+		movzx(eax, ch);
+		movzx(eax, byte_ptr[ecx]);
+		movzx(eax, cx);
+		movzx(eax, word_ptr[ecx]);
+		xchg(al, cl);
+		xchg(cl, al);
+		xchg(al, byte_ptr[ecx]);
+		xchg(byte_ptr[eax], cl);
+		xchg(ax, cx);
+		xchg(cx, ax);
+		xchg(ax, word_ptr[ecx]);
+		xchg(word_ptr[eax], cx);
+		xchg(eax, ecx);
+		xchg(ecx, eax);
+		xchg(eax, dword_ptr[ecx]);
+		xchg(dword_ptr[eax], ecx);
+#	ifdef JITASM64
+		movzx(rax, cl);
+		movzx(rax, byte_ptr[rcx]);
+		movzx(rax, cx);
+		movzx(rax, word_ptr[rcx]);
+		movzx(r8, cl);
+		movzx(r8, byte_ptr[rcx]);
+		movzx(r8, cx);
+		movzx(r8, word_ptr[rcx]);
+		xchg(rax, r8);
+		xchg(rax, qword_ptr[r8]);
+		xchg(qword_ptr[rax], r8);
+		xchg(r8, rax);
+		xchg(r8, qword_ptr[rax]);
+		xchg(qword_ptr[r8], rax);
+#	endif
+#endif
+#if 0
+		test(al, 1);
+		test(cl, 1);
+		test(ax, 1);
+		test(cx, 1);
+		test(eax, 1);
+		test(ecx, 1);
+		test(al, cl);
+		test(ax, cx);
+		test(eax, ecx);
+		test(byte_ptr[eax], 1);
+		test(word_ptr[eax], 1);
+		test(dword_ptr[eax], 1);
+		test(byte_ptr[eax], cl);
+		test(word_ptr[eax], cx);
+		test(dword_ptr[eax], ecx);
+#	ifdef JITASM64
+		test(rax, 1);
+		test(rax, r8);
+		test(qword_ptr[eax], 1);
+		test(qword_ptr[eax], r8);
+		test(r8, 1);
+		test(r8, rax);
+		test(qword_ptr[r8], r9);
+		test(qword_ptr[r8], r9);
+#	endif
+#endif
+
+#if 1
+		xor(eax, eax);
+		mov(ecx, 100);
+		label("loop_beg");
+		cmp(ecx, 0);
+		jle("loop_end");
+		add(eax, ecx);
+		sub(ecx, 1);
+		jmp("loop_beg");
+		label("loop_end");
+		//push(eax);
+		//push("%d");
+		//call(printf);
+		//add(esp, 8);
+		ret();
+#endif
+	}
+};
+
+extern "C" void hoge2(PBYTE pDst, float a, PBYTE pSrc, int nLen);
+
+int _tmain(int argc, _TCHAR* argv[])
+{
+	test_func func1;
+	func1();
+	hoge2(NULL, 1.0f, NULL, 1);
+}
