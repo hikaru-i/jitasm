@@ -1245,10 +1245,11 @@ struct Frontend
 		}
 
 		// JMPのオペランドサイズを決める
+		std::vector<int> offsets;
+		offsets.reserve(instrs_.size() + 1);
 		bool retry;
 		do {
-			std::vector<int> offsets;
-			offsets.reserve(instrs_.size() + 1);
+			offsets.clear();
 			offsets.push_back(0);
 			Backend pre;
 			for (InstrList::iterator it = instrs_.begin(); it != instrs_.end(); ++it) {
@@ -1276,9 +1277,6 @@ struct Frontend
 		} while (retry);
 
 		// JMPの距離を決定する
-		std::vector<int> offsets;
-		offsets.reserve(instrs_.size() + 1);
-		offsets.push_back(0);
 		Backend pre;
 		for (InstrList::iterator it = instrs_.begin(); it != instrs_.end(); ++it) {
 			pre.Assemble(*it);
