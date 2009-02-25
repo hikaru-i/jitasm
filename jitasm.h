@@ -1097,6 +1097,13 @@ struct Backend
 		default:			ASSERT(0); break;
 		}
 	}
+
+	static size_t GetInstrCodeSize(const Instr& instr)
+	{
+		Backend backend;
+		backend.Assemble(instr);
+		return backend.GetSize();
+	}
 };
 
 struct VirtualMemory
@@ -1208,7 +1215,7 @@ struct Frontend
 	typedef std::deque<Label> LabelList;
 	LabelList	labels_;
 
-	virtual void InternalMain() = 0;
+	virtual void naked_main() = 0;
 
 	virtual void Epilog(size_t localVarSize)
 	{
@@ -1223,7 +1230,7 @@ struct Frontend
 		push(r13);
 		push(r14);
 		push(r15);
-		// TODO XMMƒŒƒWƒXƒ^‚Ì‘Þ”ð
+		// TODO Save XMM registers
 #endif
 	}
 
@@ -1250,13 +1257,6 @@ struct Frontend
 			|| id == INSTR_JE || id == INSTR_JG || id == INSTR_JGE || id == INSTR_JL
 			|| id == INSTR_JLE || id == INSTR_JNE || id == INSTR_JNO || id == INSTR_JNP
 			|| id == INSTR_JNS || id == INSTR_JO || id == INSTR_JP || id == INSTR_JS;
-	}
-
-	size_t GetCodeSize(const Instr& instr) const
-	{
-		Backend backend;
-		backend.Assemble(instr);
-		return backend.GetSize();
 	}
 
 	// TODO: Return an error when there is no jump destination in jump is missing.
@@ -1289,7 +1289,7 @@ struct Frontend
 				Instr& instr = instrs_[i];
 				if (IsJmpOrJcc(instr.GetID()) && instr.GetOpd(0).IsImm()) {
 					size_t d = (size_t) instr.GetOpd(1).GetImm();
-					int rel = offsets[d] - offsets[i] - (int) GetCodeSize(instr);
+					int rel = offsets[d] - offsets[i] - (int) Backend::GetInstrCodeSize(instr);
 					OpdSize size = instr.GetOpd(0).GetSize();
 					if (size == SIZE_INT8) {
 						if (!IsInt8(rel)) {
@@ -1309,7 +1309,7 @@ struct Frontend
 			Instr& instr = instrs_[i];
 			if (IsJmpOrJcc(instr.GetID()) && instr.GetOpd(0).IsImm()) {
 				size_t d = (size_t) instr.GetOpd(1).GetImm();
-				int rel = offsets[d] - offsets[i] - (int) GetCodeSize(instr);
+				int rel = offsets[d] - offsets[i] - (int) Backend::GetInstrCodeSize(instr);
 				OpdSize size = instr.GetOpd(0).GetSize();
 				if (size == SIZE_INT8) {
 					ASSERT(IsInt8(rel));
@@ -1326,7 +1326,7 @@ struct Frontend
 	{
 		instrs_.clear();
 		labels_.clear();
-		InternalMain();
+		naked_main();
 
 		// Resolve jmp/jcc instructions
 		if (!labels_.empty()) {
@@ -1346,6 +1346,15 @@ struct Frontend
 		for (InstrList::const_iterator it = instrs_.begin(); it != instrs_.end(); ++it) {
 			backend.Assemble(*it);
 		}
+	}
+
+	/// Get assembled code
+	void *GetCode()
+	{
+		if (!buff_.GetPointer()) {
+			Assemble();
+		}
+		return buff_.GetPointer();
 	}
 
 	void PushBack(const Instr& instr)
@@ -1863,30 +1872,36 @@ template<class R>
 struct function0 : Frontend
 {
 	typedef R (*FuncPtr)();
-	virtual Opd main() = 0;
-
-	void InternalMain() { Opd r = main(); /* TODO store result */ }
-	operator FuncPtr() { Assemble(); return (FuncPtr)buff_.GetPointer(); }
+	virtual Opd main() { return zax; }
+	void naked_main() { Opd r = main(); /* TODO store result */ }
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
 };
 
 template<>
 struct function0<void> : Frontend
 {
 	typedef void (*FuncPtr)();
-	virtual void main() = 0;
-
-	void InternalMain()	{ main(); }
-	operator FuncPtr() { Assemble(); return (FuncPtr)buff_.GetPointer(); }
+	virtual void main() {}
+	void naked_main()	{ main(); }
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
 };
 
 template<class R, class A1>
 struct function1 : Frontend
 {
 	typedef R (*FuncPtr)(A1);
-	virtual Opd main(Var a1) = 0;
+	virtual Opd main(Var a1) { return zax; }
+	void naked_main() { Opd r = main(Var(0)); /* TODO store result */ }
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+};
 
-	void InternalMain() { Opd r = main(Var(0)); /* TODO store result */ }
-	operator FuncPtr() { Assemble(); return (FuncPtr)buff_.GetPointer(); }
+template<class A1>
+struct function1<void, A1> : Frontend
+{
+	typedef void (*FuncPtr)(A1);
+	virtual void main(Var a1) {}
+	void naked_main() { main(Var(0)); }
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
 };
 
 
