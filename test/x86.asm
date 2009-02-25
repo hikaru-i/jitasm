@@ -171,4 +171,25 @@ hoge2	proc C USES esi edi ebx, pDst: PTR, pSrc: PTR, nLen: SDWORD
 	ret
 hoge2	endp
 
+masm_test_shift	proc
+	sal al, 1
+	sal al, 2
+	sal ax, 1
+	sal ax, 2
+	sal eax, 1
+	sal eax, 2
+	sal byte ptr[eax], 1
+	sal byte ptr[eax], 2
+	sal word ptr[eax], 1
+	sal word ptr[eax], 2
+	sal dword ptr[eax], 1
+	sal dword ptr[eax], 2
+	sar al, 1
+	sar al, 2
+	shl al, 1
+	shl al, 2
+	shr al, 1
+	shr al, 2
+masm_test_shift endp
+
 end
