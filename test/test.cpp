@@ -402,6 +402,7 @@ struct jitasm_test_shift : jitasm::function0<void>
 	{
 		sal(al, 1);
 		sal(al, 2);
+		sal(al, -1);
 		sal(ax, 1);
 		sal(ax, 2);
 		sal(eax, 1);
