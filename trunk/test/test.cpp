@@ -1,5 +1,11 @@
 #include "StdAfx.h"
 #include "jitasm.h"
+#include <assert.h>
+
+#define ASSERT	assert
+
+
+extern "C" void masm_test_shift();
 
 
 struct test_add : jitasm::function0<void>
@@ -390,9 +396,67 @@ struct test_func : jitasm::function0<int>
 
 extern "C" void hoge2(PBYTE pDst, float a, PBYTE pSrc, int nLen);
 
+struct jitasm_test_shift : jitasm::function0<void>
+{
+	virtual void naked_main()
+	{
+		sal(al, 1);
+		sal(al, 2);
+		sal(ax, 1);
+		sal(ax, 2);
+		sal(eax, 1);
+		sal(eax, 2);
+		sal(byte_ptr[eax], 1);
+		sal(byte_ptr[eax], 2);
+		sal(word_ptr[eax], 1);
+		sal(word_ptr[eax], 2);
+		sal(dword_ptr[eax], 1);
+		sal(dword_ptr[eax], 2);
+		sar(al, 1);
+		sar(al, 2);
+		shl(al, 1);
+		shl(al, 2);
+		shr(al, 1);
+		shr(al, 2);
+#ifdef JITASM64
+		sal(r8b, 1);
+		sal(r8b, 2);
+		sal(r8w, 1);
+		sal(r8w, 2);
+		sal(r8d, 1);
+		sal(r8d, 2);
+		sal(r8, 1);
+		sal(r8, 2);
+		sal(qword_ptr[rax], 1);
+		sal(qword_ptr[rax], 2);
+#endif
+	}
+};
+
+template<class Ty1, class Ty2>
+void TEST(Ty1 func1, Ty2 func2)
+{
+	func2.Assemble();
+	unsigned char* p1 = (unsigned char*) func1;
+	unsigned char* p2 = (unsigned char*) func2.GetCode();
+	size_t size = func2.GetCodeSize();
+
+	for (size_t i = 0; i < size; i++) {
+		ASSERT(p1[i] == p2[i]);
+	}
+}
+
+void* get_func_ptr(void* func)
+{
+	unsigned char* p = (unsigned char*) func;
+	if (*p == 0xE9) {
+		p = (unsigned char*) (p + (unsigned long&) *(p + 1) + 5);
+	}
+	return p;
+}
+
 int _tmain(int argc, _TCHAR* argv[])
 {
-	test_func func1;
-	printf("%d\n", func1());
+	TEST(get_func_ptr(masm_test_shift), jitasm_test_shift());
 	//hoge2(NULL, 1.0f, NULL, 1);
 }

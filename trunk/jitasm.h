@@ -11,7 +11,7 @@
 //      copyright notice, this list of conditions and the following
 //      disclaimer in the documentation and/or other materials provided
 //      with the distribution.
-//    * The names of the authors may not be used to endorse or promote
+//    * The names of the contributors may not be used to endorse or promote
 //      products derived from this software without specific prior written
 //      permission.
 //
@@ -332,11 +332,9 @@ enum InstrID
 	INSTR_JMP, INSTR_JA, INSTR_JAE, INSTR_JB, INSTR_JBE, INSTR_JCXZ, INSTR_JECXZ, INSTR_JRCXZ, INSTR_JE,
 	INSTR_JG, INSTR_JGE, INSTR_JL, INSTR_JLE, INSTR_JNE, INSTR_JNO, INSTR_JNP, INSTR_JNS, INSTR_JO, INSTR_JP, INSTR_JS,
 	INSTR_LEA, INSTR_LEAVE, INSTR_MOV, INSTR_MOVZX, INSTR_NOP, INSTR_OR, INSTR_POP, INSTR_PUSH,
-	INSTR_RET, INSTR_SBB, INSTR_SUB, INSTR_TEST, INSTR_XCHG, INSTR_XOR,
+	INSTR_RET, INSTR_SAL, INSTR_SAR, INSTR_SHL, INSTR_SHR, INSTR_SBB, INSTR_SUB, INSTR_TEST, INSTR_XCHG, INSTR_XOR,
 
-	INSTR_CMPPS,
-
-	INSTR_ADDPD, INSTR_ADDSD, INSTR_ANDPD, INSTR_ANDNPD, INSTR_CLFLUSH, INSTR_CMPPD, INSTR_CMPSD, INSTR_COMISD, INSTR_CVTDQ2PD, INSTR_CVTDQ2PS,
+	INSTR_ADDPD, INSTR_ADDSD, INSTR_ANDPD, INSTR_ANDNPD, INSTR_CLFLUSH, INSTR_CMPPS, INSTR_CMPPD, INSTR_CMPSD, INSTR_COMISD, INSTR_CVTDQ2PD, INSTR_CVTDQ2PS,
 	INSTR_CVTPD2DQ, INSTR_CVTPD2PI, INSTR_CVTPD2PS, INSTR_CVTPI2PD, INSTR_CVTPS2DQ, INSTR_CVTPS2PD, INSTR_CVTSD2SI, INSTR_CVTSD2SS,
 	INSTR_CVTSI2SD, INSTR_CVTSS2SD, INSTR_CVTTPD2DQ, INSTR_CVTTPD2PI, INSTR_CVTTPS2DQ, INSTR_CVTTSD2SI, INSTR_DIVPD, INSTR_DIVSD, INSTR_LFENCE,
 	INSTR_MASKMOVDQU, INSTR_MAXPD, INSTR_MAXSD, INSTR_MFENCE, INSTR_MINPD, INSTR_MINSD, INSTR_MOVAPD, INSTR_MOVD, INSTR_MOVDQ2Q, INSTR_MOVDQA,
@@ -724,6 +722,28 @@ struct Backend
 		}
 	}
 
+	void EncodeShift(uint8 digit, const Opd& r_m, const Opd& imm)
+	{
+		ASSERT(imm.IsImm());
+
+#ifdef JITASM64
+		if (r_m.IsMem() && r_m.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
+		if (r_m.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
+		EncodeREX(Opd(), r_m);
+#else
+		if (r_m.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
+#endif
+		uint8 w = r_m.GetSize() != SIZE_INT8 ? 1 : 0;
+		if (imm.GetImm() == 1) {
+			db(0xD0 | w);
+			EncodeModRM(digit, r_m);
+		} else {
+			db(0xC0 | w);
+			EncodeModRM(digit, r_m);
+			db(imm.GetImm());
+		}
+	}
+
 	void EncodeTEST(const Opd& opd1, const Opd& opd2)
 	{
 		uint8 w = opd1.GetSize() != SIZE_INT8 ? 1 : 0;
@@ -952,6 +972,10 @@ struct Backend
 		case INSTR_POP:			EncodePOP(0x58, 0x8F, 0, opd1); break;
 		case INSTR_PUSH:		EncodePOP(0x50, 0xFF, 6, opd1); break;
 		case INSTR_RET:			db(0xC3); break;
+		case INSTR_SAL:			EncodeShift(4, opd1, opd2); break;
+		case INSTR_SAR:			EncodeShift(7, opd1, opd2); break;
+		case INSTR_SHL:			EncodeShift(4, opd1, opd2); break;
+		case INSTR_SHR:			EncodeShift(5, opd1, opd2); break;
 		case INSTR_SBB:			EncodeADD(0x18, opd1, opd2); break;
 		case INSTR_SUB:			EncodeADD(0x28, opd1, opd2); break;
 		case INSTR_TEST:		EncodeTEST(opd1, opd2); break;
@@ -1134,9 +1158,9 @@ struct VirtualMemory
 	{
 		Free();
 		if (size > 0) {
-			SYSTEM_INFO sysinfo;
-			::GetSystemInfo(&sysinfo);
-			size = (size + sysinfo.dwPageSize - 1) / sysinfo.dwPageSize * sysinfo.dwPageSize;
+//			SYSTEM_INFO sysinfo;
+//			::GetSystemInfo(&sysinfo);
+//			size = (size + sysinfo.dwPageSize - 1) / sysinfo.dwPageSize * sysinfo.dwPageSize;
 
 			pbuff_ = ::VirtualAlloc(NULL, size, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
 			if (pbuff_ == NULL) ASSERT(0);
@@ -1357,12 +1381,17 @@ struct Frontend
 		return buff_.GetPointer();
 	}
 
+	size_t GetCodeSize() const
+	{
+		return buff_.GetSize();
+	}
+
 	void PushBack(const Instr& instr)
 	{
 		instrs_.push_back(instr);
 	}
 
-	size_t get_label_id(const std::string& label_name)
+	size_t GetLabelId(const std::string& label_name)
 	{
 		for (size_t i = 0; i < labels_.size(); i++) {
 			if (labels_[i].label_name.compare(label_name) == 0) {
@@ -1377,7 +1406,7 @@ struct Frontend
 	// LABEL
 	void label(const std::string& label_name)
 	{
-		size_t label_id = get_label_id(label_name);
+		size_t label_id = GetLabelId(label_name);
 		labels_[label_id].instr_number = instrs_.size();	// Label current instruction
 	}
 
@@ -1492,42 +1521,42 @@ struct Frontend
 #endif
 
 	// JMP
-	void jmp(const std::string& label_name) {PushBack(Instr(INSTR_JMP, Imm64(get_label_id(label_name))));}
-	void ja(const std::string& label_name) {PushBack(Instr(INSTR_JA, Imm64(get_label_id(label_name))));}
-	void jae(const std::string& label_name) {PushBack(Instr(INSTR_JAE, Imm64(get_label_id(label_name))));}
-	void jb(const std::string& label_name) {PushBack(Instr(INSTR_JB, Imm64(get_label_id(label_name))));}
-	void jbe(const std::string& label_name) {PushBack(Instr(INSTR_JBE, Imm64(get_label_id(label_name))));}
+	void jmp(const std::string& label_name) {PushBack(Instr(INSTR_JMP, Imm64(GetLabelId(label_name))));}
+	void ja(const std::string& label_name) {PushBack(Instr(INSTR_JA, Imm64(GetLabelId(label_name))));}
+	void jae(const std::string& label_name) {PushBack(Instr(INSTR_JAE, Imm64(GetLabelId(label_name))));}
+	void jb(const std::string& label_name) {PushBack(Instr(INSTR_JB, Imm64(GetLabelId(label_name))));}
+	void jbe(const std::string& label_name) {PushBack(Instr(INSTR_JBE, Imm64(GetLabelId(label_name))));}
 	void jc(const std::string& label_name) {jb(label_name);}
-	void jecxz(const std::string& label_name) {PushBack(Instr(INSTR_JECXZ, Imm64(get_label_id(label_name))));}
+	void jecxz(const std::string& label_name) {PushBack(Instr(INSTR_JECXZ, Imm64(GetLabelId(label_name))));}
 #ifdef JITASM64
-	void jrcxz (const std::string& label_name) {PushBack(Instr(INSTR_JRCXZ, Imm64(get_label_id(label_name))));}
+	void jrcxz (const std::string& label_name) {PushBack(Instr(INSTR_JRCXZ, Imm64(GetLabelId(label_name))));}
 #else
-	void jcxz(const std::string& label_name) {PushBack(Instr(INSTR_JCXZ, Imm64(get_label_id(label_name))));}
+	void jcxz(const std::string& label_name) {PushBack(Instr(INSTR_JCXZ, Imm64(GetLabelId(label_name))));}
 #endif
-	void je(const std::string& label_name) {PushBack(Instr(INSTR_JE, Imm64(get_label_id(label_name))));}
-	void jg(const std::string& label_name) {PushBack(Instr(INSTR_JG, Imm64(get_label_id(label_name))));}
-	void jge(const std::string& label_name) {PushBack(Instr(INSTR_JGE, Imm64(get_label_id(label_name))));}
-	void jl(const std::string& label_name) {PushBack(Instr(INSTR_JL, Imm64(get_label_id(label_name))));}
-	void jle(const std::string& label_name) {PushBack(Instr(INSTR_JLE, Imm64(get_label_id(label_name))));}
+	void je(const std::string& label_name) {PushBack(Instr(INSTR_JE, Imm64(GetLabelId(label_name))));}
+	void jg(const std::string& label_name) {PushBack(Instr(INSTR_JG, Imm64(GetLabelId(label_name))));}
+	void jge(const std::string& label_name) {PushBack(Instr(INSTR_JGE, Imm64(GetLabelId(label_name))));}
+	void jl(const std::string& label_name) {PushBack(Instr(INSTR_JL, Imm64(GetLabelId(label_name))));}
+	void jle(const std::string& label_name) {PushBack(Instr(INSTR_JLE, Imm64(GetLabelId(label_name))));}
 	void jna(const std::string& label_name) {jbe(label_name);}
 	void jnae(const std::string& label_name) {jb(label_name);}
 	void jnb(const std::string& label_name) {jae(label_name);}
 	void jnbe(const std::string& label_name) {ja(label_name);}
 	void jnc(const std::string& label_name) {jae(label_name);}
-	void jne(const std::string& label_name) {PushBack(Instr(INSTR_JNE, Imm64(get_label_id(label_name))));}
+	void jne(const std::string& label_name) {PushBack(Instr(INSTR_JNE, Imm64(GetLabelId(label_name))));}
 	void jng(const std::string& label_name) {jle(label_name);}
 	void jnge(const std::string& label_name) {jl(label_name);}
 	void jnl(const std::string& label_name) {jge(label_name);}
 	void jnle(const std::string& label_name) {jg(label_name);}
-	void jno(const std::string& label_name) {PushBack(Instr(INSTR_JNO, Imm64(get_label_id(label_name))));}
-	void jnp(const std::string& label_name) {PushBack(Instr(INSTR_JNP, Imm64(get_label_id(label_name))));}
-	void jns(const std::string& label_name) {PushBack(Instr(INSTR_JNS, Imm64(get_label_id(label_name))));}
+	void jno(const std::string& label_name) {PushBack(Instr(INSTR_JNO, Imm64(GetLabelId(label_name))));}
+	void jnp(const std::string& label_name) {PushBack(Instr(INSTR_JNP, Imm64(GetLabelId(label_name))));}
+	void jns(const std::string& label_name) {PushBack(Instr(INSTR_JNS, Imm64(GetLabelId(label_name))));}
 	void jnz(const std::string& label_name) {jne(label_name);}
-	void jo(const std::string& label_name) {PushBack(Instr(INSTR_JO, Imm64(get_label_id(label_name))));}
-	void jp(const std::string& label_name) {PushBack(Instr(INSTR_JP, Imm64(get_label_id(label_name))));}
+	void jo(const std::string& label_name) {PushBack(Instr(INSTR_JO, Imm64(GetLabelId(label_name))));}
+	void jp(const std::string& label_name) {PushBack(Instr(INSTR_JP, Imm64(GetLabelId(label_name))));}
 	void jpe(const std::string& label_name) {jp(label_name);}
 	void jpo(const std::string& label_name) {jnp(label_name);}
-	void js(const std::string& label_name) {PushBack(Instr(INSTR_JS, Imm64(get_label_id(label_name))));}
+	void js(const std::string& label_name) {PushBack(Instr(INSTR_JS, Imm64(GetLabelId(label_name))));}
 	void jz(const std::string& label_name) {je(label_name);}
 
 	// LEA
@@ -1611,6 +1640,26 @@ struct Frontend
 
 	// RET
 	void ret() {PushBack(Instr(INSTR_RET));}
+ 
+	// SAL/SAR/SHL/SHR
+	void sal(const Opd8& opd1, uint8 imm) {PushBack(Instr(INSTR_SAL, opd1, Imm8(imm)));}
+	void sar(const Opd8& opd1, uint8 imm) {PushBack(Instr(INSTR_SAR, opd1, Imm8(imm)));}
+	void shl(const Opd8& opd1, uint8 imm) {PushBack(Instr(INSTR_SHL, opd1, Imm8(imm)));}
+	void shr(const Opd8& opd1, uint8 imm) {PushBack(Instr(INSTR_SHR, opd1, Imm8(imm)));}
+	void sal(const Opd16& opd1, uint8 imm) {PushBack(Instr(INSTR_SAL, opd1, Imm8(imm)));}
+	void sar(const Opd16& opd1, uint8 imm) {PushBack(Instr(INSTR_SAR, opd1, Imm8(imm)));}
+	void shl(const Opd16& opd1, uint8 imm) {PushBack(Instr(INSTR_SHL, opd1, Imm8(imm)));}
+	void shr(const Opd16& opd1, uint8 imm) {PushBack(Instr(INSTR_SHR, opd1, Imm8(imm)));}
+	void sal(const Opd32& opd1, uint8 imm) {PushBack(Instr(INSTR_SAL, opd1, Imm8(imm)));}
+	void sar(const Opd32& opd1, uint8 imm) {PushBack(Instr(INSTR_SAR, opd1, Imm8(imm)));}
+	void shl(const Opd32& opd1, uint8 imm) {PushBack(Instr(INSTR_SHL, opd1, Imm8(imm)));}
+	void shr(const Opd32& opd1, uint8 imm) {PushBack(Instr(INSTR_SHR, opd1, Imm8(imm)));}
+#ifdef JITASM64
+	void sal(const Opd64& opd1, uint8 imm) {PushBack(Instr(INSTR_SAL, opd1, Imm8(imm)));}
+	void sar(const Opd64& opd1, uint8 imm) {PushBack(Instr(INSTR_SAR, opd1, Imm8(imm)));}
+	void shl(const Opd64& opd1, uint8 imm) {PushBack(Instr(INSTR_SHL, opd1, Imm8(imm)));}
+	void shr(const Opd64& opd1, uint8 imm) {PushBack(Instr(INSTR_SHR, opd1, Imm8(imm)));}
+#endif
 
 	// SBB
 	void sbb(const Reg8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_SBB, opd1, opd2));}
