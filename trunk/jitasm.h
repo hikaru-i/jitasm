@@ -1,7 +1,6 @@
-// Copyright (c) 2009 Hikaru Inoue
-//           (c) 2009 Akihiro Yamasaki
+// Copyright (c) 2009, Hikaru Inoue, Akihiro Yamasaki,
 // All rights reserved.
-
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
 // met:
@@ -58,9 +57,9 @@ typedef unsigned __int16	uint16;
 typedef unsigned __int32	uint32;
 typedef unsigned __int64	uint64;
 
-bool IsInt8(sint64 n) {return (sint8) n == n;}
-bool IsInt16(sint64 n) {return (sint16) n == n;}
-bool IsInt32(sint64 n) {return (sint32) n == n;}
+inline bool IsInt8(sint64 n) {return (sint8) n == n;}
+inline bool IsInt16(sint64 n) {return (sint16) n == n;}
+inline bool IsInt32(sint64 n) {return (sint32) n == n;}
 
 //----------------------------------------
 // Operand
@@ -85,18 +84,18 @@ enum OpdSize
 enum RegID
 {
 	INVALID=-1,
+
 	EAX=0, ECX, EDX, EBX, ESP, EBP, ESI, EDI,
 	AL=0, CL, DL, BL, AH, CH, DH, BH,
 	AX=0, CX, DX, BX, SP, BP, SI, DI,
 	RAX=0, RCX, RDX, RBX, RSP, RBP, RSI, RDI,
 
 	R8=0x10, R9, R10, R11, R12, R13, R14, R15,
-	R8B=R8, R9B, R10B, R11B, R12B, R13B, R14B, R15B,
-	R8W=R8, R9W, R10W, R11W, R12W, R13W, R14W, R15W,
-	R8D=R8, R9D, R10D, R11D, R12D, R13D, R14D, R15D,
+	R8B=0x10, R9B, R10B, R11B, R12B, R13B, R14B, R15B,
+	R8W=0x10, R9W, R10W, R11W, R12W, R13W, R14W, R15W,
+	R8D=0x10, R9D, R10D, R11D, R12D, R13D, R14D, R15D,
 
 	MM0=0, MM1, MM2, MM3, MM4, MM5, MM6, MM7,
-
 	XMM0=0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7,
 	XMM8=0x10, XMM9, XMM10, XMM11, XMM12, XMM13, XMM14, XMM15,
 };
@@ -128,6 +127,7 @@ struct Opd
 	// MEM
 	Opd(OpdSize opdsize, OpdSize addrsize, RegID base, RegID index, sint64 scale, sint64 disp)
 		: opdtype_(TYPE_MEM), opdsize_(opdsize), addrsize_(addrsize), base_(base), index_(index), scale_(scale), disp_(disp) {}
+private:
 	// IMM
 	explicit Opd(sint64 imm) : opdtype_(TYPE_IMM), imm_(imm)
 	{
@@ -140,8 +140,15 @@ struct Opd
 		else ASSERT(0);
 #endif
 	}
+	friend Opd Imm8(uint8 imm);
+	friend Opd Imm16(uint16 imm);
+	friend Opd Imm32(uint32 imm);
+	friend Opd Imm64(uint64 imm);
 
-	OpdType	GetType() const {return opdtype_;}
+public:
+	bool	IsReg() const {return opdtype_ == TYPE_REG;}
+	bool	IsMem() const {return opdtype_ == TYPE_MEM;}
+	bool	IsImm() const {return opdtype_ == TYPE_IMM;}
 	OpdSize	GetSize() const {return opdsize_;}
 	OpdSize	GetAddressSize() const {return addrsize_;}
 
@@ -152,6 +159,10 @@ struct Opd
 	sint64	GetDisp() const {return disp_;}
 	sint64	GetImm() const {return imm_;}
 };
+inline Opd Imm8(uint8 imm) {return Opd((sint8) imm);}
+inline Opd Imm16(uint16 imm) {return Opd((sint16) imm);}
+inline Opd Imm32(uint32 imm) {return Opd((sint32) imm);}
+inline Opd Imm64(uint64 imm) {return Opd((sint64) imm);}
 
 template<OpdSize Size>
 struct OpdT : Opd
@@ -168,10 +179,10 @@ typedef OpdT<SIZE_INT32>	Opd32;
 typedef OpdT<SIZE_INT64>	Opd64;
 typedef OpdT<SIZE_INT128>	Opd128;
 
-template<class OpdBase>
-struct RegT : OpdBase
+template<class OpdN>
+struct RegT : OpdN
 {
-	explicit RegT(RegID reg) : OpdBase(reg) {}
+	explicit RegT(RegID reg) : OpdN(reg) {}
 };
 typedef RegT<Opd8>		Reg8;
 typedef RegT<Opd16>		Reg16;
@@ -182,10 +193,10 @@ typedef RegT<Opd64>		Reg64;
 typedef RegT<Opd64>		Mmx;
 typedef RegT<Opd128>	Xmm;
 
-template<class OpdBase>
-struct MemT : OpdBase
+template<class OpdN>
+struct MemT : OpdN
 {
-	MemT(OpdSize addrsize, RegID base, RegID index, sint64 scale, sint64 disp) : OpdBase(addrsize, base, index, scale, disp) {}
+	MemT(OpdSize addrsize, RegID base, RegID index, sint64 scale, sint64 disp) : OpdN(addrsize, base, index, scale, disp) {}
 };
 typedef MemT<Opd8>		Mem8;
 typedef MemT<Opd16>		Mem16;
@@ -200,10 +211,10 @@ struct Expr32_None
 	Expr32_None(const Reg32& obj) : reg_(obj.reg_), disp_(0) {}	// implicit
 	Expr32_None(RegID reg, sint64 disp) : reg_(reg), disp_(disp) {}
 };
-Expr32_None operator+(const Reg32& lhs, sint64 rhs) {return Expr32_None(lhs.reg_, rhs);}
-Expr32_None operator+(sint64 lhs, const Reg32& rhs) {return rhs + lhs;}
-Expr32_None operator+(const Expr32_None& lhs, sint64 rhs) {return Expr32_None(lhs.reg_, lhs.disp_ + rhs);}
-Expr32_None operator+(sint64 lhs, const Expr32_None& rhs) {return rhs + lhs;}
+inline Expr32_None operator+(const Reg32& lhs, sint64 rhs) {return Expr32_None(lhs.reg_, rhs);}
+inline Expr32_None operator+(sint64 lhs, const Reg32& rhs) {return rhs + lhs;}
+inline Expr32_None operator+(const Expr32_None& lhs, sint64 rhs) {return Expr32_None(lhs.reg_, lhs.disp_ + rhs);}
+inline Expr32_None operator+(sint64 lhs, const Expr32_None& rhs) {return rhs + lhs;}
 
 struct Expr32_BI
 {
@@ -212,9 +223,9 @@ struct Expr32_BI
 	sint64 disp_;
 	Expr32_BI(RegID base, RegID index, sint64 disp) : base_(base), index_(index), disp_(disp) {}
 };
-Expr32_BI operator+(const Expr32_None& lhs, const Expr32_None& rhs) {return Expr32_BI(lhs.reg_, rhs.reg_, lhs.disp_ + rhs.disp_);}
-Expr32_BI operator+(const Expr32_BI& lhs, sint64 rhs) {return Expr32_BI(lhs.base_, lhs.index_, lhs.disp_ + rhs);}
-Expr32_BI operator+(sint64 lhs, const Expr32_BI& rhs) {return rhs + lhs;}
+inline Expr32_BI operator+(const Expr32_None& lhs, const Expr32_None& rhs) {return Expr32_BI(lhs.reg_, rhs.reg_, lhs.disp_ + rhs.disp_);}
+inline Expr32_BI operator+(const Expr32_BI& lhs, sint64 rhs) {return Expr32_BI(lhs.base_, lhs.index_, lhs.disp_ + rhs);}
+inline Expr32_BI operator+(sint64 lhs, const Expr32_BI& rhs) {return rhs + lhs;}
 
 struct Expr32_SI
 {
@@ -223,12 +234,12 @@ struct Expr32_SI
 	sint64 disp_;
 	Expr32_SI(RegID index, sint64 scale, sint64 disp) : index_(index), scale_(scale), disp_(disp) {}
 };
-Expr32_SI operator*(const Reg32& lhs, sint64 rhs) {return Expr32_SI(lhs.reg_, rhs, 0);}
-Expr32_SI operator*(sint64 lhs, const Reg32& rhs) {return rhs * lhs;}
-Expr32_SI operator*(const Expr32_SI& lhs, sint64 rhs) {return Expr32_SI(lhs.index_, lhs.scale_ * rhs, lhs.disp_);}
-Expr32_SI operator*(sint64 lhs, const Expr32_SI& rhs) {return rhs * lhs;}
-Expr32_SI operator+(const Expr32_SI& lhs, sint64 rhs) {return Expr32_SI(lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
-Expr32_SI operator+(sint64 lhs, const Expr32_SI& rhs) {return rhs + lhs;}
+inline Expr32_SI operator*(const Reg32& lhs, sint64 rhs) {return Expr32_SI(lhs.reg_, rhs, 0);}
+inline Expr32_SI operator*(sint64 lhs, const Reg32& rhs) {return rhs * lhs;}
+inline Expr32_SI operator*(const Expr32_SI& lhs, sint64 rhs) {return Expr32_SI(lhs.index_, lhs.scale_ * rhs, lhs.disp_);}
+inline Expr32_SI operator*(sint64 lhs, const Expr32_SI& rhs) {return rhs * lhs;}
+inline Expr32_SI operator+(const Expr32_SI& lhs, sint64 rhs) {return Expr32_SI(lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
+inline Expr32_SI operator+(sint64 lhs, const Expr32_SI& rhs) {return rhs + lhs;}
 
 struct Expr32_SIB
 {
@@ -238,10 +249,10 @@ struct Expr32_SIB
 	sint64 disp_;
 	Expr32_SIB(RegID base, RegID index, sint64 scale, sint64 disp) : base_(base), index_(index), scale_(scale), disp_(disp) {}
 };
-Expr32_SIB operator+(const Expr32_None& lhs, const Expr32_SI& rhs) {return Expr32_SIB(lhs.reg_, rhs.index_, rhs.scale_, lhs.disp_ + rhs.disp_);}
-Expr32_SIB operator+(const Expr32_SI& lhs, const Expr32_None& rhs) {return rhs + lhs;}
-Expr32_SIB operator+(const Expr32_SIB& lhs, sint64 rhs) {return Expr32_SIB(lhs.base_, lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
-Expr32_SIB operator+(sint64 lhs, const Expr32_SIB& rhs) {return rhs + lhs;}
+inline Expr32_SIB operator+(const Expr32_None& lhs, const Expr32_SI& rhs) {return Expr32_SIB(lhs.reg_, rhs.index_, rhs.scale_, lhs.disp_ + rhs.disp_);}
+inline Expr32_SIB operator+(const Expr32_SI& lhs, const Expr32_None& rhs) {return rhs + lhs;}
+inline Expr32_SIB operator+(const Expr32_SIB& lhs, sint64 rhs) {return Expr32_SIB(lhs.base_, lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
+inline Expr32_SIB operator+(sint64 lhs, const Expr32_SIB& rhs) {return rhs + lhs;}
 
 #ifdef JITASM64
 struct Expr64_None
@@ -251,10 +262,10 @@ struct Expr64_None
 	Expr64_None(const Reg64& obj) : reg_(obj.reg_), disp_(0) {}	// implicit
 	Expr64_None(RegID reg, sint64 disp) : reg_(reg), disp_(disp) {}
 };
-Expr64_None operator+(const Reg64& lhs, sint64 rhs) {return Expr64_None(lhs.reg_, rhs);}
-Expr64_None operator+(sint64 lhs, const Reg64& rhs) {return rhs + lhs;}
-Expr64_None operator+(const Expr64_None& lhs, sint64 rhs) {return Expr64_None(lhs.reg_, lhs.disp_ + rhs);}
-Expr64_None operator+(sint64 lhs, const Expr64_None& rhs) {return rhs + lhs;}
+inline Expr64_None operator+(const Reg64& lhs, sint64 rhs) {return Expr64_None(lhs.reg_, rhs);}
+inline Expr64_None operator+(sint64 lhs, const Reg64& rhs) {return rhs + lhs;}
+inline Expr64_None operator+(const Expr64_None& lhs, sint64 rhs) {return Expr64_None(lhs.reg_, lhs.disp_ + rhs);}
+inline Expr64_None operator+(sint64 lhs, const Expr64_None& rhs) {return rhs + lhs;}
 
 struct Expr64_BI
 {
@@ -263,9 +274,9 @@ struct Expr64_BI
 	sint64 disp_;
 	Expr64_BI(RegID base, RegID index, sint64 disp) : base_(base), index_(index), disp_(disp) {}
 };
-Expr64_BI operator+(const Expr64_None& lhs, const Expr64_None& rhs) {return Expr64_BI(lhs.reg_, rhs.reg_, lhs.disp_ + rhs.disp_);}
-Expr64_BI operator+(const Expr64_BI& lhs, sint64 rhs) {return Expr64_BI(lhs.base_, lhs.index_, lhs.disp_ + rhs);}
-Expr64_BI operator+(sint64 lhs, const Expr64_BI& rhs) {return rhs + lhs;}
+inline Expr64_BI operator+(const Expr64_None& lhs, const Expr64_None& rhs) {return Expr64_BI(lhs.reg_, rhs.reg_, lhs.disp_ + rhs.disp_);}
+inline Expr64_BI operator+(const Expr64_BI& lhs, sint64 rhs) {return Expr64_BI(lhs.base_, lhs.index_, lhs.disp_ + rhs);}
+inline Expr64_BI operator+(sint64 lhs, const Expr64_BI& rhs) {return rhs + lhs;}
 
 struct Expr64_SI
 {
@@ -274,12 +285,12 @@ struct Expr64_SI
 	sint64 disp_;
 	Expr64_SI(RegID index, sint64 scale, sint64 disp) : index_(index), scale_(scale), disp_(disp) {}
 };
-Expr64_SI operator*(const Reg64& lhs, sint64 rhs) {return Expr64_SI(lhs.reg_, rhs, 0);}
-Expr64_SI operator*(sint64 lhs, const Reg64& rhs) {return rhs * lhs;}
-Expr64_SI operator*(const Expr64_SI& lhs, sint64 rhs) {return Expr64_SI(lhs.index_, lhs.scale_ * rhs, lhs.disp_);}
-Expr64_SI operator*(sint64 lhs, const Expr64_SI& rhs) {return rhs * lhs;}
-Expr64_SI operator+(const Expr64_SI& lhs, sint64 rhs) {return Expr64_SI(lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
-Expr64_SI operator+(sint64 lhs, const Expr64_SI& rhs) {return rhs + lhs;}
+inline Expr64_SI operator*(const Reg64& lhs, sint64 rhs) {return Expr64_SI(lhs.reg_, rhs, 0);}
+inline Expr64_SI operator*(sint64 lhs, const Reg64& rhs) {return rhs * lhs;}
+inline Expr64_SI operator*(const Expr64_SI& lhs, sint64 rhs) {return Expr64_SI(lhs.index_, lhs.scale_ * rhs, lhs.disp_);}
+inline Expr64_SI operator*(sint64 lhs, const Expr64_SI& rhs) {return rhs * lhs;}
+inline Expr64_SI operator+(const Expr64_SI& lhs, sint64 rhs) {return Expr64_SI(lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
+inline Expr64_SI operator+(sint64 lhs, const Expr64_SI& rhs) {return rhs + lhs;}
 
 struct Expr64_SIB
 {
@@ -289,10 +300,10 @@ struct Expr64_SIB
 	sint64 disp_;
 	Expr64_SIB(RegID base, RegID index, sint64 scale, sint64 disp) : base_(base), index_(index), scale_(scale), disp_(disp) {}
 };
-Expr64_SIB operator+(const Expr64_None& lhs, const Expr64_SI& rhs) {return Expr64_SIB(lhs.reg_, rhs.index_, rhs.scale_, lhs.disp_ + rhs.disp_);}
-Expr64_SIB operator+(const Expr64_SI& lhs, const Expr64_None& rhs) {return rhs + lhs;}
-Expr64_SIB operator+(const Expr64_SIB& lhs, sint64 rhs) {return Expr64_SIB(lhs.base_, lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
-Expr64_SIB operator+(sint64 lhs, const Expr64_SIB& rhs) {return rhs + lhs;}
+inline Expr64_SIB operator+(const Expr64_None& lhs, const Expr64_SI& rhs) {return Expr64_SIB(lhs.reg_, rhs.index_, rhs.scale_, lhs.disp_ + rhs.disp_);}
+inline Expr64_SIB operator+(const Expr64_SI& lhs, const Expr64_None& rhs) {return rhs + lhs;}
+inline Expr64_SIB operator+(const Expr64_SIB& lhs, sint64 rhs) {return Expr64_SIB(lhs.base_, lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
+inline Expr64_SIB operator+(sint64 lhs, const Expr64_SIB& rhs) {return rhs + lhs;}
 #endif
 
 template<typename MemTy>
@@ -317,9 +328,11 @@ struct AddressingPtr
 //----------------------------------------
 enum InstrID
 {
-	INSTR_ADC, INSTR_ADD, INSTR_AND, INSTR_CMP, INSTR_DEC, INSTR_INC, INSTR_JMP, INSTR_JA, INSTR_JAE, INSTR_JB, INSTR_JBE, INSTR_JCXZ, INSTR_JECXZ, INSTR_JRCXZ, INSTR_JE,
-	INSTR_JG, INSTR_JGE, INSTR_JL, INSTR_JLE, INSTR_JNE, INSTR_JNO, INSTR_JNP, INSTR_JNS, INSTR_JO, INSTR_JP, INSTR_JS, INSTR_LEA,
-	INSTR_LEAVE, INSTR_MOV, INSTR_MOVZX, INSTR_NOP, INSTR_OR, INSTR_POP, INSTR_PUSH, INSTR_RET, INSTR_SBB, INSTR_SUB, INSTR_TEST, INSTR_XCHG, INSTR_XOR,
+	INSTR_ADC, INSTR_ADD, INSTR_AND, INSTR_CALL, INSTR_CMP, INSTR_DEC, INSTR_INC,
+	INSTR_JMP, INSTR_JA, INSTR_JAE, INSTR_JB, INSTR_JBE, INSTR_JCXZ, INSTR_JECXZ, INSTR_JRCXZ, INSTR_JE,
+	INSTR_JG, INSTR_JGE, INSTR_JL, INSTR_JLE, INSTR_JNE, INSTR_JNO, INSTR_JNP, INSTR_JNS, INSTR_JO, INSTR_JP, INSTR_JS,
+	INSTR_LEA, INSTR_LEAVE, INSTR_MOV, INSTR_MOVZX, INSTR_NOP, INSTR_OR, INSTR_POP, INSTR_PUSH,
+	INSTR_RET, INSTR_SBB, INSTR_SUB, INSTR_TEST, INSTR_XCHG, INSTR_XOR,
 
 	INSTR_CMPPS,
 
@@ -348,7 +361,7 @@ struct Instr
 	InstrID	id_;
 	Opd		opd_[MAX_OPERAND_COUNT];
 
-	Instr(InstrID id) : id_(id) {}
+	explicit Instr(InstrID id) : id_(id) {}
 	Instr(InstrID id, const Opd& opd1) : id_(id) {opd_[0] = opd1;}
 	Instr(InstrID id, const Opd& opd1, const Opd& opd2) : id_(id) {opd_[0] = opd1, opd_[1] = opd2;}
 	Instr(InstrID id, const Opd& opd1, const Opd& opd2, const Opd& opd3) : id_(id) {opd_[0] = opd1, opd_[1] = opd2, opd_[2] = opd3;}
@@ -418,15 +431,15 @@ struct Backend
 	void EncodeREX(const Opd& reg, const Opd& r_m)
 	{
 		uint8 wrxb = 0;
-		if (reg.GetType() == TYPE_REG) {
+		if (reg.IsReg()) {
 			if (reg.GetSize() == SIZE_INT64) wrxb |= 8;
 			if (reg.GetReg() >= R8) wrxb |= 4;
 		}
-		if (r_m.GetType() == TYPE_REG) {
+		if (r_m.IsReg()) {
 			if (r_m.GetSize() == SIZE_INT64) wrxb |= 8;
 			if (r_m.GetReg() >= R8) wrxb |= 1;
 		}
-		if (r_m.GetType() == TYPE_MEM) {
+		if (r_m.IsMem()) {
 			if (r_m.GetSize() == SIZE_INT64) wrxb |= 8;
 			if (r_m.GetIndex() >= R8) wrxb |= 2;
 			if (r_m.GetBase() >= R8) wrxb |= 1;
@@ -438,9 +451,9 @@ struct Backend
 	{
 		reg = reg & 0xF;
 
-		if (opd.GetType() == TYPE_REG) {
+		if (opd.IsReg()) {
 			db(0xC0 | reg << 3 | opd.GetReg() & 0xF);
-		} else if (opd.GetType() == TYPE_MEM) {
+		} else if (opd.IsMem()) {
 			int base = opd.GetBase();
 			int index = opd.GetIndex();
 			if (base != INVALID) base = base & 0xF;
@@ -483,18 +496,18 @@ struct Backend
 
 	void EncodeModRM(const Opd& reg, const Opd& r_m)
 	{
-		ASSERT(reg.GetType() == TYPE_REG && (r_m.GetType() == TYPE_REG || r_m.GetType() == TYPE_MEM));
+		ASSERT(reg.IsReg() && (r_m.IsReg() || r_m.IsMem()));
 		EncodeModRM(reg.GetReg(), r_m);
 	}
 
 	void EncodeADD(uint8 opcode, const Opd& opd1, const Opd& opd2)
 	{
-		if (opd2.GetType() == TYPE_IMM) {
+		if (opd2.IsImm()) {
 			const Opd& r_m = opd1;
 			const Opd& imm = opd2;
 
 #ifdef JITASM64
-			if (r_m.GetType() == TYPE_MEM && r_m.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
+			if (r_m.IsMem() && r_m.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
 			if (r_m.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
 			EncodeREX(Opd(), r_m);
 #else
@@ -507,7 +520,7 @@ struct Backend
 				db(imm.GetImm());
 			} else {
 				uint8 w = r_m.GetSize() != SIZE_INT8 ? 1 : 0;
-				if (r_m.GetType() == TYPE_REG && r_m.GetReg() == EAX) {
+				if (r_m.IsReg() && r_m.GetReg() == EAX) {
 					db(opcode | 4 | w);
 				} else {
 					db(0x80 | w);	// Immediate Grp 1
@@ -522,28 +535,40 @@ struct Backend
 		} else {
 			ASSERT(opd1.GetSize() == opd2.GetSize());
 
-			const Opd& reg = opd1.GetType() == TYPE_REG ? opd1 : opd2;
-			const Opd& r_m = opd1.GetType() == TYPE_REG ? opd2 : opd1;
+			const Opd& reg = opd1.IsReg() ? opd1 : opd2;
+			const Opd& r_m = opd1.IsReg() ? opd2 : opd1;
 
 #ifdef JITASM64
-			if (r_m.GetType() == TYPE_MEM && r_m.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
+			if (r_m.IsMem() && r_m.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
 			if (reg.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
 			EncodeREX(reg, r_m);
 #else
 			if (reg.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
 #endif
 
-			uint8 d = opd1.GetType() == TYPE_REG ? 1 : 0;
+			uint8 d = opd1.IsReg() ? 1 : 0;
 			uint8 w = reg.GetSize() != SIZE_INT8 ? 1 : 0;
 			db(opcode | d << 1 | w);
 			EncodeModRM(reg, r_m);
 		}
 	}
 
+	void EncodeCALL(const Opd& opd)
+	{
+		if (opd.IsReg()) {
+			if (opd.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
+			db(0xFF);
+			EncodeModRM(2, opd);
+		} else {
+			// TODO: Support for relative displacement
+			ASSERT(0);
+		}
+	}
+
 	void EncodeINC(uint8 opcode1, uint8 digit, const Opd& opd)
 	{
 #ifdef JITASM64
-		if (opd.GetType() == TYPE_MEM && opd.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
+		if (opd.IsMem() && opd.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
 		if (opd.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
 		EncodeREX(Opd(), opd);
 #else
@@ -556,7 +581,7 @@ struct Backend
 		db(0xFE | w);	// Grp4, Grp5
 		EncodeModRM(digit, opd);
 #else
-		if (opd.GetType() == TYPE_REG && w) {
+		if (opd.IsReg() && w) {
 			db(opcode1 | opd.GetReg() & 0xF);
 		} else {
 			db(0xFE | w);	// Grp4, Grp5
@@ -582,7 +607,7 @@ struct Backend
 	void EncodeLEA(const Opd& reg, const Opd& mem)
 	{
 #ifdef JITASM64
-		if (mem.GetType() == TYPE_MEM && mem.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
+		if (mem.IsMem() && mem.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
 		if (reg.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
 		EncodeREX(reg, mem);
 #else
@@ -595,12 +620,12 @@ struct Backend
 
 	void EncodeMOV(const Opd& opd1, const Opd& opd2)
 	{
-		if (opd2.GetType() == TYPE_IMM) {
+		if (opd2.IsImm()) {
 			const Opd& r_m = opd1;
 			const Opd& imm = opd2;
 
 #ifdef JITASM64
-			if (r_m.GetType() == TYPE_MEM && r_m.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
+			if (r_m.IsMem() && r_m.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
 			if (r_m.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
 			EncodeREX(Opd(), r_m);
 #else
@@ -616,7 +641,7 @@ struct Backend
 			}
 #endif
 			uint8 w = r_m.GetSize() != SIZE_INT8 ? 1 : 0;
-			if (r_m.GetType() == TYPE_REG) {
+			if (r_m.IsReg()) {
 				db(0xB0 | w << 3 | r_m.GetReg() & 0xF);
 			} else {
 				db(0xC6 | w);
@@ -633,18 +658,18 @@ struct Backend
 		} else {
 			ASSERT(opd1.GetSize() == opd2.GetSize());
 
-			const Opd& reg = opd1.GetType() == TYPE_REG ? opd1 : opd2;
-			const Opd& r_m = opd1.GetType() == TYPE_REG ? opd2 : opd1;
+			const Opd& reg = opd1.IsReg() ? opd1 : opd2;
+			const Opd& r_m = opd1.IsReg() ? opd2 : opd1;
 
 #ifdef JITASM64
-			if (r_m.GetType() == TYPE_MEM && r_m.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
+			if (r_m.IsMem() && r_m.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
 			if (reg.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
 			EncodeREX(reg, r_m);
 #else
 			if (reg.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
 #endif
 
-			uint8 d = opd1.GetType() == TYPE_REG ? 1 : 0;
+			uint8 d = opd1.IsReg() ? 1 : 0;
 			uint8 w = reg.GetSize() != SIZE_INT8 ? 1 : 0;
 			db(0x88 | d << 1 | w);
 			EncodeModRM(reg, r_m);
@@ -653,13 +678,13 @@ struct Backend
 
 	void EncodeMOVZX(const Opd& opd1, const Opd& opd2)
 	{
-		ASSERT(opd1.GetType() == TYPE_REG);
+		ASSERT(opd1.IsReg());
 
 		const Opd& reg = opd1;
 		const Opd& r_m = opd2;
 
 #ifdef JITASM64
-		if (r_m.GetType() == TYPE_MEM && r_m.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
+		if (r_m.IsMem() && r_m.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
 		if (reg.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
 		EncodeREX(reg, r_m);
 #else
@@ -674,7 +699,7 @@ struct Backend
 
 	void EncodePOP(uint8 opcode1, uint8 opcode2, uint8 digit, const Opd& opd)
 	{
-		if (opd.GetType() == TYPE_IMM) {
+		if (opd.IsImm()) {
 			if (opd.GetSize() == SIZE_INT8) {	// sign-extention
 				db(0x6A);
 				db(opd.GetImm());
@@ -684,15 +709,15 @@ struct Backend
 			}
 		} else {
 #ifdef JITASM64
-			if (opd.GetType() == TYPE_MEM && opd.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
+			if (opd.IsMem() && opd.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
 			if (opd.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
 #else
 			if (opd.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
 #endif
 
-			if (opd.GetType() == TYPE_REG) {
+			if (opd.IsReg()) {
 				db(opcode1 | opd.GetReg() & 0xF);
-			} else if (opd.GetType() == TYPE_MEM) {
+			} else if (opd.IsMem()) {
 				db(opcode2);
 				EncodeModRM(digit, opd);
 			}
@@ -702,19 +727,19 @@ struct Backend
 	void EncodeTEST(const Opd& opd1, const Opd& opd2)
 	{
 		uint8 w = opd1.GetSize() != SIZE_INT8 ? 1 : 0;
-		if (opd2.GetType() == TYPE_IMM) {
+		if (opd2.IsImm()) {
 			const Opd& r_m = opd1;
 			const Opd& imm = opd2;
 
 #ifdef JITASM64
-			if (r_m.GetType() == TYPE_MEM && r_m.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
+			if (r_m.IsMem() && r_m.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
 			if (r_m.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
 			EncodeREX(Opd(), r_m);
 #else
 			if (r_m.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
 #endif
 
-			if (r_m.GetType() == TYPE_REG && r_m.GetReg() == EAX) {
+			if (r_m.IsReg() && r_m.GetReg() == EAX) {
 				db(0xA8 | w);
 			} else {
 				db(0xF6 | w);
@@ -725,12 +750,12 @@ struct Backend
 			else if (r_m.GetSize() == SIZE_INT32) dd(imm.GetImm());
 			else if (r_m.GetSize() == SIZE_INT64) dd(imm.GetImm());	// sign-extention
 		} else {
-			ASSERT(opd2.GetType() == TYPE_REG);
-			const Opd& reg = opd1.GetType() == TYPE_REG ? opd1 : opd2;
-			const Opd& r_m = opd1.GetType() == TYPE_REG ? opd2 : opd1;
+			ASSERT(opd2.IsReg());
+			const Opd& reg = opd1.IsReg() ? opd1 : opd2;
+			const Opd& r_m = opd1.IsReg() ? opd2 : opd1;
 
 #ifdef JITASM64
-			if (r_m.GetType() == TYPE_MEM && r_m.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
+			if (r_m.IsMem() && r_m.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
 			if (reg.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
 			EncodeREX(reg, r_m);
 #else
@@ -744,18 +769,18 @@ struct Backend
 
 	void EncodeXCHG(const Opd& opd1, const Opd& opd2)
 	{
-		const Opd& reg = opd1.GetType() == TYPE_REG && (opd2.GetSize() == SIZE_INT8 || opd2.GetType() != TYPE_REG || opd2.GetReg() != EAX) ? opd1 : opd2;
+		const Opd& reg = opd1.IsReg() && (opd2.GetSize() == SIZE_INT8 || !opd2.IsReg() || opd2.GetReg() != EAX) ? opd1 : opd2;
 		const Opd& r_m = &reg == &opd1 ? opd2 : opd1;
 
 #ifdef JITASM64
-		if (r_m.GetType() == TYPE_MEM && r_m.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
+		if (r_m.IsMem() && r_m.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
 		if (reg.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
 		EncodeREX(reg, r_m);	// TODO: In 64-bit mode, r/m8 can not be encoded to access following byte registers if a REX prefix is used: AH, BH, CH, DH.
 #else
 		if (reg.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
 #endif
 
-		if (reg.GetSize() != SIZE_INT8 && r_m.GetType() == TYPE_REG) {
+		if (reg.GetSize() != SIZE_INT8 && r_m.IsReg()) {
 			if (reg.GetReg() == EAX) {
 				db(0x90 | r_m.GetReg() & 0xF);
 				return;
@@ -773,8 +798,8 @@ struct Backend
 
 	void EncodeMMX(uint8 opcode2, const Opd& opd1, const Opd& opd2)
 	{
-		const Opd& reg = opd1.GetType() == TYPE_REG ? opd1 : opd2;
-		const Opd& r_m = opd1.GetType() == TYPE_REG ? opd2 : opd1;
+		const Opd& reg = opd1.IsReg() ? opd1 : opd2;
+		const Opd& r_m = opd1.IsReg() ? opd2 : opd1;
 
 #ifdef JITASM64
 		EncodeREX(reg, r_m);
@@ -786,8 +811,8 @@ struct Backend
 
 	void EncodeMMX(uint8 opcode2, uint8 opcode3, const Opd& opd1, const Opd& opd2)
 	{
-		const Opd& reg = opd1.GetType() == TYPE_REG ? opd1 : opd2;
-		const Opd& r_m = opd1.GetType() == TYPE_REG ? opd2 : opd1;
+		const Opd& reg = opd1.IsReg() ? opd1 : opd2;
+		const Opd& r_m = opd1.IsReg() ? opd2 : opd1;
 
 #ifdef JITASM64
 		EncodeREX(reg, r_m);
@@ -839,8 +864,8 @@ struct Backend
 
 	void EncodeMMXorSSE2(uint8 prefix, uint8 opcode2, const Opd& opd1, const Opd& opd2)
 	{
-		if ((opd1.GetType() == TYPE_REG && opd1.GetSize() == SIZE_INT128) ||
-			(opd2.GetType() == TYPE_REG && opd2.GetSize() == SIZE_INT128)) {
+		if ((opd1.IsReg() && opd1.GetSize() == SIZE_INT128) ||
+			(opd2.IsReg() && opd2.GetSize() == SIZE_INT128)) {
 			EncodeSSE2(prefix, opcode2, opd1, opd2);
 		}
 		else {
@@ -850,8 +875,8 @@ struct Backend
 
 	void EncodeMMXorSSE2(uint8 prefix, uint8 opcode2, uint8 opcode3, const Opd& opd1, const Opd& opd2)
 	{
-		if ((opd1.GetType() == TYPE_REG && opd1.GetSize() == SIZE_INT128) ||
-			(opd2.GetType() == TYPE_REG && opd2.GetSize() == SIZE_INT128)) {
+		if ((opd1.IsReg() && opd1.GetSize() == SIZE_INT128) ||
+			(opd2.IsReg() && opd2.GetSize() == SIZE_INT128)) {
 			EncodeSSE2(prefix, opcode2, opcode3, opd1, opd2);
 		}
 		else {
@@ -861,7 +886,7 @@ struct Backend
 
 	void EncodeCLFLUSH(const Opd& opd)
 	{
-		ASSERT(opd.GetType() == TYPE_MEM && opd.GetSize() == SIZE_INT8);
+		ASSERT(opd.IsMem() && opd.GetSize() == SIZE_INT8);
 		db(0x0F);
 		db(0xAE);
 		EncodeModRM(7, opd);
@@ -869,11 +894,10 @@ struct Backend
 
 	void EncodeMOVQ(const Opd& opd1, const Opd& opd2)
 	{
-		const bool opd1_is_reg = (opd1.GetType() == TYPE_REG);
-		if ((opd1_is_reg ? opd1 : opd2).GetSize() == SIZE_INT64) {
-			EncodeMMX(0x6F | (opd1_is_reg ? 0 : 0x10), opd1, opd2);
+		if ((opd1.IsReg() ? opd1 : opd2).GetSize() == SIZE_INT64) {
+			EncodeMMX(0x6F | (opd1.IsReg() ? 0 : 0x10), opd1, opd2);
 		}
-		else if (opd1_is_reg) {
+		else if (opd1.IsReg()) {
 			EncodeSSE2(0xF3, 0x7E, opd1, opd2);
 		}
 		else {
@@ -886,13 +910,13 @@ struct Backend
 		const Opd& opd1 = instr.GetOpd(0);
 		const Opd& opd2 = instr.GetOpd(1);
 		const Opd& opd3 = instr.GetOpd(2);
-		const bool opd1_is_reg = (opd1.GetType() == TYPE_REG);
 
-		switch (instr.id_) {
+		switch (instr.GetID()) {
 		// General-Purpose Instructions
 		case INSTR_ADC:			EncodeADD(0x10, opd1, opd2); break;
 		case INSTR_ADD:			EncodeADD(0x00, opd1, opd2); break;
 		case INSTR_AND:			EncodeADD(0x20, opd1, opd2); break;
+		case INSTR_CALL:		EncodeCALL(opd1); break;
 		case INSTR_CMP:			EncodeADD(0x38, opd1, opd2); break;
 		case INSTR_DEC:			EncodeINC(0x48, 1, opd1); break;
 		case INSTR_INC:			EncodeINC(0x40, 0, opd1); break;
@@ -969,21 +993,21 @@ struct Backend
 		//case INSTR_MFENCE:
 		case INSTR_MINPD:		EncodeSSE2(0x66, 0x5D, opd1, opd2); break;
 		case INSTR_MINSD:		EncodeSSE2(0xF2, 0x5D, opd1, opd2); break;
-		case INSTR_MOVAPD:		EncodeSSE2(0x66, 0x28 | (opd1_is_reg ? 0 : 0x01), opd1, opd2); break;
+		case INSTR_MOVAPD:		EncodeSSE2(0x66, 0x28 | (opd1.IsReg() ? 0 : 0x01), opd1, opd2); break;
 		//case INSTR_MOVD:
 		case INSTR_MOVDQ2Q:		EncodeSSE2(0xF2, 0xD6, opd1, opd2); break;
-		case INSTR_MOVDQA:		EncodeSSE2(0x66, 0x6F | (opd1_is_reg ? 0 : 0x10), opd1, opd2); break;
-		case INSTR_MOVDQU:		EncodeSSE2(0xF3, 0x6F | (opd1_is_reg ? 0 : 0x10), opd1, opd2); break;
-		case INSTR_MOVHPD:		EncodeSSE2(0x66, 0x16 | (opd1_is_reg ? 0 : 0x01), opd1, opd2); break;
-		case INSTR_MOVLPD:		EncodeSSE2(0x66, 0x12 | (opd1_is_reg ? 0 : 0x01), opd1, opd2); break;
+		case INSTR_MOVDQA:		EncodeSSE2(0x66, 0x6F | (opd1.IsReg() ? 0 : 0x10), opd1, opd2); break;
+		case INSTR_MOVDQU:		EncodeSSE2(0xF3, 0x6F | (opd1.IsReg() ? 0 : 0x10), opd1, opd2); break;
+		case INSTR_MOVHPD:		EncodeSSE2(0x66, 0x16 | (opd1.IsReg() ? 0 : 0x01), opd1, opd2); break;
+		case INSTR_MOVLPD:		EncodeSSE2(0x66, 0x12 | (opd1.IsReg() ? 0 : 0x01), opd1, opd2); break;
 		case INSTR_MOVMSKPD:	EncodeSSE2(0x66, 0x50, opd1, opd2); break;
 		case INSTR_MOVNTPD:		EncodeSSE2(0x66, 0x2B, opd1, opd2); break;
 		case INSTR_MOVNTDQ:		EncodeSSE2(0x66, 0xE7, opd1, opd2); break;
 		//case INSTR_MOVNTI:
 		case INSTR_MOVQ:		EncodeMOVQ(opd1, opd2); break;
 		case INSTR_MOVQ2DQ:		EncodeSSE2(0xF3, 0xD6, opd1, opd2); break;
-		case INSTR_MOVSD:		EncodeSSE2(0xF2, 0x10 | (opd1_is_reg ? 0 : 0x01), opd1, opd2); break;
-		case INSTR_MOVUPD:		EncodeSSE2(0x66, 0x10 | (opd1_is_reg ? 0 : 0x01), opd1, opd2); break;
+		case INSTR_MOVSD:		EncodeSSE2(0xF2, 0x10 | (opd1.IsReg() ? 0 : 0x01), opd1, opd2); break;
+		case INSTR_MOVUPD:		EncodeSSE2(0x66, 0x10 | (opd1.IsReg() ? 0 : 0x01), opd1, opd2); break;
 		case INSTR_MULPD:		EncodeSSE2(0x66, 0x59, opd1, opd2); break;
 		case INSTR_MULSD:		EncodeSSE2(0xF2, 0x59, opd1, opd2); break;
 		case INSTR_ORPD:		EncodeSSE2(0x66, 0x56, opd1, opd2); break;
@@ -1130,6 +1154,9 @@ struct Frontend
 	Mmx mm0, mm1, mm2, mm3, mm4, mm5, mm6, mm7;
 	Xmm xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7;
 #ifdef JITASM64
+	Reg8 r8b, r9b, r10b, r11b, r12b, r13b, r14b, r15b;
+	Reg16 r8w, r9w, r10w, r11w, r12w, r13w, r14w, r15w;
+	Reg32 r8d, r9d, r10d, r11d, r12d, r13d, r14d, r15d;
 	Reg64 rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r10, r11, r12, r13, r14, r15;
 	Xmm xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15;
 #endif
@@ -1151,13 +1178,14 @@ struct Frontend
 		: al(AL), cl(CL), dl(DL), bl(BL), ah(AH), ch(CH), dh(DH), bh(BH),
 		ax(AX), cx(CX), dx(DX), bx(BX), sp(SP), bp(BP), si(SI), di(DI),
 		eax(EAX), ecx(ECX), edx(EDX), ebx(EBX), esp(ESP), ebp(EBP), esi(ESI), edi(EDI),
-#ifdef JITASM64
-		rax(RAX), rcx(RCX), rdx(RDX), rbx(RBX), rsp(RSP), rbp(RBP), rsi(RSI), rdi(RDI),
-		r8(R8), r9(R9), r10(R10), r11(R11), r12(R12), r13(R13), r14(R14), r15(R15),
-#endif
 		mm0(MM0), mm1(MM1), mm2(MM2), mm3(MM3), mm4(MM4), mm5(MM5), mm6(MM6), mm7(MM7),
 		xmm0(XMM0), xmm1(XMM1), xmm2(XMM2), xmm3(XMM3), xmm4(XMM4), xmm5(XMM5), xmm6(XMM6), xmm7(XMM7),
 #ifdef JITASM64
+		r8b(R8B), r9b(R9B), r10b(R10B), r11b(R11B), r12b(R12B), r13b(R13B), r14b(R14B), r15b(R15B),
+		r8w(R8W), r9w(R9W), r10w(R10W), r11w(R11W), r12w(R12W), r13w(R13W), r14w(R14W), r15w(R15W),
+		r8d(R8D), r9d(R9D), r10d(R10D), r11d(R11D), r12d(R12D), r13d(R13D), r14d(R14D), r15d(R15D),
+		rax(RAX), rcx(RCX), rdx(RDX), rbx(RBX), rsp(RSP), rbp(RBP), rsi(RSI), rdi(RDI),
+		r8(R8), r9(R9), r10(R10), r11(R11), r12(R12), r13(R13), r14(R14), r15(R15),
 		xmm8(XMM8), xmm9(XMM9), xmm10(XMM10), xmm11(XMM11), xmm12(XMM12), xmm13(XMM13), xmm14(XMM14), xmm15(XMM15),
 #endif
 #ifndef JITASM64
@@ -1165,7 +1193,6 @@ struct Frontend
 #else
 		zax(RAX), zcx(RCX), zdx(RDX), zbx(RBX), zsp(RSP), zbp(RBP), zsi(RSI), zdi(RDI)
 #endif
-
 	{
 	}
 
@@ -1216,13 +1243,13 @@ struct Frontend
 		ret();
 	}
 
-	bool IsJmpOrJcc(const Instr& instr) const
+	bool IsJmpOrJcc(InstrID id) const
 	{
-		return instr.GetID() == INSTR_JMP || instr.GetID() == INSTR_JA || instr.GetID() == INSTR_JAE || instr.GetID() == INSTR_JB
-			|| instr.GetID() == INSTR_JBE || instr.GetID() == INSTR_JCXZ || instr.GetID() == INSTR_JECXZ || instr.GetID() == INSTR_JRCXZ
-			|| instr.GetID() == INSTR_JE || instr.GetID() == INSTR_JG || instr.GetID() == INSTR_JGE || instr.GetID() == INSTR_JL
-			|| instr.GetID() == INSTR_JLE || instr.GetID() == INSTR_JNE || instr.GetID() == INSTR_JNO || instr.GetID() == INSTR_JNP
-			|| instr.GetID() == INSTR_JNS || instr.GetID() == INSTR_JO || instr.GetID() == INSTR_JP || instr.GetID() == INSTR_JS;
+		return id == INSTR_JMP || id == INSTR_JA || id == INSTR_JAE || id == INSTR_JB
+			|| id == INSTR_JBE || id == INSTR_JCXZ || id == INSTR_JECXZ || id == INSTR_JRCXZ
+			|| id == INSTR_JE || id == INSTR_JG || id == INSTR_JGE || id == INSTR_JL
+			|| id == INSTR_JLE || id == INSTR_JNE || id == INSTR_JNO || id == INSTR_JNP
+			|| id == INSTR_JNS || id == INSTR_JO || id == INSTR_JP || id == INSTR_JS;
 	}
 
 	size_t GetCodeSize(const Instr& instr) const
@@ -1232,19 +1259,19 @@ struct Frontend
 		return backend.GetSize();
 	}
 
-	// TODO: ジャンプの飛び先がないときにエラーにする！
+	// TODO: Return an error when there is no jump destination in jump is missing.
 	void ResolveJump()
 	{
-		// ラベルIDから行番号に変換
+		// Replace label indexes with instruncion numbers.
 		for (InstrList::iterator it = instrs_.begin(); it != instrs_.end(); ++it) {
 			Instr& instr = *it;
-			if (IsJmpOrJcc(instr.GetID())) {
+			if (IsJmpOrJcc(instr.GetID()) && instr.GetOpd(0).IsImm()) {
 				size_t label_id = (size_t) instr.GetOpd(0).GetImm();
-				instr = Instr(instr.GetID(), Opd(0x7F), Opd(labels_[label_id].instr_number));	// Opd1にサイズ, Opd2に行番号を設定
+				instr = Instr(instr.GetID(), Imm8(0xFF), Imm64(labels_[label_id].instr_number));	// opd1 = max value in sint8, opd2 = instruction number
 			}
 		}
 
-		// JMPのオペランドサイズを決める
+		// Resolve operand sizes.
 		std::vector<int> offsets;
 		offsets.reserve(instrs_.size() + 1);
 		bool retry;
@@ -1260,35 +1287,36 @@ struct Frontend
 			retry = false;
 			for (size_t i = 0; i < instrs_.size(); i++) {
 				Instr& instr = instrs_[i];
-				if (IsJmpOrJcc(instr.GetID())) {
+				if (IsJmpOrJcc(instr.GetID()) && instr.GetOpd(0).IsImm()) {
 					size_t d = (size_t) instr.GetOpd(1).GetImm();
 					int rel = offsets[d] - offsets[i] - (int) GetCodeSize(instr);
 					OpdSize size = instr.GetOpd(0).GetSize();
 					if (size == SIZE_INT8) {
 						if (!IsInt8(rel)) {
-							instr = Instr(instr.GetID(), Opd(0x7FFFFFFF), Opd(instr.GetOpd(1).GetImm()));	// 32ビットジャンプでリトライ
+							// Retry with immediate 32
+							instr = Instr(instr.GetID(), Imm32(0xFFFFFFFF), Imm64(instr.GetOpd(1).GetImm()));
 							retry = true;
 						}
 					} else if (size == SIZE_INT32) {
-						ASSERT(IsInt32(rel));	// 32ビット以上の即値JMPは存在しない
+						ASSERT(IsInt32(rel));	// There is no jump instruction larger than immediate 32.
 					}
 				}
 			}
 		} while (retry);
 
-		// JMPの距離を決定する
+		// Resolve immediates
 		for (size_t i = 0; i < instrs_.size(); i++) {
 			Instr& instr = instrs_[i];
-			if (IsJmpOrJcc(instr.GetID())) {
+			if (IsJmpOrJcc(instr.GetID()) && instr.GetOpd(0).IsImm()) {
 				size_t d = (size_t) instr.GetOpd(1).GetImm();
 				int rel = offsets[d] - offsets[i] - (int) GetCodeSize(instr);
 				OpdSize size = instr.GetOpd(0).GetSize();
 				if (size == SIZE_INT8) {
 					ASSERT(IsInt8(rel));
-					instr = Instr(instr.GetID(), Opd(rel));
+					instr = Instr(instr.GetID(), Imm8(rel));
 				} else if (size == SIZE_INT32) {
 					ASSERT(IsInt32(rel));
-					instr = Instr(instr.GetID(), Opd(rel));
+					instr = Instr(instr.GetID(), Imm32(rel));
 				}
 			}
 		}
@@ -1296,23 +1324,23 @@ struct Frontend
 
 	void Assemble()
 	{
-		// TODO: クリティカルセクションで包む？
-
-		// 初期化
 		instrs_.clear();
 		labels_.clear();
-
 		InternalMain();
+
+		// Resolve jmp/jcc instructions
 		if (!labels_.empty()) {
 			ResolveJump();
 		}
 
+		// Count total size of machine code
 		Backend pre;
 		for (InstrList::const_iterator it = instrs_.begin(); it != instrs_.end(); ++it) {
 			pre.Assemble(*it);
 		}
 		size_t buffsize = pre.GetSize();
 
+		// Write machine code to the buffer
 		buff_.Resize(buffsize);
 		Backend backend(buff_.GetPointer(), buff_.GetSize());
 		for (InstrList::const_iterator it = instrs_.begin(); it != instrs_.end(); ++it) {
@@ -1328,7 +1356,6 @@ struct Frontend
 	size_t get_label_id(const std::string& label_name)
 	{
 		for (size_t i = 0; i < labels_.size(); i++) {
-			// if (labels_[i].label_name == label_name) {
 			if (labels_[i].label_name.compare(label_name) == 0) {
 				return i;
 			}
@@ -1342,93 +1369,101 @@ struct Frontend
 	void label(const std::string& label_name)
 	{
 		size_t label_id = get_label_id(label_name);
-		labels_[label_id].instr_number = instrs_.size();	// label current line
+		labels_[label_id].instr_number = instrs_.size();	// Label current instruction
 	}
 
 	// ALIGN
 	void align(size_t n)
 	{
-		PushBack(Instr(INSTR_PSEUDO_ALIGN, Opd(n)));
+		PushBack(Instr(INSTR_PSEUDO_ALIGN, Imm64(n)));
 	}
 
 	// ADC
 	void adc(const Reg8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_ADC, opd1, opd2));}
 	void adc(const Reg8& opd1, const Mem8& opd2) {PushBack(Instr(INSTR_ADC, opd1, opd2));}
 	void adc(const Mem8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_ADC, opd1, opd2));}
-	void adc(const Opd8& opd1, uint8 imm) {PushBack(Instr(INSTR_ADC, opd1, Opd((sint8) imm)));}
+	void adc(const Opd8& opd1, uint8 imm) {PushBack(Instr(INSTR_ADC, opd1, Imm8(imm)));}
 	void adc(const Reg16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_ADC, opd1, opd2));}
 	void adc(const Reg16& opd1, const Mem16& opd2) {PushBack(Instr(INSTR_ADC, opd1, opd2));}
 	void adc(const Mem16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_ADC, opd1, opd2));}
-	void adc(const Opd16& opd1, uint16 imm) {PushBack(Instr(INSTR_ADC, opd1, Opd((sint16) imm)));}
+	void adc(const Opd16& opd1, uint16 imm) {PushBack(Instr(INSTR_ADC, opd1, Imm16(imm)));}
 	void adc(const Reg32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_ADC, opd1, opd2));}
 	void adc(const Reg32& opd1, const Mem32& opd2) {PushBack(Instr(INSTR_ADC, opd1, opd2));}
 	void adc(const Mem32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_ADC, opd1, opd2));}
-	void adc(const Opd32& opd1, uint32 imm) {PushBack(Instr(INSTR_ADC, opd1, Opd((sint32) imm)));}
+	void adc(const Opd32& opd1, uint32 imm) {PushBack(Instr(INSTR_ADC, opd1, Imm32(imm)));}
 #ifdef JITASM64
 	void adc(const Reg64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_ADC, opd1, opd2));}
 	void adc(const Reg64& opd1, const Mem64& opd2) {PushBack(Instr(INSTR_ADC, opd1, opd2));}
 	void adc(const Mem64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_ADC, opd1, opd2));}
-	void adc(const Opd64& opd1, uint32 imm) {PushBack(Instr(INSTR_ADC, opd1, Opd((sint32) imm)));}
+	void adc(const Opd64& opd1, uint32 imm) {PushBack(Instr(INSTR_ADC, opd1, Imm32(imm)));}
 #endif
 
 	// ADD
 	void add(const Reg8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_ADD, opd1, opd2));}
 	void add(const Reg8& opd1, const Mem8& opd2) {PushBack(Instr(INSTR_ADD, opd1, opd2));}
 	void add(const Mem8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_ADD, opd1, opd2));}
-	void add(const Opd8& opd1, uint8 imm) {PushBack(Instr(INSTR_ADD, opd1, Opd((sint8) imm)));}
+	void add(const Opd8& opd1, uint8 imm) {PushBack(Instr(INSTR_ADD, opd1, Imm8(imm)));}
 	void add(const Reg16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_ADD, opd1, opd2));}
 	void add(const Reg16& opd1, const Mem16& opd2) {PushBack(Instr(INSTR_ADD, opd1, opd2));}
 	void add(const Mem16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_ADD, opd1, opd2));}
-	void add(const Opd16& opd1, uint16 imm) {PushBack(Instr(INSTR_ADD, opd1, Opd((sint16) imm)));}
+	void add(const Opd16& opd1, uint16 imm) {PushBack(Instr(INSTR_ADD, opd1, Imm16(imm)));}
 	void add(const Reg32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_ADD, opd1, opd2));}
 	void add(const Reg32& opd1, const Mem32& opd2) {PushBack(Instr(INSTR_ADD, opd1, opd2));}
 	void add(const Mem32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_ADD, opd1, opd2));}
-	void add(const Opd32& opd1, uint32 imm) {PushBack(Instr(INSTR_ADD, opd1, Opd((sint32) imm)));}
+	void add(const Opd32& opd1, uint32 imm) {PushBack(Instr(INSTR_ADD, opd1, Imm32(imm)));}
 #ifdef JITASM64
 	void add(const Reg64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_ADD, opd1, opd2));}
 	void add(const Reg64& opd1, const Mem64& opd2) {PushBack(Instr(INSTR_ADD, opd1, opd2));}
 	void add(const Mem64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_ADD, opd1, opd2));}
-	void add(const Opd64& opd1, uint32 imm) {PushBack(Instr(INSTR_ADD, opd1, Opd((sint32) imm)));}
+	void add(const Opd64& opd1, uint32 imm) {PushBack(Instr(INSTR_ADD, opd1, Imm32(imm)));}
 #endif
 
 	// AND
 	void and(const Reg8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_AND, opd1, opd2));}
 	void and(const Reg8& opd1, const Mem8& opd2) {PushBack(Instr(INSTR_AND, opd1, opd2));}
 	void and(const Mem8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_AND, opd1, opd2));}
-	void and(const Opd8& opd1, uint8 imm) {PushBack(Instr(INSTR_AND, opd1, Opd((sint8) imm)));}
+	void and(const Opd8& opd1, uint8 imm) {PushBack(Instr(INSTR_AND, opd1, Imm8(imm)));}
 	void and(const Reg16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_AND, opd1, opd2));}
 	void and(const Reg16& opd1, const Mem16& opd2) {PushBack(Instr(INSTR_AND, opd1, opd2));}
 	void and(const Mem16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_AND, opd1, opd2));}
-	void and(const Opd16& opd1, uint16 imm) {PushBack(Instr(INSTR_AND, opd1, Opd((sint16) imm)));}
+	void and(const Opd16& opd1, uint16 imm) {PushBack(Instr(INSTR_AND, opd1, Imm16(imm)));}
 	void and(const Reg32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_AND, opd1, opd2));}
 	void and(const Reg32& opd1, const Mem32& opd2) {PushBack(Instr(INSTR_AND, opd1, opd2));}
 	void and(const Mem32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_AND, opd1, opd2));}
-	void and(const Opd32& opd1, uint32 imm) {PushBack(Instr(INSTR_AND, opd1, Opd((sint32) imm)));}
+	void and(const Opd32& opd1, uint32 imm) {PushBack(Instr(INSTR_AND, opd1, Imm32(imm)));}
 #ifdef JITASM64
 	void and(const Reg64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_AND, opd1, opd2));}
 	void and(const Reg64& opd1, const Mem64& opd2) {PushBack(Instr(INSTR_AND, opd1, opd2));}
 	void and(const Mem64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_AND, opd1, opd2));}
-	void and(const Opd64& opd1, uint32 imm) {PushBack(Instr(INSTR_AND, opd1, Opd((sint32) imm)));}
+	void and(const Opd64& opd1, uint32 imm) {PushBack(Instr(INSTR_AND, opd1, Imm32(imm)));}
+#endif
+
+	// CALL
+#ifndef JITASM64
+	void call(const Reg16& opd) {PushBack(Instr(INSTR_CALL, opd));}
+	void call(const Reg32& opd) {PushBack(Instr(INSTR_CALL, opd));}
+#else
+	void call(const Reg64& opd) {PushBack(Instr(INSTR_CALL, opd));}
 #endif
 
 	// CMP
 	void cmp(const Reg8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_CMP, opd1, opd2));}
 	void cmp(const Reg8& opd1, const Mem8& opd2) {PushBack(Instr(INSTR_CMP, opd1, opd2));}
 	void cmp(const Mem8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_CMP, opd1, opd2));}
-	void cmp(const Opd8& opd1, uint8 imm) {PushBack(Instr(INSTR_CMP, opd1, Opd((sint8) imm)));}
+	void cmp(const Opd8& opd1, uint8 imm) {PushBack(Instr(INSTR_CMP, opd1, Imm8(imm)));}
 	void cmp(const Reg16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_CMP, opd1, opd2));}
 	void cmp(const Reg16& opd1, const Mem16& opd2) {PushBack(Instr(INSTR_CMP, opd1, opd2));}
 	void cmp(const Mem16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_CMP, opd1, opd2));}
-	void cmp(const Opd16& opd1, uint16 imm) {PushBack(Instr(INSTR_CMP, opd1, Opd((sint16) imm)));}
+	void cmp(const Opd16& opd1, uint16 imm) {PushBack(Instr(INSTR_CMP, opd1, Imm16(imm)));}
 	void cmp(const Reg32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_CMP, opd1, opd2));}
 	void cmp(const Reg32& opd1, const Mem32& opd2) {PushBack(Instr(INSTR_CMP, opd1, opd2));}
 	void cmp(const Mem32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_CMP, opd1, opd2));}
-	void cmp(const Opd32& opd1, uint32 imm) {PushBack(Instr(INSTR_CMP, opd1, Opd((sint32) imm)));}
+	void cmp(const Opd32& opd1, uint32 imm) {PushBack(Instr(INSTR_CMP, opd1, Imm32(imm)));}
 #ifdef JITASM64
 	void cmp(const Reg64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_CMP, opd1, opd2));}
 	void cmp(const Reg64& opd1, const Mem64& opd2) {PushBack(Instr(INSTR_CMP, opd1, opd2));}
 	void cmp(const Mem64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_CMP, opd1, opd2));}
-	void cmp(const Opd64& opd1, uint32 imm) {PushBack(Instr(INSTR_CMP, opd1, Opd((sint32) imm)));}
+	void cmp(const Opd64& opd1, uint32 imm) {PushBack(Instr(INSTR_CMP, opd1, Imm32(imm)));}
 #endif
 
 	// DEC
@@ -1448,42 +1483,42 @@ struct Frontend
 #endif
 
 	// JMP
-	void jmp(const std::string& label_name) {PushBack(Instr(INSTR_JMP, Opd(get_label_id(label_name))));}
-	void ja(const std::string& label_name) {PushBack(Instr(INSTR_JA, Opd(get_label_id(label_name))));}
-	void jae(const std::string& label_name) {PushBack(Instr(INSTR_JAE, Opd(get_label_id(label_name))));}
-	void jb(const std::string& label_name) {PushBack(Instr(INSTR_JB, Opd(get_label_id(label_name))));}
-	void jbe(const std::string& label_name) {PushBack(Instr(INSTR_JBE, Opd(get_label_id(label_name))));}
+	void jmp(const std::string& label_name) {PushBack(Instr(INSTR_JMP, Imm64(get_label_id(label_name))));}
+	void ja(const std::string& label_name) {PushBack(Instr(INSTR_JA, Imm64(get_label_id(label_name))));}
+	void jae(const std::string& label_name) {PushBack(Instr(INSTR_JAE, Imm64(get_label_id(label_name))));}
+	void jb(const std::string& label_name) {PushBack(Instr(INSTR_JB, Imm64(get_label_id(label_name))));}
+	void jbe(const std::string& label_name) {PushBack(Instr(INSTR_JBE, Imm64(get_label_id(label_name))));}
 	void jc(const std::string& label_name) {jb(label_name);}
-	void jecxz(const std::string& label_name) {PushBack(Instr(INSTR_JECXZ, Opd(get_label_id(label_name))));}
+	void jecxz(const std::string& label_name) {PushBack(Instr(INSTR_JECXZ, Imm64(get_label_id(label_name))));}
 #ifdef JITASM64
-	void jrcxz (const std::string& label_name) {PushBack(Instr(INSTR_JRCXZ, Opd(get_label_id(label_name))));}
+	void jrcxz (const std::string& label_name) {PushBack(Instr(INSTR_JRCXZ, Imm64(get_label_id(label_name))));}
 #else
-	void jcxz(const std::string& label_name) {PushBack(Instr(INSTR_JCXZ, Opd(get_label_id(label_name))));}
+	void jcxz(const std::string& label_name) {PushBack(Instr(INSTR_JCXZ, Imm64(get_label_id(label_name))));}
 #endif
-	void je(const std::string& label_name) {PushBack(Instr(INSTR_JE, Opd(get_label_id(label_name))));}
-	void jg(const std::string& label_name) {PushBack(Instr(INSTR_JG, Opd(get_label_id(label_name))));}
-	void jge(const std::string& label_name) {PushBack(Instr(INSTR_JGE, Opd(get_label_id(label_name))));}
-	void jl(const std::string& label_name) {PushBack(Instr(INSTR_JL, Opd(get_label_id(label_name))));}
-	void jle(const std::string& label_name) {PushBack(Instr(INSTR_JLE, Opd(get_label_id(label_name))));}
+	void je(const std::string& label_name) {PushBack(Instr(INSTR_JE, Imm64(get_label_id(label_name))));}
+	void jg(const std::string& label_name) {PushBack(Instr(INSTR_JG, Imm64(get_label_id(label_name))));}
+	void jge(const std::string& label_name) {PushBack(Instr(INSTR_JGE, Imm64(get_label_id(label_name))));}
+	void jl(const std::string& label_name) {PushBack(Instr(INSTR_JL, Imm64(get_label_id(label_name))));}
+	void jle(const std::string& label_name) {PushBack(Instr(INSTR_JLE, Imm64(get_label_id(label_name))));}
 	void jna(const std::string& label_name) {jbe(label_name);}
 	void jnae(const std::string& label_name) {jb(label_name);}
 	void jnb(const std::string& label_name) {jae(label_name);}
 	void jnbe(const std::string& label_name) {ja(label_name);}
 	void jnc(const std::string& label_name) {jae(label_name);}
-	void jne(const std::string& label_name) {PushBack(Instr(INSTR_JNE, Opd(get_label_id(label_name))));}
+	void jne(const std::string& label_name) {PushBack(Instr(INSTR_JNE, Imm64(get_label_id(label_name))));}
 	void jng(const std::string& label_name) {jle(label_name);}
 	void jnge(const std::string& label_name) {jl(label_name);}
 	void jnl(const std::string& label_name) {jge(label_name);}
 	void jnle(const std::string& label_name) {jg(label_name);}
-	void jno(const std::string& label_name) {PushBack(Instr(INSTR_JNO, Opd(get_label_id(label_name))));}
-	void jnp(const std::string& label_name) {PushBack(Instr(INSTR_JNP, Opd(get_label_id(label_name))));}
-	void jns(const std::string& label_name) {PushBack(Instr(INSTR_JNS, Opd(get_label_id(label_name))));}
+	void jno(const std::string& label_name) {PushBack(Instr(INSTR_JNO, Imm64(get_label_id(label_name))));}
+	void jnp(const std::string& label_name) {PushBack(Instr(INSTR_JNP, Imm64(get_label_id(label_name))));}
+	void jns(const std::string& label_name) {PushBack(Instr(INSTR_JNS, Imm64(get_label_id(label_name))));}
 	void jnz(const std::string& label_name) {jne(label_name);}
-	void jo(const std::string& label_name) {PushBack(Instr(INSTR_JO, Opd(get_label_id(label_name))));}
-	void jp(const std::string& label_name) {PushBack(Instr(INSTR_JP, Opd(get_label_id(label_name))));}
+	void jo(const std::string& label_name) {PushBack(Instr(INSTR_JO, Imm64(get_label_id(label_name))));}
+	void jp(const std::string& label_name) {PushBack(Instr(INSTR_JP, Imm64(get_label_id(label_name))));}
 	void jpe(const std::string& label_name) {jp(label_name);}
 	void jpo(const std::string& label_name) {jnp(label_name);}
-	void js(const std::string& label_name) {PushBack(Instr(INSTR_JS, Opd(get_label_id(label_name))));}
+	void js(const std::string& label_name) {PushBack(Instr(INSTR_JS, Imm64(get_label_id(label_name))));}
 	void jz(const std::string& label_name) {je(label_name);}
 
 	// LEA
@@ -1500,20 +1535,20 @@ struct Frontend
 	void mov(const Reg8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_MOV, opd1, opd2));}
 	void mov(const Reg8& opd1, const Mem8& opd2) {PushBack(Instr(INSTR_MOV, opd1, opd2));}
 	void mov(const Mem8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_MOV, opd1, opd2));}
-	void mov(const Opd8& opd1, uint8 imm) {PushBack(Instr(INSTR_MOV, opd1, Opd((sint8) imm)));}
+	void mov(const Opd8& opd1, uint8 imm) {PushBack(Instr(INSTR_MOV, opd1, Imm8(imm)));}
 	void mov(const Reg16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_MOV, opd1, opd2));}
 	void mov(const Reg16& opd1, const Mem16& opd2) {PushBack(Instr(INSTR_MOV, opd1, opd2));}
 	void mov(const Mem16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_MOV, opd1, opd2));}
-	void mov(const Opd16& opd1, uint16 imm) {PushBack(Instr(INSTR_MOV, opd1, Opd((sint16) imm)));}
+	void mov(const Opd16& opd1, uint16 imm) {PushBack(Instr(INSTR_MOV, opd1, Imm16(imm)));}
 	void mov(const Reg32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_MOV, opd1, opd2));}
 	void mov(const Reg32& opd1, const Mem32& opd2) {PushBack(Instr(INSTR_MOV, opd1, opd2));}
 	void mov(const Mem32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_MOV, opd1, opd2));}
-	void mov(const Opd32& opd1, uint32 imm) {PushBack(Instr(INSTR_MOV, opd1, Opd((sint32) imm)));}
+	void mov(const Opd32& opd1, uint32 imm) {PushBack(Instr(INSTR_MOV, opd1, Imm32(imm)));}
 #ifdef JITASM64
 	void mov(const Reg64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_MOV, opd1, opd2));}
 	void mov(const Reg64& opd1, const Mem64& opd2) {PushBack(Instr(INSTR_MOV, opd1, opd2));}
 	void mov(const Mem64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_MOV, opd1, opd2));}
-	void mov(const Opd64& opd1, uint64 imm) {PushBack(Instr(INSTR_MOV, opd1, Opd((sint64) imm)));}
+	void mov(const Opd64& opd1, uint64 imm) {PushBack(Instr(INSTR_MOV, opd1, Imm64(imm)));}
 #endif
  
 	// MOVZX
@@ -1532,20 +1567,20 @@ struct Frontend
 	void or(const Reg8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_OR, opd1, opd2));}
 	void or(const Reg8& opd1, const Mem8& opd2) {PushBack(Instr(INSTR_OR, opd1, opd2));}
 	void or(const Mem8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_OR, opd1, opd2));}
-	void or(const Opd8& opd1, uint8 imm) {PushBack(Instr(INSTR_OR, opd1, Opd((sint8) imm)));}
+	void or(const Opd8& opd1, uint8 imm) {PushBack(Instr(INSTR_OR, opd1, Imm8(imm)));}
 	void or(const Reg16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_OR, opd1, opd2));}
 	void or(const Reg16& opd1, const Mem16& opd2) {PushBack(Instr(INSTR_OR, opd1, opd2));}
 	void or(const Mem16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_OR, opd1, opd2));}
-	void or(const Opd16& opd1, uint16 imm) {PushBack(Instr(INSTR_OR, opd1, Opd((sint16) imm)));}
+	void or(const Opd16& opd1, uint16 imm) {PushBack(Instr(INSTR_OR, opd1, Imm16(imm)));}
 	void or(const Reg32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_OR, opd1, opd2));}
 	void or(const Reg32& opd1, const Mem32& opd2) {PushBack(Instr(INSTR_OR, opd1, opd2));}
 	void or(const Mem32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_OR, opd1, opd2));}
-	void or(const Opd32& opd1, uint32 imm) {PushBack(Instr(INSTR_OR, opd1, Opd((sint32) imm)));}
+	void or(const Opd32& opd1, uint32 imm) {PushBack(Instr(INSTR_OR, opd1, Imm32(imm)));}
 #ifdef JITASM64
 	void or(const Reg64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_OR, opd1, opd2));}
 	void or(const Reg64& opd1, const Mem64& opd2) {PushBack(Instr(INSTR_OR, opd1, opd2));}
 	void or(const Mem64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_OR, opd1, opd2));}
-	void or(const Opd64& opd1, uint32 imm) {PushBack(Instr(INSTR_OR, opd1, Opd((sint32) imm)));}
+	void or(const Opd64& opd1, uint32 imm) {PushBack(Instr(INSTR_OR, opd1, Imm32(imm)));}
 #endif
 
 	// POP
@@ -1563,7 +1598,7 @@ struct Frontend
 #else
 	void push(const Opd32& opd) {PushBack(Instr(INSTR_PUSH, opd));}
 #endif
-	void push(uint64 imm) {PushBack(Instr(INSTR_PUSH, Opd((sint64) imm)));}
+	void push(uint64 imm) {PushBack(Instr(INSTR_PUSH, Imm64(imm)));}
 
 	// RET
 	void ret() {PushBack(Instr(INSTR_RET));}
@@ -1572,51 +1607,51 @@ struct Frontend
 	void sbb(const Reg8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_SBB, opd1, opd2));}
 	void sbb(const Reg8& opd1, const Mem8& opd2) {PushBack(Instr(INSTR_SBB, opd1, opd2));}
 	void sbb(const Mem8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_SBB, opd1, opd2));}
-	void sbb(const Opd8& opd1, uint8 imm) {PushBack(Instr(INSTR_SBB, opd1, Opd((sint8) imm)));}
+	void sbb(const Opd8& opd1, uint8 imm) {PushBack(Instr(INSTR_SBB, opd1, Imm8(imm)));}
 	void sbb(const Reg16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_SBB, opd1, opd2));}
 	void sbb(const Reg16& opd1, const Mem16& opd2) {PushBack(Instr(INSTR_SBB, opd1, opd2));}
 	void sbb(const Mem16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_SBB, opd1, opd2));}
-	void sbb(const Opd16& opd1, uint16 imm) {PushBack(Instr(INSTR_SBB, opd1, Opd((sint16) imm)));}
+	void sbb(const Opd16& opd1, uint16 imm) {PushBack(Instr(INSTR_SBB, opd1, Imm16(imm)));}
 	void sbb(const Reg32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_SBB, opd1, opd2));}
 	void sbb(const Reg32& opd1, const Mem32& opd2) {PushBack(Instr(INSTR_SBB, opd1, opd2));}
 	void sbb(const Mem32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_SBB, opd1, opd2));}
-	void sbb(const Opd32& opd1, uint32 imm) {PushBack(Instr(INSTR_SBB, opd1, Opd((sint32) imm)));}
+	void sbb(const Opd32& opd1, uint32 imm) {PushBack(Instr(INSTR_SBB, opd1, Imm32(imm)));}
 #ifdef JITASM64
 	void sbb(const Reg64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_SBB, opd1, opd2));}
 	void sbb(const Reg64& opd1, const Mem64& opd2) {PushBack(Instr(INSTR_SBB, opd1, opd2));}
 	void sbb(const Mem64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_SBB, opd1, opd2));}
-	void sbb(const Opd64& opd1, uint32 imm) {PushBack(Instr(INSTR_SBB, opd1, Opd((sint32) imm)));}
+	void sbb(const Opd64& opd1, uint32 imm) {PushBack(Instr(INSTR_SBB, opd1, Imm32(imm)));}
 #endif
 
 	// SUB
 	void sub(const Reg8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_SUB, opd1, opd2));}
 	void sub(const Reg8& opd1, const Mem8& opd2) {PushBack(Instr(INSTR_SUB, opd1, opd2));}
 	void sub(const Mem8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_SUB, opd1, opd2));}
-	void sub(const Opd8& opd1, uint8 imm) {PushBack(Instr(INSTR_SUB, opd1, Opd((sint8) imm)));}
+	void sub(const Opd8& opd1, uint8 imm) {PushBack(Instr(INSTR_SUB, opd1, Imm8(imm)));}
 	void sub(const Reg16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_SUB, opd1, opd2));}
 	void sub(const Reg16& opd1, const Mem16& opd2) {PushBack(Instr(INSTR_SUB, opd1, opd2));}
 	void sub(const Mem16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_SUB, opd1, opd2));}
-	void sub(const Opd16& opd1, uint16 imm) {PushBack(Instr(INSTR_SUB, opd1, Opd((sint16) imm)));}
+	void sub(const Opd16& opd1, uint16 imm) {PushBack(Instr(INSTR_SUB, opd1, Imm16(imm)));}
 	void sub(const Reg32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_SUB, opd1, opd2));}
 	void sub(const Reg32& opd1, const Mem32& opd2) {PushBack(Instr(INSTR_SUB, opd1, opd2));}
 	void sub(const Mem32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_SUB, opd1, opd2));}
-	void sub(const Opd32& opd1, uint32 imm) {PushBack(Instr(INSTR_SUB, opd1, Opd((sint32) imm)));}
+	void sub(const Opd32& opd1, uint32 imm) {PushBack(Instr(INSTR_SUB, opd1, Imm32(imm)));}
 #ifdef JITASM64
 	void sub(const Reg64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_SUB, opd1, opd2));}
 	void sub(const Reg64& opd1, const Mem64& opd2) {PushBack(Instr(INSTR_SUB, opd1, opd2));}
 	void sub(const Mem64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_SUB, opd1, opd2));}
-	void sub(const Opd64& opd1, uint32 imm) {PushBack(Instr(INSTR_SUB, opd1, Opd((sint32) imm)));}
+	void sub(const Opd64& opd1, uint32 imm) {PushBack(Instr(INSTR_SUB, opd1, Imm32(imm)));}
 #endif
 
 	// TEST
-	void test(const Opd8& opd1, uint8 imm) {PushBack(Instr(INSTR_TEST, opd1, Opd((sint8) imm)));}
+	void test(const Opd8& opd1, uint8 imm) {PushBack(Instr(INSTR_TEST, opd1, Imm8(imm)));}
 	void test(const Opd8& opd1, Reg8& opd2) {PushBack(Instr(INSTR_TEST, opd1, opd2));}
-	void test(const Opd16& opd1, uint16 imm) {PushBack(Instr(INSTR_TEST, opd1, Opd((sint16) imm)));}
+	void test(const Opd16& opd1, uint16 imm) {PushBack(Instr(INSTR_TEST, opd1, Imm16(imm)));}
 	void test(const Opd16& opd1, Reg16& opd2) {PushBack(Instr(INSTR_TEST, opd1, opd2));}
-	void test(const Opd32& opd1, uint32 imm) {PushBack(Instr(INSTR_TEST, opd1, Opd((sint32) imm)));}
+	void test(const Opd32& opd1, uint32 imm) {PushBack(Instr(INSTR_TEST, opd1, Imm32(imm)));}
 	void test(const Opd32& opd1, Reg32& opd2) {PushBack(Instr(INSTR_TEST, opd1, opd2));}
 #ifdef JITASM64
-	void test(const Opd64& opd1, uint32 imm) {PushBack(Instr(INSTR_TEST, opd1, Opd((sint32) imm)));}
+	void test(const Opd64& opd1, uint32 imm) {PushBack(Instr(INSTR_TEST, opd1, Imm32(imm)));}
 	void test(const Opd64& opd1, Reg64& opd2) {PushBack(Instr(INSTR_TEST, opd1, opd2));}
 #endif
 
@@ -1640,20 +1675,20 @@ struct Frontend
 	void xor(const Reg8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_XOR, opd1, opd2));}
 	void xor(const Reg8& opd1, const Mem8& opd2) {PushBack(Instr(INSTR_XOR, opd1, opd2));}
 	void xor(const Mem8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_XOR, opd1, opd2));}
-	void xor(const Opd8& opd1, uint8 imm) {PushBack(Instr(INSTR_XOR, opd1, Opd((sint8) imm)));}
+	void xor(const Opd8& opd1, uint8 imm) {PushBack(Instr(INSTR_XOR, opd1, Imm8(imm)));}
 	void xor(const Reg16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_XOR, opd1, opd2));}
 	void xor(const Reg16& opd1, const Mem16& opd2) {PushBack(Instr(INSTR_XOR, opd1, opd2));}
 	void xor(const Mem16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_XOR, opd1, opd2));}
-	void xor(const Opd16& opd1, uint16 imm) {PushBack(Instr(INSTR_XOR, opd1, Opd((sint16) imm)));}
+	void xor(const Opd16& opd1, uint16 imm) {PushBack(Instr(INSTR_XOR, opd1, Imm16(imm)));}
 	void xor(const Reg32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_XOR, opd1, opd2));}
 	void xor(const Reg32& opd1, const Mem32& opd2) {PushBack(Instr(INSTR_XOR, opd1, opd2));}
 	void xor(const Mem32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_XOR, opd1, opd2));}
-	void xor(const Opd32& opd1, uint32 imm) {PushBack(Instr(INSTR_XOR, opd1, Opd((sint32) imm)));}
+	void xor(const Opd32& opd1, uint32 imm) {PushBack(Instr(INSTR_XOR, opd1, Imm32(imm)));}
 #ifdef JITASM64
 	void xor(const Reg64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_XOR, opd1, opd2));}
 	void xor(const Reg64& opd1, const Mem64& opd2) {PushBack(Instr(INSTR_XOR, opd1, opd2));}
 	void xor(const Mem64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_XOR, opd1, opd2));}
-	void xor(const Opd64& opd1, uint32 imm) {PushBack(Instr(INSTR_XOR, opd1, Opd((sint32) imm)));}
+	void xor(const Opd64& opd1, uint32 imm) {PushBack(Instr(INSTR_XOR, opd1, Imm32(imm)));}
 #endif
 
 	void addpd(const Xmm& opd1, const Xmm& opd2)	{PushBack(Instr(INSTR_ADDPD, opd1, opd2));}
@@ -1668,8 +1703,8 @@ struct Frontend
 
 	void clflush(const Mem8& opd) {PushBack(Instr(INSTR_CLFLUSH, opd));}
 
-	void cmppd(const Xmm& opd1, const Xmm& opd2, uint8 opd3)	{PushBack(Instr(INSTR_CMPPD, opd1, opd2, Opd(opd3)));}
-	void cmppd(const Xmm& opd1, const Mem128& opd2, uint8 opd3)	{PushBack(Instr(INSTR_CMPPD, opd1, opd2, Opd(opd3)));}
+	void cmppd(const Xmm& opd1, const Xmm& opd2, uint8 opd3)	{PushBack(Instr(INSTR_CMPPD, opd1, opd2, Imm8(opd3)));}
+	void cmppd(const Xmm& opd1, const Mem128& opd2, uint8 opd3)	{PushBack(Instr(INSTR_CMPPD, opd1, opd2, Imm8(opd3)));}
 	void cmpeqpd(const Xmm& opd1, const Xmm& opd2)				{cmppd(opd1, opd2, 0);}
 	void cmpeqpd(const Xmm& opd1, const Mem128& opd2)			{cmppd(opd1, opd2, 0);}
 	void cmpltpd(const Xmm& opd1, const Xmm& opd2)				{cmppd(opd1, opd2, 1);}
@@ -1687,8 +1722,8 @@ struct Frontend
 	void cmpordpd(const Xmm& opd1, const Xmm& opd2)				{cmppd(opd1, opd2, 7);}
 	void cmpordpd(const Xmm& opd1, const Mem128& opd2)			{cmppd(opd1, opd2, 7);}
 
-	void cmpps(const Xmm& opd1, const Xmm& opd2, uint8 opd3)	{PushBack(Instr(INSTR_CMPPS, opd1, opd2, Opd(opd3)));}
-	void cmpps(const Xmm& opd1, const Mem128& opd2, uint8 opd3)	{PushBack(Instr(INSTR_CMPPS, opd1, opd2, Opd(opd3)));}
+	void cmpps(const Xmm& opd1, const Xmm& opd2, uint8 opd3)	{PushBack(Instr(INSTR_CMPPS, opd1, opd2, Imm8(opd3)));}
+	void cmpps(const Xmm& opd1, const Mem128& opd2, uint8 opd3)	{PushBack(Instr(INSTR_CMPPS, opd1, opd2, Imm8(opd3)));}
 	void cmpeqps(const Xmm& opd1, const Xmm& opd2)				{cmpps(opd1, opd2, 0);}
 	void cmpeqps(const Xmm& opd1, const Mem128& opd2)			{cmpps(opd1, opd2, 0);}
 	void cmpltps(const Xmm& opd1, const Xmm& opd2)				{cmpps(opd1, opd2, 1);}
@@ -1706,8 +1741,8 @@ struct Frontend
 	void cmpordps(const Xmm& opd1, const Xmm& opd2)				{cmpps(opd1, opd2, 7);}
 	void cmpordps(const Xmm& opd1, const Mem128& opd2)			{cmpps(opd1, opd2, 7);}
 
-	void cmpsd(const Xmm& opd1, const Xmm& opd2, uint8 opd3)	{PushBack(Instr(INSTR_CMPSD, opd1, opd2, Opd(opd3)));}
-	void cmpsd(const Xmm& opd1, const Mem64& opd2, uint8 opd3)	{PushBack(Instr(INSTR_CMPSD, opd1, opd2, Opd(opd3)));}
+	void cmpsd(const Xmm& opd1, const Xmm& opd2, uint8 opd3)	{PushBack(Instr(INSTR_CMPSD, opd1, opd2, Imm8(opd3)));}
+	void cmpsd(const Xmm& opd1, const Mem64& opd2, uint8 opd3)	{PushBack(Instr(INSTR_CMPSD, opd1, opd2, Imm8(opd3)));}
 	void cmpeqsd(const Xmm& opd1, const Xmm& opd2)				{cmpsd(opd1, opd2, 0);}
 	void cmpeqsd(const Xmm& opd1, const Mem64& opd2)			{cmpsd(opd1, opd2, 0);}
 	void cmpltsd(const Xmm& opd1, const Xmm& opd2)				{cmpsd(opd1, opd2, 1);}
@@ -1830,7 +1865,7 @@ struct function0 : Frontend
 	typedef R (*FuncPtr)();
 	virtual Opd main() = 0;
 
-	void Main() { Opd r = main(); /* TODO store result */ }
+	void InternalMain() { Opd r = main(); /* TODO store result */ }
 	operator FuncPtr() { Assemble(); return (FuncPtr)buff_.GetPointer(); }
 };
 

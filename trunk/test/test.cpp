@@ -257,7 +257,11 @@ struct test_jmp : jitasm::function0<void>
 		jb("1");
 		jbe("1");
 		jc("1");
+#ifdef JITASM64
+		jrcxz("1");
+#else
 		jcxz("1");
+#endif
 		jecxz("1");
 		je("1");
 		jg("1");
@@ -350,24 +354,37 @@ struct test_test : jitasm::function0<void>
 	}
 };
 
-struct test_func : jitasm::function0<void>
+struct test_func : jitasm::function0<int>
 {
-	virtual void main()
+	virtual jitasm::Opd main()
 	{
-		xor(eax, eax);
-		mov(ecx, 100);
-		label("loop_beg");
-		cmp(ecx, 0);
+		xor(zax, zax);
+		mov(zcx, 100);
+	label("loop_beg");
+		cmp(zcx, 0);
 		jle("loop_end");
-		add(eax, ecx);
-		sub(ecx, 1);
+		add(zax, zcx);
+		sub(zcx, 1);
 		jmp("loop_beg");
-		label("loop_end");
-		//push(eax);
-		//push("%d");
-		//call(printf);
-		//add(esp, 8);
+	label("loop_end");
+#if 0
+#ifndef JITASM64
+		push(zax);
+		push((intptr_t) "%d");
+		mov(zcx, (intptr_t) printf);
+		call(zcx);
+		add(zsp, sizeof(intptr_t) * 2);
+#else
+		sub(zsp, 40);
+		mov(zcx, (intptr_t) "%d");
+		mov(zdx, zax);
+		mov(zax, (intptr_t) printf);
+		call(zax);
+		add(zsp, 40);
+#endif
+#endif
 		ret();
+		return zax;
 	}
 };
 
@@ -376,6 +393,6 @@ extern "C" void hoge2(PBYTE pDst, float a, PBYTE pSrc, int nLen);
 int _tmain(int argc, _TCHAR* argv[])
 {
 	test_func func1;
-	func1();
-	hoge2(NULL, 1.0f, NULL, 1);
+	printf("%d\n", func1());
+	//hoge2(NULL, 1.0f, NULL, 1);
 }
