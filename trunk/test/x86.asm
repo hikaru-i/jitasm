@@ -174,6 +174,7 @@ hoge2	endp
 masm_test_shift	proc
 	sal al, 1
 	sal al, 2
+	sal al, -1
 	sal ax, 1
 	sal ax, 2
 	sal eax, 1
