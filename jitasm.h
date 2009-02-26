@@ -1063,13 +1063,13 @@ struct Backend
 		case INSTR_MULPD:		EncodeSSE2(0x66, 0x59, opd1, opd2); break;
 		case INSTR_MULSD:		EncodeSSE2(0xF2, 0x59, opd1, opd2); break;
 		case INSTR_ORPD:		EncodeSSE2(0x66, 0x56, opd1, opd2); break;
-		case INSTR_PABSB:		EncodeMMXorSSE2(0x66, 0x38, 0x1C, opd1, opd2); break;
-		case INSTR_PABSW:		EncodeMMXorSSE2(0x66, 0x38, 0x1D, opd1, opd2); break;
-		case INSTR_PABSD:		EncodeMMXorSSE2(0x66, 0x38, 0x1E, opd1, opd2); break;
+		case INSTR_PABSB:		EncodeMMXorSSE2(0x66, 0x38, 0x1C, opd1, opd2); break;	// SSSE3
+		case INSTR_PABSW:		EncodeMMXorSSE2(0x66, 0x38, 0x1D, opd1, opd2); break;	// SSSE3
+		case INSTR_PABSD:		EncodeMMXorSSE2(0x66, 0x38, 0x1E, opd1, opd2); break;	// SSSE3
 		case INSTR_PACKSSWB:	EncodeMMXorSSE2(0x66, 0x63, opd1, opd2); break;
 		case INSTR_PACKSSDW:	EncodeMMXorSSE2(0x66, 0x6B, opd1, opd2); break;
 		case INSTR_PACKUSWB:	EncodeMMXorSSE2(0x66, 0x67, opd1, opd2); break;
-		case INSTR_PACKUSDW:	EncodeMMXorSSE2(0x66, 0x38, 0x2B, opd1, opd2); break;
+		case INSTR_PACKUSDW:	EncodeSSE2(0x66, 0x38, 0x2B, opd1, opd2); break;		// SSE 4.1
 		case INSTR_PADDB:		EncodeMMXorSSE2(0x66, 0xFC, opd1, opd2); break;
 		case INSTR_PADDW:		EncodeMMXorSSE2(0x66, 0xFD, opd1, opd2); break;
 		case INSTR_PADDD:		EncodeMMXorSSE2(0x66, 0xFE, opd1, opd2); break;
@@ -1078,7 +1078,7 @@ struct Backend
 		case INSTR_PADDSW:		EncodeMMXorSSE2(0x66, 0xED, opd1, opd2); break;
 		case INSTR_PADDUSB:		EncodeMMXorSSE2(0x66, 0xDC, opd1, opd2); break;
 		case INSTR_PADDUSW:		EncodeMMXorSSE2(0x66, 0xDD, opd1, opd2); break;
-		case INSTR_PALIGNR:		EncodeMMXorSSE2(0x66, 0x3A, 0x0F, opd1, opd2); break;
+		case INSTR_PALIGNR:		EncodeMMXorSSE2(0x66, 0x3A, 0x0F, opd1, opd2); break;	// SSSE3
 		case INSTR_PAND:		EncodeMMXorSSE2(0x66, 0xDB, opd1, opd2); break;
 		case INSTR_PANDN:		EncodeMMXorSSE2(0x66, 0xDF, opd1, opd2); break;
 		case INSTR_PAUSE:		break;
@@ -1269,7 +1269,7 @@ struct Frontend
 
 	virtual void naked_main() = 0;
 
-	virtual void Epilog(size_t localVarSize)
+	virtual void Prolog(size_t localVarSize)
 	{
 		push(rbp);
 		mov(rbp, rsp);
@@ -1286,7 +1286,7 @@ struct Frontend
 #endif
 	}
 
-	virtual void Prolog()
+	virtual void Epilog()
 	{
 #ifdef JITASM64
 		// rbx, rbp, rdi, rsi, r12, r13, r14, r15
