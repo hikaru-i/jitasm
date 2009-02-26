@@ -4,108 +4,7 @@
 
 .code
 
-hoge PROC
-
-	test al, 1
-	test cl, 1
-	test ax, 1
-	test cx, 1
-	test eax, 1
-	test ecx, 1
-	test al, cl
-	test ax, cx
-	test eax, ecx
-	test byte ptr[eax], 1
-	test word ptr[eax], 1
-	test dword ptr[eax], 1
-	test byte ptr[eax], cl
-	test word ptr[eax], cx
-	test dword ptr[eax], ecx
-
-	add al, 1
-	add ax, 1
-	add eax, 1
-	add ax, 100h
-	add eax, 10000h
-	add eax, ecx
-	add ecx, eax
-	add eax, dword ptr[ecx]
-	add dword ptr[eax], ecx
-	or eax, ecx
-	adc eax, ecx
-	sbb eax, ecx
-	and eax, ecx
-	sub eax, ecx
-	xor eax, ecx
-	cmp eax, ecx
-
-	inc al
-	inc ax
-	inc eax
-	inc word ptr[eax]
-	inc dword ptr[eax]
-	dec al
-	dec ax
-	dec eax
-	dec word ptr[eax]
-	dec dword ptr[eax]
-
-	push ax
-	push eax
-	push 1
-	push 100h
-	push word ptr[eax]
-	push dword ptr[eax]
-	pop ax
-	pop eax
-	pop word ptr[eax]
-	pop dword ptr[eax]
-
-	lea ax, word ptr[eax]
-	lea eax, dword ptr[eax]
-	lea eax, dword ptr[eax + 1]
-	lea eax, dword ptr[ecx * 4]
-	lea eax, dword ptr[ecx * 4 + 1]
-	lea eax, dword ptr[eax + ecx]
-	lea eax, dword ptr[eax + ecx * 4]
-	lea eax, dword ptr[eax + ecx * 4 + 1]
-
-	lea	ax, word ptr[eax]
-	lea	eax, dword ptr[eax]
-	lea	eax, dword ptr[eax + ecx * 4 + 100h]
-
-	mov al, cl
-	mov byte ptr[eax], cl
-	mov al, byte ptr[ecx]
-	mov al, -1
-	mov ax, cx
-	mov word ptr[eax], cx
-	mov ax, word ptr[ecx]
-	mov ax, -1
-	mov eax, ecx
-	mov dword ptr[eax], ecx
-	mov eax, dword ptr[ecx]
-	mov eax, -1
-
-	movzx ax, cl
-	movzx ax, byte ptr[ecx]
-	movzx eax, ch
-	movzx eax, byte ptr[ecx]
-	movzx eax, cx
-	movzx eax, word ptr[ecx]
-	xchg al, cl
-	xchg cl, al
-	xchg al, byte ptr[ecx]
-	xchg byte ptr[eax], cl
-	xchg ax, cx
-	xchg cx, ax
-	xchg ax, word ptr[ecx]
-	xchg word ptr[eax], cx
-	xchg eax, ecx
-	xchg ecx, eax
-	xchg eax, dword ptr[ecx]
-	xchg dword ptr[eax], ecx
-
+hoge proc
 	movdqa xmm0, xmm1
 	movdqa xmm0, xmmword ptr[ecx]
 	movdqa xmmword ptr[eax], xmm1
@@ -159,19 +58,21 @@ hoge PROC
 	pxor mm0, qword ptr[ecx]
 	pxor xmm0, xmm1
 	pxor xmm0, xmmword ptr[ecx]
+hoge endp
 
-hoge ENDP
-
-hoge2	proc C USES esi edi ebx, pDst: PTR, pSrc: PTR, nLen: SDWORD
+hoge2 proc C USES esi edi ebx, pDst: PTR, pSrc: PTR, nLen: SDWORD
 	LOCAL a:SDWORD
 	mov esi, pSrc
 	mov edi, pDst
 	mov esi, [pSrc]
 	mov edi, [pDst]
 	ret
-hoge2	endp
+hoge2 endp
 
-masm_test_shift	proc
+;----------------------------------------
+; SAL
+;----------------------------------------
+masm_test_sal proc
 	sal al, 1
 	sal al, 2
 	sal al, -1
@@ -185,12 +86,521 @@ masm_test_shift	proc
 	sal word ptr[eax], 2
 	sal dword ptr[eax], 1
 	sal dword ptr[eax], 2
+masm_test_sal endp
+
+;----------------------------------------
+; SAR
+;----------------------------------------
+masm_test_sar proc
 	sar al, 1
 	sar al, 2
+	sar al, -1
+	sar ax, 1
+	sar ax, 2
+	sar eax, 1
+	sar eax, 2
+	sar byte ptr[eax], 1
+	sar byte ptr[eax], 2
+	sar word ptr[eax], 1
+	sar word ptr[eax], 2
+	sar dword ptr[eax], 1
+	sar dword ptr[eax], 2
+masm_test_sar endp
+
+;----------------------------------------
+; SHL
+;----------------------------------------
+masm_test_shl proc
 	shl al, 1
 	shl al, 2
+	shl al, -1
+	shl ax, 1
+	shl ax, 2
+	shl eax, 1
+	shl eax, 2
+	shl byte ptr[eax], 1
+	shl byte ptr[eax], 2
+	shl word ptr[eax], 1
+	shl word ptr[eax], 2
+	shl dword ptr[eax], 1
+	shl dword ptr[eax], 2
+masm_test_shl endp
+
+;----------------------------------------
+; SHR
+;----------------------------------------
+masm_test_shr proc
 	shr al, 1
 	shr al, 2
-masm_test_shift endp
+	shr al, -1
+	shr ax, 1
+	shr ax, 2
+	shr eax, 1
+	shr eax, 2
+	shr byte ptr[eax], 1
+	shr byte ptr[eax], 2
+	shr word ptr[eax], 1
+	shr word ptr[eax], 2
+	shr dword ptr[eax], 1
+	shr dword ptr[eax], 2
+masm_test_shr endp
+
+;----------------------------------------
+; INC/DEC
+;----------------------------------------
+masm_test_inc_dec proc
+	inc al
+	inc ax
+	inc eax
+	inc byte ptr[eax]
+	inc word ptr[eax]
+	inc dword ptr[eax]
+	dec al
+	dec ax
+	dec eax
+	dec byte ptr[eax]
+	dec word ptr[eax]
+	dec dword ptr[eax]
+masm_test_inc_dec endp
+
+;----------------------------------------
+; PUSH/POP
+;----------------------------------------
+masm_test_push_pop proc
+	push ax
+	push word ptr[eax]
+	push 1h
+	push 100h
+	push 10000h
+	push -1h
+	push -100h
+	push -10000h
+	pop ax
+	pop word ptr[eax]
+	push eax
+	push dword ptr[eax]
+	pop eax
+	pop dword ptr[eax]
+masm_test_push_pop endp
+
+;----------------------------------------
+; ADD
+;----------------------------------------
+masm_test_add proc
+	add al, 1h
+	add al, -1h
+	add ax, 1h
+	add ax, 100h
+	add ax, -1h
+	add ax, -100h
+	add eax, 1h
+	add eax, 100h
+	add eax, 10000h
+	add eax, -1h
+	add eax, -100h
+	add eax, -10000h
+	add cl, 1h
+	add cl, -1h
+	add cx, 1h
+	add cx, 100h
+	add cx, -1h
+	add cx, -100h
+	add ecx, 1h
+	add ecx, 100h
+	add ecx, 10000h
+	add ecx, -1h
+	add ecx, -100h
+	add ecx, -10000h
+	add byte ptr[eax], 1
+	add word ptr[eax], 1
+	add dword ptr[eax], 1
+	add al, byte ptr[eax]
+	add ax, word ptr[eax]
+	add eax, dword ptr[eax]
+	add byte ptr[eax], al
+	add word ptr[eax], ax
+	add dword ptr[eax], eax
+masm_test_add endp
+
+;----------------------------------------
+; OR
+;----------------------------------------
+masm_test_or proc
+	or al, 1h
+	or al, -1h
+	or ax, 1h
+	or ax, 100h
+	or ax, -1h
+	or ax, -100h
+	or eax, 1h
+	or eax, 100h
+	or eax, 10000h
+	or eax, -1h
+	or eax, -100h
+	or eax, -10000h
+	or cl, 1h
+	or cl, -1h
+	or cx, 1h
+	or cx, 100h
+	or cx, -1h
+	or cx, -100h
+	or ecx, 1h
+	or ecx, 100h
+	or ecx, 10000h
+	or ecx, -1h
+	or ecx, -100h
+	or ecx, -10000h
+	or byte ptr[eax], 1
+	or word ptr[eax], 1
+	or dword ptr[eax], 1
+	or al, byte ptr[eax]
+	or ax, word ptr[eax]
+	or eax, dword ptr[eax]
+	or byte ptr[eax], al
+	or word ptr[eax], ax
+	or dword ptr[eax], eax
+masm_test_or endp
+
+;----------------------------------------
+; ADC
+;----------------------------------------
+masm_test_adc proc
+	adc al, 1h
+	adc al, -1h
+	adc ax, 1h
+	adc ax, 100h
+	adc ax, -1h
+	adc ax, -100h
+	adc eax, 1h
+	adc eax, 100h
+	adc eax, 10000h
+	adc eax, -1h
+	adc eax, -100h
+	adc eax, -10000h
+	adc cl, 1h
+	adc cl, -1h
+	adc cx, 1h
+	adc cx, 100h
+	adc cx, -1h
+	adc cx, -100h
+	adc ecx, 1h
+	adc ecx, 100h
+	adc ecx, 10000h
+	adc ecx, -1h
+	adc ecx, -100h
+	adc ecx, -10000h
+	adc byte ptr[eax], 1
+	adc word ptr[eax], 1
+	adc dword ptr[eax], 1
+	adc al, byte ptr[eax]
+	adc ax, word ptr[eax]
+	adc eax, dword ptr[eax]
+	adc byte ptr[eax], al
+	adc word ptr[eax], ax
+	adc dword ptr[eax], eax
+masm_test_adc endp
+
+;----------------------------------------
+; SBB
+;----------------------------------------
+masm_test_sbb proc
+	sbb al, 1h
+	sbb al, -1h
+	sbb ax, 1h
+	sbb ax, 100h
+	sbb ax, -1h
+	sbb ax, -100h
+	sbb eax, 1h
+	sbb eax, 100h
+	sbb eax, 10000h
+	sbb eax, -1h
+	sbb eax, -100h
+	sbb eax, -10000h
+	sbb cl, 1h
+	sbb cl, -1h
+	sbb cx, 1h
+	sbb cx, 100h
+	sbb cx, -1h
+	sbb cx, -100h
+	sbb ecx, 1h
+	sbb ecx, 100h
+	sbb ecx, 10000h
+	sbb ecx, -1h
+	sbb ecx, -100h
+	sbb ecx, -10000h
+	sbb byte ptr[eax], 1
+	sbb word ptr[eax], 1
+	sbb dword ptr[eax], 1
+	sbb al, byte ptr[eax]
+	sbb ax, word ptr[eax]
+	sbb eax, dword ptr[eax]
+	sbb byte ptr[eax], al
+	sbb word ptr[eax], ax
+	sbb dword ptr[eax], eax
+masm_test_sbb endp
+
+;----------------------------------------
+; AND
+;----------------------------------------
+masm_test_and proc
+	and al, 1h
+	and al, -1h
+	and ax, 1h
+	and ax, 100h
+	and ax, -1h
+	and ax, -100h
+	and eax, 1h
+	and eax, 100h
+	and eax, 10000h
+	and eax, -1h
+	and eax, -100h
+	and eax, -10000h
+	and cl, 1h
+	and cl, -1h
+	and cx, 1h
+	and cx, 100h
+	and cx, -1h
+	and cx, -100h
+	and ecx, 1h
+	and ecx, 100h
+	and ecx, 10000h
+	and ecx, -1h
+	and ecx, -100h
+	and ecx, -10000h
+	and byte ptr[eax], 1
+	and word ptr[eax], 1
+	and dword ptr[eax], 1
+	and al, byte ptr[eax]
+	and ax, word ptr[eax]
+	and eax, dword ptr[eax]
+	and byte ptr[eax], al
+	and word ptr[eax], ax
+	and dword ptr[eax], eax
+masm_test_and endp
+
+;----------------------------------------
+; SUB
+;----------------------------------------
+masm_test_sub proc
+	sub al, 1h
+	sub al, -1h
+	sub ax, 1h
+	sub ax, 100h
+	sub ax, -1h
+	sub ax, -100h
+	sub eax, 1h
+	sub eax, 100h
+	sub eax, 10000h
+	sub eax, -1h
+	sub eax, -100h
+	sub eax, -10000h
+	sub cl, 1h
+	sub cl, -1h
+	sub cx, 1h
+	sub cx, 100h
+	sub cx, -1h
+	sub cx, -100h
+	sub ecx, 1h
+	sub ecx, 100h
+	sub ecx, 10000h
+	sub ecx, -1h
+	sub ecx, -100h
+	sub ecx, -10000h
+	sub byte ptr[eax], 1
+	sub word ptr[eax], 1
+	sub dword ptr[eax], 1
+	sub al, byte ptr[eax]
+	sub ax, word ptr[eax]
+	sub eax, dword ptr[eax]
+	sub byte ptr[eax], al
+	sub word ptr[eax], ax
+	sub dword ptr[eax], eax
+masm_test_sub endp
+
+;----------------------------------------
+; XOR
+;----------------------------------------
+masm_test_xor proc
+	xor al, 1h
+	xor al, -1h
+	xor ax, 1h
+	xor ax, 100h
+	xor ax, -1h
+	xor ax, -100h
+	xor eax, 1h
+	xor eax, 100h
+	xor eax, 10000h
+	xor eax, -1h
+	xor eax, -100h
+	xor eax, -10000h
+	xor cl, 1h
+	xor cl, -1h
+	xor cx, 1h
+	xor cx, 100h
+	xor cx, -1h
+	xor cx, -100h
+	xor ecx, 1h
+	xor ecx, 100h
+	xor ecx, 10000h
+	xor ecx, -1h
+	xor ecx, -100h
+	xor ecx, -10000h
+	xor byte ptr[eax], 1
+	xor word ptr[eax], 1
+	xor dword ptr[eax], 1
+	xor al, byte ptr[eax]
+	xor ax, word ptr[eax]
+	xor eax, dword ptr[eax]
+	xor byte ptr[eax], al
+	xor word ptr[eax], ax
+	xor dword ptr[eax], eax
+masm_test_xor endp
+
+;----------------------------------------
+; CMP
+;----------------------------------------
+masm_test_cmp proc
+	cmp al, 1h
+	cmp al, -1h
+	cmp ax, 1h
+	cmp ax, 100h
+	cmp ax, -1h
+	cmp ax, -100h
+	cmp eax, 1h
+	cmp eax, 100h
+	cmp eax, 10000h
+	cmp eax, -1h
+	cmp eax, -100h
+	cmp eax, -10000h
+	cmp cl, 1h
+	cmp cl, -1h
+	cmp cx, 1h
+	cmp cx, 100h
+	cmp cx, -1h
+	cmp cx, -100h
+	cmp ecx, 1h
+	cmp ecx, 100h
+	cmp ecx, 10000h
+	cmp ecx, -1h
+	cmp ecx, -100h
+	cmp ecx, -10000h
+	cmp byte ptr[eax], 1
+	cmp word ptr[eax], 1
+	cmp dword ptr[eax], 1
+	cmp al, byte ptr[eax]
+	cmp ax, word ptr[eax]
+	cmp eax, dword ptr[eax]
+	cmp byte ptr[eax], al
+	cmp word ptr[eax], ax
+	cmp dword ptr[eax], eax
+masm_test_cmp endp
+
+;----------------------------------------
+; XCHG
+;----------------------------------------
+masm_test_xchg proc
+	xchg al, cl
+	xchg cl, al
+	xchg ax, cx
+	xchg cx, ax
+	xchg eax, ecx
+	xchg ecx, eax
+	xchg ecx, edx
+	xchg edx, ecx
+	xchg al, byte ptr[ecx]
+	xchg byte ptr[ecx], al
+	xchg cl, byte ptr[eax]
+	xchg byte ptr[eax], cl
+	xchg ax, word ptr[ecx]
+	xchg word ptr[ecx], ax
+	xchg cx, word ptr[eax]
+	xchg word ptr[eax], cx
+	xchg eax, dword ptr[ecx]
+	xchg dword ptr[ecx], eax
+	xchg ecx, dword ptr[eax]
+	xchg dword ptr[eax], ecx
+masm_test_xchg endp
+
+;----------------------------------------
+; TEST
+;----------------------------------------
+masm_test_test proc
+	test al, 1
+	test ax, 1
+	test eax, 1
+	test al, -1
+	test ax, -1
+	test eax, -1
+	test cl, 1
+	test cx, 1
+	test ecx, 1
+	test cl, -1
+	test cx, -1
+	test ecx, -1
+	test al, cl
+	test ax, cx
+	test eax, ecx
+	test cl, al
+	test cx, ax
+	test ecx, eax
+	test byte ptr[eax], 1
+	test word ptr[eax], 1
+	test dword ptr[eax], 1
+	test byte ptr[eax], cl
+	test word ptr[eax], cx
+	test dword ptr[eax], ecx
+masm_test_test endp
+
+;----------------------------------------
+; MOV/MOVZX
+;----------------------------------------
+masm_test_mov proc
+	mov al, cl
+	mov ax, cx
+	mov eax, ecx
+	mov byte ptr[eax], cl
+	mov word ptr[eax], cx
+	mov dword ptr[eax], ecx
+	mov al, byte ptr[ecx]
+	mov ax, word ptr[ecx]
+	mov eax, dword ptr[ecx]
+	mov al, 1
+	mov al, -1
+	mov ax, 1
+	mov ax, -1
+	mov eax, 1
+	mov eax, -1
+	mov byte ptr[eax], 1
+	mov word ptr[eax], 1
+	mov dword ptr[eax], 1
+	movzx ax, cl
+	movzx eax, cl
+	movzx eax, cx
+	movzx ax, byte ptr[ecx]
+	movzx eax, byte ptr[ecx]
+	movzx eax, word ptr[ecx]
+masm_test_mov endp
+
+;----------------------------------------
+; LEA
+;----------------------------------------
+masm_test_lea proc
+	lea ax, word ptr[eax]
+	lea ax, word ptr[eax + 1]
+	lea ax, word ptr[ecx * 4]
+	lea ax, word ptr[ecx * 4 + 1]
+	lea ax, word ptr[eax + ecx]
+	lea ax, word ptr[eax + ecx * 4]
+	lea ax, word ptr[eax + ecx * 4 + 1]
+	lea eax, dword ptr[eax]
+	lea eax, dword ptr[eax + 1]
+	lea eax, dword ptr[ecx * 4]
+	lea eax, dword ptr[ecx * 4 + 1]
+	lea eax, dword ptr[eax + ecx]
+	lea eax, dword ptr[eax + ecx * 4]
+	lea eax, dword ptr[eax + ecx * 4 + 1]
+	lea eax, dword ptr[eax + eax]
+	lea eax, dword ptr[eax * 2]
+masm_test_lea endp
 
 end
