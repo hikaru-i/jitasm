@@ -80,6 +80,7 @@ enum OpdSize
 	SIZE_INT16,
 	SIZE_INT32,
 	SIZE_INT64,
+	SIZE_INT80,
 	SIZE_INT128,
 };
 
@@ -96,6 +97,8 @@ enum RegID
 	R8B=0x10, R9B, R10B, R11B, R12B, R13B, R14B, R15B,
 	R8W=0x10, R9W, R10W, R11W, R12W, R13W, R14W, R15W,
 	R8D=0x10, R9D, R10D, R11D, R12D, R13D, R14D, R15D,
+
+	ST0=0, ST1, ST2, ST3, ST4, ST5, ST6, ST7,
 
 	MM0=0, MM1, MM2, MM3, MM4, MM5, MM6, MM7,
 	XMM0=0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7,
@@ -180,6 +183,7 @@ typedef OpdT<SIZE_INT8>		Opd8;
 typedef OpdT<SIZE_INT16>	Opd16;
 typedef OpdT<SIZE_INT32>	Opd32;
 typedef OpdT<SIZE_INT64>	Opd64;
+typedef OpdT<SIZE_INT80>	Opd80;
 typedef OpdT<SIZE_INT128>	Opd128;
 
 template<class OpdN>
@@ -193,6 +197,7 @@ typedef RegT<Opd32>		Reg32;
 #ifdef JITASM64
 typedef RegT<Opd64>		Reg64;
 #endif
+typedef RegT<Opd80>		FpuReg;
 typedef RegT<Opd64>		Mmx;
 typedef RegT<Opd128>	Xmm;
 
@@ -205,6 +210,7 @@ typedef MemT<Opd8>		Mem8;
 typedef MemT<Opd16>		Mem16;
 typedef MemT<Opd32>		Mem32;
 typedef MemT<Opd64>		Mem64;
+typedef MemT<Opd80>		Mem80;
 typedef MemT<Opd128>	Mem128;
 
 struct Expr32_None
@@ -337,6 +343,8 @@ enum InstrID
 	INSTR_LEA, INSTR_LEAVE, INSTR_MOV, INSTR_MOVZX, INSTR_NOP, INSTR_OR, INSTR_POP, INSTR_PUSH,
 	INSTR_RET, INSTR_SAR, INSTR_SHL, INSTR_SHR, INSTR_SBB, INSTR_SUB, INSTR_TEST, INSTR_XCHG, INSTR_XOR,
 
+	INSTR_FLD,
+
 	INSTR_ADDPD, INSTR_ADDSD, INSTR_ANDPD, INSTR_ANDNPD, INSTR_CLFLUSH, INSTR_CMPPS, INSTR_CMPPD, INSTR_CMPSD, INSTR_COMISD, INSTR_CVTDQ2PD, INSTR_CVTDQ2PS,
 	INSTR_CVTPD2DQ, INSTR_CVTPD2PI, INSTR_CVTPD2PS, INSTR_CVTPI2PD, INSTR_CVTPS2DQ, INSTR_CVTPS2PD, INSTR_CVTSD2SI, INSTR_CVTSD2SS,
 	INSTR_CVTSI2SD, INSTR_CVTSS2SD, INSTR_CVTTPD2DQ, INSTR_CVTTPD2PI, INSTR_CVTTPS2DQ, INSTR_CVTTSD2SI, INSTR_DIVPD, INSTR_DIVSD, INSTR_LFENCE,
@@ -429,12 +437,12 @@ struct Backend
 		db(0x66);
 	}
 
-	void EncodeRexW(const Opd& r_m)
+	void EncodeRexWRXB(const Opd& r_m)
 	{
-		EncodeRexW(Opd(), r_m);
+		EncodeRexWRXB(Opd(), r_m);
 	}
 
-	void EncodeRexW(const Opd& reg, const Opd& r_m)
+	void EncodeRexWRXB(const Opd& reg, const Opd& r_m)
 	{
 		uint8 wrxb = 0;
 		if (reg.IsReg()) {
@@ -453,12 +461,12 @@ struct Backend
 		if (wrxb) db(0x40 | wrxb);
 	}
 
-	void EncodeRex(const Opd& r_m)
+	void EncodeRexRXB(const Opd& r_m)
 	{
-		EncodeRexW(Opd(), r_m);
+		EncodeRexRXB(Opd(), r_m);
 	}
 
-	void EncodeRex(const Opd& reg, const Opd& r_m)
+	void EncodeRexRXB(const Opd& reg, const Opd& r_m)
 	{
 		uint8 rxb = 0;
 		if (reg.IsReg()) {
@@ -474,48 +482,54 @@ struct Backend
 		if (rxb) db(0x40 | rxb);
 	}
 
-	void EncodeModRM(int reg, const Opd& opd)
+	void EncodeModRM(int reg, const Opd& r_m)
 	{
 		reg = reg & 0xF;
 
-		if (opd.IsReg()) {
-			db(0xC0 | reg << 3 | opd.GetReg() & 0xF);
-		} else if (opd.IsMem()) {
-			int base = opd.GetBase();
-			int index = opd.GetIndex();
-			if (base != INVALID) base = base & 0xF;
-			if (index != INVALID) index = index & 0xF;
+		if (r_m.IsReg()) {
+			db(0xC0 | reg << 3 | r_m.GetReg() & 0xF);
+		} else if (r_m.IsMem()) {
+			int base = r_m.GetBase(); if (base != INVALID) base &= 0xF;
+			int index = r_m.GetIndex(); if (index != INVALID) index &= 0xF;
 
-			sint64 disp = opd.GetDisp();
-			if (base == INVALID) disp = 0;
+			if (index == ESP) {
+				ASSERT(base != ESP && r_m.GetScale() == 0);
+				index = base;
+				base = ESP;
+			}
+			bool sib = index != INVALID || r_m.GetScale() || base == ESP;
 
+			// ModR/M
 			uint8 mod;
-			if (disp == 0) mod = 0;
-			else if (IsInt8(disp)) mod = 1;
-			else if (IsInt32(disp)) mod = 2;
+			if (r_m.GetDisp() == 0 || sib && base == INVALID) mod = base != EBP ? 0 : 1;
+			else if (IsInt8(r_m.GetDisp())) mod = 1;
+			else if (IsInt32(r_m.GetDisp())) mod = 2;
 			else ASSERT(0);
+			db(mod << 6 | reg << 3 | (sib ? 4 : base));
 
-			uint8 r_m = index != INVALID ? 4 : base;
-			ASSERT(r_m <= 7);
-
-			db(mod << 6 | reg << 3 | r_m);
-			if (index != INVALID) {
+			// SIB
+			if (sib) {
 				uint8 ss;
-				if (opd.GetScale() == 0) ss = 0;
-				else if (opd.GetScale() == 2) ss = 1;
-				else if (opd.GetScale() == 4) ss = 2;
-				else if (opd.GetScale() == 8) ss = 3;
+				if (r_m.GetScale() == 0) ss = 0;
+				else if (r_m.GetScale() == 2) ss = 1;
+				else if (r_m.GetScale() == 4) ss = 2;
+				else if (r_m.GetScale() == 8) ss = 3;
 				else ASSERT(0);
-
-				if (base == INVALID) {
-					db(ss << 6 | index << 3 | 5);
-					if (mod == 0) dd(opd.GetDisp());
-				} else {
+				if (index != INVALID && base != INVALID) {
 					db(ss << 6 | index << 3 | base);
+				} else if (base != INVALID) {
+					db(ss << 6 | 4 << 3 | base);
+				} else if (index != INVALID) {
+					db(ss << 6 | index << 3 | 5);
+					if (mod == 0) dd(r_m.GetDisp());
+				} else {
+					ASSERT(0);
 				}
 			}
-			if (mod == 1) db(disp);
-			if (mod == 2) dd(disp);
+
+			// Displacement
+			if (mod == 1) db(r_m.GetDisp());
+			if (mod == 2) dd(r_m.GetDisp());
 		} else {
 			ASSERT(0);
 		}
@@ -536,7 +550,7 @@ struct Backend
 #ifdef JITASM64
 			if (r_m.IsMem() && r_m.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
 			if (r_m.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
-			EncodeRexW(r_m);
+			EncodeRexWRXB(r_m);
 #else
 			if (r_m.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
 #endif
@@ -568,7 +582,7 @@ struct Backend
 #ifdef JITASM64
 			if (r_m.IsMem() && r_m.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
 			if (reg.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
-			EncodeRexW(reg, r_m);
+			EncodeRexWRXB(reg, r_m);
 #else
 			if (reg.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
 #endif
@@ -597,7 +611,7 @@ struct Backend
 #ifdef JITASM64
 		if (opd.IsMem() && opd.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
 		if (opd.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
-		EncodeRexW(opd);
+		EncodeRexWRXB(opd);
 #else
 		if (opd.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
 #endif
@@ -636,7 +650,7 @@ struct Backend
 #ifdef JITASM64
 		if (mem.IsMem() && mem.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
 		if (reg.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
-		EncodeRexW(reg, mem);
+		EncodeRexWRXB(reg, mem);
 #else
 		if (reg.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
 #endif
@@ -654,7 +668,7 @@ struct Backend
 #ifdef JITASM64
 			if (r_m.IsMem() && r_m.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
 			if (r_m.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
-			EncodeRexW(r_m);
+			EncodeRexWRXB(r_m);
 #else
 			if (r_m.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
 #endif
@@ -692,7 +706,7 @@ struct Backend
 #ifdef JITASM64
 			if (r_m.IsMem() && r_m.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
 			if (reg.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
-			EncodeRexW(reg, r_m);
+			EncodeRexWRXB(reg, r_m);
 #else
 			if (reg.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
 #endif
@@ -714,7 +728,7 @@ struct Backend
 #ifdef JITASM64
 		if (r_m.IsMem() && r_m.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
 		if (reg.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
-		EncodeRexW(reg, r_m);
+		EncodeRexWRXB(reg, r_m);
 #else
 		if (reg.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
 #endif
@@ -739,7 +753,7 @@ struct Backend
 #ifdef JITASM64
 			if (opd.IsMem() && opd.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
 			if (opd.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
-			EncodeRex(Opd(), opd);
+			EncodeRexRXB(opd);
 #else
 			if (opd.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
 #endif
@@ -760,7 +774,7 @@ struct Backend
 #ifdef JITASM64
 		if (r_m.IsMem() && r_m.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
 		if (r_m.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
-		EncodeRexW(r_m);
+		EncodeRexWRXB(r_m);
 #else
 		if (r_m.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
 #endif
@@ -785,7 +799,7 @@ struct Backend
 #ifdef JITASM64
 			if (r_m.IsMem() && r_m.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
 			if (r_m.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
-			EncodeRexW(r_m);
+			EncodeRexWRXB(r_m);
 #else
 			if (r_m.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
 #endif
@@ -808,7 +822,7 @@ struct Backend
 #ifdef JITASM64
 			if (r_m.IsMem() && r_m.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
 			if (reg.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
-			EncodeRexW(reg, r_m);
+			EncodeRexWRXB(reg, r_m);
 #else
 			if (reg.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
 #endif
@@ -826,7 +840,7 @@ struct Backend
 #ifdef JITASM64
 		if (r_m.IsMem() && r_m.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
 		if (reg.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
-		EncodeRexW(reg, r_m);	// TODO: In 64-bit mode, r/m8 can not be encoded to access following byte registers if a REX prefix is used: AH, BH, CH, DH.
+		EncodeRexWRXB(reg, r_m);	// TODO: In 64-bit mode, r/m8 can not be encoded to access following byte registers if a REX prefix is used: AH, BH, CH, DH.
 #else
 		if (reg.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
 #endif
@@ -847,13 +861,28 @@ struct Backend
 		EncodeModRM(reg, r_m);
 	}
 
+	void EncodeFLD(const Opd& opd)
+	{
+		if (opd.IsReg()) {
+			db(0xD9);
+			db(0xC0 | opd.GetReg());
+		} else {
+			int digit = 0;
+			if (opd.GetSize() == SIZE_INT32) db(0xD9), digit = 0;
+			else if (opd.GetSize() == SIZE_INT64) db(0xDD), digit = 0;
+			else if (opd.GetSize() == SIZE_INT80) db(0xDB), digit = 5;
+			else ASSERT(0);
+			EncodeModRM(digit, opd);
+		}
+	}
+
 	void EncodeMMX(uint8 opcode2, const Opd& opd1, const Opd& opd2)
 	{
 		const Opd& reg = opd1.IsReg() ? opd1 : opd2;
 		const Opd& r_m = opd1.IsReg() ? opd2 : opd1;
 
 #ifdef JITASM64
-		EncodeRexW(reg, r_m);
+		EncodeRexWRXB(reg, r_m);
 #endif
 		db(0x0F);
 		db(opcode2);
@@ -866,7 +895,7 @@ struct Backend
 		const Opd& r_m = opd1.IsReg() ? opd2 : opd1;
 
 #ifdef JITASM64
-		EncodeRexW(reg, r_m);
+		EncodeRexWRXB(reg, r_m);
 #endif
 		db(0x0F);
 		db(opcode2);
@@ -1011,6 +1040,9 @@ struct Backend
 		case INSTR_TEST:		EncodeTEST(opd1, opd2); break;
 		case INSTR_XCHG:		EncodeXCHG(opd1, opd2); break;
 		case INSTR_XOR:			EncodeADD(0x30, opd1, opd2); break;
+
+		// x87 Floating-Point Instructions
+		case INSTR_FLD:			EncodeFLD(opd1); break;
 
 		// MMX/SSE/SSE2 Instructions
 		case INSTR_ADDPD:		EncodeSSE2(0x66, 0x58, opd1, opd2); break;
@@ -1223,6 +1255,7 @@ struct Frontend
 #else
 	Reg32 rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi;
 #endif
+	struct {FpuReg operator()(size_t n) {ASSERT(n >= ST0 && n <= ST7); return FpuReg((RegID) n);}} st;
 
 	AddressingPtr<Mem8>		byte_ptr;
 	AddressingPtr<Mem16>	word_ptr;
@@ -1235,6 +1268,9 @@ struct Frontend
 #else
 	AddressingPtr<Mem32>	ptr;
 #endif
+	AddressingPtr<Mem32>	real4_ptr;
+	AddressingPtr<Mem64>	real8_ptr;
+	AddressingPtr<Mem80>	real10_ptr;
 
 	Frontend()
 		: al(AL), cl(CL), dl(DL), bl(BL), ah(AH), ch(CH), dh(DH), bh(BH),
@@ -1781,6 +1817,12 @@ struct Frontend
 	void xor(const Mem64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_XOR, opd1, opd2));}
 	void xor(const Opd64& opd1, uint32 imm) {PushBack(Instr(INSTR_XOR, opd1, Imm32(imm)));}
 #endif
+
+	// FLD
+	void fld(const Mem32& opd) {PushBack(Instr(INSTR_FLD, opd));}
+	void fld(const Mem64& opd) {PushBack(Instr(INSTR_FLD, opd));}
+	void fld(const Mem80& opd) {PushBack(Instr(INSTR_FLD, opd));}
+	void fld(const FpuReg& opd) {PushBack(Instr(INSTR_FLD, opd));}
 
 	void addpd(const Xmm& opd1, const Xmm& opd2)	{PushBack(Instr(INSTR_ADDPD, opd1, opd2));}
 	void addpd(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(INSTR_ADDPD, opd1, opd2));}
