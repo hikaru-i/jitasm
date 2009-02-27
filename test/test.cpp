@@ -176,18 +176,18 @@ struct test_func : jitasm::function0<int>
 	label("loop_end");
 #if 0
 #ifndef JITASM64
-		push(zax);
+		push(rax);
 		push((intptr_t) "%d");
-		mov(zcx, (intptr_t) printf);
-		call(zcx);
-		add(zsp, sizeof(intptr_t) * 2);
+		mov(rcx, (intptr_t) printf);
+		call(rcx);
+		add(rsp, sizeof(intptr_t) * 2);
 #else
-		sub(zsp, 40);
-		mov(zcx, (intptr_t) "%d");
-		mov(zdx, zax);
-		mov(zax, (intptr_t) printf);
-		call(zax);
-		add(zsp, 40);
+		sub(rsp, 40);
+		mov(rcx, (intptr_t) "%d");
+		mov(rdx, rax);
+		mov(rax, (intptr_t) printf);
+		call(rax);
+		add(rsp, 40);
 #endif
 #endif
 		ret();
@@ -1074,11 +1074,12 @@ struct test_lea : jitasm::function0<void>
 	}
 };
 
-struct hoge : jitasm::function0<void>
+struct hoge : jitasm::function2_cdecl<void, short, int>
 {
-	virtual void naked_main()
+	virtual void main(jitasm::Arg a1, jitasm::Arg a2)
 	{
-		lea(eax, dword_ptr[eax * 2]);
+		movzx(eax, word_ptr[a1]);
+		mov(ecx, dword_ptr[a2]);
 	}
 };
 

@@ -61,6 +61,8 @@ inline bool IsInt8(sint64 n) {return (sint8) n == n;}
 inline bool IsInt16(sint64 n) {return (sint16) n == n;}
 inline bool IsInt32(sint64 n) {return (sint32) n == n;}
 
+template<int N> size_t AlignSize(size_t size) { return (size + N - 1) / N * N; }
+
 //----------------------------------------
 // Operand
 //----------------------------------------
@@ -1273,7 +1275,7 @@ struct Frontend
 	{
 		push(rbp);
 		mov(rbp, rsp);
-		//sub(zsp, localVarSize)
+		//sub(rsp, localVarSize)
 		push(rbx);
 		push(rdi);
 		push(rsi);
@@ -1942,14 +1944,14 @@ struct Frontend
 
 
 #ifdef JITASM64
-typedef Expr64_None Var;
+typedef Expr64_None Arg;
 #else
-typedef Expr32_None Var;
+typedef Expr32_None Arg;
 #endif
 
 
 template<class R>
-struct function0 : Frontend
+struct function0_cdecl : Frontend
 {
 	typedef R (*FuncPtr)();
 	virtual Opd main() { return rax; }
@@ -1958,7 +1960,7 @@ struct function0 : Frontend
 };
 
 template<>
-struct function0<void> : Frontend
+struct function0_cdecl<void> : Frontend
 {
 	typedef void (*FuncPtr)();
 	virtual void main() {}
@@ -1967,23 +1969,47 @@ struct function0<void> : Frontend
 };
 
 template<class R, class A1>
-struct function1 : Frontend
+struct function1_cdecl : Frontend
 {
 	typedef R (*FuncPtr)(A1);
-	virtual Opd main(Var a1) { return zax; }
-	void naked_main() { Opd r = main(Var(0)); /* TODO store result */ }
+	virtual Opd main(Arg a1) { return rax; }
+	void naked_main() { Opd r = main(Arg(rbp)); /* TODO store result */ }
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
 };
 
 template<class A1>
-struct function1<void, A1> : Frontend
+struct function1_cdecl<void, A1> : Frontend
 {
 	typedef void (*FuncPtr)(A1);
-	virtual void main(Var a1) {}
-	void naked_main() { main(Var(0)); }
+	virtual void main(Arg a1) {}
+	void naked_main() { main(Arg(rbp)); }
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
 };
 
+template<class R, class A1, class A2>
+struct function2_cdecl : Frontend
+{
+	typedef R (*FuncPtr)(A1, A2);
+	virtual Opd main(Arg a1, Arg a2) { return rax; }
+	void naked_main() { Opd r = main(Arg(rbp), Arg(rbp + (sizeof(A1)+3)/4*4)); /* TODO store result */ }
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+};
+
+template<class A1, class A2>
+struct function2_cdecl<void, A1, A2> : Frontend
+{
+	typedef void (*FuncPtr)(A1, A2);
+	virtual void main(Arg a1, Arg a2) {}
+	void naked_main() {
+		//Prolog(0);
+		main(Arg(rbp), Arg(rbp + AlignSize<sizeof(void*)>(sizeof(A1))));
+		//Epilog();
+	}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+};
+
+template<class R> struct function0 : function0_cdecl<R> {};
+template<class R, class A1> struct function1 : function1_cdecl<R, A1> {};
 
 }	// namespace jitasm
 #endif	// #ifndef JITASM_H
