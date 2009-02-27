@@ -521,13 +521,13 @@ struct Backend
 					db(ss << 6 | 4 << 3 | base);
 				} else if (index != INVALID) {
 					db(ss << 6 | index << 3 | 5);
-					if (mod == 0) dd(r_m.GetDisp());
 				} else {
 					ASSERT(0);
 				}
 			}
 
 			// Displacement
+			if (mod == 0 && sib && base == INVALID) dd(r_m.GetDisp());
 			if (mod == 1) db(r_m.GetDisp());
 			if (mod == 2) dd(r_m.GetDisp());
 		} else {
