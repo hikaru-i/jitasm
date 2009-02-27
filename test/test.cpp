@@ -1039,38 +1039,154 @@ struct test_lea : jitasm::function0<void>
 {
 	virtual void naked_main()
 	{
-		lea(ax, word_ptr[eax]);
-		lea(ax, word_ptr[eax + 1]);
-		lea(ax, word_ptr[ecx * 4]);
-		lea(ax, word_ptr[ecx * 4 + 1]);
-		lea(ax, word_ptr[eax + ecx]);
-		lea(ax, word_ptr[eax + ecx * 4]);
-		lea(ax, word_ptr[eax + ecx * 4 + 1]);
 		lea(eax, dword_ptr[eax]);
-		lea(eax, dword_ptr[eax + 1]);
-		lea(eax, dword_ptr[ecx * 4]);
-		lea(eax, dword_ptr[ecx * 4 + 1]);
+		lea(eax, dword_ptr[esp]);
+		lea(eax, dword_ptr[ebp]);
 		lea(eax, dword_ptr[eax + ecx]);
-		lea(eax, dword_ptr[eax + ecx * 4]);
-		lea(eax, dword_ptr[eax + ecx * 4 + 1]);
-		lea(eax, dword_ptr[eax + eax]);
+		lea(eax, dword_ptr[ecx + eax]);
+		lea(eax, dword_ptr[esp + ecx]);
+		lea(eax, dword_ptr[ecx + esp]);
+		lea(eax, dword_ptr[ebp + ecx]);
+		lea(eax, dword_ptr[ecx + ebp]);
+		lea(eax, dword_ptr[eax + 0x1]);
+		lea(eax, dword_ptr[esp + 0x1]);
+		lea(eax, dword_ptr[ebp + 0x1]);
+		lea(eax, dword_ptr[eax + 0x100]);
+		lea(eax, dword_ptr[esp + 0x100]);
+		lea(eax, dword_ptr[ebp + 0x100]);
+		lea(eax, dword_ptr[eax + 0x10000]);
+		lea(eax, dword_ptr[esp + 0x10000]);
+		lea(eax, dword_ptr[ebp + 0x10000]);
 		lea(eax, dword_ptr[eax * 2]);
+		lea(eax, dword_ptr[ebp * 2]);
+		lea(eax, dword_ptr[eax * 4]);
+		lea(eax, dword_ptr[ebp * 4]);
+		lea(eax, dword_ptr[eax * 8]);
+		lea(eax, dword_ptr[ebp * 8]);
+		lea(eax, dword_ptr[eax * 2 + 0x1]);
+		lea(eax, dword_ptr[ebp * 2 + 0x1]);
+		lea(eax, dword_ptr[eax * 2 + 0x100]);
+		lea(eax, dword_ptr[ebp * 2 + 0x100]);
+		lea(eax, dword_ptr[eax * 2 + 0x10000]);
+		lea(eax, dword_ptr[ebp * 2 + 0x10000]);
+		lea(eax, dword_ptr[eax + ecx * 2]);
+		lea(eax, dword_ptr[ecx + eax * 2]);
+		lea(eax, dword_ptr[esp + ecx * 2]);
+		lea(eax, dword_ptr[ebp + ecx * 2]);
+		lea(eax, dword_ptr[ecx + ebp * 2]);
+		lea(eax, dword_ptr[eax + ecx + 0x1]);
+		lea(eax, dword_ptr[ecx + eax + 0x1]);
+		lea(eax, dword_ptr[esp + ecx + 0x1]);
+		lea(eax, dword_ptr[ebp + ecx + 0x1]);
+		lea(eax, dword_ptr[ecx + ebp + 0x1]);
+		lea(eax, dword_ptr[eax + ecx + 0x100]);
+		lea(eax, dword_ptr[ecx + eax + 0x100]);
+		lea(eax, dword_ptr[esp + ecx + 0x100]);
+		lea(eax, dword_ptr[ebp + ecx + 0x100]);
+		lea(eax, dword_ptr[ecx + ebp + 0x100]);
+		lea(eax, dword_ptr[eax + ecx + 0x10000]);
+		lea(eax, dword_ptr[ecx + eax + 0x10000]);
+		lea(eax, dword_ptr[esp + ecx + 0x10000]);
+		lea(eax, dword_ptr[ebp + ecx + 0x10000]);
+		lea(eax, dword_ptr[ecx + ebp + 0x10000]);
+		lea(eax, dword_ptr[eax + ecx * 2 + 0x1]);
+		lea(eax, dword_ptr[ecx + eax * 2 + 0x1]);
+		lea(eax, dword_ptr[esp + ecx * 2 + 0x1]);
+		lea(eax, dword_ptr[ebp + ecx * 2 + 0x1]);
+		lea(eax, dword_ptr[ecx + ebp * 2 + 0x1]);
+		lea(eax, dword_ptr[eax + ecx * 2 + 0x100]);
+		lea(eax, dword_ptr[ecx + eax * 2 + 0x100]);
+		lea(eax, dword_ptr[esp + ecx * 2 + 0x100]);
+		lea(eax, dword_ptr[ebp + ecx * 2 + 0x100]);
+		lea(eax, dword_ptr[ecx + ebp * 2 + 0x100]);
+		lea(eax, dword_ptr[eax + ecx * 2 + 0x10000]);
+		lea(eax, dword_ptr[ecx + eax * 2 + 0x10000]);
+		lea(eax, dword_ptr[esp + ecx * 2 + 0x10000]);
+		lea(eax, dword_ptr[ebp + ecx * 2 + 0x10000]);
+		lea(eax, dword_ptr[ecx + ebp * 2 + 0x10000]);
 #ifdef JITASM64
-		lea(rax, qword_ptr[eax]);
-		lea(rax, qword_ptr[eax + 1]);
-		lea(rax, qword_ptr[ecx * 4]);
-		lea(rax, qword_ptr[ecx * 4 + 1]);
-		lea(rax, qword_ptr[eax + ecx]);
-		lea(rax, qword_ptr[eax + ecx * 4]);
-		lea(rax, qword_ptr[eax + ecx * 4 + 1]);
 		lea(rax, qword_ptr[rax]);
-		lea(rax, qword_ptr[rax + 1]);
-		lea(rax, qword_ptr[rcx * 4]);
-		lea(rax, qword_ptr[rcx * 4 + 1]);
+		lea(rax, qword_ptr[rsp]);
+		lea(rax, qword_ptr[rbp]);
 		lea(rax, qword_ptr[rax + rcx]);
-		lea(rax, qword_ptr[rax + rcx * 4]);
-		lea(rax, qword_ptr[rax + rcx * 4 + 1]);
+		lea(rax, qword_ptr[rcx + rax]);
+		lea(rax, qword_ptr[rsp + rcx]);
+		lea(rax, qword_ptr[rcx + rsp]);
+		lea(rax, qword_ptr[rbp + rcx]);
+		lea(rax, qword_ptr[rcx + rbp]);
+		lea(rax, qword_ptr[rax + 0x1]);
+		lea(rax, qword_ptr[rsp + 0x1]);
+		lea(rax, qword_ptr[rbp + 0x1]);
+		lea(rax, qword_ptr[rax + 0x100]);
+		lea(rax, qword_ptr[rsp + 0x100]);
+		lea(rax, qword_ptr[rbp + 0x100]);
+		lea(rax, qword_ptr[rax + 0x10000]);
+		lea(rax, qword_ptr[rsp + 0x10000]);
+		lea(rax, qword_ptr[rbp + 0x10000]);
+		lea(rax, qword_ptr[rax * 2]);
+		lea(rax, qword_ptr[rbp * 2]);
+		lea(rax, qword_ptr[rax * 4]);
+		lea(rax, qword_ptr[rbp * 4]);
+		lea(rax, qword_ptr[rax * 8]);
+		lea(rax, qword_ptr[rbp * 8]);
+		lea(rax, qword_ptr[rax * 2 + 0x1]);
+		lea(rax, qword_ptr[rbp * 2 + 0x1]);
+		lea(rax, qword_ptr[rax * 2 + 0x100]);
+		lea(rax, qword_ptr[rbp * 2 + 0x100]);
+		lea(rax, qword_ptr[rax * 2 + 0x10000]);
+		lea(rax, qword_ptr[rbp * 2 + 0x10000]);
+		lea(rax, qword_ptr[rax + rcx * 2]);
+		lea(rax, qword_ptr[rcx + rax * 2]);
+		lea(rax, qword_ptr[rsp + rcx * 2]);
+		lea(rax, qword_ptr[rbp + rcx * 2]);
+		lea(rax, qword_ptr[rcx + rbp * 2]);
+		lea(rax, qword_ptr[rax + rcx + 0x1]);
+		lea(rax, qword_ptr[rcx + rax + 0x1]);
+		lea(rax, qword_ptr[rsp + rcx + 0x1]);
+		lea(rax, qword_ptr[rbp + rcx + 0x1]);
+		lea(rax, qword_ptr[rcx + rbp + 0x1]);
+		lea(rax, qword_ptr[rax + rcx + 0x100]);
+		lea(rax, qword_ptr[rcx + rax + 0x100]);
+		lea(rax, qword_ptr[rsp + rcx + 0x100]);
+		lea(rax, qword_ptr[rbp + rcx + 0x100]);
+		lea(rax, qword_ptr[rcx + rbp + 0x100]);
+		lea(rax, qword_ptr[rax + rcx + 0x10000]);
+		lea(rax, qword_ptr[rcx + rax + 0x10000]);
+		lea(rax, qword_ptr[rsp + rcx + 0x10000]);
+		lea(rax, qword_ptr[rbp + rcx + 0x10000]);
+		lea(rax, qword_ptr[rcx + rbp + 0x10000]);
+		lea(rax, qword_ptr[rax + rcx * 2 + 0x1]);
+		lea(rax, qword_ptr[rcx + rax * 2 + 0x1]);
+		lea(rax, qword_ptr[rsp + rcx * 2 + 0x1]);
+		lea(rax, qword_ptr[rbp + rcx * 2 + 0x1]);
+		lea(rax, qword_ptr[rcx + rbp * 2 + 0x1]);
+		lea(rax, qword_ptr[rax + rcx * 2 + 0x100]);
+		lea(rax, qword_ptr[rcx + rax * 2 + 0x100]);
+		lea(rax, qword_ptr[rsp + rcx * 2 + 0x100]);
+		lea(rax, qword_ptr[rbp + rcx * 2 + 0x100]);
+		lea(rax, qword_ptr[rcx + rbp * 2 + 0x100]);
+		lea(rax, qword_ptr[rax + rcx * 2 + 0x10000]);
+		lea(rax, qword_ptr[rcx + rax * 2 + 0x10000]);
+		lea(rax, qword_ptr[rsp + rcx * 2 + 0x10000]);
+		lea(rax, qword_ptr[rbp + rcx * 2 + 0x10000]);
+		lea(rax, qword_ptr[rcx + rbp * 2 + 0x10000]);
 #endif
+	}
+};
+
+//----------------------------------------
+// FLD
+//----------------------------------------
+extern "C" void masm_test_fld();
+struct test_fld : jitasm::function0<void>
+{
+	virtual void naked_main()
+	{
+		fld(real4_ptr[esp]);
+		fld(real8_ptr[esp]);
+		fld(real10_ptr[esp]);
+		fld(st(0));
+		fld(st(7));
 	}
 };
 
@@ -1103,4 +1219,5 @@ int _tmain(int argc, _TCHAR* argv[])
 	TEST(masm_test_test, test_test());
 	TEST(masm_test_mov, test_mov());
 	TEST(masm_test_lea, test_lea());
+	TEST(masm_test_fld, test_fld());
 }
