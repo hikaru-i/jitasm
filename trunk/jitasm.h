@@ -57,9 +57,12 @@ typedef unsigned __int16	uint16;
 typedef unsigned __int32	uint32;
 typedef unsigned __int64	uint64;
 
-inline bool IsInt8(sint64 n) {return (sint8) n == n;}
-inline bool IsInt16(sint64 n) {return (sint16) n == n;}
-inline bool IsInt32(sint64 n) {return (sint32) n == n;}
+namespace detail
+{
+	inline bool IsInt8(sint64 n) {return (sint8) n == n;}
+	inline bool IsInt16(sint64 n) {return (sint16) n == n;}
+	inline bool IsInt32(sint64 n) {return (sint32) n == n;}
+}	// namespace detail
 
 //----------------------------------------
 // Operand
@@ -134,9 +137,9 @@ private:
 	// IMM
 	explicit Opd(sint64 imm) : opdtype_(TYPE_IMM), imm_(imm)
 	{
-		if (IsInt8(imm)) opdsize_ = SIZE_INT8;
-		else if (IsInt16(imm)) opdsize_ = SIZE_INT16;
-		else if (IsInt32(imm)) opdsize_ = SIZE_INT32;
+		if (detail::IsInt8(imm)) opdsize_ = SIZE_INT8;
+		else if (detail::IsInt16(imm)) opdsize_ = SIZE_INT16;
+		else if (detail::IsInt32(imm)) opdsize_ = SIZE_INT32;
 #ifdef JITASM64
 		else opdsize_ = SIZE_INT64;
 #else
@@ -404,42 +407,15 @@ struct Backend
 			size_++;
 		}
 	}
+	void db(uint64 b) {put_bytes(&b, 1);}
+	void dw(uint64 w) {put_bytes(&w, 2);}
+	void dd(uint64 d) {put_bytes(&d, 4);}
+	void dq(uint64 q) {put_bytes(&q, 8);}
 
-	void db(uint64 b)
-	{
-		put_bytes(&b, 1);
-	}
+	void EncodeAddressSizePrefix() {db(0x67);}
+	void EncodeOperandSizePrefix() {db(0x66);}
 
-	void dw(uint64 w)
-	{
-		put_bytes(&w, 2);
-	}
-
-	void dd(uint64 d)
-	{
-		put_bytes(&d, 4);
-	}
-
-	void dq(uint64 q)
-	{
-		put_bytes(&q, 8);
-	}
-
-	void EncodeAddressSizePrefix()
-	{
-		db(0x67);
-	}
-
-	void EncodeOperandSizePrefix()
-	{
-		db(0x66);
-	}
-
-	void EncodeRexWRXB(const Opd& r_m)
-	{
-		EncodeRexWRXB(Opd(), r_m);
-	}
-
+	void EncodeRexWRXB(const Opd& r_m) {EncodeRexWRXB(Opd(), r_m);}
 	void EncodeRexWRXB(const Opd& reg, const Opd& r_m)
 	{
 		uint8 wrxb = 0;
@@ -459,11 +435,7 @@ struct Backend
 		if (wrxb) db(0x40 | wrxb);
 	}
 
-	void EncodeRexRXB(const Opd& r_m)
-	{
-		EncodeRexRXB(Opd(), r_m);
-	}
-
+	void EncodeRexRXB(const Opd& r_m) {EncodeRexRXB(Opd(), r_m);}
 	void EncodeRexRXB(const Opd& reg, const Opd& r_m)
 	{
 		uint8 rxb = 0;
@@ -482,7 +454,7 @@ struct Backend
 
 	void EncodeModRM(int reg, const Opd& r_m)
 	{
-		reg = reg & 0xF;
+		reg &= 0xF;
 
 		if (r_m.IsReg()) {
 			db(0xC0 | reg << 3 | r_m.GetReg() & 0xF);
@@ -490,8 +462,10 @@ struct Backend
 			int base = r_m.GetBase(); if (base != INVALID) base &= 0xF;
 			int index = r_m.GetIndex(); if (index != INVALID) index &= 0xF;
 
+			ASSERT(base != ESP || index != ESP);
+			ASSERT(index != ESP || r_m.GetScale() == 0);
+
 			if (index == ESP) {
-				ASSERT(base != ESP && r_m.GetScale() == 0);
 				index = base;
 				base = ESP;
 			}
@@ -500,8 +474,8 @@ struct Backend
 			// ModR/M
 			uint8 mod;
 			if (r_m.GetDisp() == 0 || sib && base == INVALID) mod = base != EBP ? 0 : 1;
-			else if (IsInt8(r_m.GetDisp())) mod = 1;
-			else if (IsInt32(r_m.GetDisp())) mod = 2;
+			else if (detail::IsInt8(r_m.GetDisp())) mod = 1;
+			else if (detail::IsInt32(r_m.GetDisp())) mod = 2;
 			else ASSERT(0);
 			db(mod << 6 | reg << 3 | (sib ? 4 : base));
 
@@ -1380,13 +1354,13 @@ struct Frontend
 					int rel = offsets[d] - offsets[i] - (int) Backend::GetInstrCodeSize(instr);
 					OpdSize size = instr.GetOpd(0).GetSize();
 					if (size == SIZE_INT8) {
-						if (!IsInt8(rel)) {
+						if (!detail::IsInt8(rel)) {
 							// Retry with immediate 32
 							instr = Instr(instr.GetID(), Imm32(0xFFFFFFFF), Imm64(instr.GetOpd(1).GetImm()));
 							retry = true;
 						}
 					} else if (size == SIZE_INT32) {
-						ASSERT(IsInt32(rel));	// There is no jump instruction larger than immediate 32.
+						ASSERT(detail::IsInt32(rel));	// There is no jump instruction larger than immediate 32.
 					}
 				}
 			}
@@ -1400,10 +1374,10 @@ struct Frontend
 				int rel = offsets[d] - offsets[i] - (int) Backend::GetInstrCodeSize(instr);
 				OpdSize size = instr.GetOpd(0).GetSize();
 				if (size == SIZE_INT8) {
-					ASSERT(IsInt8(rel));
+					ASSERT(detail::IsInt8(rel));
 					instr = Instr(instr.GetID(), Imm8(rel));
 				} else if (size == SIZE_INT32) {
-					ASSERT(IsInt32(rel));
+					ASSERT(detail::IsInt32(rel));
 					instr = Instr(instr.GetID(), Imm32(rel));
 				}
 			}
