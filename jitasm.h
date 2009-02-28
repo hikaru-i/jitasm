@@ -61,8 +61,6 @@ inline bool IsInt8(sint64 n) {return (sint8) n == n;}
 inline bool IsInt16(sint64 n) {return (sint16) n == n;}
 inline bool IsInt32(sint64 n) {return (sint32) n == n;}
 
-template<int N> size_t AlignSize(size_t size) { return (size + N - 1) / N * N; }
-
 //----------------------------------------
 // Operand
 //----------------------------------------
@@ -1327,15 +1325,15 @@ struct Frontend
 	virtual void Epilog()
 	{
 #ifdef JITASM64
-		// rbx, rbp, rdi, rsi, r12, r13, r14, r15
-		push(r15);
-		push(r14);
-		push(r13);
-		push(r12);
+		// TODO Restore XMM registers
+		pop(r15);
+		pop(r14);
+		pop(r13);
+		pop(r12);
 #endif
-		push(rsi);
-		push(rdi);
-		push(rbx);
+		pop(rsi);
+		pop(rdi);
+		pop(rbx);
 		leave();
 		ret();
 	}
@@ -1991,67 +1989,97 @@ typedef Expr64_None Arg;
 typedef Expr32_None Arg;
 #endif
 
+namespace detail {
+
+	template<int N> size_t AlignSize(size_t size) {
+		return (size + N - 1) / N * N;
+	}
+
+	/// cdecl function base class
+	template<class FuncPtr>
+	struct Function : Frontend
+	{
+		typedef Opd Result;
+		Arg Arg1() { return Arg(rbp + 8); }
+		template<class A1> Arg Arg2() { return Arg1() + AlignSize<sizeof(void*)>(sizeof(A1)); }
+		template<class A1, class A2> Arg Arg3() { return Arg2() + AlignSize<sizeof(void*)>(sizeof(A2)); }
+		template<class R> void StoreResult(const Opd& result) {
+		}
+
+		operator FuncPtr() { return (FuncPtr)GetCode(); }
+	};
+
+}	// namespace detail
 
 template<class R>
-struct function0_cdecl : Frontend
+struct function0_cdecl : detail::Function<R (__cdecl *)()>
 {
-	typedef R (*FuncPtr)();
 	virtual Opd main() { return rax; }
-	void naked_main() { Opd r = main(); /* TODO store result */ }
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	void naked_main() {
+		Prolog(0);
+		StoreResult<R>(main());
+		Epilog();
+	}
 };
 
 template<>
-struct function0_cdecl<void> : Frontend
+struct function0_cdecl<void> : detail::Function<void (__cdecl *)()>
 {
-	typedef void (*FuncPtr)();
 	virtual void main() {}
-	void naked_main()	{ main(); }
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	void naked_main()	{
+		Prolog(0);
+		main();
+		Epilog();
+	}
 };
 
 template<class R, class A1>
-struct function1_cdecl : Frontend
+struct function1_cdecl : detail::Function<R (__cdecl *)(A1)>
 {
-	typedef R (*FuncPtr)(A1);
 	virtual Opd main(Arg a1) { return rax; }
-	void naked_main() { Opd r = main(Arg(rbp)); /* TODO store result */ }
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	void naked_main() {
+		Prolog(0);
+		StoreResult<R>(main(Arg1()));
+		Epilog();
+	}
 };
 
 template<class A1>
-struct function1_cdecl<void, A1> : Frontend
+struct function1_cdecl<void, A1> : detail::Function<void (__cdecl *)(A1)>
 {
-	typedef void (*FuncPtr)(A1);
 	virtual void main(Arg a1) {}
-	void naked_main() { main(Arg(rbp)); }
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	void naked_main() {
+		Prolog(0);
+		main(Arg1());
+		Epilog();
+	}
 };
 
 template<class R, class A1, class A2>
-struct function2_cdecl : Frontend
+struct function2_cdecl : detail::Function<R (__cdecl *)(A1, A2)>
 {
-	typedef R (*FuncPtr)(A1, A2);
 	virtual Opd main(Arg a1, Arg a2) { return rax; }
-	void naked_main() { Opd r = main(Arg(rbp), Arg(rbp + (sizeof(A1)+3)/4*4)); /* TODO store result */ }
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	void naked_main() {
+		Prolog(0);
+		StoreResult<R>(main(Arg1(), Arg2<A1>()));
+		Epilog();
+	}
 };
 
 template<class A1, class A2>
-struct function2_cdecl<void, A1, A2> : Frontend
+struct function2_cdecl<void, A1, A2> : detail::Function<void (__cdecl *)(A1, A2)>
 {
-	typedef void (*FuncPtr)(A1, A2);
 	virtual void main(Arg a1, Arg a2) {}
 	void naked_main() {
-		//Prolog(0);
-		main(Arg(rbp), Arg(rbp + AlignSize<sizeof(void*)>(sizeof(A1))));
-		//Epilog();
+		Prolog(0);
+		main(Arg1(), Arg2<A1>());
+		Epilog();
 	}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
 };
 
 template<class R> struct function0 : function0_cdecl<R> {};
 template<class R, class A1> struct function1 : function1_cdecl<R, A1> {};
+template<class R, class A1, class A2> struct function2 : function2_cdecl<R, A1, A2> {};
 
 }	// namespace jitasm
 #endif	// #ifndef JITASM_H
