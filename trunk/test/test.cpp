@@ -1190,6 +1190,18 @@ struct test_fld : jitasm::function0<void>
 	}
 };
 
+//----------------------------------------
+// function0_cdecl<int>
+//----------------------------------------
+extern "C" void masm_test_function0_cdecl();
+struct test_function0_cdecl : jitasm::function0_cdecl<int>
+{
+	Result main()
+	{
+		return jitasm::Imm8(16);
+	}
+};
+
 struct hoge : jitasm::function2_cdecl<void, short, int>
 {
 	virtual void main(jitasm::Arg a1, jitasm::Arg a2)
@@ -1198,6 +1210,7 @@ struct hoge : jitasm::function2_cdecl<void, short, int>
 		mov(ecx, dword_ptr[a2]);
 	}
 };
+
 
 int _tmain(int argc, _TCHAR* argv[])
 {
@@ -1220,4 +1233,6 @@ int _tmain(int argc, _TCHAR* argv[])
 	TEST(masm_test_mov, test_mov());
 	TEST(masm_test_lea, test_lea());
 	TEST(masm_test_fld, test_fld());
+
+	//TEST(masm_test_function0_cdecl, test_function0_cdecl());
 }
