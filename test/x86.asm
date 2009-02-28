@@ -663,4 +663,22 @@ masm_test_fld proc
 	fld st(7)
 masm_test_fld endp
 
+
+;----------------------------------------
+; function0_cdecl<int>
+;----------------------------------------
+masm_test_function0_cdecl proc
+		push ebp
+		mov ebp, esp
+		push ebx
+		push edi
+		push esi
+		mov eax, 16
+		pop esi
+		pop edi
+		pop ebx
+		leave
+		ret
+masm_test_function0_cdecl endp
+
 end
