@@ -1969,6 +1969,39 @@ namespace detail {
 		return (size + N - 1) / N * N;
 	}
 
+	template<class T, int Size = sizeof(T)>
+	struct ResultT {
+	};
+
+	template<class T>
+	struct ResultT<T, 1> {
+		ResultT(const Opd8& val);
+		ResultT(uint8 imm);
+	};
+
+	template<class T>
+	struct ResultT<T, 2> {
+	};
+
+	template<class T>
+	struct ResultT<T, 4> {
+	};
+
+#ifdef JITASM64
+	template<class T>
+	struct ResultT<T, 8> {
+	};
+#endif
+
+	template<>
+	struct ResultT<float, sizeof(float)> {
+	};
+
+	template<>
+	struct ResultT<double, sizeof(double)> {
+	};
+
+
 	/// cdecl function base class
 	template<class FuncPtr>
 	struct Function : Frontend
@@ -1978,6 +2011,7 @@ namespace detail {
 		template<class A1> Arg Arg2() { return Arg1() + AlignSize<sizeof(void*)>(sizeof(A1)); }
 		template<class A1, class A2> Arg Arg3() { return Arg2() + AlignSize<sizeof(void*)>(sizeof(A2)); }
 		template<class R> void StoreResult(const Opd& result) {
+
 		}
 
 		operator FuncPtr() { return (FuncPtr)GetCode(); }
@@ -1985,10 +2019,11 @@ namespace detail {
 
 }	// namespace detail
 
+/// cdecl function which has no argument
 template<class R>
 struct function0_cdecl : detail::Function<R (__cdecl *)()>
 {
-	virtual Opd main() { return rax; }
+	virtual Result main() { return rax; }
 	void naked_main() {
 		Prolog(0);
 		StoreResult<R>(main());
@@ -2007,10 +2042,11 @@ struct function0_cdecl<void> : detail::Function<void (__cdecl *)()>
 	}
 };
 
+/// cdecl function which has 1 argument
 template<class R, class A1>
 struct function1_cdecl : detail::Function<R (__cdecl *)(A1)>
 {
-	virtual Opd main(Arg a1) { return rax; }
+	virtual Result main(Arg a1) { return rax; }
 	void naked_main() {
 		Prolog(0);
 		StoreResult<R>(main(Arg1()));
@@ -2029,10 +2065,11 @@ struct function1_cdecl<void, A1> : detail::Function<void (__cdecl *)(A1)>
 	}
 };
 
+/// cdecl function which has 2 arguments
 template<class R, class A1, class A2>
 struct function2_cdecl : detail::Function<R (__cdecl *)(A1, A2)>
 {
-	virtual Opd main(Arg a1, Arg a2) { return rax; }
+	virtual Result main(Arg a1, Arg a2) { return rax; }
 	void naked_main() {
 		Prolog(0);
 		StoreResult<R>(main(Arg1(), Arg2<A1>()));
