@@ -133,7 +133,7 @@ struct Opd
 	// MEM
 	Opd(OpdSize opdsize, OpdSize addrsize, RegID base, RegID index, sint64 scale, sint64 disp)
 		: opdtype_(TYPE_MEM), opdsize_(opdsize), addrsize_(addrsize), base_(base), index_(index), scale_(scale), disp_(disp) {}
-private:
+protected:
 	// IMM
 	explicit Opd(sint64 imm) : opdtype_(TYPE_IMM), imm_(imm)
 	{
@@ -146,10 +146,6 @@ private:
 		else ASSERT(0);
 #endif
 	}
-	friend Opd Imm8(uint8 imm);
-	friend Opd Imm16(uint16 imm);
-	friend Opd Imm32(uint32 imm);
-	friend Opd Imm64(uint64 imm);
 
 public:
 	bool	IsNone() const {return opdtype_ == TYPE_NONE;}
@@ -166,10 +162,6 @@ public:
 	sint64	GetDisp() const {return disp_;}
 	sint64	GetImm() const {return imm_;}
 };
-inline Opd Imm8(uint8 imm) {return Opd((sint8) imm);}
-inline Opd Imm16(uint16 imm) {return Opd((sint16) imm);}
-inline Opd Imm32(uint32 imm) {return Opd((sint32) imm);}
-inline Opd Imm64(uint64 imm) {return Opd((sint64) imm);}
 
 template<OpdSize Size>
 struct OpdT : Opd
@@ -179,6 +171,9 @@ struct OpdT : Opd
 	// MEM
 	OpdT(OpdSize addrsize, RegID base, RegID index, sint64 scale, sint64 disp)
 		: Opd(Size, addrsize, base, index, scale, disp) {}
+protected:
+	// IMM
+	OpdT(sint64 imm) : Opd(imm) {}
 };
 typedef OpdT<SIZE_INT8>		Opd8;
 typedef OpdT<SIZE_INT16>	Opd16;
@@ -228,6 +223,16 @@ struct MemOffset64
 	explicit MemOffset64(sint64 offset) : offset_(offset) {}
 	Mem64 ToMem64() {return Mem64(SIZE_INT64, INVALID, INVALID, 0, offset_);}
 };
+
+template<class OpdN, class U, class S>
+struct ImmT : OpdN
+{
+	ImmT(U imm) : OpdN((S) imm) {}
+};
+typedef ImmT<Opd8, uint8, sint8>		Imm8;
+typedef ImmT<Opd16, uint16, sint16>		Imm16;
+typedef ImmT<Opd32, uint32, sint32>		Imm32;
+typedef ImmT<Opd64, uint64, sint64>		Imm64;
 
 struct Expr32_None
 {
@@ -2026,21 +2031,46 @@ namespace detail {
 
 	template<class T>
 	struct ResultT<T, 1> {
-		ResultT(const Opd8& val);
-		ResultT(uint8 imm);
+		Opd8 val_;
+		ResultT() : val_(INVALID) {}
+		ResultT(const Opd8& val) : val_(val) {}
+		ResultT(uint8 imm) : val_(Imm8(imm)) {}
+		void Store(Frontend& f) {
+			if (!val_.IsReg() || val_.GetReg() != INVALID)
+				f.mov(f.al, static_cast<Reg8&>(val_));
+		}
 	};
 
 	template<class T>
 	struct ResultT<T, 2> {
+		Opd16 val_;
+		ResultT() : val_(INVALID) {}
+		ResultT(const Opd16& val) : val_(val) {}
+		ResultT(uint16 imm) : val_(Imm16(imm)) {}
+		void Store(Frontend& f) {
+			if (!val_.IsReg() || val_.GetReg() != INVALID)
+				f.mov(f.ax, static_cast<Reg16&>(val_));
+		}
 	};
 
 	template<class T>
 	struct ResultT<T, 4> {
+		Opd32 val_;
+		ResultT() : val_(INVALID) {}
+		ResultT(const Opd32& val) : val_(val) {}
+		ResultT(uint32 imm) : val_(Imm32(imm)) {}
+		void Store(Frontend& f) {
+			if (!val_.IsReg() || val_.GetReg() != INVALID)
+				f.mov(f.eax, static_cast<Reg32&>(val_));
+		}
 	};
 
 #ifdef JITASM64
 	template<class T>
 	struct ResultT<T, 8> {
+		Opd64 value_;
+		ResultT(const Opd64& val) : value_(val) {}
+		ResultT(uint64 imm) : value_(Imm64(imm)) {}
 	};
 #endif
 
@@ -2057,13 +2087,9 @@ namespace detail {
 	template<class FuncPtr>
 	struct Function : Frontend
 	{
-		typedef Opd Result;
 		Arg Arg1() { return Arg(zbp + 8); }
 		template<class A1> Arg Arg2() { return Arg1() + AlignSize<sizeof(void*)>(sizeof(A1)); }
 		template<class A1, class A2> Arg Arg3() { return Arg2() + AlignSize<sizeof(void*)>(sizeof(A2)); }
-		template<class R> void StoreResult(const Opd& result) {
-
-		}
 
 		operator FuncPtr() { return (FuncPtr)GetCode(); }
 	};
@@ -2074,10 +2100,11 @@ namespace detail {
 template<class R>
 struct function0_cdecl : detail::Function<R (__cdecl *)()>
 {
-	virtual Result main() { return zax; }
+	typedef detail::ResultT<R> Result;
+	virtual Result main() { return Result(); }
 	void naked_main() {
 		Prolog(0);
-		StoreResult<R>(main());
+		main().Store(*this);
 		Epilog();
 	}
 };
@@ -2097,10 +2124,11 @@ struct function0_cdecl<void> : detail::Function<void (__cdecl *)()>
 template<class R, class A1>
 struct function1_cdecl : detail::Function<R (__cdecl *)(A1)>
 {
-	virtual Result main(Arg a1) { return rax; }
+	typedef detail::ResultT<R> Result;
+	virtual Result main(Arg a1) { return Result(); }
 	void naked_main() {
 		Prolog(0);
-		StoreResult<R>(main(Arg1()));
+		main(Arg1()).Store(*this);
 		Epilog();
 	}
 };
@@ -2120,10 +2148,11 @@ struct function1_cdecl<void, A1> : detail::Function<void (__cdecl *)(A1)>
 template<class R, class A1, class A2>
 struct function2_cdecl : detail::Function<R (__cdecl *)(A1, A2)>
 {
-	virtual Result main(Arg a1, Arg a2) { return rax; }
+	typedef detail::ResultT<R> Result;
+	virtual Result main(Arg a1, Arg a2) { return Result(); }
 	void naked_main() {
 		Prolog(0);
-		StoreResult<R>(main(Arg1(), Arg2<A1>()));
+		main(Arg1(), Arg2<A1>()).Store(*this);
 		Epilog();
 	}
 };
