@@ -1,6 +1,6 @@
-#include "StdAfx.h"
-#include "jitasm.h"
+#include <tchar.h>
 #include <assert.h>
+#include "jitasm.h"
 
 #define ASSERT	assert
 
@@ -113,85 +113,37 @@ struct test_mmx_sse2 : jitasm::function0<void>
 	}
 };
 
-struct test_jmp : jitasm::function0<void>
-{
-	virtual void main()
-	{
-		jmp("1");
-		ja("1");
-		jae("1");
-		jb("1");
-		jbe("1");
-		jc("1");
-#ifdef JITASM64
-		jrcxz("1");
-#else
-		jcxz("1");
-#endif
-		jecxz("1");
-		je("1");
-		jg("1");
-		jge("1");
-		jl("1");
-		jle("1");
-		jna("1");
-		jnae("1");
-		jnb("1");
-		jnbe("1");
-		jnc("1");
-		jne("1");
-		jng("1");
-		jnge("1");
-		jnl("1");
-		jnle("1");
-		jno("1");
-		jnp("1");
-		jns("1");
-		jnz("1");
-		jo("1");
-		jp("1");
-		jpe("1");
-		jpo("1");
-		js("1");
-		jz("1");
-		label("1");
-		for (int i = 0; i < 256; i++) nop();
-		jmp("1");
-		jz("1");
-	}
-};
-
 struct test_func : jitasm::function0<int>
 {
 	virtual jitasm::Opd main()
 	{
-		xor(rax, rax);
-		mov(rcx, 100);
+		xor(zax, zax);
+		mov(zcx, 100);
 	label("loop_beg");
-		cmp(rcx, 0);
+		cmp(zcx, 0);
 		jle("loop_end");
-		add(rax, rcx);
-		sub(rcx, 1);
+		add(zax, zcx);
+		sub(zcx, 1);
 		jmp("loop_beg");
 	label("loop_end");
 #if 0
 #ifndef JITASM64
-		push(rax);
+		push(zax);
 		push((intptr_t) "%d");
-		mov(rcx, (intptr_t) printf);
-		call(rcx);
-		add(rsp, sizeof(intptr_t) * 2);
+		mov(zcx, (intptr_t) printf);
+		call(zcx);
+		add(zsp, sizeof(intptr_t) * 2);
 #else
-		sub(rsp, 40);
-		mov(rcx, (intptr_t) "%d");
-		mov(rdx, rax);
-		mov(rax, (intptr_t) printf);
-		call(rax);
-		add(rsp, 40);
+		sub(zsp, 40);
+		mov(zcx, (intptr_t) "%d");
+		mov(zdx, zax);
+		mov(zax, (intptr_t) printf);
+		call(zax);
+		add(zsp, 40);
 #endif
 #endif
 		ret();
-		return rax;
+		return zax;
 	}
 };
 
@@ -1048,6 +1000,8 @@ struct test_lea : jitasm::function0<void>
 		lea(eax, dword_ptr[ecx + esp]);
 		lea(eax, dword_ptr[ebp + ecx]);
 		lea(eax, dword_ptr[ecx + ebp]);
+		lea(eax, dword_ptr[esp + ebp]);
+		lea(eax, dword_ptr[ebp + esp]);
 		lea(eax, dword_ptr[eax + 0x1]);
 		lea(eax, dword_ptr[esp + 0x1]);
 		lea(eax, dword_ptr[ebp + 0x1]);
@@ -1074,36 +1028,49 @@ struct test_lea : jitasm::function0<void>
 		lea(eax, dword_ptr[esp + ecx * 2]);
 		lea(eax, dword_ptr[ebp + ecx * 2]);
 		lea(eax, dword_ptr[ecx + ebp * 2]);
+		lea(eax, dword_ptr[esp + ebp * 2]);
 		lea(eax, dword_ptr[eax + ecx + 0x1]);
 		lea(eax, dword_ptr[ecx + eax + 0x1]);
 		lea(eax, dword_ptr[esp + ecx + 0x1]);
+		lea(eax, dword_ptr[ecx + esp + 0x1]);
 		lea(eax, dword_ptr[ebp + ecx + 0x1]);
 		lea(eax, dword_ptr[ecx + ebp + 0x1]);
+		lea(eax, dword_ptr[esp + ebp + 0x1]);
+		lea(eax, dword_ptr[ebp + esp + 0x1]);
 		lea(eax, dword_ptr[eax + ecx + 0x100]);
 		lea(eax, dword_ptr[ecx + eax + 0x100]);
 		lea(eax, dword_ptr[esp + ecx + 0x100]);
+		lea(eax, dword_ptr[ecx + esp + 0x100]);
 		lea(eax, dword_ptr[ebp + ecx + 0x100]);
 		lea(eax, dword_ptr[ecx + ebp + 0x100]);
+		lea(eax, dword_ptr[esp + ebp + 0x100]);
+		lea(eax, dword_ptr[ebp + esp + 0x100]);
 		lea(eax, dword_ptr[eax + ecx + 0x10000]);
 		lea(eax, dword_ptr[ecx + eax + 0x10000]);
 		lea(eax, dword_ptr[esp + ecx + 0x10000]);
+		lea(eax, dword_ptr[ecx + esp + 0x10000]);
 		lea(eax, dword_ptr[ebp + ecx + 0x10000]);
 		lea(eax, dword_ptr[ecx + ebp + 0x10000]);
+		lea(eax, dword_ptr[esp + ebp + 0x10000]);
+		lea(eax, dword_ptr[ebp + esp + 0x10000]);
 		lea(eax, dword_ptr[eax + ecx * 2 + 0x1]);
 		lea(eax, dword_ptr[ecx + eax * 2 + 0x1]);
 		lea(eax, dword_ptr[esp + ecx * 2 + 0x1]);
 		lea(eax, dword_ptr[ebp + ecx * 2 + 0x1]);
 		lea(eax, dword_ptr[ecx + ebp * 2 + 0x1]);
+		lea(eax, dword_ptr[esp + ebp * 2 + 0x1]);
 		lea(eax, dword_ptr[eax + ecx * 2 + 0x100]);
 		lea(eax, dword_ptr[ecx + eax * 2 + 0x100]);
 		lea(eax, dword_ptr[esp + ecx * 2 + 0x100]);
 		lea(eax, dword_ptr[ebp + ecx * 2 + 0x100]);
 		lea(eax, dword_ptr[ecx + ebp * 2 + 0x100]);
+		lea(eax, dword_ptr[esp + ebp * 2 + 0x100]);
 		lea(eax, dword_ptr[eax + ecx * 2 + 0x10000]);
 		lea(eax, dword_ptr[ecx + eax * 2 + 0x10000]);
 		lea(eax, dword_ptr[esp + ecx * 2 + 0x10000]);
 		lea(eax, dword_ptr[ebp + ecx * 2 + 0x10000]);
 		lea(eax, dword_ptr[ecx + ebp * 2 + 0x10000]);
+		lea(eax, dword_ptr[esp + ebp * 2 + 0x10000]);
 #ifdef JITASM64
 		lea(rax, qword_ptr[rax]);
 		lea(rax, qword_ptr[rsp]);
@@ -1114,6 +1081,8 @@ struct test_lea : jitasm::function0<void>
 		lea(rax, qword_ptr[rcx + rsp]);
 		lea(rax, qword_ptr[rbp + rcx]);
 		lea(rax, qword_ptr[rcx + rbp]);
+		lea(rax, qword_ptr[rsp + rbp]);
+		lea(rax, qword_ptr[rbp + rsp]);
 		lea(rax, qword_ptr[rax + 0x1]);
 		lea(rax, qword_ptr[rsp + 0x1]);
 		lea(rax, qword_ptr[rbp + 0x1]);
@@ -1140,36 +1109,47 @@ struct test_lea : jitasm::function0<void>
 		lea(rax, qword_ptr[rsp + rcx * 2]);
 		lea(rax, qword_ptr[rbp + rcx * 2]);
 		lea(rax, qword_ptr[rcx + rbp * 2]);
+		lea(rax, qword_ptr[rsp + rbp * 2]);
 		lea(rax, qword_ptr[rax + rcx + 0x1]);
 		lea(rax, qword_ptr[rcx + rax + 0x1]);
 		lea(rax, qword_ptr[rsp + rcx + 0x1]);
+		lea(rax, qword_ptr[rcx + rsp + 0x1]);
 		lea(rax, qword_ptr[rbp + rcx + 0x1]);
 		lea(rax, qword_ptr[rcx + rbp + 0x1]);
+		lea(rax, qword_ptr[rsp + rbp + 0x1]);
+		lea(rax, qword_ptr[rbp + rsp + 0x1]);
 		lea(rax, qword_ptr[rax + rcx + 0x100]);
 		lea(rax, qword_ptr[rcx + rax + 0x100]);
 		lea(rax, qword_ptr[rsp + rcx + 0x100]);
 		lea(rax, qword_ptr[rbp + rcx + 0x100]);
 		lea(rax, qword_ptr[rcx + rbp + 0x100]);
+		lea(rax, qword_ptr[rsp + rbp + 0x100]);
+		lea(rax, qword_ptr[rbp + rsp + 0x100]);
 		lea(rax, qword_ptr[rax + rcx + 0x10000]);
 		lea(rax, qword_ptr[rcx + rax + 0x10000]);
 		lea(rax, qword_ptr[rsp + rcx + 0x10000]);
 		lea(rax, qword_ptr[rbp + rcx + 0x10000]);
 		lea(rax, qword_ptr[rcx + rbp + 0x10000]);
+		lea(rax, qword_ptr[rsp + rbp + 0x10000]);
+		lea(rax, qword_ptr[rbp + rsp + 0x10000]);
 		lea(rax, qword_ptr[rax + rcx * 2 + 0x1]);
 		lea(rax, qword_ptr[rcx + rax * 2 + 0x1]);
 		lea(rax, qword_ptr[rsp + rcx * 2 + 0x1]);
 		lea(rax, qword_ptr[rbp + rcx * 2 + 0x1]);
 		lea(rax, qword_ptr[rcx + rbp * 2 + 0x1]);
+		lea(rax, qword_ptr[rsp + rbp * 2 + 0x1]);
 		lea(rax, qword_ptr[rax + rcx * 2 + 0x100]);
 		lea(rax, qword_ptr[rcx + rax * 2 + 0x100]);
 		lea(rax, qword_ptr[rsp + rcx * 2 + 0x100]);
 		lea(rax, qword_ptr[rbp + rcx * 2 + 0x100]);
 		lea(rax, qword_ptr[rcx + rbp * 2 + 0x100]);
+		lea(rax, qword_ptr[rsp + rbp * 2 + 0x100]);
 		lea(rax, qword_ptr[rax + rcx * 2 + 0x10000]);
 		lea(rax, qword_ptr[rcx + rax * 2 + 0x10000]);
 		lea(rax, qword_ptr[rsp + rcx * 2 + 0x10000]);
 		lea(rax, qword_ptr[rbp + rcx * 2 + 0x10000]);
 		lea(rax, qword_ptr[rcx + rbp * 2 + 0x10000]);
+		lea(rax, qword_ptr[rsp + rbp * 2 + 0x10000]);
 #endif
 	}
 };
@@ -1187,6 +1167,114 @@ struct test_fld : jitasm::function0<void>
 		fld(real10_ptr[esp]);
 		fld(st(0));
 		fld(st(7));
+	}
+};
+
+//----------------------------------------
+// JMP
+//----------------------------------------
+extern "C" void masm_test_jmp();
+struct test_jmp : jitasm::function0<void>
+{
+	virtual void naked_main()
+	{
+		// jmp short
+		jmp("L1");
+		ja("L1");
+		jae("L1");
+		jb("L1");
+		jbe("L1");
+		jc("L1");
+#ifdef JITASM64
+		jrcxz("L1");
+#else
+		jcxz("L1");
+#endif
+		jecxz("L1");
+		je("L1");
+		jg("L1");
+		jge("L1");
+		jl("L1");
+		jle("L1");
+		jna("L1");
+		jnae("L1");
+		jnb("L1");
+		jnbe("L1");
+		jnc("L1");
+		jne("L1");
+		jng("L1");
+		jnge("L1");
+		jnl("L1");
+		jnle("L1");
+		jno("L1");
+		jnp("L1");
+		jns("L1");
+		jnz("L1");
+		jo("L1");
+		jp("L1");
+		jpe("L1");
+		jpo("L1");
+		js("L1");
+		jz("L1");
+	label("L1");
+		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
+		// jmp near
+		jmp("L1");
+		ja("L1");
+		jae("L1");
+		jb("L1");
+		jbe("L1");
+		jc("L1");
+		je("L1");
+		jg("L1");
+		jge("L1");
+		jl("L1");
+		jle("L1");
+		jna("L1");
+		jnae("L1");
+		jnb("L1");
+		jnbe("L1");
+		jnc("L1");
+		jne("L1");
+		jng("L1");
+		jnge("L1");
+		jnl("L1");
+		jnle("L1");
+		jno("L1");
+		jnp("L1");
+		jns("L1");
+		jnz("L1");
+		jo("L1");
+		jp("L1");
+		jpe("L1");
+		jpo("L1");
+		js("L1");
+		jz("L1");
 	}
 };
 
@@ -1211,6 +1299,41 @@ struct hoge : jitasm::function2_cdecl<void, short, int>
 	}
 };
 
+struct mov_disp : jitasm::function0<void>
+{
+	virtual void naked_main()
+	{
+		mov(al, byte_ptr[1]);
+		mov(cl, byte_ptr[1]);
+		mov(al, byte_ptr[-1]);
+		mov(cl, byte_ptr[-1]);
+		mov(ax, word_ptr[1]);
+		mov(cx, word_ptr[1]);
+		mov(ax, word_ptr[-1]);
+		mov(cx, word_ptr[-1]);
+		mov(eax, dword_ptr[1]);
+		mov(ecx, dword_ptr[1]);
+		mov(eax, dword_ptr[-1]);
+		mov(ecx, dword_ptr[-1]);
+#ifdef JITASM64
+		mov(rax, qword_ptr[1]);
+		mov(rax, qword_ptr[-1]);
+		mov(rax, qword_ptr[0x100000000]);
+#endif
+	}
+};
+
+//----------------------------------------
+// function0_cdecl<int>
+//----------------------------------------
+extern "C" void masm_test_function0_cdecl();
+struct test_function0_cdecl : jitasm::function0_cdecl<int>
+{
+	Result main()
+	{
+		return jitasm::Imm8(16);
+	}
+};
 
 int _tmain(int argc, _TCHAR* argv[])
 {
@@ -1233,6 +1356,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	TEST(masm_test_mov, test_mov());
 	TEST(masm_test_lea, test_lea());
 	TEST(masm_test_fld, test_fld());
+	TEST(masm_test_jmp, test_jmp());
 
 	//TEST(masm_test_function0_cdecl, test_function0_cdecl());
 }
