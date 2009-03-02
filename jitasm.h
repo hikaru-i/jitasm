@@ -498,7 +498,6 @@ struct Backend
 					base = ESP;
 				}
 				bool sib = index != INVALID || r_m.GetScale() || base == ESP;
-			db(mod << 6 | reg << 3 | (sib ? 4 : base));
 
 				// ModR/M
 				uint8 mod;
@@ -1291,9 +1290,6 @@ struct Frontend
 	Reg32 zax, zcx, zdx, zbx, zsp, zbp, zsi, zdi;
 	AddressingPtr<Opd32>	zword_ptr;
 #endif
-	AddressingPtr<Mem32>	real4_ptr;
-	AddressingPtr<Mem64>	real8_ptr;
-	AddressingPtr<Mem80>	real10_ptr;
 
 	Frontend()
 		: al(AL), cl(CL), dl(DL), bl(BL), ah(AH), ch(CH), dh(DH), bh(BH),

@@ -1217,32 +1217,32 @@ struct test_jmp : jitasm::function0<void>
 		js("L1");
 		jz("L1");
 	label("L1");
-		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
-		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
-		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
-		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
-		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
-		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
-		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
-		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
-		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
-		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
-		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
-		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
-		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
-		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
-		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
-		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
-		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
-		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
-		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
-		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
-		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
-		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
-		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
-		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
-		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
-		pabsb(xmm0, xmmword_ptr[zsp + zcx * 2 + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx + 0x100]);	// 10 bytes
+		pabsb(xmm0, xmmword_ptr[zsp + zcx + 0x100]);	// 10 bytes
 		// jmp near
 		jmp("L1");
 		ja("L1");
@@ -1320,18 +1320,6 @@ struct mov_disp : jitasm::function0<void>
 		mov(rax, qword_ptr[-1]);
 		mov(rax, qword_ptr[0x100000000]);
 #endif
-	}
-};
-
-//----------------------------------------
-// function0_cdecl<int>
-//----------------------------------------
-extern "C" void masm_test_function0_cdecl();
-struct test_function0_cdecl : jitasm::function0_cdecl<int>
-{
-	Result main()
-	{
-		return jitasm::Imm8(16);
 	}
 };
 
