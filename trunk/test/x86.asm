@@ -683,6 +683,7 @@ masm_test_fld endp
 ;----------------------------------------
 masm_test_jmp proc
 	; jmp short
+	nop
 	jmp L1
 	ja L1
 	jae L1

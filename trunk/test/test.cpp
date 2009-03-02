@@ -1179,6 +1179,7 @@ struct test_jmp : jitasm::function0<void>
 	virtual void naked_main()
 	{
 		// jmp short
+		nop();
 		jmp("L1");
 		ja("L1");
 		jae("L1");

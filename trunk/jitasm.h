@@ -888,6 +888,9 @@ struct Backend
 			db(0xD9);
 			db(0xC0 | opd.GetReg());
 		} else {
+#ifdef JITASM64
+			EncodeAddressSizePrefix();
+#endif
 			int digit = 0;
 			if (opd.GetSize() == SIZE_INT32) db(0xD9), digit = 0;
 			else if (opd.GetSize() == SIZE_INT64) db(0xDD), digit = 0;
@@ -1026,10 +1029,11 @@ struct Backend
 		case INSTR_JAE:			EncodeJCC(0x3, opd1); break;
 		case INSTR_JB:			EncodeJCC(0x2, opd1); break;
 		case INSTR_JBE:			EncodeJCC(0x6, opd1); break;
-		case INSTR_JECXZ:		db(0xE3); db(opd1.GetImm()); break;
 #ifdef JITASM64
-		case INSTR_JRCXZ:		EncodeAddressSizePrefix(); db(0xE3); db(opd1.GetImm()); break;
+		case INSTR_JECXZ:		EncodeAddressSizePrefix(); db(0xE3); db(opd1.GetImm()); break;
+		case INSTR_JRCXZ:		db(0xE3); db(opd1.GetImm()); break;
 #else
+		case INSTR_JECXZ:		db(0xE3); db(opd1.GetImm()); break;
 		case INSTR_JCXZ:		EncodeAddressSizePrefix(); db(0xE3); db(opd1.GetImm()); break;
 #endif
 		case INSTR_JE:			EncodeJCC(0x4, opd1); break;
