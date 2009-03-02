@@ -143,7 +143,7 @@ struct test_func : jitasm::function0<int>
 #endif
 #endif
 		ret();
-		return zax;
+		return eax;
 	}
 };
 
@@ -1167,6 +1167,11 @@ struct test_fld : jitasm::function0<void>
 		fld(real10_ptr[esp]);
 		fld(st(0));
 		fld(st(7));
+#ifdef JITASM64
+		fld(real4_ptr[rsp]);
+		fld(real8_ptr[rsp]);
+		fld(real10_ptr[rsp]);
+#endif
 	}
 };
 

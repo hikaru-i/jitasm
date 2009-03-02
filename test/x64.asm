@@ -972,6 +972,10 @@ masm_test_fld proc
 	fld real10 ptr[esp]
 	fld st(0)
 	fld st(7)
+
+	fld real4 ptr[rsp]
+	fld real8 ptr[rsp]
+	fld real10 ptr[rsp]
 masm_test_fld endp
 
 ;----------------------------------------
