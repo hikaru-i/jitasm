@@ -811,6 +811,8 @@ masm_test_lea proc
 	lea eax, dword ptr[ecx + esp]
 	lea eax, dword ptr[ebp + ecx]
 	lea eax, dword ptr[ecx + ebp]
+	lea eax, dword ptr[esp + ebp]
+	lea eax, dword ptr[ebp + esp]
 	lea eax, dword ptr[eax + 1h]
 	lea eax, dword ptr[esp + 1h]
 	lea eax, dword ptr[ebp + 1h]
@@ -837,36 +839,49 @@ masm_test_lea proc
 	lea eax, dword ptr[esp + ecx * 2]
 	lea eax, dword ptr[ebp + ecx * 2]
 	lea eax, dword ptr[ecx + ebp * 2]
+	lea eax, dword ptr[esp + ebp * 2]
 	lea eax, dword ptr[eax + ecx + 1h]
 	lea eax, dword ptr[ecx + eax + 1h]
 	lea eax, dword ptr[esp + ecx + 1h]
+	lea eax, dword ptr[ecx + esp + 1h]
 	lea eax, dword ptr[ebp + ecx + 1h]
 	lea eax, dword ptr[ecx + ebp + 1h]
+	lea eax, dword ptr[esp + ebp + 1h]
+	lea eax, dword ptr[ebp + esp + 1h]
 	lea eax, dword ptr[eax + ecx + 100h]
 	lea eax, dword ptr[ecx + eax + 100h]
 	lea eax, dword ptr[esp + ecx + 100h]
+	lea eax, dword ptr[ecx + esp + 100h]
 	lea eax, dword ptr[ebp + ecx + 100h]
 	lea eax, dword ptr[ecx + ebp + 100h]
+	lea eax, dword ptr[esp + ebp + 100h]
+	lea eax, dword ptr[ebp + esp + 100h]
 	lea eax, dword ptr[eax + ecx + 10000h]
 	lea eax, dword ptr[ecx + eax + 10000h]
 	lea eax, dword ptr[esp + ecx + 10000h]
+	lea eax, dword ptr[ecx + esp + 10000h]
 	lea eax, dword ptr[ebp + ecx + 10000h]
 	lea eax, dword ptr[ecx + ebp + 10000h]
+	lea eax, dword ptr[esp + ebp + 10000h]
+	lea eax, dword ptr[ebp + esp + 10000h]
 	lea eax, dword ptr[eax + ecx * 2 + 1h]
 	lea eax, dword ptr[ecx + eax * 2 + 1h]
 	lea eax, dword ptr[esp + ecx * 2 + 1h]
 	lea eax, dword ptr[ebp + ecx * 2 + 1h]
 	lea eax, dword ptr[ecx + ebp * 2 + 1h]
+	lea eax, dword ptr[esp + ebp * 2 + 1h]
 	lea eax, dword ptr[eax + ecx * 2 + 100h]
 	lea eax, dword ptr[ecx + eax * 2 + 100h]
 	lea eax, dword ptr[esp + ecx * 2 + 100h]
 	lea eax, dword ptr[ebp + ecx * 2 + 100h]
 	lea eax, dword ptr[ecx + ebp * 2 + 100h]
+	lea eax, dword ptr[esp + ebp * 2 + 100h]
 	lea eax, dword ptr[eax + ecx * 2 + 10000h]
 	lea eax, dword ptr[ecx + eax * 2 + 10000h]
 	lea eax, dword ptr[esp + ecx * 2 + 10000h]
 	lea eax, dword ptr[ebp + ecx * 2 + 10000h]
 	lea eax, dword ptr[ecx + ebp * 2 + 10000h]
+	lea eax, dword ptr[esp + ebp * 2 + 10000h]
 
 	lea rax, qword ptr[rax]
 	lea rax, qword ptr[rsp]
@@ -877,6 +892,8 @@ masm_test_lea proc
 	lea rax, qword ptr[rcx + rsp]
 	lea rax, qword ptr[rbp + rcx]
 	lea rax, qword ptr[rcx + rbp]
+	lea rax, qword ptr[rsp + rbp]
+	lea rax, qword ptr[rbp + rsp]
 	lea rax, qword ptr[rax + 1h]
 	lea rax, qword ptr[rsp + 1h]
 	lea rax, qword ptr[rbp + 1h]
@@ -903,36 +920,47 @@ masm_test_lea proc
 	lea rax, qword ptr[rsp + rcx * 2]
 	lea rax, qword ptr[rbp + rcx * 2]
 	lea rax, qword ptr[rcx + rbp * 2]
+	lea rax, qword ptr[rsp + rbp * 2]
 	lea rax, qword ptr[rax + rcx + 1h]
 	lea rax, qword ptr[rcx + rax + 1h]
 	lea rax, qword ptr[rsp + rcx + 1h]
+	lea rax, qword ptr[rcx + rsp + 1h]
 	lea rax, qword ptr[rbp + rcx + 1h]
 	lea rax, qword ptr[rcx + rbp + 1h]
+	lea rax, qword ptr[rsp + rbp + 1h]
+	lea rax, qword ptr[rbp + rsp + 1h]
 	lea rax, qword ptr[rax + rcx + 100h]
 	lea rax, qword ptr[rcx + rax + 100h]
 	lea rax, qword ptr[rsp + rcx + 100h]
 	lea rax, qword ptr[rbp + rcx + 100h]
 	lea rax, qword ptr[rcx + rbp + 100h]
+	lea rax, qword ptr[rsp + rbp + 100h]
+	lea rax, qword ptr[rbp + rsp + 100h]
 	lea rax, qword ptr[rax + rcx + 10000h]
 	lea rax, qword ptr[rcx + rax + 10000h]
 	lea rax, qword ptr[rsp + rcx + 10000h]
 	lea rax, qword ptr[rbp + rcx + 10000h]
 	lea rax, qword ptr[rcx + rbp + 10000h]
+	lea rax, qword ptr[rsp + rbp + 10000h]
+	lea rax, qword ptr[rbp + rsp + 10000h]
 	lea rax, qword ptr[rax + rcx * 2 + 1h]
 	lea rax, qword ptr[rcx + rax * 2 + 1h]
 	lea rax, qword ptr[rsp + rcx * 2 + 1h]
 	lea rax, qword ptr[rbp + rcx * 2 + 1h]
 	lea rax, qword ptr[rcx + rbp * 2 + 1h]
+	lea rax, qword ptr[rsp + rbp * 2 + 1h]
 	lea rax, qword ptr[rax + rcx * 2 + 100h]
 	lea rax, qword ptr[rcx + rax * 2 + 100h]
 	lea rax, qword ptr[rsp + rcx * 2 + 100h]
 	lea rax, qword ptr[rbp + rcx * 2 + 100h]
 	lea rax, qword ptr[rcx + rbp * 2 + 100h]
+	lea rax, qword ptr[rsp + rbp * 2 + 100h]
 	lea rax, qword ptr[rax + rcx * 2 + 10000h]
 	lea rax, qword ptr[rcx + rax * 2 + 10000h]
 	lea rax, qword ptr[rsp + rcx * 2 + 10000h]
 	lea rax, qword ptr[rbp + rcx * 2 + 10000h]
 	lea rax, qword ptr[rcx + rbp * 2 + 10000h]
+	lea rax, qword ptr[rsp + rbp * 2 + 10000h]
 masm_test_lea endp
 
 ;----------------------------------------
@@ -945,5 +973,103 @@ masm_test_fld proc
 	fld st(0)
 	fld st(7)
 masm_test_fld endp
+
+;----------------------------------------
+; JMP
+;----------------------------------------
+masm_test_jmp proc
+	jmp L1
+	ja L1
+	jae L1
+	jb L1
+	jbe L1
+	jc L1
+	jrcxz L1
+	jecxz L1
+	je L1
+	jg L1
+	jge L1
+	jl L1
+	jle L1
+	jna L1
+	jnae L1
+	jnb L1
+	jnbe L1
+	jnc L1
+	jne L1
+	jng L1
+	jnge L1
+	jnl L1
+	jnle L1
+	jno L1
+	jnp L1
+	jns L1
+	jnz L1
+	jo L1
+	jp L1
+	jpe L1
+	jpo L1
+	js L1
+	jz L1
+L1:
+	pabsb xmm0, xmmword ptr[rsp + rcx + 100h]	; 10 bytes
+	pabsb xmm0, xmmword ptr[rsp + rcx + 100h]	; 10 bytes
+	pabsb xmm0, xmmword ptr[rsp + rcx + 100h]	; 10 bytes
+	pabsb xmm0, xmmword ptr[rsp + rcx + 100h]	; 10 bytes
+	pabsb xmm0, xmmword ptr[rsp + rcx + 100h]	; 10 bytes
+	pabsb xmm0, xmmword ptr[rsp + rcx + 100h]	; 10 bytes
+	pabsb xmm0, xmmword ptr[rsp + rcx + 100h]	; 10 bytes
+	pabsb xmm0, xmmword ptr[rsp + rcx + 100h]	; 10 bytes
+	pabsb xmm0, xmmword ptr[rsp + rcx + 100h]	; 10 bytes
+	pabsb xmm0, xmmword ptr[rsp + rcx + 100h]	; 10 bytes
+	pabsb xmm0, xmmword ptr[rsp + rcx + 100h]	; 10 bytes
+	pabsb xmm0, xmmword ptr[rsp + rcx + 100h]	; 10 bytes
+	pabsb xmm0, xmmword ptr[rsp + rcx + 100h]	; 10 bytes
+	pabsb xmm0, xmmword ptr[rsp + rcx + 100h]	; 10 bytes
+	pabsb xmm0, xmmword ptr[rsp + rcx + 100h]	; 10 bytes
+	pabsb xmm0, xmmword ptr[rsp + rcx + 100h]	; 10 bytes
+	pabsb xmm0, xmmword ptr[rsp + rcx + 100h]	; 10 bytes
+	pabsb xmm0, xmmword ptr[rsp + rcx + 100h]	; 10 bytes
+	pabsb xmm0, xmmword ptr[rsp + rcx + 100h]	; 10 bytes
+	pabsb xmm0, xmmword ptr[rsp + rcx + 100h]	; 10 bytes
+	pabsb xmm0, xmmword ptr[rsp + rcx + 100h]	; 10 bytes
+	pabsb xmm0, xmmword ptr[rsp + rcx + 100h]	; 10 bytes
+	pabsb xmm0, xmmword ptr[rsp + rcx + 100h]	; 10 bytes
+	pabsb xmm0, xmmword ptr[rsp + rcx + 100h]	; 10 bytes
+	pabsb xmm0, xmmword ptr[rsp + rcx + 100h]	; 10 bytes
+	pabsb xmm0, xmmword ptr[rsp + rcx + 100h]	; 10 bytes
+	; jmp near
+	jmp L1
+	ja L1
+	jae L1
+	jb L1
+	jbe L1
+	jc L1
+	je L1
+	jg L1
+	jge L1
+	jl L1
+	jle L1
+	jna L1
+	jnae L1
+	jnb L1
+	jnbe L1
+	jnc L1
+	jne L1
+	jng L1
+	jnge L1
+	jnl L1
+	jnle L1
+	jno L1
+	jnp L1
+	jns L1
+	jnz L1
+	jo L1
+	jp L1
+	jpe L1
+	jpo L1
+	js L1
+	jz L1
+masm_test_jmp endp
 
 end

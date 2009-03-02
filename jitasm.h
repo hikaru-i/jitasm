@@ -202,6 +202,13 @@ typedef RegT<Opd80>		FpuReg;
 typedef RegT<Opd64>		Mmx;
 typedef RegT<Opd128>	Xmm;
 
+#ifdef JITASM64
+struct Rax : Reg64
+{
+	Rax() : Reg64(RAX) {}
+};
+#endif
+
 template<class OpdN>
 struct MemT : OpdN
 {
@@ -213,6 +220,14 @@ typedef MemT<Opd32>		Mem32;
 typedef MemT<Opd64>		Mem64;
 typedef MemT<Opd80>		Mem80;
 typedef MemT<Opd128>	Mem128;
+
+struct MemOffset64
+{
+	sint64 offset_;
+
+	explicit MemOffset64(sint64 offset) : offset_(offset) {}
+	Mem64 ToMem64() {return Mem64(SIZE_INT64, INVALID, INVALID, 0, offset_);}
+};
 
 struct Expr32_None
 {
@@ -316,20 +331,24 @@ inline Expr64_SIB operator+(const Expr64_SIB& lhs, sint64 rhs) {return Expr64_SI
 inline Expr64_SIB operator+(sint64 lhs, const Expr64_SIB& rhs) {return rhs + lhs;}
 #endif
 
-template<typename MemTy>
+template<typename OpdN>
 struct AddressingPtr
 {
 	// 32bit-Addressing
-	MemTy operator[](const Expr32_None& obj) {return MemTy(SIZE_INT32, obj.reg_, INVALID, 0, obj.disp_);}
-	MemTy operator[](const Expr32_BI& obj) {return MemTy(SIZE_INT32, obj.base_, obj.index_, 0, obj.disp_);}
-	MemTy operator[](const Expr32_SI& obj) {return MemTy(SIZE_INT32, INVALID, obj.index_, obj.scale_, obj.disp_);}
-	MemTy operator[](const Expr32_SIB& obj) {return MemTy(SIZE_INT32, obj.base_, obj.index_, obj.scale_, obj.disp_);}
+	MemT<OpdN> operator[](const Expr32_None& obj) {return MemT<OpdN>(SIZE_INT32, obj.reg_, INVALID, 0, obj.disp_);}
+	MemT<OpdN> operator[](const Expr32_BI& obj) {return MemT<OpdN>(SIZE_INT32, obj.base_, obj.index_, 0, obj.disp_);}
+	MemT<OpdN> operator[](const Expr32_SI& obj) {return MemT<OpdN>(SIZE_INT32, INVALID, obj.index_, obj.scale_, obj.disp_);}
+	MemT<OpdN> operator[](const Expr32_SIB& obj) {return MemT<OpdN>(SIZE_INT32, obj.base_, obj.index_, obj.scale_, obj.disp_);}
+	MemT<OpdN> operator[](sint32 disp) {return MemT<OpdN>(SIZE_INT64, INVALID, INVALID, 0, disp);}
+	MemT<OpdN> operator[](uint32 disp) {return MemT<OpdN>(SIZE_INT64, INVALID, INVALID, 0, (sint32) disp);}
 #ifdef JITASM64
 	// 64bit-Addressing
-	MemTy operator[](const Expr64_None& obj) {return MemTy(SIZE_INT64, obj.reg_, INVALID, 0, obj.disp_);}
-	MemTy operator[](const Expr64_BI& obj) {return MemTy(SIZE_INT64, obj.base_, obj.index_, 0, obj.disp_);}
-	MemTy operator[](const Expr64_SI& obj) {return MemTy(SIZE_INT64, INVALID, obj.index_, obj.scale_, obj.disp_);}
-	MemTy operator[](const Expr64_SIB& obj) {return MemTy(SIZE_INT64, obj.base_, obj.index_, obj.scale_, obj.disp_);}
+	MemT<OpdN> operator[](const Expr64_None& obj) {return MemT<OpdN>(SIZE_INT64, obj.reg_, INVALID, 0, obj.disp_);}
+	MemT<OpdN> operator[](const Expr64_BI& obj) {return MemT<OpdN>(SIZE_INT64, obj.base_, obj.index_, 0, obj.disp_);}
+	MemT<OpdN> operator[](const Expr64_SI& obj) {return MemT<OpdN>(SIZE_INT64, INVALID, obj.index_, obj.scale_, obj.disp_);}
+	MemT<OpdN> operator[](const Expr64_SIB& obj) {return MemT<OpdN>(SIZE_INT64, obj.base_, obj.index_, obj.scale_, obj.disp_);}
+	MemOffset64 operator[](sint64 offset) {return MemOffset64(offset);}
+	MemOffset64 operator[](uint64 offset) {return MemOffset64((sint64) offset);}
 #endif
 };
 
@@ -452,7 +471,7 @@ struct Backend
 		if (rxb) db(0x40 | rxb);
 	}
 
-	void EncodeModRM(int reg, const Opd& r_m)
+	void EncodeModRM(uint8 reg, const Opd& r_m)
 	{
 		reg &= 0xF;
 
@@ -462,46 +481,57 @@ struct Backend
 			int base = r_m.GetBase(); if (base != INVALID) base &= 0xF;
 			int index = r_m.GetIndex(); if (index != INVALID) index &= 0xF;
 
-			ASSERT(base != ESP || index != ESP);
-			ASSERT(index != ESP || r_m.GetScale() == 0);
+			if (base == INVALID && index == INVALID) {
+#ifdef JITASM64
+				db(reg << 3 | 4);
+				db(0x25);
+#else
+				db(reg << 3 | 5);
+#endif
+				dd(r_m.GetDisp());
+			} else {
+				ASSERT(base != ESP || index != ESP);
+				ASSERT(index != ESP || r_m.GetScale() == 0);
 
-			if (index == ESP) {
-				index = base;
-				base = ESP;
-			}
-			bool sib = index != INVALID || r_m.GetScale() || base == ESP;
-
-			// ModR/M
-			uint8 mod;
-			if (r_m.GetDisp() == 0 || sib && base == INVALID) mod = base != EBP ? 0 : 1;
-			else if (detail::IsInt8(r_m.GetDisp())) mod = 1;
-			else if (detail::IsInt32(r_m.GetDisp())) mod = 2;
-			else ASSERT(0);
+				if (index == ESP) {
+					index = base;
+					base = ESP;
+				}
+				bool sib = index != INVALID || r_m.GetScale() || base == ESP;
 			db(mod << 6 | reg << 3 | (sib ? 4 : base));
 
-			// SIB
-			if (sib) {
-				uint8 ss;
-				if (r_m.GetScale() == 0) ss = 0;
-				else if (r_m.GetScale() == 2) ss = 1;
-				else if (r_m.GetScale() == 4) ss = 2;
-				else if (r_m.GetScale() == 8) ss = 3;
+				// ModR/M
+				uint8 mod;
+				if (r_m.GetDisp() == 0 || sib && base == INVALID) mod = base != EBP ? 0 : 1;
+				else if (detail::IsInt8(r_m.GetDisp())) mod = 1;
+				else if (detail::IsInt32(r_m.GetDisp())) mod = 2;
 				else ASSERT(0);
-				if (index != INVALID && base != INVALID) {
-					db(ss << 6 | index << 3 | base);
-				} else if (base != INVALID) {
-					db(ss << 6 | 4 << 3 | base);
-				} else if (index != INVALID) {
-					db(ss << 6 | index << 3 | 5);
-				} else {
-					ASSERT(0);
-				}
-			}
+				db(mod << 6 | reg << 3 | (sib ? 4 : base));
 
-			// Displacement
-			if (mod == 0 && sib && base == INVALID) dd(r_m.GetDisp());
-			if (mod == 1) db(r_m.GetDisp());
-			if (mod == 2) dd(r_m.GetDisp());
+				// SIB
+				if (sib) {
+					uint8 ss;
+					if (r_m.GetScale() == 0) ss = 0;
+					else if (r_m.GetScale() == 2) ss = 1;
+					else if (r_m.GetScale() == 4) ss = 2;
+					else if (r_m.GetScale() == 8) ss = 3;
+					else ASSERT(0);
+					if (index != INVALID && base != INVALID) {
+						db(ss << 6 | index << 3 | base);
+					} else if (base != INVALID) {
+						db(ss << 6 | 4 << 3 | base);
+					} else if (index != INVALID) {
+						db(ss << 6 | index << 3 | 5);
+					} else {
+						ASSERT(0);
+					}
+				}
+
+				// Displacement
+				if (mod == 0 && sib && base == INVALID) dd(r_m.GetDisp());
+				if (mod == 1) db(r_m.GetDisp());
+				if (mod == 2) dd(r_m.GetDisp());
+			}
 		} else {
 			ASSERT(0);
 		}
@@ -683,8 +713,23 @@ struct Backend
 			if (reg.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
 #endif
 
-			uint8 d = opd1.IsReg() ? 1 : 0;
 			uint8 w = reg.GetSize() != SIZE_INT8 ? 1 : 0;
+#ifdef JITASM64
+			if (reg.GetReg() == EAX && r_m.IsMem() && r_m.GetBase() == INVALID && r_m.GetIndex() == INVALID && !detail::IsInt32(r_m.GetDisp())) {
+				uint8 d = opd1.IsReg() ? 0 : 1;
+				db(0xA0 | d << 1 | w);
+				dq(r_m.GetDisp());
+				return;
+			}
+#else
+			if (reg.GetReg() == EAX && r_m.IsMem() && r_m.GetBase() == INVALID && r_m.GetIndex() == INVALID) {
+				uint8 d = opd1.IsReg() ? 0 : 1;
+				db(0xA0 | d << 1 | w);
+				dd(r_m.GetDisp());
+				return;
+			}
+#endif
+			uint8 d = opd1.IsReg() ? 1 : 0;
 			db(0x88 | d << 1 | w);
 			EncodeModRM(reg, r_m);
 		}
@@ -1222,23 +1267,29 @@ struct Frontend
 	Reg8 r8b, r9b, r10b, r11b, r12b, r13b, r14b, r15b;
 	Reg16 r8w, r9w, r10w, r11w, r12w, r13w, r14w, r15w;
 	Reg32 r8d, r9d, r10d, r11d, r12d, r13d, r14d, r15d;
-	Reg64 rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r10, r11, r12, r13, r14, r15;
+	Rax rax;
+	Reg64 rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r10, r11, r12, r13, r14, r15;
 	Xmm xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15;
-#else
-	Reg32 rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi;
 #endif
 	struct {FpuReg operator()(size_t n) {ASSERT(n >= ST0 && n <= ST7); return FpuReg((RegID) n);}} st;
 
-	AddressingPtr<Mem8>		byte_ptr;
-	AddressingPtr<Mem16>	word_ptr;
-	AddressingPtr<Mem32>	dword_ptr;
-	AddressingPtr<Mem64>	qword_ptr;
-	AddressingPtr<Mem64>	mmword_ptr;
-	AddressingPtr<Mem128>	xmmword_ptr;
+	AddressingPtr<Opd8>		byte_ptr;
+	AddressingPtr<Opd16>	word_ptr;
+	AddressingPtr<Opd32>	dword_ptr;
+	AddressingPtr<Opd64>	qword_ptr;
+	AddressingPtr<Opd64>	mmword_ptr;
+	AddressingPtr<Opd128>	xmmword_ptr;
+	AddressingPtr<Opd32>	real4_ptr;
+	AddressingPtr<Opd64>	real8_ptr;
+	AddressingPtr<Opd80>	real10_ptr;
+
 #ifdef JITASM64
-	AddressingPtr<Mem64>	ptr;
+	Rax zax;
+	Reg64 zcx, zdx, zbx, zsp, zbp, zsi, zdi;
+	AddressingPtr<Opd64>	zword_ptr;
 #else
-	AddressingPtr<Mem32>	ptr;
+	Reg32 zax, zcx, zdx, zbx, zsp, zbp, zsi, zdi;
+	AddressingPtr<Opd32>	zword_ptr;
 #endif
 	AddressingPtr<Mem32>	real4_ptr;
 	AddressingPtr<Mem64>	real8_ptr;
@@ -1254,11 +1305,12 @@ struct Frontend
 		r8b(R8B), r9b(R9B), r10b(R10B), r11b(R11B), r12b(R12B), r13b(R13B), r14b(R14B), r15b(R15B),
 		r8w(R8W), r9w(R9W), r10w(R10W), r11w(R11W), r12w(R12W), r13w(R13W), r14w(R14W), r15w(R15W),
 		r8d(R8D), r9d(R9D), r10d(R10D), r11d(R11D), r12d(R12D), r13d(R13D), r14d(R14D), r15d(R15D),
-		rax(RAX), rcx(RCX), rdx(RDX), rbx(RBX), rsp(RSP), rbp(RBP), rsi(RSI), rdi(RDI),
+		rcx(RCX), rdx(RDX), rbx(RBX), rsp(RSP), rbp(RBP), rsi(RSI), rdi(RDI),
 		r8(R8), r9(R9), r10(R10), r11(R11), r12(R12), r13(R13), r14(R14), r15(R15),
 		xmm8(XMM8), xmm9(XMM9), xmm10(XMM10), xmm11(XMM11), xmm12(XMM12), xmm13(XMM13), xmm14(XMM14), xmm15(XMM15),
+		zcx(RCX), zdx(RDX), zbx(RBX), zsp(RSP), zbp(RBP), zsi(RSI), zdi(RDI),
 #else
-		rax(EAX), rcx(ECX), rdx(EDX), rbx(EBX), rsp(ESP), rbp(EBP), rsi(ESI), rdi(EDI),
+		zax(EAX), zcx(ECX), zdx(EDX), zbx(EBX), zsp(ESP), zbp(EBP), zsi(ESI), zdi(EDI),
 #endif
 		buffsize_(0)
 	{
@@ -1281,12 +1333,12 @@ struct Frontend
 
 	virtual void Prolog(size_t localVarSize)
 	{
-		push(rbp);
-		mov(rbp, rsp);
+		push(zbp);
+		mov(zbp, zsp);
 		//sub(rsp, localVarSize)
-		push(rbx);
-		push(rdi);
-		push(rsi);
+		push(zbx);
+		push(zdi);
+		push(zsi);
 #ifdef JITASM64
 		push(r12);
 		push(r13);
@@ -1305,9 +1357,9 @@ struct Frontend
 		pop(r13);
 		pop(r12);
 #endif
-		pop(rsi);
-		pop(rdi);
-		pop(rbx);
+		pop(zsi);
+		pop(zdi);
+		pop(zbx);
 		leave();
 		ret();
 	}
@@ -1321,7 +1373,7 @@ struct Frontend
 			|| id == INSTR_JNS || id == INSTR_JO || id == INSTR_JP || id == INSTR_JS;
 	}
 
-	// TODO: Return an error when there is no jump destination in jump is missing.
+	// TODO: Return an error when there is no destination.
 	void ResolveJump()
 	{
 		// Replace label indexes with instruncion numbers.
@@ -1329,7 +1381,7 @@ struct Frontend
 			Instr& instr = *it;
 			if (IsJmpOrJcc(instr.GetID()) && instr.GetOpd(0).IsImm()) {
 				size_t label_id = (size_t) instr.GetOpd(0).GetImm();
-				instr = Instr(instr.GetID(), Imm8(0xFF), Imm64(labels_[label_id].instr_number));	// opd1 = max value in sint8, opd2 = instruction number
+				instr = Instr(instr.GetID(), Imm8(0x7F), Imm64(labels_[label_id].instr_number));	// opd1 = max value in sint8, opd2 = instruction number
 			}
 		}
 
@@ -1355,8 +1407,10 @@ struct Frontend
 					OpdSize size = instr.GetOpd(0).GetSize();
 					if (size == SIZE_INT8) {
 						if (!detail::IsInt8(rel)) {
+							if (instr.GetID() == INSTR_JRCXZ || instr.GetID() == INSTR_JCXZ || instr.GetID() == INSTR_JECXZ) ASSERT(0);	// jrcxz, jcxz, jecxz are only for short jump
+
 							// Retry with immediate 32
-							instr = Instr(instr.GetID(), Imm32(0xFFFFFFFF), Imm64(instr.GetOpd(1).GetImm()));
+							instr = Instr(instr.GetID(), Imm32(0x7FFFFFFF), Imm64(instr.GetOpd(1).GetImm()));
 							retry = true;
 						}
 					} else if (size == SIZE_INT32) {
@@ -1567,11 +1621,11 @@ struct Frontend
 	void jb(const std::string& label_name) {PushBack(Instr(INSTR_JB, Imm64(GetLabelId(label_name))));}
 	void jbe(const std::string& label_name) {PushBack(Instr(INSTR_JBE, Imm64(GetLabelId(label_name))));}
 	void jc(const std::string& label_name) {jb(label_name);}
-	void jecxz(const std::string& label_name) {PushBack(Instr(INSTR_JECXZ, Imm64(GetLabelId(label_name))));}
+	void jecxz(const std::string& label_name) {PushBack(Instr(INSTR_JECXZ, Imm64(GetLabelId(label_name))));}	// short jump only
 #ifdef JITASM64
-	void jrcxz (const std::string& label_name) {PushBack(Instr(INSTR_JRCXZ, Imm64(GetLabelId(label_name))));}
+	void jrcxz (const std::string& label_name) {PushBack(Instr(INSTR_JRCXZ, Imm64(GetLabelId(label_name))));}	// short jump only
 #else
-	void jcxz(const std::string& label_name) {PushBack(Instr(INSTR_JCXZ, Imm64(GetLabelId(label_name))));}
+	void jcxz(const std::string& label_name) {PushBack(Instr(INSTR_JCXZ, Imm64(GetLabelId(label_name))));}		// short jump only
 #endif
 	void je(const std::string& label_name) {PushBack(Instr(INSTR_JE, Imm64(GetLabelId(label_name))));}
 	void jg(const std::string& label_name) {PushBack(Instr(INSTR_JG, Imm64(GetLabelId(label_name))));}
@@ -1627,6 +1681,7 @@ struct Frontend
 	void mov(const Reg64& opd1, const Mem64& opd2) {PushBack(Instr(INSTR_MOV, opd1, opd2));}
 	void mov(const Mem64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_MOV, opd1, opd2));}
 	void mov(const Opd64& opd1, uint64 imm) {PushBack(Instr(INSTR_MOV, opd1, Imm64(imm)));}
+	void mov(const Rax& opd1, MemOffset64& opd2) {PushBack(Instr(INSTR_MOV, opd1, opd2.ToMem64()));}
 #endif
  
 	// MOVZX
@@ -2007,7 +2062,7 @@ namespace detail {
 	struct Function : Frontend
 	{
 		typedef Opd Result;
-		Arg Arg1() { return Arg(rbp + 8); }
+		Arg Arg1() { return Arg(zbp + 8); }
 		template<class A1> Arg Arg2() { return Arg1() + AlignSize<sizeof(void*)>(sizeof(A1)); }
 		template<class A1, class A2> Arg Arg3() { return Arg2() + AlignSize<sizeof(void*)>(sizeof(A2)); }
 		template<class R> void StoreResult(const Opd& result) {
@@ -2023,7 +2078,7 @@ namespace detail {
 template<class R>
 struct function0_cdecl : detail::Function<R (__cdecl *)()>
 {
-	virtual Result main() { return rax; }
+	virtual Result main() { return zax; }
 	void naked_main() {
 		Prolog(0);
 		StoreResult<R>(main());
