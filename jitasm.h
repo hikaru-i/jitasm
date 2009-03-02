@@ -40,9 +40,9 @@
 #define ASSERT assert
 #endif
 
-#if defined(_WIN64) && (defined(_M_AMD64) || defined(_M_X64))
+//#if defined(_WIN64) && (defined(_M_AMD64) || defined(_M_X64))
 #define JITASM64
-#endif
+//#endif
 
 namespace jitasm
 {
@@ -889,7 +889,7 @@ struct Backend
 			db(0xC0 | opd.GetReg());
 		} else {
 #ifdef JITASM64
-			EncodeAddressSizePrefix();
+			if (opd.IsMem() && opd.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
 #endif
 			int digit = 0;
 			if (opd.GetSize() == SIZE_INT32) db(0xD9), digit = 0;
