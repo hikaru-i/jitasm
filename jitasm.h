@@ -2031,10 +2031,12 @@ namespace detail {
 
 	template<class T, int Size = sizeof(T)>
 	struct ResultT {
+		enum { ArgR = 1 };
 	};
 
 	template<class T>
 	struct ResultT<T, 1> {
+		enum { ArgR = 0 };
 		Opd8 val_;
 		ResultT() : val_(INVALID) {}
 		ResultT(const Opd8& val) : val_(val) {}
@@ -2047,6 +2049,7 @@ namespace detail {
 
 	template<class T>
 	struct ResultT<T, 2> {
+		enum { ArgR = 0 };
 		Opd16 val_;
 		ResultT() : val_(INVALID) {}
 		ResultT(const Opd16& val) : val_(val) {}
@@ -2059,6 +2062,7 @@ namespace detail {
 
 	template<class T>
 	struct ResultT<T, 4> {
+		enum { ArgR = 0 };
 		Opd32 val_;
 		ResultT() : val_(INVALID) {}
 		ResultT(const Opd32& val) : val_(val) {}
@@ -2072,18 +2076,26 @@ namespace detail {
 #ifdef JITASM64
 	template<class T>
 	struct ResultT<T, 8> {
-		Opd64 value_;
-		ResultT(const Opd64& val) : value_(val) {}
-		ResultT(uint64 imm) : value_(Imm64(imm)) {}
+		enum { ArgR = 0 };
+		Opd64 val_;
+		ResultT() : val_(INVALID) {}
+		ResultT(const Opd64& val) : val_(val) {}
+		ResultT(uint64 imm) : val_(Imm64(imm)) {}
+		void Store(Frontend& f) {
+			if (!val_.IsReg() || val_.GetReg() != INVALID)
+				f.mov(f.eax, static_cast<Reg64&>(val_));
+		}
 	};
 #endif
 
 	template<>
 	struct ResultT<float, sizeof(float)> {
+		enum { ArgR = 0 };
 	};
 
 	template<>
 	struct ResultT<double, sizeof(double)> {
+		enum { ArgR = 0 };
 	};
 
 
@@ -2091,9 +2103,9 @@ namespace detail {
 	template<class FuncPtr>
 	struct Function : Frontend
 	{
-		Arg Arg1() { return Arg(zbp + 8); }
-		template<class A1> Arg Arg2() { return Arg1() + AlignSize<sizeof(void*)>(sizeof(A1)); }
-		template<class A1, class A2> Arg Arg3() { return Arg2() + AlignSize<sizeof(void*)>(sizeof(A2)); }
+		template<int ArgR> Arg Arg1() { return Arg(zbp + sizeof(void *) * (2 + ArgR)); }
+		template<int ArgR, class A1> Arg Arg2() { return Arg1<ArgR>() + AlignSize<sizeof(void *)>(sizeof(A1)); }
+		template<int ArgR, class A1, class A2> Arg Arg3() { return Arg2<A1, ArgR>() + AlignSize<sizeof(void *)>(sizeof(A2)); }
 
 		operator FuncPtr() { return (FuncPtr)GetCode(); }
 	};
@@ -2132,7 +2144,7 @@ struct function1_cdecl : detail::Function<R (__cdecl *)(A1)>
 	virtual Result main(Arg a1) { return Result(); }
 	void naked_main() {
 		Prolog(0);
-		main(Arg1()).Store(*this);
+		main(Arg1<Result::ArgR>()).Store(*this);
 		Epilog();
 	}
 };
@@ -2143,7 +2155,7 @@ struct function1_cdecl<void, A1> : detail::Function<void (__cdecl *)(A1)>
 	virtual void main(Arg a1) {}
 	void naked_main() {
 		Prolog(0);
-		main(Arg1());
+		main(Arg1<0>());
 		Epilog();
 	}
 };
@@ -2156,7 +2168,7 @@ struct function2_cdecl : detail::Function<R (__cdecl *)(A1, A2)>
 	virtual Result main(Arg a1, Arg a2) { return Result(); }
 	void naked_main() {
 		Prolog(0);
-		main(Arg1(), Arg2<A1>()).Store(*this);
+		main(Arg1<Result::ArgR>(), Arg2<Result::ArgR, A1>()).Store(*this);
 		Epilog();
 	}
 };
@@ -2167,7 +2179,7 @@ struct function2_cdecl<void, A1, A2> : detail::Function<void (__cdecl *)(A1, A2)
 	virtual void main(Arg a1, Arg a2) {}
 	void naked_main() {
 		Prolog(0);
-		main(Arg1(), Arg2<A1>());
+		main(Arg1<0>(), Arg2<0, A1>());
 		Epilog();
 	}
 };
