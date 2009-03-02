@@ -115,7 +115,7 @@ struct test_mmx_sse2 : jitasm::function0<void>
 
 struct test_func : jitasm::function0<int>
 {
-	virtual jitasm::Opd main()
+	virtual Result main()
 	{
 		xor(zax, zax);
 		mov(zcx, 100);
@@ -1282,11 +1282,11 @@ struct test_jmp : jitasm::function0<void>
 // function0_cdecl<int>
 //----------------------------------------
 extern "C" void masm_test_function0_cdecl();
-struct test_function0_cdecl : jitasm::function0_cdecl<int>
+struct test_function0_cdecl : jitasm::function0_cdecl<short>
 {
 	Result main()
 	{
-		return jitasm::Imm8(16);
+		return 16;
 	}
 };
 
