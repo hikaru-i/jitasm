@@ -1352,5 +1352,5 @@ int _tmain(int argc, _TCHAR* argv[])
 	TEST(masm_test_fld, test_fld());
 	TEST(masm_test_jmp, test_jmp());
 
-	//TEST(masm_test_function0_cdecl, test_function0_cdecl());
+	TEST(masm_test_function0_cdecl, test_function0_cdecl());
 }
