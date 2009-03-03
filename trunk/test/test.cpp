@@ -1315,6 +1315,28 @@ struct test_jmp : jitasm::function0<void>
 	}
 };
 
+
+//----------------------------------------
+// MOVSB/MOVSW/MOVSD/MOVSQ
+//----------------------------------------
+extern "C" void masm_test_movs();
+struct test_movs : jitasm::function0<void>
+{
+	virtual void naked_main()
+	{
+		movsb();
+		movsw();
+		movsd();
+		rep_movsb();
+		rep_movsw();
+		rep_movsd();
+#ifdef JITASM64
+		movsq();
+		rep_movsq();
+#endif
+	}
+};
+
 //----------------------------------------
 // function0_cdecl<int>
 //----------------------------------------
@@ -1394,6 +1416,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	TEST(test_lea);
 	TEST(test_fld);
 	TEST(test_jmp);
+	TEST(test_movs);
 
 	TEST(test_function0_cdecl);
 	//TEST(masm_test_function1_cdecl, test_function1_cdecl());

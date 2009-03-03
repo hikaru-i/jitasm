@@ -1082,6 +1082,21 @@ L1:
 masm_test_jmp endp
 
 ;----------------------------------------
+; MOVSB/MOVSW/MOVSD/MOVSQ
+;----------------------------------------
+masm_test_movs proc
+	movsb 
+	movsw 
+	movsd 
+	rep movsb 
+	rep movsw 
+	rep movsd 
+
+	movsq 
+	rep movsq 
+masm_test_movs endp
+
+;----------------------------------------
 ; function0_cdecl<int>
 ;----------------------------------------
 masm_test_function0_cdecl proc
