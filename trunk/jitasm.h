@@ -2075,6 +2075,11 @@ struct Frontend
 	void movdqu(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_MOVDQU, opd1, opd2));}
 	void movdqu(const Mem128& opd1, const Xmm& opd2)	{PushBack(Instr(I_MOVDQU, opd1, opd2));}
 
+	// MOVSD
+	void movsd(const Xmm& dst, const Xmm& src)		{PushBack(Instr(I_MOVSD, dst, src));}
+	void movsd(const Xmm& dst, const Mem64& src)	{PushBack(Instr(I_MOVSD, dst, src));}
+	void movsd(const Mem64& dst, const Xmm& src)	{PushBack(Instr(I_MOVSD, dst, src));}
+
 	// MOVSS
 	void movss(const Xmm& dst, const Xmm& src)		{PushBack(Instr(I_MOVSS, dst, src));}
 	void movss(const Xmm& dst, const Mem32& src)	{PushBack(Instr(I_MOVSS, dst, src));}
@@ -2198,7 +2203,7 @@ namespace detail {
 #endif
 
 	template<>
-	struct ResultT<float, sizeof(float)> {
+	struct ResultT<float, 4> {
 		enum { ArgR = 0 };
 		Opd val_;
 		ResultT() {}
@@ -2219,19 +2224,48 @@ namespace detail {
 			else if (val_.IsReg() && val_.GetSize() == O_SIZE_128) {
 				// from XMM register
 				f.movss(f.dword_ptr[f.esp - 4], static_cast<Xmm&>(val_));
-				f.fld(f.dword_ptr[f.esp - 4]);
+				f.fld(f.real4_ptr[f.esp - 4]);
 			}
 			else if (val_.IsImm()) {
 				// from float immediate
 				f.mov(f.dword_ptr[f.esp - 4], static_cast<Reg32&>(val_));
-				f.fld(f.dword_ptr[f.esp - 4]);
+				f.fld(f.real4_ptr[f.esp - 4]);
 			}
 		}
 	};
 
 	template<>
-	struct ResultT<double, sizeof(double)> {
+	struct ResultT<double, 8> {
 		enum { ArgR = 0 };
+		Opd val_;
+		double imm_;
+		ResultT() {}
+		ResultT(const FpuReg& fpu) : val_(fpu) {}
+		ResultT(const Mem64& mem) : val_(mem) {}
+		ResultT(const Xmm& xmm) : val_(xmm) {}
+		ResultT(const double imm) : val_(Imm32(0)), imm_(imm) {}
+		void Store(Frontend& f) {
+			if (val_.IsReg() && val_.GetSize() == O_SIZE_80) {
+				// from FPU register
+				if (val_.GetReg() != ST0)
+					f.fld(static_cast<FpuReg&>(val_));
+			}
+			else if (val_.IsMem() && val_.GetSize() == O_SIZE_64) {
+				// from memory
+				f.fld(static_cast<Mem64&>(val_));
+			}
+			else if (val_.IsReg() && val_.GetSize() == O_SIZE_128) {
+				// from XMM register
+				f.movsd(f.qword_ptr[f.esp - 8], static_cast<Xmm&>(val_));
+				f.fld(f.real8_ptr[f.esp - 8]);
+			}
+			else if (val_.IsImm()) {
+				// from double immediate
+				f.mov(f.dword_ptr[f.esp - 8], *reinterpret_cast<uint32*>(&imm_));
+				f.mov(f.dword_ptr[f.esp - 4], *(reinterpret_cast<uint32*>(&imm_) + 1));
+				f.fld(f.real8_ptr[f.esp - 8]);
+			}
+		}
 	};
 
 

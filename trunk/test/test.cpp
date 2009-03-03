@@ -1357,7 +1357,13 @@ struct test_function1_cdecl : jitasm::function1_cdecl<float, float>
 {
 	Result main(Arg a1)
 	{
-		return 1.0f;
+		static float sf = 20.0f;
+		movss(xmm0, real4_ptr[(uintptr_t)&sf]);
+		return xmm0;
+		//return 11.0f;
+		//return real4_ptr[a1];
+		//fld(real4_ptr[a1]);
+		//return st(0);
 	}
 };
 
