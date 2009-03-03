@@ -40,9 +40,9 @@
 #define ASSERT assert
 #endif
 
-//#if defined(_WIN64) && (defined(_M_AMD64) || defined(_M_X64))
+#if defined(_WIN64) && (defined(_M_AMD64) || defined(_M_X64))
 #define JITASM64
-//#endif
+#endif
 
 namespace jitasm
 {

@@ -1288,7 +1288,7 @@ struct test_jmp : jitasm::function0<void>
 // function0_cdecl<int>
 //----------------------------------------
 extern "C" void masm_test_function0_cdecl();
-struct test_function0_cdecl : jitasm::function0_cdecl<short>
+struct test_function0_cdecl : jitasm::function0_cdecl<int>
 {
 	Result main()
 	{
