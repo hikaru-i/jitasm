@@ -882,6 +882,9 @@ masm_test_lea proc
 	lea eax, dword ptr[ebp + ecx * 2 + 10000h]
 	lea eax, dword ptr[ecx + ebp * 2 + 10000h]
 	lea eax, dword ptr[esp + ebp * 2 + 10000h]
+	lea eax, dword ptr[eax - 1h]
+	lea eax, dword ptr[eax - 100h]
+	lea eax, dword ptr[eax - 10000h]
 
 	lea rax, qword ptr[rax]
 	lea rax, qword ptr[rsp]

@@ -69,20 +69,20 @@ namespace detail
 //----------------------------------------
 enum OpdType
 {
-	TYPE_NONE,
-	TYPE_REG,
-	TYPE_MEM,
-	TYPE_IMM,
+	O_TYPE_NONE,
+	O_TYPE_REG,
+	O_TYPE_MEM,
+	O_TYPE_IMM,
 };
 
 enum OpdSize
 {
-	SIZE_INT8,
-	SIZE_INT16,
-	SIZE_INT32,
-	SIZE_INT64,
-	SIZE_INT80,
-	SIZE_INT128,
+	O_SIZE_8,
+	O_SIZE_16,
+	O_SIZE_32,
+	O_SIZE_64,
+	O_SIZE_80,
+	O_SIZE_128,
 };
 
 enum RegID
@@ -127,31 +127,31 @@ struct Opd
 	};
 
 	// NONE
-	Opd() : opdtype_(TYPE_NONE) {}
+	Opd() : opdtype_(O_TYPE_NONE) {}
 	// REG
-	explicit Opd(OpdSize opdsize, RegID reg) : opdtype_(TYPE_REG), opdsize_(opdsize), reg_(reg) {}
+	explicit Opd(OpdSize opdsize, RegID reg) : opdtype_(O_TYPE_REG), opdsize_(opdsize), reg_(reg) {}
 	// MEM
 	Opd(OpdSize opdsize, OpdSize addrsize, RegID base, RegID index, sint64 scale, sint64 disp)
-		: opdtype_(TYPE_MEM), opdsize_(opdsize), addrsize_(addrsize), base_(base), index_(index), scale_(scale), disp_(disp) {}
+		: opdtype_(O_TYPE_MEM), opdsize_(opdsize), addrsize_(addrsize), base_(base), index_(index), scale_(scale), disp_(disp) {}
 protected:
 	// IMM
-	explicit Opd(sint64 imm) : opdtype_(TYPE_IMM), imm_(imm)
+	explicit Opd(sint64 imm) : opdtype_(O_TYPE_IMM), imm_(imm)
 	{
-		if (detail::IsInt8(imm)) opdsize_ = SIZE_INT8;
-		else if (detail::IsInt16(imm)) opdsize_ = SIZE_INT16;
-		else if (detail::IsInt32(imm)) opdsize_ = SIZE_INT32;
+		if (detail::IsInt8(imm)) opdsize_ = O_SIZE_8;
+		else if (detail::IsInt16(imm)) opdsize_ = O_SIZE_16;
+		else if (detail::IsInt32(imm)) opdsize_ = O_SIZE_32;
 #ifdef JITASM64
-		else opdsize_ = SIZE_INT64;
+		else opdsize_ = O_SIZE_64;
 #else
 		else ASSERT(0);
 #endif
 	}
 
 public:
-	bool	IsNone() const {return opdtype_ == TYPE_NONE;}
-	bool	IsReg() const {return opdtype_ == TYPE_REG;}
-	bool	IsMem() const {return opdtype_ == TYPE_MEM;}
-	bool	IsImm() const {return opdtype_ == TYPE_IMM;}
+	bool	IsNone() const {return opdtype_ == O_TYPE_NONE;}
+	bool	IsReg() const {return opdtype_ == O_TYPE_REG;}
+	bool	IsMem() const {return opdtype_ == O_TYPE_MEM;}
+	bool	IsImm() const {return opdtype_ == O_TYPE_IMM;}
 	OpdSize	GetSize() const {return opdsize_;}
 	OpdSize	GetAddressSize() const {return addrsize_;}
 
@@ -175,12 +175,12 @@ protected:
 	// IMM
 	OpdT(sint64 imm) : Opd(imm) {}
 };
-typedef OpdT<SIZE_INT8>		Opd8;
-typedef OpdT<SIZE_INT16>	Opd16;
-typedef OpdT<SIZE_INT32>	Opd32;
-typedef OpdT<SIZE_INT64>	Opd64;
-typedef OpdT<SIZE_INT80>	Opd80;
-typedef OpdT<SIZE_INT128>	Opd128;
+typedef OpdT<O_SIZE_8>		Opd8;
+typedef OpdT<O_SIZE_16>	Opd16;
+typedef OpdT<O_SIZE_32>	Opd32;
+typedef OpdT<O_SIZE_64>	Opd64;
+typedef OpdT<O_SIZE_80>	Opd80;
+typedef OpdT<O_SIZE_128>	Opd128;
 
 template<class OpdN>
 struct RegT : OpdN
@@ -221,7 +221,7 @@ struct MemOffset64
 	sint64 offset_;
 
 	explicit MemOffset64(sint64 offset) : offset_(offset) {}
-	Mem64 ToMem64() {return Mem64(SIZE_INT64, INVALID, INVALID, 0, offset_);}
+	Mem64 ToMem64() {return Mem64(O_SIZE_64, INVALID, INVALID, 0, offset_);}
 };
 
 template<class OpdN, class U, class S>
@@ -243,8 +243,10 @@ struct Expr32_None
 };
 inline Expr32_None operator+(const Reg32& lhs, sint64 rhs) {return Expr32_None(lhs.reg_, rhs);}
 inline Expr32_None operator+(sint64 lhs, const Reg32& rhs) {return rhs + lhs;}
+inline Expr32_None operator-(const Reg32& lhs, sint64 rhs) {return lhs + -rhs;}
 inline Expr32_None operator+(const Expr32_None& lhs, sint64 rhs) {return Expr32_None(lhs.reg_, lhs.disp_ + rhs);}
 inline Expr32_None operator+(sint64 lhs, const Expr32_None& rhs) {return rhs + lhs;}
+inline Expr32_None operator-(const Expr32_None& lhs, sint64 rhs) {return lhs + -rhs;}
 
 struct Expr32_BI
 {
@@ -256,6 +258,7 @@ struct Expr32_BI
 inline Expr32_BI operator+(const Expr32_None& lhs, const Expr32_None& rhs) {return Expr32_BI(rhs.reg_, lhs.reg_, lhs.disp_ + rhs.disp_);}
 inline Expr32_BI operator+(const Expr32_BI& lhs, sint64 rhs) {return Expr32_BI(lhs.base_, lhs.index_, lhs.disp_ + rhs);}
 inline Expr32_BI operator+(sint64 lhs, const Expr32_BI& rhs) {return rhs + lhs;}
+inline Expr32_BI operator-(const Expr32_BI& lhs, sint64 rhs) {return lhs + -rhs;}
 
 struct Expr32_SI
 {
@@ -270,6 +273,7 @@ inline Expr32_SI operator*(const Expr32_SI& lhs, sint64 rhs) {return Expr32_SI(l
 inline Expr32_SI operator*(sint64 lhs, const Expr32_SI& rhs) {return rhs * lhs;}
 inline Expr32_SI operator+(const Expr32_SI& lhs, sint64 rhs) {return Expr32_SI(lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
 inline Expr32_SI operator+(sint64 lhs, const Expr32_SI& rhs) {return rhs + lhs;}
+inline Expr32_SI operator-(const Expr32_SI& lhs, sint64 rhs) {return lhs + -rhs;}
 
 struct Expr32_SIB
 {
@@ -283,6 +287,7 @@ inline Expr32_SIB operator+(const Expr32_None& lhs, const Expr32_SI& rhs) {retur
 inline Expr32_SIB operator+(const Expr32_SI& lhs, const Expr32_None& rhs) {return rhs + lhs;}
 inline Expr32_SIB operator+(const Expr32_SIB& lhs, sint64 rhs) {return Expr32_SIB(lhs.base_, lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
 inline Expr32_SIB operator+(sint64 lhs, const Expr32_SIB& rhs) {return rhs + lhs;}
+inline Expr32_SIB operator-(const Expr32_SIB& lhs, sint64 rhs) {return lhs + -rhs;}
 
 #ifdef JITASM64
 struct Expr64_None
@@ -294,8 +299,10 @@ struct Expr64_None
 };
 inline Expr64_None operator+(const Reg64& lhs, sint64 rhs) {return Expr64_None(lhs.reg_, rhs);}
 inline Expr64_None operator+(sint64 lhs, const Reg64& rhs) {return rhs + lhs;}
+inline Expr64_None operator-(const Reg64& lhs, sint64 rhs) {return lhs + -rhs;}
 inline Expr64_None operator+(const Expr64_None& lhs, sint64 rhs) {return Expr64_None(lhs.reg_, lhs.disp_ + rhs);}
 inline Expr64_None operator+(sint64 lhs, const Expr64_None& rhs) {return rhs + lhs;}
+inline Expr64_None operator-(const Expr64_None& lhs, sint64 rhs) {return lhs + -rhs;}
 
 struct Expr64_BI
 {
@@ -307,6 +314,7 @@ struct Expr64_BI
 inline Expr64_BI operator+(const Expr64_None& lhs, const Expr64_None& rhs) {return Expr64_BI(rhs.reg_, lhs.reg_, lhs.disp_ + rhs.disp_);}
 inline Expr64_BI operator+(const Expr64_BI& lhs, sint64 rhs) {return Expr64_BI(lhs.base_, lhs.index_, lhs.disp_ + rhs);}
 inline Expr64_BI operator+(sint64 lhs, const Expr64_BI& rhs) {return rhs + lhs;}
+inline Expr64_BI operator-(const Expr64_BI& lhs, sint64 rhs) {return lhs + -rhs;}
 
 struct Expr64_SI
 {
@@ -321,6 +329,7 @@ inline Expr64_SI operator*(const Expr64_SI& lhs, sint64 rhs) {return Expr64_SI(l
 inline Expr64_SI operator*(sint64 lhs, const Expr64_SI& rhs) {return rhs * lhs;}
 inline Expr64_SI operator+(const Expr64_SI& lhs, sint64 rhs) {return Expr64_SI(lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
 inline Expr64_SI operator+(sint64 lhs, const Expr64_SI& rhs) {return rhs + lhs;}
+inline Expr64_SI operator-(const Expr64_SI& lhs, sint64 rhs) {return lhs + -rhs;}
 
 struct Expr64_SIB
 {
@@ -334,24 +343,25 @@ inline Expr64_SIB operator+(const Expr64_None& lhs, const Expr64_SI& rhs) {retur
 inline Expr64_SIB operator+(const Expr64_SI& lhs, const Expr64_None& rhs) {return rhs + lhs;}
 inline Expr64_SIB operator+(const Expr64_SIB& lhs, sint64 rhs) {return Expr64_SIB(lhs.base_, lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
 inline Expr64_SIB operator+(sint64 lhs, const Expr64_SIB& rhs) {return rhs + lhs;}
+inline Expr64_SIB operator-(const Expr64_SIB& lhs, sint64 rhs) {return lhs + -rhs;}
 #endif
 
 template<typename OpdN>
 struct AddressingPtr
 {
 	// 32bit-Addressing
-	MemT<OpdN> operator[](const Expr32_None& obj) {return MemT<OpdN>(SIZE_INT32, obj.reg_, INVALID, 0, obj.disp_);}
-	MemT<OpdN> operator[](const Expr32_BI& obj) {return MemT<OpdN>(SIZE_INT32, obj.base_, obj.index_, 0, obj.disp_);}
-	MemT<OpdN> operator[](const Expr32_SI& obj) {return MemT<OpdN>(SIZE_INT32, INVALID, obj.index_, obj.scale_, obj.disp_);}
-	MemT<OpdN> operator[](const Expr32_SIB& obj) {return MemT<OpdN>(SIZE_INT32, obj.base_, obj.index_, obj.scale_, obj.disp_);}
-	MemT<OpdN> operator[](sint32 disp) {return MemT<OpdN>(SIZE_INT64, INVALID, INVALID, 0, disp);}
-	MemT<OpdN> operator[](uint32 disp) {return MemT<OpdN>(SIZE_INT64, INVALID, INVALID, 0, (sint32) disp);}
+	MemT<OpdN> operator[](const Expr32_None& obj) {return MemT<OpdN>(O_SIZE_32, obj.reg_, INVALID, 0, obj.disp_);}
+	MemT<OpdN> operator[](const Expr32_BI& obj) {return MemT<OpdN>(O_SIZE_32, obj.base_, obj.index_, 0, obj.disp_);}
+	MemT<OpdN> operator[](const Expr32_SI& obj) {return MemT<OpdN>(O_SIZE_32, INVALID, obj.index_, obj.scale_, obj.disp_);}
+	MemT<OpdN> operator[](const Expr32_SIB& obj) {return MemT<OpdN>(O_SIZE_32, obj.base_, obj.index_, obj.scale_, obj.disp_);}
+	MemT<OpdN> operator[](sint32 disp) {return MemT<OpdN>(O_SIZE_64, INVALID, INVALID, 0, disp);}
+	MemT<OpdN> operator[](uint32 disp) {return MemT<OpdN>(O_SIZE_64, INVALID, INVALID, 0, (sint32) disp);}
 #ifdef JITASM64
 	// 64bit-Addressing
-	MemT<OpdN> operator[](const Expr64_None& obj) {return MemT<OpdN>(SIZE_INT64, obj.reg_, INVALID, 0, obj.disp_);}
-	MemT<OpdN> operator[](const Expr64_BI& obj) {return MemT<OpdN>(SIZE_INT64, obj.base_, obj.index_, 0, obj.disp_);}
-	MemT<OpdN> operator[](const Expr64_SI& obj) {return MemT<OpdN>(SIZE_INT64, INVALID, obj.index_, obj.scale_, obj.disp_);}
-	MemT<OpdN> operator[](const Expr64_SIB& obj) {return MemT<OpdN>(SIZE_INT64, obj.base_, obj.index_, obj.scale_, obj.disp_);}
+	MemT<OpdN> operator[](const Expr64_None& obj) {return MemT<OpdN>(O_SIZE_64, obj.reg_, INVALID, 0, obj.disp_);}
+	MemT<OpdN> operator[](const Expr64_BI& obj) {return MemT<OpdN>(O_SIZE_64, obj.base_, obj.index_, 0, obj.disp_);}
+	MemT<OpdN> operator[](const Expr64_SI& obj) {return MemT<OpdN>(O_SIZE_64, INVALID, obj.index_, obj.scale_, obj.disp_);}
+	MemT<OpdN> operator[](const Expr64_SIB& obj) {return MemT<OpdN>(O_SIZE_64, obj.base_, obj.index_, obj.scale_, obj.disp_);}
 	MemOffset64 operator[](sint64 offset) {return MemOffset64(offset);}
 	MemOffset64 operator[](uint64 offset) {return MemOffset64((sint64) offset);}
 #endif
@@ -362,30 +372,30 @@ struct AddressingPtr
 //----------------------------------------
 enum InstrID
 {
-	INSTR_ADC, INSTR_ADD, INSTR_AND, INSTR_CALL, INSTR_CMP, INSTR_DEC, INSTR_INC,
-	INSTR_JMP, INSTR_JA, INSTR_JAE, INSTR_JB, INSTR_JBE, INSTR_JCXZ, INSTR_JECXZ, INSTR_JRCXZ, INSTR_JE,
-	INSTR_JG, INSTR_JGE, INSTR_JL, INSTR_JLE, INSTR_JNE, INSTR_JNO, INSTR_JNP, INSTR_JNS, INSTR_JO, INSTR_JP, INSTR_JS,
-	INSTR_LEA, INSTR_LEAVE, INSTR_MOV, INSTR_MOVZX, INSTR_NOP, INSTR_OR, INSTR_POP, INSTR_PUSH,
-	INSTR_RET, INSTR_SAR, INSTR_SHL, INSTR_SHR, INSTR_SBB, INSTR_SUB, INSTR_TEST, INSTR_XCHG, INSTR_XOR,
+	I_ADC, I_ADD, I_AND, I_CALL, I_CMP, I_DEC, I_INC,
+	I_JMP, I_JA, I_JAE, I_JB, I_JBE, I_JCXZ, I_JECXZ, I_JRCXZ, I_JE,
+	I_JG, I_JGE, I_JL, I_JLE, I_JNE, I_JNO, I_JNP, I_JNS, I_JO, I_JP, I_JS,
+	I_LEA, I_LEAVE, I_MOV, I_MOVZX, I_NOP, I_OR, I_POP, I_PUSH,
+	I_RET, I_SAR, I_SHL, I_SHR, I_SBB, I_SUB, I_TEST, I_XCHG, I_XOR,
 
-	INSTR_FLD,
+	I_FLD,
 
-	INSTR_ADDPD, INSTR_ADDSD, INSTR_ANDPD, INSTR_ANDNPD, INSTR_CLFLUSH, INSTR_CMPPS, INSTR_CMPPD, INSTR_CMPSD, INSTR_COMISD, INSTR_CVTDQ2PD, INSTR_CVTDQ2PS,
-	INSTR_CVTPD2DQ, INSTR_CVTPD2PI, INSTR_CVTPD2PS, INSTR_CVTPI2PD, INSTR_CVTPS2DQ, INSTR_CVTPS2PD, INSTR_CVTSD2SI, INSTR_CVTSD2SS,
-	INSTR_CVTSI2SD, INSTR_CVTSS2SD, INSTR_CVTTPD2DQ, INSTR_CVTTPD2PI, INSTR_CVTTPS2DQ, INSTR_CVTTSD2SI, INSTR_DIVPD, INSTR_DIVSD, INSTR_LFENCE,
-	INSTR_MASKMOVDQU, INSTR_MAXPD, INSTR_MAXSD, INSTR_MFENCE, INSTR_MINPD, INSTR_MINSD, INSTR_MOVAPD, INSTR_MOVD, INSTR_MOVDQ2Q, INSTR_MOVDQA,
-	INSTR_MOVDQU, INSTR_MOVHPD, INSTR_MOVLPD, INSTR_MOVMSKPD, INSTR_MOVNTPD, INSTR_MOVNTDQ, INSTR_MOVNTI, INSTR_MOVQ, INSTR_MOVQ2DQ, INSTR_MOVSD, INSTR_MOVUPD, INSTR_MULPD,
-	INSTR_MULSD, INSTR_ORPD, INSTR_PABSB, INSTR_PABSD, INSTR_PABSW, INSTR_PACKSSDW, INSTR_PACKSSWB, INSTR_PACKUSDW, INSTR_PACKUSWB,
-	INSTR_PADDB, INSTR_PADDD, INSTR_PADDQ, INSTR_PADDSB, INSTR_PADDSW, INSTR_PADDUSB, INSTR_PADDUSW, INSTR_PADDW, INSTR_PALIGNR,
-	INSTR_PAND, INSTR_PANDN, INSTR_PAUSE, INSTR_PAVGB, INSTR_PAVGW, INSTR_PCMPEQB, INSTR_PCMPEQW, INSTR_PCMPEQD, INSTR_PCMPEQQ,
-	INSTR_PCMPGTB, INSTR_PCMPGTW, INSTR_PCMPGTD, INSTR_PCMPGTQ, INSTR_PEXTRW, INSTR_PINSRW, INSTR_PMADDWD,
-	INSTR_PMAXSW, INSTR_PMAXUB, INSTR_PMINSW, INSTR_PMINUB, INSTR_PMOVMSKB, INSTR_PMULHUW, INSTR_PMULHW, INSTR_PMULLW, INSTR_PMULUDQ,
-	INSTR_POR, INSTR_PSADBW, INSTR_PSHUFD, INSTR_PSHUFHW, INSTR_PSHUFLW, INSTR_PSLLW, INSTR_PSLLD, INSTR_PSLLQ, INSTR_PSLLDQ, INSTR_PSRAW,
-	INSTR_PSRAD, INSTR_PSRLW, INSTR_PSRLD, INSTR_PSRLQ, INSTR_PSRLDQ, INSTR_PSUBB, INSTR_PSUBW, INSTR_PSUBD, INSTR_PSUBQ, INSTR_PSUBSB, INSTR_PSUBSW,
-	INSTR_PSUBUSB, INSTR_PSUBUSW, INSTR_PUNPCKHBW, INSTR_PUNPCKHWD, INSTR_PUNPCKHDQ, INSTR_PUNPCKHQDQ, INSTR_PUNPCKLBW, INSTR_PUNPCKLWD, INSTR_PUNPCKLDQ, INSTR_PUNPCKLQDQ,
-	INSTR_PXOR, INSTR_SHUFPD, INSTR_SQRTPD, INSTR_SQRTSD, INSTR_SUBPD, INSTR_SUBSD, INSTR_UCOMISD, INSTR_UNPCKHPD, INSTR_UNPCKLPD, INSTR_XORPD,
+	I_ADDPD, I_ADDSD, I_ANDPD, I_ANDNPD, I_CLFLUSH, I_CMPPS, I_CMPPD, I_CMPSD, I_COMISD, I_CVTDQ2PD, I_CVTDQ2PS,
+	I_CVTPD2DQ, I_CVTPD2PI, I_CVTPD2PS, I_CVTPI2PD, I_CVTPS2DQ, I_CVTPS2PD, I_CVTSD2SI, I_CVTSD2SS,
+	I_CVTSI2SD, I_CVTSS2SD, I_CVTTPD2DQ, I_CVTTPD2PI, I_CVTTPS2DQ, I_CVTTSD2SI, I_DIVPD, I_DIVSD, I_LFENCE,
+	I_MASKMOVDQU, I_MAXPD, I_MAXSD, I_MFENCE, I_MINPD, I_MINSD, I_MOVAPD, I_MOVD, I_MOVDQ2Q, I_MOVDQA,
+	I_MOVDQU, I_MOVHPD, I_MOVLPD, I_MOVMSKPD, I_MOVNTPD, I_MOVNTDQ, I_MOVNTI, I_MOVQ, I_MOVQ2DQ, I_MOVSD, I_MOVUPD, I_MULPD,
+	I_MULSD, I_ORPD, I_PABSB, I_PABSD, I_PABSW, I_PACKSSDW, I_PACKSSWB, I_PACKUSDW, I_PACKUSWB,
+	I_PADDB, I_PADDD, I_PADDQ, I_PADDSB, I_PADDSW, I_PADDUSB, I_PADDUSW, I_PADDW, I_PALIGNR,
+	I_PAND, I_PANDN, I_PAUSE, I_PAVGB, I_PAVGW, I_PCMPEQB, I_PCMPEQW, I_PCMPEQD, I_PCMPEQQ,
+	I_PCMPGTB, I_PCMPGTW, I_PCMPGTD, I_PCMPGTQ, I_PEXTRW, I_PINSRW, I_PMADDWD,
+	I_PMAXSW, I_PMAXUB, I_PMINSW, I_PMINUB, I_PMOVMSKB, I_PMULHUW, I_PMULHW, I_PMULLW, I_PMULUDQ,
+	I_POR, I_PSADBW, I_PSHUFD, I_PSHUFHW, I_PSHUFLW, I_PSLLW, I_PSLLD, I_PSLLQ, I_PSLLDQ, I_PSRAW,
+	I_PSRAD, I_PSRLW, I_PSRLD, I_PSRLQ, I_PSRLDQ, I_PSUBB, I_PSUBW, I_PSUBD, I_PSUBQ, I_PSUBSB, I_PSUBSW,
+	I_PSUBUSB, I_PSUBUSW, I_PUNPCKHBW, I_PUNPCKHWD, I_PUNPCKHDQ, I_PUNPCKHQDQ, I_PUNPCKLBW, I_PUNPCKLWD, I_PUNPCKLDQ, I_PUNPCKLQDQ,
+	I_PXOR, I_SHUFPD, I_SQRTPD, I_SQRTSD, I_SUBPD, I_SUBSD, I_UCOMISD, I_UNPCKHPD, I_UNPCKLPD, I_XORPD,
 
-	INSTR_PSEUDO_ALIGN,
+	I_PSEUDO_ALIGN,
 };
 
 struct Instr
@@ -444,15 +454,15 @@ struct Backend
 	{
 		uint8 wrxb = 0;
 		if (reg.IsReg()) {
-			if (reg.GetSize() == SIZE_INT64) wrxb |= 8;
+			if (reg.GetSize() == O_SIZE_64) wrxb |= 8;
 			if (reg.GetReg() >= R8) wrxb |= 4;
 		}
 		if (r_m.IsReg()) {
-			if (r_m.GetSize() == SIZE_INT64) wrxb |= 8;
+			if (r_m.GetSize() == O_SIZE_64) wrxb |= 8;
 			if (r_m.GetReg() >= R8) wrxb |= 1;
 		}
 		if (r_m.IsMem()) {
-			if (r_m.GetSize() == SIZE_INT64) wrxb |= 8;
+			if (r_m.GetSize() == O_SIZE_64) wrxb |= 8;
 			if (r_m.GetIndex() >= R8) wrxb |= 2;
 			if (r_m.GetBase() >= R8) wrxb |= 1;
 		}
@@ -554,29 +564,29 @@ struct Backend
 			const Opd& imm = opd2;
 
 #ifdef JITASM64
-			if (r_m.IsMem() && r_m.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
-			if (r_m.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
+			if (r_m.IsMem() && r_m.GetAddressSize() != O_SIZE_64) EncodeAddressSizePrefix();
+			if (r_m.GetSize() == O_SIZE_16) EncodeOperandSizePrefix();
 			EncodeRexWRXB(r_m);
 #else
-			if (r_m.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
+			if (r_m.GetSize() == O_SIZE_16) EncodeOperandSizePrefix();
 #endif
 
-			if (imm.GetSize() == SIZE_INT8 && r_m.GetSize() != SIZE_INT8) {	// sign-extension
+			if (imm.GetSize() == O_SIZE_8 && r_m.GetSize() != O_SIZE_8) {	// sign-extension
 				db(0x83);	// Immediate Grp 1
 				EncodeModRM(opcode / 8, r_m);
 				db(imm.GetImm());
 			} else {
-				uint8 w = r_m.GetSize() != SIZE_INT8 ? 1 : 0;
+				uint8 w = r_m.GetSize() != O_SIZE_8 ? 1 : 0;
 				if (r_m.IsReg() && r_m.GetReg() == EAX) {
 					db(opcode | 4 | w);
 				} else {
 					db(0x80 | w);	// Immediate Grp 1
 					EncodeModRM(opcode / 8, r_m);
 				}
-				if (r_m.GetSize() == SIZE_INT8) db(imm.GetImm());
-				else if (r_m.GetSize() == SIZE_INT16) dw(imm.GetImm());
-				else if (r_m.GetSize() == SIZE_INT32) dd(imm.GetImm());
-				else if (r_m.GetSize() == SIZE_INT64) dd(imm.GetImm());
+				if (r_m.GetSize() == O_SIZE_8) db(imm.GetImm());
+				else if (r_m.GetSize() == O_SIZE_16) dw(imm.GetImm());
+				else if (r_m.GetSize() == O_SIZE_32) dd(imm.GetImm());
+				else if (r_m.GetSize() == O_SIZE_64) dd(imm.GetImm());
 				else ASSERT(0);
 			}
 		} else {
@@ -586,15 +596,15 @@ struct Backend
 			const Opd& r_m = opd1.IsReg() ? opd2 : opd1;
 
 #ifdef JITASM64
-			if (r_m.IsMem() && r_m.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
-			if (reg.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
+			if (r_m.IsMem() && r_m.GetAddressSize() != O_SIZE_64) EncodeAddressSizePrefix();
+			if (reg.GetSize() == O_SIZE_16) EncodeOperandSizePrefix();
 			EncodeRexWRXB(reg, r_m);
 #else
-			if (reg.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
+			if (reg.GetSize() == O_SIZE_16) EncodeOperandSizePrefix();
 #endif
 
 			uint8 d = opd1.IsReg() ? 1 : 0;
-			uint8 w = reg.GetSize() != SIZE_INT8 ? 1 : 0;
+			uint8 w = reg.GetSize() != O_SIZE_8 ? 1 : 0;
 			db(opcode | d << 1 | w);
 			EncodeModRM(reg, r_m);
 		}
@@ -603,7 +613,7 @@ struct Backend
 	void EncodeCALL(const Opd& opd)
 	{
 		if (opd.IsReg()) {
-			if (opd.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
+			if (opd.GetSize() == O_SIZE_16) EncodeOperandSizePrefix();
 			db(0xFF);
 			EncodeModRM(2, opd);
 		} else {
@@ -615,14 +625,14 @@ struct Backend
 	void EncodeINC(uint8 opcode1, uint8 digit, const Opd& opd)
 	{
 #ifdef JITASM64
-		if (opd.IsMem() && opd.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
-		if (opd.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
+		if (opd.IsMem() && opd.GetAddressSize() != O_SIZE_64) EncodeAddressSizePrefix();
+		if (opd.GetSize() == O_SIZE_16) EncodeOperandSizePrefix();
 		EncodeRexWRXB(opd);
 #else
-		if (opd.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
+		if (opd.GetSize() == O_SIZE_16) EncodeOperandSizePrefix();
 #endif
 
-		uint8 w = opd.GetSize() != SIZE_INT8 ? 1 : 0;
+		uint8 w = opd.GetSize() != O_SIZE_8 ? 1 : 0;
 
 #ifdef JITASM64
 		db(0xFE | w);	// Grp4, Grp5
@@ -639,26 +649,26 @@ struct Backend
 
 	void EncodeJCC(uint8 tttn, const Opd& opd)
 	{
-		if (opd.GetSize() <= SIZE_INT8) db(0x70 | tttn), db(opd.GetImm());
-		else if (opd.GetSize() <= SIZE_INT32) db(0x0F), db(0x80 | tttn), dd(opd.GetImm());
+		if (opd.GetSize() <= O_SIZE_8) db(0x70 | tttn), db(opd.GetImm());
+		else if (opd.GetSize() <= O_SIZE_32) db(0x0F), db(0x80 | tttn), dd(opd.GetImm());
 		else ASSERT(0);
 	}
 
 	void EncodeJMP(const Opd& opd)
 	{
-		if (opd.GetSize() <= SIZE_INT8) db(0xEB), db(opd.GetImm());
-		else if (opd.GetSize() <= SIZE_INT32) db(0xE9), dd(opd.GetImm());
+		if (opd.GetSize() <= O_SIZE_8) db(0xEB), db(opd.GetImm());
+		else if (opd.GetSize() <= O_SIZE_32) db(0xE9), dd(opd.GetImm());
 		else ASSERT(0);
 	}
 
 	void EncodeLEA(const Opd& reg, const Opd& mem)
 	{
 #ifdef JITASM64
-		if (mem.IsMem() && mem.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
-		if (reg.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
+		if (mem.IsMem() && mem.GetAddressSize() != O_SIZE_64) EncodeAddressSizePrefix();
+		if (reg.GetSize() == O_SIZE_16) EncodeOperandSizePrefix();
 		EncodeRexWRXB(reg, mem);
 #else
-		if (reg.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
+		if (reg.GetSize() == O_SIZE_16) EncodeOperandSizePrefix();
 #endif
 
 		db(0x8D);
@@ -672,15 +682,15 @@ struct Backend
 			const Opd& imm = opd2;
 
 #ifdef JITASM64
-			if (r_m.IsMem() && r_m.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
-			if (r_m.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
+			if (r_m.IsMem() && r_m.GetAddressSize() != O_SIZE_64) EncodeAddressSizePrefix();
+			if (r_m.GetSize() == O_SIZE_16) EncodeOperandSizePrefix();
 			EncodeRexWRXB(r_m);
 #else
-			if (r_m.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
+			if (r_m.GetSize() == O_SIZE_16) EncodeOperandSizePrefix();
 #endif
 
 #ifdef JITASM64
-			if (r_m.GetSize() == SIZE_INT64 && imm.GetSize() <= SIZE_INT32) {	// sign-extension
+			if (r_m.GetSize() == O_SIZE_64 && imm.GetSize() <= O_SIZE_32) {	// sign-extension
 				db(0xC7);
 				EncodeModRM(0, r_m);
 				dd(imm.GetImm());
@@ -688,19 +698,19 @@ struct Backend
 			}
 #endif
 
-			uint8 w = r_m.GetSize() != SIZE_INT8 ? 1 : 0;
+			uint8 w = r_m.GetSize() != O_SIZE_8 ? 1 : 0;
 			if (r_m.IsReg()) {
 				db(0xB0 | w << 3 | r_m.GetReg() & 0xF);
 			} else {
 				db(0xC6 | w);
 				EncodeModRM(0, r_m);
 			}
-			if (r_m.GetSize() == SIZE_INT8) db(imm.GetImm());
-			else if (r_m.GetSize() == SIZE_INT8) db(imm.GetImm());
-			else if (r_m.GetSize() == SIZE_INT16) dw(imm.GetImm());
-			else if (r_m.GetSize() == SIZE_INT32) dd(imm.GetImm());
+			if (r_m.GetSize() == O_SIZE_8) db(imm.GetImm());
+			else if (r_m.GetSize() == O_SIZE_8) db(imm.GetImm());
+			else if (r_m.GetSize() == O_SIZE_16) dw(imm.GetImm());
+			else if (r_m.GetSize() == O_SIZE_32) dd(imm.GetImm());
 #ifdef JITASM64
-			else if (r_m.GetSize() == SIZE_INT64) dq(imm.GetImm());
+			else if (r_m.GetSize() == O_SIZE_64) dq(imm.GetImm());
 #endif
 			else ASSERT(0);
 		} else {
@@ -710,14 +720,14 @@ struct Backend
 			const Opd& r_m = opd1.IsReg() ? opd2 : opd1;
 
 #ifdef JITASM64
-			if (r_m.IsMem() && r_m.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
-			if (reg.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
+			if (r_m.IsMem() && r_m.GetAddressSize() != O_SIZE_64) EncodeAddressSizePrefix();
+			if (reg.GetSize() == O_SIZE_16) EncodeOperandSizePrefix();
 			EncodeRexWRXB(reg, r_m);
 #else
-			if (reg.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
+			if (reg.GetSize() == O_SIZE_16) EncodeOperandSizePrefix();
 #endif
 
-			uint8 w = reg.GetSize() != SIZE_INT8 ? 1 : 0;
+			uint8 w = reg.GetSize() != O_SIZE_8 ? 1 : 0;
 #ifdef JITASM64
 			if (reg.GetReg() == EAX && r_m.IsMem() && r_m.GetBase() == INVALID && r_m.GetIndex() == INVALID && !detail::IsInt32(r_m.GetDisp())) {
 				uint8 d = opd1.IsReg() ? 0 : 1;
@@ -747,15 +757,15 @@ struct Backend
 		const Opd& r_m = opd2;
 
 #ifdef JITASM64
-		if (r_m.IsMem() && r_m.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
-		if (reg.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
+		if (r_m.IsMem() && r_m.GetAddressSize() != O_SIZE_64) EncodeAddressSizePrefix();
+		if (reg.GetSize() == O_SIZE_16) EncodeOperandSizePrefix();
 		EncodeRexWRXB(reg, r_m);
 #else
-		if (reg.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
+		if (reg.GetSize() == O_SIZE_16) EncodeOperandSizePrefix();
 #endif
 
 		db(0x0F);
-		uint8 w = r_m.GetSize() != SIZE_INT8 ? 1 : 0;
+		uint8 w = r_m.GetSize() != O_SIZE_8 ? 1 : 0;
 		db(0xB6 | w);
 		EncodeModRM(reg, r_m);
 	}
@@ -763,7 +773,7 @@ struct Backend
 	void EncodePOP(uint8 opcode1, uint8 opcode2, uint8 digit, const Opd& opd)
 	{
 		if (opd.IsImm()) {
-			if (opd.GetSize() == SIZE_INT8) {	// sign-extention
+			if (opd.GetSize() == O_SIZE_8) {	// sign-extention
 				db(0x6A);
 				db(opd.GetImm());
 			} else {
@@ -772,11 +782,11 @@ struct Backend
 			}
 		} else {
 #ifdef JITASM64
-			if (opd.IsMem() && opd.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
-			if (opd.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
+			if (opd.IsMem() && opd.GetAddressSize() != O_SIZE_64) EncodeAddressSizePrefix();
+			if (opd.GetSize() == O_SIZE_16) EncodeOperandSizePrefix();
 			EncodeRexRXB(opd);
 #else
-			if (opd.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
+			if (opd.GetSize() == O_SIZE_16) EncodeOperandSizePrefix();
 #endif
 
 			if (opd.IsReg()) {
@@ -793,13 +803,13 @@ struct Backend
 		ASSERT(imm.IsImm());
 
 #ifdef JITASM64
-		if (r_m.IsMem() && r_m.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
-		if (r_m.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
+		if (r_m.IsMem() && r_m.GetAddressSize() != O_SIZE_64) EncodeAddressSizePrefix();
+		if (r_m.GetSize() == O_SIZE_16) EncodeOperandSizePrefix();
 		EncodeRexWRXB(r_m);
 #else
-		if (r_m.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
+		if (r_m.GetSize() == O_SIZE_16) EncodeOperandSizePrefix();
 #endif
-		uint8 w = r_m.GetSize() != SIZE_INT8 ? 1 : 0;
+		uint8 w = r_m.GetSize() != O_SIZE_8 ? 1 : 0;
 		if (imm.GetImm() == 1) {
 			db(0xD0 | w);
 			EncodeModRM(digit, r_m);
@@ -812,17 +822,17 @@ struct Backend
 
 	void EncodeTEST(const Opd& opd1, const Opd& opd2)
 	{
-		uint8 w = opd1.GetSize() != SIZE_INT8 ? 1 : 0;
+		uint8 w = opd1.GetSize() != O_SIZE_8 ? 1 : 0;
 		if (opd2.IsImm()) {
 			const Opd& r_m = opd1;
 			const Opd& imm = opd2;
 
 #ifdef JITASM64
-			if (r_m.IsMem() && r_m.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
-			if (r_m.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
+			if (r_m.IsMem() && r_m.GetAddressSize() != O_SIZE_64) EncodeAddressSizePrefix();
+			if (r_m.GetSize() == O_SIZE_16) EncodeOperandSizePrefix();
 			EncodeRexWRXB(r_m);
 #else
-			if (r_m.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
+			if (r_m.GetSize() == O_SIZE_16) EncodeOperandSizePrefix();
 #endif
 
 			if (r_m.IsReg() && r_m.GetReg() == EAX) {
@@ -831,21 +841,21 @@ struct Backend
 				db(0xF6 | w);
 				EncodeModRM(0, r_m);
 			}
-			if (r_m.GetSize() == SIZE_INT8) db(imm.GetImm());
-			else if (r_m.GetSize() == SIZE_INT16) dw(imm.GetImm());
-			else if (r_m.GetSize() == SIZE_INT32) dd(imm.GetImm());
-			else if (r_m.GetSize() == SIZE_INT64) dd(imm.GetImm());	// sign-extention
+			if (r_m.GetSize() == O_SIZE_8) db(imm.GetImm());
+			else if (r_m.GetSize() == O_SIZE_16) dw(imm.GetImm());
+			else if (r_m.GetSize() == O_SIZE_32) dd(imm.GetImm());
+			else if (r_m.GetSize() == O_SIZE_64) dd(imm.GetImm());	// sign-extention
 		} else {
 			ASSERT(opd2.IsReg());
 			const Opd& reg = opd1.IsReg() ? opd1 : opd2;
 			const Opd& r_m = opd1.IsReg() ? opd2 : opd1;
 
 #ifdef JITASM64
-			if (r_m.IsMem() && r_m.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
-			if (reg.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
+			if (r_m.IsMem() && r_m.GetAddressSize() != O_SIZE_64) EncodeAddressSizePrefix();
+			if (reg.GetSize() == O_SIZE_16) EncodeOperandSizePrefix();
 			EncodeRexWRXB(reg, r_m);
 #else
-			if (reg.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
+			if (reg.GetSize() == O_SIZE_16) EncodeOperandSizePrefix();
 #endif
 
 			db(0x84 | w);
@@ -855,18 +865,18 @@ struct Backend
 
 	void EncodeXCHG(const Opd& opd1, const Opd& opd2)
 	{
-		const Opd& reg = opd1.IsReg() && (opd2.GetSize() == SIZE_INT8 || !opd2.IsReg() || opd2.GetReg() != EAX) ? opd1 : opd2;
+		const Opd& reg = opd1.IsReg() && (opd2.GetSize() == O_SIZE_8 || !opd2.IsReg() || opd2.GetReg() != EAX) ? opd1 : opd2;
 		const Opd& r_m = &reg == &opd1 ? opd2 : opd1;
 
 #ifdef JITASM64
-		if (r_m.IsMem() && r_m.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
-		if (reg.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
+		if (r_m.IsMem() && r_m.GetAddressSize() != O_SIZE_64) EncodeAddressSizePrefix();
+		if (reg.GetSize() == O_SIZE_16) EncodeOperandSizePrefix();
 		EncodeRexWRXB(reg, r_m);	// TODO: In 64-bit mode, r/m8 can not be encoded to access following byte registers if a REX prefix is used: AH, BH, CH, DH.
 #else
-		if (reg.GetSize() == SIZE_INT16) EncodeOperandSizePrefix();
+		if (reg.GetSize() == O_SIZE_16) EncodeOperandSizePrefix();
 #endif
 
-		if (reg.GetSize() != SIZE_INT8 && r_m.IsReg()) {
+		if (reg.GetSize() != O_SIZE_8 && r_m.IsReg()) {
 			if (reg.GetReg() == EAX) {
 				db(0x90 | r_m.GetReg() & 0xF);
 				return;
@@ -877,7 +887,7 @@ struct Backend
 			}
 		}
 
-		uint8 w = reg.GetSize() != SIZE_INT8 ? 1 : 0;
+		uint8 w = reg.GetSize() != O_SIZE_8 ? 1 : 0;
 		db(0x86 | w);
 		EncodeModRM(reg, r_m);
 	}
@@ -889,12 +899,12 @@ struct Backend
 			db(0xC0 | opd.GetReg());
 		} else {
 #ifdef JITASM64
-			if (opd.IsMem() && opd.GetAddressSize() != SIZE_INT64) EncodeAddressSizePrefix();
+			if (opd.IsMem() && opd.GetAddressSize() != O_SIZE_64) EncodeAddressSizePrefix();
 #endif
 			int digit = 0;
-			if (opd.GetSize() == SIZE_INT32) db(0xD9), digit = 0;
-			else if (opd.GetSize() == SIZE_INT64) db(0xDD), digit = 0;
-			else if (opd.GetSize() == SIZE_INT80) db(0xDB), digit = 5;
+			if (opd.GetSize() == O_SIZE_32) db(0xD9), digit = 0;
+			else if (opd.GetSize() == O_SIZE_64) db(0xDD), digit = 0;
+			else if (opd.GetSize() == O_SIZE_80) db(0xDB), digit = 5;
 			else ASSERT(0);
 			EncodeModRM(digit, opd);
 		}
@@ -968,8 +978,8 @@ struct Backend
 
 	void EncodeMMXorSSE2(uint8 prefix, uint8 opcode2, const Opd& opd1, const Opd& opd2)
 	{
-		if ((opd1.IsReg() && opd1.GetSize() == SIZE_INT128) ||
-			(opd2.IsReg() && opd2.GetSize() == SIZE_INT128)) {
+		if ((opd1.IsReg() && opd1.GetSize() == O_SIZE_128) ||
+			(opd2.IsReg() && opd2.GetSize() == O_SIZE_128)) {
 			EncodeSSE2(prefix, opcode2, opd1, opd2);
 		}
 		else {
@@ -979,8 +989,8 @@ struct Backend
 
 	void EncodeMMXorSSE2(uint8 prefix, uint8 opcode2, uint8 opcode3, const Opd& opd1, const Opd& opd2)
 	{
-		if ((opd1.IsReg() && opd1.GetSize() == SIZE_INT128) ||
-			(opd2.IsReg() && opd2.GetSize() == SIZE_INT128)) {
+		if ((opd1.IsReg() && opd1.GetSize() == O_SIZE_128) ||
+			(opd2.IsReg() && opd2.GetSize() == O_SIZE_128)) {
 			EncodeSSE2(prefix, opcode2, opcode3, opd1, opd2);
 		}
 		else {
@@ -990,7 +1000,7 @@ struct Backend
 
 	void EncodeCLFLUSH(const Opd& opd)
 	{
-		ASSERT(opd.IsMem() && opd.GetSize() == SIZE_INT8);
+		ASSERT(opd.IsMem() && opd.GetSize() == O_SIZE_8);
 		db(0x0F);
 		db(0xAE);
 		EncodeModRM(7, opd);
@@ -998,7 +1008,7 @@ struct Backend
 
 	void EncodeMOVQ(const Opd& opd1, const Opd& opd2)
 	{
-		if ((opd1.IsReg() ? opd1 : opd2).GetSize() == SIZE_INT64) {
+		if ((opd1.IsReg() ? opd1 : opd2).GetSize() == O_SIZE_64) {
 			EncodeMMX(0x6F | (opd1.IsReg() ? 0 : 0x10), opd1, opd2);
 		}
 		else if (opd1.IsReg()) {
@@ -1017,193 +1027,193 @@ struct Backend
 
 		switch (instr.GetID()) {
 		// General-Purpose Instructions
-		case INSTR_ADC:			EncodeADD(0x10, opd1, opd2); break;
-		case INSTR_ADD:			EncodeADD(0x00, opd1, opd2); break;
-		case INSTR_AND:			EncodeADD(0x20, opd1, opd2); break;
-		case INSTR_CALL:		EncodeCALL(opd1); break;
-		case INSTR_CMP:			EncodeADD(0x38, opd1, opd2); break;
-		case INSTR_DEC:			EncodeINC(0x48, 1, opd1); break;
-		case INSTR_INC:			EncodeINC(0x40, 0, opd1); break;
-		case INSTR_JMP:			EncodeJMP(opd1); break;
-		case INSTR_JA:			EncodeJCC(0x7, opd1); break;
-		case INSTR_JAE:			EncodeJCC(0x3, opd1); break;
-		case INSTR_JB:			EncodeJCC(0x2, opd1); break;
-		case INSTR_JBE:			EncodeJCC(0x6, opd1); break;
+		case I_ADC:			EncodeADD(0x10, opd1, opd2); break;
+		case I_ADD:			EncodeADD(0x00, opd1, opd2); break;
+		case I_AND:			EncodeADD(0x20, opd1, opd2); break;
+		case I_CALL:		EncodeCALL(opd1); break;
+		case I_CMP:			EncodeADD(0x38, opd1, opd2); break;
+		case I_DEC:			EncodeINC(0x48, 1, opd1); break;
+		case I_INC:			EncodeINC(0x40, 0, opd1); break;
+		case I_JMP:			EncodeJMP(opd1); break;
+		case I_JA:			EncodeJCC(0x7, opd1); break;
+		case I_JAE:			EncodeJCC(0x3, opd1); break;
+		case I_JB:			EncodeJCC(0x2, opd1); break;
+		case I_JBE:			EncodeJCC(0x6, opd1); break;
 #ifdef JITASM64
-		case INSTR_JECXZ:		EncodeAddressSizePrefix(); db(0xE3); db(opd1.GetImm()); break;
-		case INSTR_JRCXZ:		db(0xE3); db(opd1.GetImm()); break;
+		case I_JECXZ:		EncodeAddressSizePrefix(); db(0xE3); db(opd1.GetImm()); break;
+		case I_JRCXZ:		db(0xE3); db(opd1.GetImm()); break;
 #else
-		case INSTR_JECXZ:		db(0xE3); db(opd1.GetImm()); break;
-		case INSTR_JCXZ:		EncodeAddressSizePrefix(); db(0xE3); db(opd1.GetImm()); break;
+		case I_JECXZ:		db(0xE3); db(opd1.GetImm()); break;
+		case I_JCXZ:		EncodeAddressSizePrefix(); db(0xE3); db(opd1.GetImm()); break;
 #endif
-		case INSTR_JE:			EncodeJCC(0x4, opd1); break;
-		case INSTR_JG:			EncodeJCC(0xF, opd1); break;
-		case INSTR_JGE:			EncodeJCC(0xD, opd1); break;
-		case INSTR_JL:			EncodeJCC(0xC, opd1); break;
-		case INSTR_JLE:			EncodeJCC(0xE, opd1); break;
-		case INSTR_JNE:			EncodeJCC(0x5, opd1); break;
-		case INSTR_JNO:			EncodeJCC(0x1, opd1); break;
-		case INSTR_JNP:			EncodeJCC(0xB, opd1); break;
-		case INSTR_JNS:			EncodeJCC(0x9, opd1); break;
-		case INSTR_JO:			EncodeJCC(0x0, opd1); break;
-		case INSTR_JP:			EncodeJCC(0xA, opd1); break;
-		case INSTR_JS:			EncodeJCC(0x8, opd1); break;
-		case INSTR_LEA:			EncodeLEA(opd1, opd2); break;
-		case INSTR_LEAVE:		db(0xC9); break;
-		case INSTR_MOV:			EncodeMOV(opd1, opd2); break;
-		case INSTR_MOVZX:		EncodeMOVZX(opd1, opd2); break;
-		case INSTR_NOP:			db(0x90); break;
-		case INSTR_OR:			EncodeADD(0x08, opd1, opd2); break;
-		case INSTR_POP:			EncodePOP(0x58, 0x8F, 0, opd1); break;
-		case INSTR_PUSH:		EncodePOP(0x50, 0xFF, 6, opd1); break;
-		case INSTR_RET:			if (opd1.IsNone()) db(0xC3); else db(0xC2), dw(opd1.GetImm()); break;
-		case INSTR_SAR:			EncodeShift(7, opd1, opd2); break;
-		case INSTR_SHL:			EncodeShift(4, opd1, opd2); break;
-		case INSTR_SHR:			EncodeShift(5, opd1, opd2); break;
-		case INSTR_SBB:			EncodeADD(0x18, opd1, opd2); break;
-		case INSTR_SUB:			EncodeADD(0x28, opd1, opd2); break;
-		case INSTR_TEST:		EncodeTEST(opd1, opd2); break;
-		case INSTR_XCHG:		EncodeXCHG(opd1, opd2); break;
-		case INSTR_XOR:			EncodeADD(0x30, opd1, opd2); break;
+		case I_JE:			EncodeJCC(0x4, opd1); break;
+		case I_JG:			EncodeJCC(0xF, opd1); break;
+		case I_JGE:			EncodeJCC(0xD, opd1); break;
+		case I_JL:			EncodeJCC(0xC, opd1); break;
+		case I_JLE:			EncodeJCC(0xE, opd1); break;
+		case I_JNE:			EncodeJCC(0x5, opd1); break;
+		case I_JNO:			EncodeJCC(0x1, opd1); break;
+		case I_JNP:			EncodeJCC(0xB, opd1); break;
+		case I_JNS:			EncodeJCC(0x9, opd1); break;
+		case I_JO:			EncodeJCC(0x0, opd1); break;
+		case I_JP:			EncodeJCC(0xA, opd1); break;
+		case I_JS:			EncodeJCC(0x8, opd1); break;
+		case I_LEA:			EncodeLEA(opd1, opd2); break;
+		case I_LEAVE:		db(0xC9); break;
+		case I_MOV:			EncodeMOV(opd1, opd2); break;
+		case I_MOVZX:		EncodeMOVZX(opd1, opd2); break;
+		case I_NOP:			db(0x90); break;
+		case I_OR:			EncodeADD(0x08, opd1, opd2); break;
+		case I_POP:			EncodePOP(0x58, 0x8F, 0, opd1); break;
+		case I_PUSH:		EncodePOP(0x50, 0xFF, 6, opd1); break;
+		case I_RET:			if (opd1.IsNone()) db(0xC3); else db(0xC2), dw(opd1.GetImm()); break;
+		case I_SAR:			EncodeShift(7, opd1, opd2); break;
+		case I_SHL:			EncodeShift(4, opd1, opd2); break;
+		case I_SHR:			EncodeShift(5, opd1, opd2); break;
+		case I_SBB:			EncodeADD(0x18, opd1, opd2); break;
+		case I_SUB:			EncodeADD(0x28, opd1, opd2); break;
+		case I_TEST:		EncodeTEST(opd1, opd2); break;
+		case I_XCHG:		EncodeXCHG(opd1, opd2); break;
+		case I_XOR:			EncodeADD(0x30, opd1, opd2); break;
 
 		// x87 Floating-Point Instructions
-		case INSTR_FLD:			EncodeFLD(opd1); break;
+		case I_FLD:			EncodeFLD(opd1); break;
 
 		// MMX/SSE/SSE2 Instructions
-		case INSTR_ADDPD:		EncodeSSE2(0x66, 0x58, opd1, opd2); break;
-		case INSTR_ADDSD:		EncodeSSE2(0xF2, 0x58, opd1, opd2); break;
-		case INSTR_ANDPD:		EncodeSSE2(0x66, 0x54, opd1, opd2); break;
-		case INSTR_ANDNPD:		EncodeSSE2(0x66, 0x55, opd1, opd2); break;
-		case INSTR_CLFLUSH:		EncodeCLFLUSH(opd1); break;
-		case INSTR_CMPPD:		EncodeSSE2(0x66, 0xC2, opd1, opd2); db(opd3.GetImm()); break;
-		case INSTR_CMPPS:		EncodeSSE(0xC2, opd1, opd2); db(opd3.GetImm()); break;
-		case INSTR_CMPSD:		EncodeSSE2(0xF2, 0xC2, opd1, opd2); db(opd3.GetImm()); break;
-		case INSTR_COMISD:		EncodeSSE2(0x66, 0x2F, opd1, opd2); break;
-		case INSTR_CVTDQ2PD:	EncodeSSE2(0xF3, 0xE6, opd1, opd2); break;
-		case INSTR_CVTPD2DQ:	EncodeSSE2(0xF2, 0xE6, opd1, opd2); break;
-		case INSTR_CVTPD2PI:	EncodeSSE2(0x66, 0x2D, opd1, opd2); break;
-		case INSTR_CVTPD2PS:	EncodeSSE2(0x66, 0x5A, opd1, opd2); break;
-		case INSTR_CVTPI2PD:	EncodeSSE2(0x66, 0x2A, opd1, opd2); break;
-		case INSTR_CVTPS2DQ:	EncodeSSE2(0x66, 0x5B, opd1, opd2); break;
-		case INSTR_CVTDQ2PS:	EncodeSSE(0x5B, opd1, opd2); break;
-		case INSTR_CVTPS2PD:	EncodeSSE(0x5A, opd1, opd2); break;	// SSE2!!!
-		//case INSTR_CVTSD2SI:
-		case INSTR_CVTSD2SS:	EncodeSSE2(0xF2, 0x5A, opd1, opd2); break;
-		//case INSTR_CVTSI2SD:
-		case INSTR_CVTSS2SD:	EncodeSSE2(0xF3, 0x5A, opd1, opd2); break;
-		case INSTR_CVTTPD2DQ:	EncodeSSE2(0x66, 0xE6, opd1, opd2); break;
-		case INSTR_CVTTPD2PI:	EncodeSSE2(0x66, 0x2C, opd1, opd2); break;
-		case INSTR_CVTTPS2DQ:	EncodeSSE2(0xF3, 0x5B, opd1, opd2); break;
-		//case INSTR_CVTTSD2SI:
-		case INSTR_DIVPD:		EncodeSSE2(0x66, 0x5E, opd1, opd2); break;
-		case INSTR_DIVSD:		EncodeSSE2(0xF2, 0x5E, opd1, opd2); break;
-		//case INSTR_LFENCE:
-		case INSTR_MASKMOVDQU:	EncodeSSE2(0x66, 0xF7, opd1, opd2); break;
-		case INSTR_MAXPD:		EncodeSSE2(0x66, 0x5F, opd1, opd2); break;
-		case INSTR_MAXSD:		EncodeSSE2(0xF2, 0x5F, opd1, opd2); break;
-		//case INSTR_MFENCE:
-		case INSTR_MINPD:		EncodeSSE2(0x66, 0x5D, opd1, opd2); break;
-		case INSTR_MINSD:		EncodeSSE2(0xF2, 0x5D, opd1, opd2); break;
-		case INSTR_MOVAPD:		EncodeSSE2(0x66, 0x28 | (opd1.IsReg() ? 0 : 0x01), opd1, opd2); break;
-		//case INSTR_MOVD:
-		case INSTR_MOVDQ2Q:		EncodeSSE2(0xF2, 0xD6, opd1, opd2); break;
-		case INSTR_MOVDQA:		EncodeSSE2(0x66, 0x6F | (opd1.IsReg() ? 0 : 0x10), opd1, opd2); break;
-		case INSTR_MOVDQU:		EncodeSSE2(0xF3, 0x6F | (opd1.IsReg() ? 0 : 0x10), opd1, opd2); break;
-		case INSTR_MOVHPD:		EncodeSSE2(0x66, 0x16 | (opd1.IsReg() ? 0 : 0x01), opd1, opd2); break;
-		case INSTR_MOVLPD:		EncodeSSE2(0x66, 0x12 | (opd1.IsReg() ? 0 : 0x01), opd1, opd2); break;
-		case INSTR_MOVMSKPD:	EncodeSSE2(0x66, 0x50, opd1, opd2); break;
-		case INSTR_MOVNTPD:		EncodeSSE2(0x66, 0x2B, opd1, opd2); break;
-		case INSTR_MOVNTDQ:		EncodeSSE2(0x66, 0xE7, opd1, opd2); break;
-		//case INSTR_MOVNTI:
-		case INSTR_MOVQ:		EncodeMOVQ(opd1, opd2); break;
-		case INSTR_MOVQ2DQ:		EncodeSSE2(0xF3, 0xD6, opd1, opd2); break;
-		case INSTR_MOVSD:		EncodeSSE2(0xF2, 0x10 | (opd1.IsReg() ? 0 : 0x01), opd1, opd2); break;
-		case INSTR_MOVUPD:		EncodeSSE2(0x66, 0x10 | (opd1.IsReg() ? 0 : 0x01), opd1, opd2); break;
-		case INSTR_MULPD:		EncodeSSE2(0x66, 0x59, opd1, opd2); break;
-		case INSTR_MULSD:		EncodeSSE2(0xF2, 0x59, opd1, opd2); break;
-		case INSTR_ORPD:		EncodeSSE2(0x66, 0x56, opd1, opd2); break;
-		case INSTR_PABSB:		EncodeMMXorSSE2(0x66, 0x38, 0x1C, opd1, opd2); break;	// SSSE3
-		case INSTR_PABSW:		EncodeMMXorSSE2(0x66, 0x38, 0x1D, opd1, opd2); break;	// SSSE3
-		case INSTR_PABSD:		EncodeMMXorSSE2(0x66, 0x38, 0x1E, opd1, opd2); break;	// SSSE3
-		case INSTR_PACKSSWB:	EncodeMMXorSSE2(0x66, 0x63, opd1, opd2); break;
-		case INSTR_PACKSSDW:	EncodeMMXorSSE2(0x66, 0x6B, opd1, opd2); break;
-		case INSTR_PACKUSWB:	EncodeMMXorSSE2(0x66, 0x67, opd1, opd2); break;
-		case INSTR_PACKUSDW:	EncodeSSE2(0x66, 0x38, 0x2B, opd1, opd2); break;		// SSE 4.1
-		case INSTR_PADDB:		EncodeMMXorSSE2(0x66, 0xFC, opd1, opd2); break;
-		case INSTR_PADDW:		EncodeMMXorSSE2(0x66, 0xFD, opd1, opd2); break;
-		case INSTR_PADDD:		EncodeMMXorSSE2(0x66, 0xFE, opd1, opd2); break;
-		case INSTR_PADDQ:		EncodeMMXorSSE2(0x66, 0xD4, opd1, opd2); break;
-		case INSTR_PADDSB:		EncodeMMXorSSE2(0x66, 0xEC, opd1, opd2); break;
-		case INSTR_PADDSW:		EncodeMMXorSSE2(0x66, 0xED, opd1, opd2); break;
-		case INSTR_PADDUSB:		EncodeMMXorSSE2(0x66, 0xDC, opd1, opd2); break;
-		case INSTR_PADDUSW:		EncodeMMXorSSE2(0x66, 0xDD, opd1, opd2); break;
-		case INSTR_PALIGNR:		EncodeMMXorSSE2(0x66, 0x3A, 0x0F, opd1, opd2); break;	// SSSE3
-		case INSTR_PAND:		EncodeMMXorSSE2(0x66, 0xDB, opd1, opd2); break;
-		case INSTR_PANDN:		EncodeMMXorSSE2(0x66, 0xDF, opd1, opd2); break;
-		case INSTR_PAUSE:		break;
-		case INSTR_PAVGB:		EncodeMMXorSSE2(0x66, 0xE0, opd1, opd2); break;
-		case INSTR_PAVGW:		EncodeMMXorSSE2(0x66, 0xE3, opd1, opd2); break;
-		case INSTR_PCMPEQB:		EncodeMMXorSSE2(0x66, 0x74, opd1, opd2); break;
-		case INSTR_PCMPEQW:		EncodeMMXorSSE2(0x66, 0x75, opd1, opd2); break;
-		case INSTR_PCMPEQD:		EncodeMMXorSSE2(0x66, 0x76, opd1, opd2); break;
-		case INSTR_PCMPEQQ:		EncodeSSE2(0x66, 0x38, 0x29, opd1, opd2); break;
-		case INSTR_PCMPGTB:		EncodeMMXorSSE2(0x66, 0x64, opd1, opd2); break;
-		case INSTR_PCMPGTW:		EncodeMMXorSSE2(0x66, 0x65, opd1, opd2); break;
-		case INSTR_PCMPGTD:		EncodeMMXorSSE2(0x66, 0x66, opd1, opd2); break;
-		case INSTR_PCMPGTQ:		EncodeSSE2(0x66, 0x38, 0x37, opd1, opd2); break;
-		//case INSTR_PEXTRW:
-		//case INSTR_PINSRW:
-		case INSTR_PMADDWD:		EncodeMMXorSSE2(0x66, 0xF5, opd1, opd2); break;
-		case INSTR_PMAXSW:		EncodeMMXorSSE2(0x66, 0xEE, opd1, opd2); break;
-		case INSTR_PMAXUB:		EncodeMMXorSSE2(0x66, 0xDE, opd1, opd2); break;
-		case INSTR_PMINSW:		EncodeMMXorSSE2(0x66, 0xEA, opd1, opd2); break;
-		case INSTR_PMINUB:		EncodeMMXorSSE2(0x66, 0xDA, opd1, opd2); break;
-		//case INSTR_PMOVMSKB:
-		case INSTR_PMULHUW:		EncodeMMXorSSE2(0x66, 0xE4, opd1, opd2); break;
-		case INSTR_PMULHW:		EncodeMMXorSSE2(0x66, 0xE5, opd1, opd2); break;
-		case INSTR_PMULLW:		EncodeMMXorSSE2(0x66, 0xD5, opd1, opd2); break;
-		case INSTR_PMULUDQ:		EncodeMMXorSSE2(0x66, 0xF4, opd1, opd2); break;
-		case INSTR_POR:			EncodeMMXorSSE2(0x66, 0xEB, opd1, opd2); break;
-		case INSTR_PSADBW:		EncodeMMXorSSE2(0x66, 0xF6, opd1, opd2); break;
-		//case INSTR_PSHUFD:
-		//case INSTR_PSHUFHW:
-		//case INSTR_PSHUFLW:
-		//case INSTR_PSLLW:
-		//case INSTR_PSLLD:
-		//case INSTR_PSLLQ:
-		//case INSTR_PSLLDQ:
-		//case INSTR_PSRAW:
-		//case INSTR_PSRAD:
-		//case INSTR_PSRLW:
-		//case INSTR_PSRLD:
-		//case INSTR_PSRLQ:
-		//case INSTR_PSRLDQ:
-		case INSTR_PSUBB:		EncodeMMXorSSE2(0x66, 0xF8, opd1, opd2); break;
-		case INSTR_PSUBW:		EncodeMMXorSSE2(0x66, 0xF9, opd1, opd2); break;
-		case INSTR_PSUBD:		EncodeMMXorSSE2(0x66, 0xFA, opd1, opd2); break;
-		case INSTR_PSUBQ:		EncodeMMXorSSE2(0x66, 0xFB, opd1, opd2); break;
-		case INSTR_PSUBSB:		EncodeMMXorSSE2(0x66, 0xE8, opd1, opd2); break;
-		case INSTR_PSUBSW:		EncodeMMXorSSE2(0x66, 0xE9, opd1, opd2); break;
-		case INSTR_PSUBUSB:		EncodeMMXorSSE2(0x66, 0xD8, opd1, opd2); break;
-		case INSTR_PSUBUSW:		EncodeMMXorSSE2(0x66, 0xD9, opd1, opd2); break;
-		case INSTR_PUNPCKHBW:	EncodeMMXorSSE2(0x66, 0x68, opd1, opd2); break;
-		case INSTR_PUNPCKHWD:	EncodeMMXorSSE2(0x66, 0x69, opd1, opd2); break;
-		case INSTR_PUNPCKHDQ:	EncodeMMXorSSE2(0x66, 0x6A, opd1, opd2); break;
-		case INSTR_PUNPCKHQDQ:	EncodeSSE2(0x66, 0x6D, opd1, opd2); break;
-		case INSTR_PUNPCKLBW:	EncodeMMXorSSE2(0x66, 0x60, opd1, opd2); break;
-		case INSTR_PUNPCKLWD:	EncodeMMXorSSE2(0x66, 0x61, opd1, opd2); break;
-		case INSTR_PUNPCKLDQ:	EncodeMMXorSSE2(0x66, 0x62, opd1, opd2); break;
-		case INSTR_PUNPCKLQDQ:	EncodeSSE2(0x66, 0x6C, opd1, opd2); break;
-		case INSTR_PXOR:		EncodeMMXorSSE2(0x66, 0xEF, opd1, opd2); break;
-		//case INSTR_SHUFPD:
-		case INSTR_SQRTPD:		EncodeSSE2(0x66, 0x51, opd1, opd2); break;
-		case INSTR_SQRTSD:		EncodeSSE2(0xF2, 0x51, opd1, opd2); break;
-		case INSTR_SUBPD:		EncodeSSE2(0x66, 0x5C, opd1, opd2); break;
-		case INSTR_SUBSD:		EncodeSSE2(0xF2, 0x5C, opd1, opd2); break;
-		case INSTR_UCOMISD:		EncodeSSE2(0x66, 0x2E, opd1, opd2); break;
-		case INSTR_UNPCKHPD:	EncodeSSE2(0x66, 0x15, opd1, opd2); break;
-		case INSTR_UNPCKLPD:	EncodeSSE2(0x66, 0x14, opd1, opd2); break;
-		case INSTR_XORPD:		EncodeSSE2(0x66, 0x57, opd1, opd2); break;
+		case I_ADDPD:		EncodeSSE2(0x66, 0x58, opd1, opd2); break;
+		case I_ADDSD:		EncodeSSE2(0xF2, 0x58, opd1, opd2); break;
+		case I_ANDPD:		EncodeSSE2(0x66, 0x54, opd1, opd2); break;
+		case I_ANDNPD:		EncodeSSE2(0x66, 0x55, opd1, opd2); break;
+		case I_CLFLUSH:		EncodeCLFLUSH(opd1); break;
+		case I_CMPPD:		EncodeSSE2(0x66, 0xC2, opd1, opd2); db(opd3.GetImm()); break;
+		case I_CMPPS:		EncodeSSE(0xC2, opd1, opd2); db(opd3.GetImm()); break;
+		case I_CMPSD:		EncodeSSE2(0xF2, 0xC2, opd1, opd2); db(opd3.GetImm()); break;
+		case I_COMISD:		EncodeSSE2(0x66, 0x2F, opd1, opd2); break;
+		case I_CVTDQ2PD:	EncodeSSE2(0xF3, 0xE6, opd1, opd2); break;
+		case I_CVTPD2DQ:	EncodeSSE2(0xF2, 0xE6, opd1, opd2); break;
+		case I_CVTPD2PI:	EncodeSSE2(0x66, 0x2D, opd1, opd2); break;
+		case I_CVTPD2PS:	EncodeSSE2(0x66, 0x5A, opd1, opd2); break;
+		case I_CVTPI2PD:	EncodeSSE2(0x66, 0x2A, opd1, opd2); break;
+		case I_CVTPS2DQ:	EncodeSSE2(0x66, 0x5B, opd1, opd2); break;
+		case I_CVTDQ2PS:	EncodeSSE(0x5B, opd1, opd2); break;
+		case I_CVTPS2PD:	EncodeSSE(0x5A, opd1, opd2); break;	// SSE2!!!
+		//case I_CVTSD2SI:
+		case I_CVTSD2SS:	EncodeSSE2(0xF2, 0x5A, opd1, opd2); break;
+		//case I_CVTSI2SD:
+		case I_CVTSS2SD:	EncodeSSE2(0xF3, 0x5A, opd1, opd2); break;
+		case I_CVTTPD2DQ:	EncodeSSE2(0x66, 0xE6, opd1, opd2); break;
+		case I_CVTTPD2PI:	EncodeSSE2(0x66, 0x2C, opd1, opd2); break;
+		case I_CVTTPS2DQ:	EncodeSSE2(0xF3, 0x5B, opd1, opd2); break;
+		//case I_CVTTSD2SI:
+		case I_DIVPD:		EncodeSSE2(0x66, 0x5E, opd1, opd2); break;
+		case I_DIVSD:		EncodeSSE2(0xF2, 0x5E, opd1, opd2); break;
+		//case I_LFENCE:
+		case I_MASKMOVDQU:	EncodeSSE2(0x66, 0xF7, opd1, opd2); break;
+		case I_MAXPD:		EncodeSSE2(0x66, 0x5F, opd1, opd2); break;
+		case I_MAXSD:		EncodeSSE2(0xF2, 0x5F, opd1, opd2); break;
+		//case I_MFENCE:
+		case I_MINPD:		EncodeSSE2(0x66, 0x5D, opd1, opd2); break;
+		case I_MINSD:		EncodeSSE2(0xF2, 0x5D, opd1, opd2); break;
+		case I_MOVAPD:		EncodeSSE2(0x66, 0x28 | (opd1.IsReg() ? 0 : 0x01), opd1, opd2); break;
+		//case I_MOVD:
+		case I_MOVDQ2Q:		EncodeSSE2(0xF2, 0xD6, opd1, opd2); break;
+		case I_MOVDQA:		EncodeSSE2(0x66, 0x6F | (opd1.IsReg() ? 0 : 0x10), opd1, opd2); break;
+		case I_MOVDQU:		EncodeSSE2(0xF3, 0x6F | (opd1.IsReg() ? 0 : 0x10), opd1, opd2); break;
+		case I_MOVHPD:		EncodeSSE2(0x66, 0x16 | (opd1.IsReg() ? 0 : 0x01), opd1, opd2); break;
+		case I_MOVLPD:		EncodeSSE2(0x66, 0x12 | (opd1.IsReg() ? 0 : 0x01), opd1, opd2); break;
+		case I_MOVMSKPD:	EncodeSSE2(0x66, 0x50, opd1, opd2); break;
+		case I_MOVNTPD:		EncodeSSE2(0x66, 0x2B, opd1, opd2); break;
+		case I_MOVNTDQ:		EncodeSSE2(0x66, 0xE7, opd1, opd2); break;
+		//case I_MOVNTI:
+		case I_MOVQ:		EncodeMOVQ(opd1, opd2); break;
+		case I_MOVQ2DQ:		EncodeSSE2(0xF3, 0xD6, opd1, opd2); break;
+		case I_MOVSD:		EncodeSSE2(0xF2, 0x10 | (opd1.IsReg() ? 0 : 0x01), opd1, opd2); break;
+		case I_MOVUPD:		EncodeSSE2(0x66, 0x10 | (opd1.IsReg() ? 0 : 0x01), opd1, opd2); break;
+		case I_MULPD:		EncodeSSE2(0x66, 0x59, opd1, opd2); break;
+		case I_MULSD:		EncodeSSE2(0xF2, 0x59, opd1, opd2); break;
+		case I_ORPD:		EncodeSSE2(0x66, 0x56, opd1, opd2); break;
+		case I_PABSB:		EncodeMMXorSSE2(0x66, 0x38, 0x1C, opd1, opd2); break;	// SSSE3
+		case I_PABSW:		EncodeMMXorSSE2(0x66, 0x38, 0x1D, opd1, opd2); break;	// SSSE3
+		case I_PABSD:		EncodeMMXorSSE2(0x66, 0x38, 0x1E, opd1, opd2); break;	// SSSE3
+		case I_PACKSSWB:	EncodeMMXorSSE2(0x66, 0x63, opd1, opd2); break;
+		case I_PACKSSDW:	EncodeMMXorSSE2(0x66, 0x6B, opd1, opd2); break;
+		case I_PACKUSWB:	EncodeMMXorSSE2(0x66, 0x67, opd1, opd2); break;
+		case I_PACKUSDW:	EncodeSSE2(0x66, 0x38, 0x2B, opd1, opd2); break;		// SSE 4.1
+		case I_PADDB:		EncodeMMXorSSE2(0x66, 0xFC, opd1, opd2); break;
+		case I_PADDW:		EncodeMMXorSSE2(0x66, 0xFD, opd1, opd2); break;
+		case I_PADDD:		EncodeMMXorSSE2(0x66, 0xFE, opd1, opd2); break;
+		case I_PADDQ:		EncodeMMXorSSE2(0x66, 0xD4, opd1, opd2); break;
+		case I_PADDSB:		EncodeMMXorSSE2(0x66, 0xEC, opd1, opd2); break;
+		case I_PADDSW:		EncodeMMXorSSE2(0x66, 0xED, opd1, opd2); break;
+		case I_PADDUSB:		EncodeMMXorSSE2(0x66, 0xDC, opd1, opd2); break;
+		case I_PADDUSW:		EncodeMMXorSSE2(0x66, 0xDD, opd1, opd2); break;
+		case I_PALIGNR:		EncodeMMXorSSE2(0x66, 0x3A, 0x0F, opd1, opd2); break;	// SSSE3
+		case I_PAND:		EncodeMMXorSSE2(0x66, 0xDB, opd1, opd2); break;
+		case I_PANDN:		EncodeMMXorSSE2(0x66, 0xDF, opd1, opd2); break;
+		case I_PAUSE:		break;
+		case I_PAVGB:		EncodeMMXorSSE2(0x66, 0xE0, opd1, opd2); break;
+		case I_PAVGW:		EncodeMMXorSSE2(0x66, 0xE3, opd1, opd2); break;
+		case I_PCMPEQB:		EncodeMMXorSSE2(0x66, 0x74, opd1, opd2); break;
+		case I_PCMPEQW:		EncodeMMXorSSE2(0x66, 0x75, opd1, opd2); break;
+		case I_PCMPEQD:		EncodeMMXorSSE2(0x66, 0x76, opd1, opd2); break;
+		case I_PCMPEQQ:		EncodeSSE2(0x66, 0x38, 0x29, opd1, opd2); break;
+		case I_PCMPGTB:		EncodeMMXorSSE2(0x66, 0x64, opd1, opd2); break;
+		case I_PCMPGTW:		EncodeMMXorSSE2(0x66, 0x65, opd1, opd2); break;
+		case I_PCMPGTD:		EncodeMMXorSSE2(0x66, 0x66, opd1, opd2); break;
+		case I_PCMPGTQ:		EncodeSSE2(0x66, 0x38, 0x37, opd1, opd2); break;
+		//case I_PEXTRW:
+		//case I_PINSRW:
+		case I_PMADDWD:		EncodeMMXorSSE2(0x66, 0xF5, opd1, opd2); break;
+		case I_PMAXSW:		EncodeMMXorSSE2(0x66, 0xEE, opd1, opd2); break;
+		case I_PMAXUB:		EncodeMMXorSSE2(0x66, 0xDE, opd1, opd2); break;
+		case I_PMINSW:		EncodeMMXorSSE2(0x66, 0xEA, opd1, opd2); break;
+		case I_PMINUB:		EncodeMMXorSSE2(0x66, 0xDA, opd1, opd2); break;
+		//case I_PMOVMSKB:
+		case I_PMULHUW:		EncodeMMXorSSE2(0x66, 0xE4, opd1, opd2); break;
+		case I_PMULHW:		EncodeMMXorSSE2(0x66, 0xE5, opd1, opd2); break;
+		case I_PMULLW:		EncodeMMXorSSE2(0x66, 0xD5, opd1, opd2); break;
+		case I_PMULUDQ:		EncodeMMXorSSE2(0x66, 0xF4, opd1, opd2); break;
+		case I_POR:			EncodeMMXorSSE2(0x66, 0xEB, opd1, opd2); break;
+		case I_PSADBW:		EncodeMMXorSSE2(0x66, 0xF6, opd1, opd2); break;
+		//case I_PSHUFD:
+		//case I_PSHUFHW:
+		//case I_PSHUFLW:
+		//case I_PSLLW:
+		//case I_PSLLD:
+		//case I_PSLLQ:
+		//case I_PSLLDQ:
+		//case I_PSRAW:
+		//case I_PSRAD:
+		//case I_PSRLW:
+		//case I_PSRLD:
+		//case I_PSRLQ:
+		//case I_PSRLDQ:
+		case I_PSUBB:		EncodeMMXorSSE2(0x66, 0xF8, opd1, opd2); break;
+		case I_PSUBW:		EncodeMMXorSSE2(0x66, 0xF9, opd1, opd2); break;
+		case I_PSUBD:		EncodeMMXorSSE2(0x66, 0xFA, opd1, opd2); break;
+		case I_PSUBQ:		EncodeMMXorSSE2(0x66, 0xFB, opd1, opd2); break;
+		case I_PSUBSB:		EncodeMMXorSSE2(0x66, 0xE8, opd1, opd2); break;
+		case I_PSUBSW:		EncodeMMXorSSE2(0x66, 0xE9, opd1, opd2); break;
+		case I_PSUBUSB:		EncodeMMXorSSE2(0x66, 0xD8, opd1, opd2); break;
+		case I_PSUBUSW:		EncodeMMXorSSE2(0x66, 0xD9, opd1, opd2); break;
+		case I_PUNPCKHBW:	EncodeMMXorSSE2(0x66, 0x68, opd1, opd2); break;
+		case I_PUNPCKHWD:	EncodeMMXorSSE2(0x66, 0x69, opd1, opd2); break;
+		case I_PUNPCKHDQ:	EncodeMMXorSSE2(0x66, 0x6A, opd1, opd2); break;
+		case I_PUNPCKHQDQ:	EncodeSSE2(0x66, 0x6D, opd1, opd2); break;
+		case I_PUNPCKLBW:	EncodeMMXorSSE2(0x66, 0x60, opd1, opd2); break;
+		case I_PUNPCKLWD:	EncodeMMXorSSE2(0x66, 0x61, opd1, opd2); break;
+		case I_PUNPCKLDQ:	EncodeMMXorSSE2(0x66, 0x62, opd1, opd2); break;
+		case I_PUNPCKLQDQ:	EncodeSSE2(0x66, 0x6C, opd1, opd2); break;
+		case I_PXOR:		EncodeMMXorSSE2(0x66, 0xEF, opd1, opd2); break;
+		//case I_SHUFPD:
+		case I_SQRTPD:		EncodeSSE2(0x66, 0x51, opd1, opd2); break;
+		case I_SQRTSD:		EncodeSSE2(0xF2, 0x51, opd1, opd2); break;
+		case I_SUBPD:		EncodeSSE2(0x66, 0x5C, opd1, opd2); break;
+		case I_SUBSD:		EncodeSSE2(0xF2, 0x5C, opd1, opd2); break;
+		case I_UCOMISD:		EncodeSSE2(0x66, 0x2E, opd1, opd2); break;
+		case I_UNPCKHPD:	EncodeSSE2(0x66, 0x15, opd1, opd2); break;
+		case I_UNPCKLPD:	EncodeSSE2(0x66, 0x14, opd1, opd2); break;
+		case I_XORPD:		EncodeSSE2(0x66, 0x57, opd1, opd2); break;
 
 		default:			ASSERT(0); break;
 		}
@@ -1371,11 +1381,11 @@ struct Frontend
 
 	bool IsJmpOrJcc(InstrID id) const
 	{
-		return id == INSTR_JMP || id == INSTR_JA || id == INSTR_JAE || id == INSTR_JB
-			|| id == INSTR_JBE || id == INSTR_JCXZ || id == INSTR_JECXZ || id == INSTR_JRCXZ
-			|| id == INSTR_JE || id == INSTR_JG || id == INSTR_JGE || id == INSTR_JL
-			|| id == INSTR_JLE || id == INSTR_JNE || id == INSTR_JNO || id == INSTR_JNP
-			|| id == INSTR_JNS || id == INSTR_JO || id == INSTR_JP || id == INSTR_JS;
+		return id == I_JMP || id == I_JA || id == I_JAE || id == I_JB
+			|| id == I_JBE || id == I_JCXZ || id == I_JECXZ || id == I_JRCXZ
+			|| id == I_JE || id == I_JG || id == I_JGE || id == I_JL
+			|| id == I_JLE || id == I_JNE || id == I_JNO || id == I_JNP
+			|| id == I_JNS || id == I_JO || id == I_JP || id == I_JS;
 	}
 
 	// TODO: Return an error when there is no destination.
@@ -1410,15 +1420,15 @@ struct Frontend
 					size_t d = (size_t) instr.GetOpd(1).GetImm();
 					int rel = offsets[d] - offsets[i] - (int) Backend::GetInstrCodeSize(instr);
 					OpdSize size = instr.GetOpd(0).GetSize();
-					if (size == SIZE_INT8) {
+					if (size == O_SIZE_8) {
 						if (!detail::IsInt8(rel)) {
-							if (instr.GetID() == INSTR_JRCXZ || instr.GetID() == INSTR_JCXZ || instr.GetID() == INSTR_JECXZ) ASSERT(0);	// jrcxz, jcxz, jecxz are only for short jump
+							if (instr.GetID() == I_JRCXZ || instr.GetID() == I_JCXZ || instr.GetID() == I_JECXZ) ASSERT(0);	// jrcxz, jcxz, jecxz are only for short jump
 
 							// Retry with immediate 32
 							instr = Instr(instr.GetID(), Imm32(0x7FFFFFFF), Imm64(instr.GetOpd(1).GetImm()));
 							retry = true;
 						}
-					} else if (size == SIZE_INT32) {
+					} else if (size == O_SIZE_32) {
 						ASSERT(detail::IsInt32(rel));	// There is no jump instruction larger than immediate 32.
 					}
 				}
@@ -1432,10 +1442,10 @@ struct Frontend
 				size_t d = (size_t) instr.GetOpd(1).GetImm();
 				int rel = offsets[d] - offsets[i] - (int) Backend::GetInstrCodeSize(instr);
 				OpdSize size = instr.GetOpd(0).GetSize();
-				if (size == SIZE_INT8) {
+				if (size == O_SIZE_8) {
 					ASSERT(detail::IsInt8(rel));
 					instr = Instr(instr.GetID(), Imm8(rel));
-				} else if (size == SIZE_INT32) {
+				} else if (size == O_SIZE_32) {
 					ASSERT(detail::IsInt32(rel));
 					instr = Instr(instr.GetID(), Imm32(rel));
 				}
@@ -1512,510 +1522,583 @@ struct Frontend
 	// ALIGN
 	void align(size_t n)
 	{
-		PushBack(Instr(INSTR_PSEUDO_ALIGN, Imm64(n)));
+		PushBack(Instr(I_PSEUDO_ALIGN, Imm64(n)));
 	}
 
 	// ADC
-	void adc(const Reg8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_ADC, opd1, opd2));}
-	void adc(const Reg8& opd1, const Mem8& opd2) {PushBack(Instr(INSTR_ADC, opd1, opd2));}
-	void adc(const Mem8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_ADC, opd1, opd2));}
-	void adc(const Opd8& opd1, uint8 imm) {PushBack(Instr(INSTR_ADC, opd1, Imm8(imm)));}
-	void adc(const Reg16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_ADC, opd1, opd2));}
-	void adc(const Reg16& opd1, const Mem16& opd2) {PushBack(Instr(INSTR_ADC, opd1, opd2));}
-	void adc(const Mem16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_ADC, opd1, opd2));}
-	void adc(const Opd16& opd1, uint16 imm) {PushBack(Instr(INSTR_ADC, opd1, Imm16(imm)));}
-	void adc(const Reg32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_ADC, opd1, opd2));}
-	void adc(const Reg32& opd1, const Mem32& opd2) {PushBack(Instr(INSTR_ADC, opd1, opd2));}
-	void adc(const Mem32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_ADC, opd1, opd2));}
-	void adc(const Opd32& opd1, uint32 imm) {PushBack(Instr(INSTR_ADC, opd1, Imm32(imm)));}
+	void adc(const Reg8& opd1, const Reg8& opd2)	{PushBack(Instr(I_ADC, opd1, opd2));}
+	void adc(const Reg8& opd1, const Mem8& opd2)	{PushBack(Instr(I_ADC, opd1, opd2));}
+	void adc(const Mem8& opd1, const Reg8& opd2)	{PushBack(Instr(I_ADC, opd1, opd2));}
+	void adc(const Reg8& opd1, const Imm8& imm)		{PushBack(Instr(I_ADC, opd1, imm));}
+	void adc(const Mem8& opd1, const Imm8& imm)		{PushBack(Instr(I_ADC, opd1, imm));}
+	void adc(const Reg16& opd1, const Reg16& opd2)	{PushBack(Instr(I_ADC, opd1, opd2));}
+	void adc(const Reg16& opd1, const Mem16& opd2)	{PushBack(Instr(I_ADC, opd1, opd2));}
+	void adc(const Mem16& opd1, const Reg16& opd2)	{PushBack(Instr(I_ADC, opd1, opd2));}
+	void adc(const Reg16& opd1, const Imm16& imm)	{PushBack(Instr(I_ADC, opd1, imm));}
+	void adc(const Mem16& opd1, const Imm16& imm)	{PushBack(Instr(I_ADC, opd1, imm));}
+	void adc(const Reg32& opd1, const Reg32& opd2)	{PushBack(Instr(I_ADC, opd1, opd2));}
+	void adc(const Reg32& opd1, const Mem32& opd2)	{PushBack(Instr(I_ADC, opd1, opd2));}
+	void adc(const Mem32& opd1, const Reg32& opd2)	{PushBack(Instr(I_ADC, opd1, opd2));}
+	void adc(const Reg32& opd1, const Imm32& imm)	{PushBack(Instr(I_ADC, opd1, imm));}
+	void adc(const Mem32& opd1, const Imm32& imm)	{PushBack(Instr(I_ADC, opd1, imm));}
 #ifdef JITASM64
-	void adc(const Reg64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_ADC, opd1, opd2));}
-	void adc(const Reg64& opd1, const Mem64& opd2) {PushBack(Instr(INSTR_ADC, opd1, opd2));}
-	void adc(const Mem64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_ADC, opd1, opd2));}
-	void adc(const Opd64& opd1, uint32 imm) {PushBack(Instr(INSTR_ADC, opd1, Imm32(imm)));}
+	void adc(const Reg64& opd1, const Reg64& opd2)	{PushBack(Instr(I_ADC, opd1, opd2));}
+	void adc(const Reg64& opd1, const Mem64& opd2)	{PushBack(Instr(I_ADC, opd1, opd2));}
+	void adc(const Mem64& opd1, const Reg64& opd2)	{PushBack(Instr(I_ADC, opd1, opd2));}
+	void adc(const Reg64& opd1, const Imm32& imm)	{PushBack(Instr(I_ADC, opd1, imm));}
+	void adc(const Mem64& opd1, const Imm32& imm)	{PushBack(Instr(I_ADC, opd1, imm));}
 #endif
 
 	// ADD
-	void add(const Reg8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_ADD, opd1, opd2));}
-	void add(const Reg8& opd1, const Mem8& opd2) {PushBack(Instr(INSTR_ADD, opd1, opd2));}
-	void add(const Mem8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_ADD, opd1, opd2));}
-	void add(const Opd8& opd1, uint8 imm) {PushBack(Instr(INSTR_ADD, opd1, Imm8(imm)));}
-	void add(const Reg16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_ADD, opd1, opd2));}
-	void add(const Reg16& opd1, const Mem16& opd2) {PushBack(Instr(INSTR_ADD, opd1, opd2));}
-	void add(const Mem16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_ADD, opd1, opd2));}
-	void add(const Opd16& opd1, uint16 imm) {PushBack(Instr(INSTR_ADD, opd1, Imm16(imm)));}
-	void add(const Reg32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_ADD, opd1, opd2));}
-	void add(const Reg32& opd1, const Mem32& opd2) {PushBack(Instr(INSTR_ADD, opd1, opd2));}
-	void add(const Mem32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_ADD, opd1, opd2));}
-	void add(const Opd32& opd1, uint32 imm) {PushBack(Instr(INSTR_ADD, opd1, Imm32(imm)));}
+	void add(const Reg8& opd1, const Reg8& opd2)	{PushBack(Instr(I_ADD, opd1, opd2));}
+	void add(const Reg8& opd1, const Mem8& opd2)	{PushBack(Instr(I_ADD, opd1, opd2));}
+	void add(const Mem8& opd1, const Reg8& opd2)	{PushBack(Instr(I_ADD, opd1, opd2));}
+	void add(const Reg8& opd1, const Imm8& imm)		{PushBack(Instr(I_ADD, opd1, imm));}
+	void add(const Mem8& opd1, const Imm8& imm)		{PushBack(Instr(I_ADD, opd1, imm));}
+	void add(const Reg16& opd1, const Reg16& opd2)	{PushBack(Instr(I_ADD, opd1, opd2));}
+	void add(const Reg16& opd1, const Mem16& opd2)	{PushBack(Instr(I_ADD, opd1, opd2));}
+	void add(const Mem16& opd1, const Reg16& opd2)	{PushBack(Instr(I_ADD, opd1, opd2));}
+	void add(const Reg16& opd1, const Imm16& imm)	{PushBack(Instr(I_ADD, opd1, imm));}
+	void add(const Mem16& opd1, const Imm16& imm)	{PushBack(Instr(I_ADD, opd1, imm));}
+	void add(const Reg32& opd1, const Reg32& opd2)	{PushBack(Instr(I_ADD, opd1, opd2));}
+	void add(const Reg32& opd1, const Mem32& opd2)	{PushBack(Instr(I_ADD, opd1, opd2));}
+	void add(const Mem32& opd1, const Reg32& opd2)	{PushBack(Instr(I_ADD, opd1, opd2));}
+	void add(const Reg32& opd1, const Imm32& imm)	{PushBack(Instr(I_ADD, opd1, imm));}
+	void add(const Mem32& opd1, const Imm32& imm)	{PushBack(Instr(I_ADD, opd1, imm));}
 #ifdef JITASM64
-	void add(const Reg64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_ADD, opd1, opd2));}
-	void add(const Reg64& opd1, const Mem64& opd2) {PushBack(Instr(INSTR_ADD, opd1, opd2));}
-	void add(const Mem64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_ADD, opd1, opd2));}
-	void add(const Opd64& opd1, uint32 imm) {PushBack(Instr(INSTR_ADD, opd1, Imm32(imm)));}
+	void add(const Reg64& opd1, const Reg64& opd2)	{PushBack(Instr(I_ADD, opd1, opd2));}
+	void add(const Reg64& opd1, const Mem64& opd2)	{PushBack(Instr(I_ADD, opd1, opd2));}
+	void add(const Mem64& opd1, const Reg64& opd2)	{PushBack(Instr(I_ADD, opd1, opd2));}
+	void add(const Reg64& opd1, const Imm32& imm)	{PushBack(Instr(I_ADD, opd1, imm));}
+	void add(const Mem64& opd1, const Imm32& imm)	{PushBack(Instr(I_ADD, opd1, imm));}
 #endif
 
 	// AND
-	void and(const Reg8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_AND, opd1, opd2));}
-	void and(const Reg8& opd1, const Mem8& opd2) {PushBack(Instr(INSTR_AND, opd1, opd2));}
-	void and(const Mem8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_AND, opd1, opd2));}
-	void and(const Opd8& opd1, uint8 imm) {PushBack(Instr(INSTR_AND, opd1, Imm8(imm)));}
-	void and(const Reg16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_AND, opd1, opd2));}
-	void and(const Reg16& opd1, const Mem16& opd2) {PushBack(Instr(INSTR_AND, opd1, opd2));}
-	void and(const Mem16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_AND, opd1, opd2));}
-	void and(const Opd16& opd1, uint16 imm) {PushBack(Instr(INSTR_AND, opd1, Imm16(imm)));}
-	void and(const Reg32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_AND, opd1, opd2));}
-	void and(const Reg32& opd1, const Mem32& opd2) {PushBack(Instr(INSTR_AND, opd1, opd2));}
-	void and(const Mem32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_AND, opd1, opd2));}
-	void and(const Opd32& opd1, uint32 imm) {PushBack(Instr(INSTR_AND, opd1, Imm32(imm)));}
+	void and(const Reg8& opd1, const Reg8& opd2)	{PushBack(Instr(I_AND, opd1, opd2));}
+	void and(const Reg8& opd1, const Mem8& opd2)	{PushBack(Instr(I_AND, opd1, opd2));}
+	void and(const Mem8& opd1, const Reg8& opd2)	{PushBack(Instr(I_AND, opd1, opd2));}
+	void and(const Reg8& opd1, const Imm8& imm)		{PushBack(Instr(I_AND, opd1, imm));}
+	void and(const Mem8& opd1, const Imm8& imm)		{PushBack(Instr(I_AND, opd1, imm));}
+	void and(const Reg16& opd1, const Reg16& opd2)	{PushBack(Instr(I_AND, opd1, opd2));}
+	void and(const Reg16& opd1, const Mem16& opd2)	{PushBack(Instr(I_AND, opd1, opd2));}
+	void and(const Mem16& opd1, const Reg16& opd2)	{PushBack(Instr(I_AND, opd1, opd2));}
+	void and(const Reg16& opd1, const Imm16& imm)	{PushBack(Instr(I_AND, opd1, imm));}
+	void and(const Mem16& opd1, const Imm16& imm)	{PushBack(Instr(I_AND, opd1, imm));}
+	void and(const Reg32& opd1, const Reg32& opd2)	{PushBack(Instr(I_AND, opd1, opd2));}
+	void and(const Reg32& opd1, const Mem32& opd2)	{PushBack(Instr(I_AND, opd1, opd2));}
+	void and(const Mem32& opd1, const Reg32& opd2)	{PushBack(Instr(I_AND, opd1, opd2));}
+	void and(const Reg32& opd1, const Imm32& imm)	{PushBack(Instr(I_AND, opd1, imm));}
+	void and(const Mem32& opd1, const Imm32& imm)	{PushBack(Instr(I_AND, opd1, imm));}
 #ifdef JITASM64
-	void and(const Reg64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_AND, opd1, opd2));}
-	void and(const Reg64& opd1, const Mem64& opd2) {PushBack(Instr(INSTR_AND, opd1, opd2));}
-	void and(const Mem64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_AND, opd1, opd2));}
-	void and(const Opd64& opd1, uint32 imm) {PushBack(Instr(INSTR_AND, opd1, Imm32(imm)));}
+	void and(const Reg64& opd1, const Reg64& opd2)	{PushBack(Instr(I_AND, opd1, opd2));}
+	void and(const Reg64& opd1, const Mem64& opd2)	{PushBack(Instr(I_AND, opd1, opd2));}
+	void and(const Mem64& opd1, const Reg64& opd2)	{PushBack(Instr(I_AND, opd1, opd2));}
+	void and(const Reg64& opd1, const Imm32& imm)	{PushBack(Instr(I_AND, opd1, imm));}
+	void and(const Mem64& opd1, const Imm32& imm)	{PushBack(Instr(I_AND, opd1, imm));}
 #endif
 
 	// CALL
 #ifndef JITASM64
-	void call(const Reg16& opd) {PushBack(Instr(INSTR_CALL, opd));}
-	void call(const Reg32& opd) {PushBack(Instr(INSTR_CALL, opd));}
+	void call(const Reg16& opd)	{PushBack(Instr(I_CALL, opd));}
+	void call(const Reg32& opd)	{PushBack(Instr(I_CALL, opd));}
 #else
-	void call(const Reg64& opd) {PushBack(Instr(INSTR_CALL, opd));}
+	void call(const Reg64& opd)	{PushBack(Instr(I_CALL, opd));}
 #endif
 
 	// CMP
-	void cmp(const Reg8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_CMP, opd1, opd2));}
-	void cmp(const Reg8& opd1, const Mem8& opd2) {PushBack(Instr(INSTR_CMP, opd1, opd2));}
-	void cmp(const Mem8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_CMP, opd1, opd2));}
-	void cmp(const Opd8& opd1, uint8 imm) {PushBack(Instr(INSTR_CMP, opd1, Imm8(imm)));}
-	void cmp(const Reg16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_CMP, opd1, opd2));}
-	void cmp(const Reg16& opd1, const Mem16& opd2) {PushBack(Instr(INSTR_CMP, opd1, opd2));}
-	void cmp(const Mem16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_CMP, opd1, opd2));}
-	void cmp(const Opd16& opd1, uint16 imm) {PushBack(Instr(INSTR_CMP, opd1, Imm16(imm)));}
-	void cmp(const Reg32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_CMP, opd1, opd2));}
-	void cmp(const Reg32& opd1, const Mem32& opd2) {PushBack(Instr(INSTR_CMP, opd1, opd2));}
-	void cmp(const Mem32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_CMP, opd1, opd2));}
-	void cmp(const Opd32& opd1, uint32 imm) {PushBack(Instr(INSTR_CMP, opd1, Imm32(imm)));}
+	void cmp(const Reg8& opd1, const Reg8& opd2)	{PushBack(Instr(I_CMP, opd1, opd2));}
+	void cmp(const Reg8& opd1, const Mem8& opd2)	{PushBack(Instr(I_CMP, opd1, opd2));}
+	void cmp(const Mem8& opd1, const Reg8& opd2)	{PushBack(Instr(I_CMP, opd1, opd2));}
+	void cmp(const Reg8& opd1, const Imm8& imm)		{PushBack(Instr(I_CMP, opd1, imm));}
+	void cmp(const Mem8& opd1, const Imm8& imm)		{PushBack(Instr(I_CMP, opd1, imm));}
+	void cmp(const Reg16& opd1, const Reg16& opd2)	{PushBack(Instr(I_CMP, opd1, opd2));}
+	void cmp(const Reg16& opd1, const Mem16& opd2)	{PushBack(Instr(I_CMP, opd1, opd2));}
+	void cmp(const Mem16& opd1, const Reg16& opd2)	{PushBack(Instr(I_CMP, opd1, opd2));}
+	void cmp(const Reg16& opd1, const Imm16& imm)	{PushBack(Instr(I_CMP, opd1, imm));}
+	void cmp(const Mem16& opd1, const Imm16& imm)	{PushBack(Instr(I_CMP, opd1, imm));}
+	void cmp(const Reg32& opd1, const Reg32& opd2)	{PushBack(Instr(I_CMP, opd1, opd2));}
+	void cmp(const Reg32& opd1, const Mem32& opd2)	{PushBack(Instr(I_CMP, opd1, opd2));}
+	void cmp(const Mem32& opd1, const Reg32& opd2)	{PushBack(Instr(I_CMP, opd1, opd2));}
+	void cmp(const Reg32& opd1, const Imm32& imm)	{PushBack(Instr(I_CMP, opd1, imm));}
+	void cmp(const Mem32& opd1, const Imm32& imm)	{PushBack(Instr(I_CMP, opd1, imm));}
 #ifdef JITASM64
-	void cmp(const Reg64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_CMP, opd1, opd2));}
-	void cmp(const Reg64& opd1, const Mem64& opd2) {PushBack(Instr(INSTR_CMP, opd1, opd2));}
-	void cmp(const Mem64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_CMP, opd1, opd2));}
-	void cmp(const Opd64& opd1, uint32 imm) {PushBack(Instr(INSTR_CMP, opd1, Imm32(imm)));}
+	void cmp(const Reg64& opd1, const Reg64& opd2)	{PushBack(Instr(I_CMP, opd1, opd2));}
+	void cmp(const Reg64& opd1, const Mem64& opd2)	{PushBack(Instr(I_CMP, opd1, opd2));}
+	void cmp(const Mem64& opd1, const Reg64& opd2)	{PushBack(Instr(I_CMP, opd1, opd2));}
+	void cmp(const Reg64& opd1, const Imm32& imm)	{PushBack(Instr(I_CMP, opd1, imm));}
+	void cmp(const Mem64& opd1, const Imm32& imm)	{PushBack(Instr(I_CMP, opd1, imm));}
 #endif
 
 	// DEC
-	void dec(const Opd8& opd) {PushBack(Instr(INSTR_DEC, opd));}
-	void dec(const Opd16& opd) {PushBack(Instr(INSTR_DEC, opd));}
-	void dec(const Opd32& opd) {PushBack(Instr(INSTR_DEC, opd));}
+	void dec(const Reg8& opd)	{PushBack(Instr(I_DEC, opd));}
+	void dec(const Mem8& opd)	{PushBack(Instr(I_DEC, opd));}
+	void dec(const Reg16& opd)	{PushBack(Instr(I_DEC, opd));}
+	void dec(const Mem16& opd)	{PushBack(Instr(I_DEC, opd));}
+	void dec(const Reg32& opd)	{PushBack(Instr(I_DEC, opd));}
+	void dec(const Mem32& opd)	{PushBack(Instr(I_DEC, opd));}
 #ifdef JITASM64
-	void dec(const Opd64& opd) {PushBack(Instr(INSTR_DEC, opd));}
+	void dec(const Reg64& opd)	{PushBack(Instr(I_DEC, opd));}
+	void dec(const Mem64& opd)	{PushBack(Instr(I_DEC, opd));}
 #endif
 
 	// INC
-	void inc(const Opd8& opd) {PushBack(Instr(INSTR_INC, opd));}
-	void inc(const Opd16& opd) {PushBack(Instr(INSTR_INC, opd));}
-	void inc(const Opd32& opd) {PushBack(Instr(INSTR_INC, opd));}
+	void inc(const Reg8& opd)	{PushBack(Instr(I_INC, opd));}
+	void inc(const Mem8& opd)	{PushBack(Instr(I_INC, opd));}
+	void inc(const Reg16& opd)	{PushBack(Instr(I_INC, opd));}
+	void inc(const Mem16& opd)	{PushBack(Instr(I_INC, opd));}
+	void inc(const Reg32& opd)	{PushBack(Instr(I_INC, opd));}
+	void inc(const Mem32& opd)	{PushBack(Instr(I_INC, opd));}
 #ifdef JITASM64
-	void inc(const Opd64& opd) {PushBack(Instr(INSTR_INC, opd));}
+	void inc(const Reg64& opd)	{PushBack(Instr(I_INC, opd));}
+	void inc(const Mem64& opd)	{PushBack(Instr(I_INC, opd));}
 #endif
 
 	// JMP
-	void jmp(const std::string& label_name) {PushBack(Instr(INSTR_JMP, Imm64(GetLabelId(label_name))));}
-	void ja(const std::string& label_name) {PushBack(Instr(INSTR_JA, Imm64(GetLabelId(label_name))));}
-	void jae(const std::string& label_name) {PushBack(Instr(INSTR_JAE, Imm64(GetLabelId(label_name))));}
-	void jb(const std::string& label_name) {PushBack(Instr(INSTR_JB, Imm64(GetLabelId(label_name))));}
-	void jbe(const std::string& label_name) {PushBack(Instr(INSTR_JBE, Imm64(GetLabelId(label_name))));}
-	void jc(const std::string& label_name) {jb(label_name);}
-	void jecxz(const std::string& label_name) {PushBack(Instr(INSTR_JECXZ, Imm64(GetLabelId(label_name))));}	// short jump only
+	void jmp(const std::string& label_name)		{PushBack(Instr(I_JMP, Imm64(GetLabelId(label_name))));}
+	void ja(const std::string& label_name)		{PushBack(Instr(I_JA, Imm64(GetLabelId(label_name))));}
+	void jae(const std::string& label_name)		{PushBack(Instr(I_JAE, Imm64(GetLabelId(label_name))));}
+	void jb(const std::string& label_name)		{PushBack(Instr(I_JB, Imm64(GetLabelId(label_name))));}
+	void jbe(const std::string& label_name)		{PushBack(Instr(I_JBE, Imm64(GetLabelId(label_name))));}
+	void jc(const std::string& label_name)		{jb(label_name);}
+	void jecxz(const std::string& label_name)	{PushBack(Instr(I_JECXZ, Imm64(GetLabelId(label_name))));}	// short jump only
 #ifdef JITASM64
-	void jrcxz (const std::string& label_name) {PushBack(Instr(INSTR_JRCXZ, Imm64(GetLabelId(label_name))));}	// short jump only
+	void jrcxz (const std::string& label_name)	{PushBack(Instr(I_JRCXZ, Imm64(GetLabelId(label_name))));}	// short jump only
 #else
-	void jcxz(const std::string& label_name) {PushBack(Instr(INSTR_JCXZ, Imm64(GetLabelId(label_name))));}		// short jump only
+	void jcxz(const std::string& label_name)	{PushBack(Instr(I_JCXZ, Imm64(GetLabelId(label_name))));}	// short jump only
 #endif
-	void je(const std::string& label_name) {PushBack(Instr(INSTR_JE, Imm64(GetLabelId(label_name))));}
-	void jg(const std::string& label_name) {PushBack(Instr(INSTR_JG, Imm64(GetLabelId(label_name))));}
-	void jge(const std::string& label_name) {PushBack(Instr(INSTR_JGE, Imm64(GetLabelId(label_name))));}
-	void jl(const std::string& label_name) {PushBack(Instr(INSTR_JL, Imm64(GetLabelId(label_name))));}
-	void jle(const std::string& label_name) {PushBack(Instr(INSTR_JLE, Imm64(GetLabelId(label_name))));}
-	void jna(const std::string& label_name) {jbe(label_name);}
-	void jnae(const std::string& label_name) {jb(label_name);}
-	void jnb(const std::string& label_name) {jae(label_name);}
-	void jnbe(const std::string& label_name) {ja(label_name);}
-	void jnc(const std::string& label_name) {jae(label_name);}
-	void jne(const std::string& label_name) {PushBack(Instr(INSTR_JNE, Imm64(GetLabelId(label_name))));}
-	void jng(const std::string& label_name) {jle(label_name);}
-	void jnge(const std::string& label_name) {jl(label_name);}
-	void jnl(const std::string& label_name) {jge(label_name);}
-	void jnle(const std::string& label_name) {jg(label_name);}
-	void jno(const std::string& label_name) {PushBack(Instr(INSTR_JNO, Imm64(GetLabelId(label_name))));}
-	void jnp(const std::string& label_name) {PushBack(Instr(INSTR_JNP, Imm64(GetLabelId(label_name))));}
-	void jns(const std::string& label_name) {PushBack(Instr(INSTR_JNS, Imm64(GetLabelId(label_name))));}
-	void jnz(const std::string& label_name) {jne(label_name);}
-	void jo(const std::string& label_name) {PushBack(Instr(INSTR_JO, Imm64(GetLabelId(label_name))));}
-	void jp(const std::string& label_name) {PushBack(Instr(INSTR_JP, Imm64(GetLabelId(label_name))));}
-	void jpe(const std::string& label_name) {jp(label_name);}
-	void jpo(const std::string& label_name) {jnp(label_name);}
-	void js(const std::string& label_name) {PushBack(Instr(INSTR_JS, Imm64(GetLabelId(label_name))));}
-	void jz(const std::string& label_name) {je(label_name);}
+	void je(const std::string& label_name)		{PushBack(Instr(I_JE, Imm64(GetLabelId(label_name))));}
+	void jg(const std::string& label_name)		{PushBack(Instr(I_JG, Imm64(GetLabelId(label_name))));}
+	void jge(const std::string& label_name)		{PushBack(Instr(I_JGE, Imm64(GetLabelId(label_name))));}
+	void jl(const std::string& label_name)		{PushBack(Instr(I_JL, Imm64(GetLabelId(label_name))));}
+	void jle(const std::string& label_name)		{PushBack(Instr(I_JLE, Imm64(GetLabelId(label_name))));}
+	void jna(const std::string& label_name)		{jbe(label_name);}
+	void jnae(const std::string& label_name)	{jb(label_name);}
+	void jnb(const std::string& label_name)		{jae(label_name);}
+	void jnbe(const std::string& label_name)	{ja(label_name);}
+	void jnc(const std::string& label_name)		{jae(label_name);}
+	void jne(const std::string& label_name)		{PushBack(Instr(I_JNE, Imm64(GetLabelId(label_name))));}
+	void jng(const std::string& label_name)		{jle(label_name);}
+	void jnge(const std::string& label_name)	{jl(label_name);}
+	void jnl(const std::string& label_name)		{jge(label_name);}
+	void jnle(const std::string& label_name)	{jg(label_name);}
+	void jno(const std::string& label_name)		{PushBack(Instr(I_JNO, Imm64(GetLabelId(label_name))));}
+	void jnp(const std::string& label_name)		{PushBack(Instr(I_JNP, Imm64(GetLabelId(label_name))));}
+	void jns(const std::string& label_name)		{PushBack(Instr(I_JNS, Imm64(GetLabelId(label_name))));}
+	void jnz(const std::string& label_name)		{jne(label_name);}
+	void jo(const std::string& label_name)		{PushBack(Instr(I_JO, Imm64(GetLabelId(label_name))));}
+	void jp(const std::string& label_name)		{PushBack(Instr(I_JP, Imm64(GetLabelId(label_name))));}
+	void jpe(const std::string& label_name)		{jp(label_name);}
+	void jpo(const std::string& label_name)		{jnp(label_name);}
+	void js(const std::string& label_name)		{PushBack(Instr(I_JS, Imm64(GetLabelId(label_name))));}
+	void jz(const std::string& label_name)		{je(label_name);}
 
 	// LEA
-	void lea(const Reg16& opd1, const Mem16& opd2) {PushBack(Instr(INSTR_LEA, opd1, opd2));}
-	void lea(const Reg32& opd1, const Mem32& opd2) {PushBack(Instr(INSTR_LEA, opd1, opd2));}
+	void lea(const Reg16& opd1, const Mem16& opd2)	{PushBack(Instr(I_LEA, opd1, opd2));}
+	void lea(const Reg32& opd1, const Mem32& opd2)	{PushBack(Instr(I_LEA, opd1, opd2));}
 #ifdef JITASM64
-	void lea(const Reg64& opd1, const Mem64& opd2) {PushBack(Instr(INSTR_LEA, opd1, opd2));}
+	void lea(const Reg64& opd1, const Mem64& opd2)	{PushBack(Instr(I_LEA, opd1, opd2));}
 #endif
 
 	// LEAVE
-	void leave() {PushBack(Instr(INSTR_LEAVE));}
+	void leave()	{PushBack(Instr(I_LEAVE));}
 
 	// MOV
-	void mov(const Reg8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_MOV, opd1, opd2));}
-	void mov(const Reg8& opd1, const Mem8& opd2) {PushBack(Instr(INSTR_MOV, opd1, opd2));}
-	void mov(const Mem8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_MOV, opd1, opd2));}
-	void mov(const Opd8& opd1, uint8 imm) {PushBack(Instr(INSTR_MOV, opd1, Imm8(imm)));}
-	void mov(const Reg16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_MOV, opd1, opd2));}
-	void mov(const Reg16& opd1, const Mem16& opd2) {PushBack(Instr(INSTR_MOV, opd1, opd2));}
-	void mov(const Mem16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_MOV, opd1, opd2));}
-	void mov(const Opd16& opd1, uint16 imm) {PushBack(Instr(INSTR_MOV, opd1, Imm16(imm)));}
-	void mov(const Reg32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_MOV, opd1, opd2));}
-	void mov(const Reg32& opd1, const Mem32& opd2) {PushBack(Instr(INSTR_MOV, opd1, opd2));}
-	void mov(const Mem32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_MOV, opd1, opd2));}
-	void mov(const Opd32& opd1, uint32 imm) {PushBack(Instr(INSTR_MOV, opd1, Imm32(imm)));}
+	void mov(const Reg8& opd1, const Reg8& opd2)	{PushBack(Instr(I_MOV, opd1, opd2));}
+	void mov(const Reg8& opd1, const Mem8& opd2)	{PushBack(Instr(I_MOV, opd1, opd2));}
+	void mov(const Mem8& opd1, const Reg8& opd2)	{PushBack(Instr(I_MOV, opd1, opd2));}
+	void mov(const Reg8& opd1, const Imm8& imm)		{PushBack(Instr(I_MOV, opd1, imm));}
+	void mov(const Mem8& opd1, const Imm8& imm)		{PushBack(Instr(I_MOV, opd1, imm));}
+	void mov(const Reg16& opd1, const Reg16& opd2)	{PushBack(Instr(I_MOV, opd1, opd2));}
+	void mov(const Reg16& opd1, const Mem16& opd2)	{PushBack(Instr(I_MOV, opd1, opd2));}
+	void mov(const Mem16& opd1, const Reg16& opd2)	{PushBack(Instr(I_MOV, opd1, opd2));}
+	void mov(const Reg16& opd1, const Imm16& imm)	{PushBack(Instr(I_MOV, opd1, imm));}
+	void mov(const Mem16& opd1, const Imm16& imm)	{PushBack(Instr(I_MOV, opd1, imm));}
+	void mov(const Reg32& opd1, const Reg32& opd2)	{PushBack(Instr(I_MOV, opd1, opd2));}
+	void mov(const Reg32& opd1, const Mem32& opd2)	{PushBack(Instr(I_MOV, opd1, opd2));}
+	void mov(const Mem32& opd1, const Reg32& opd2)	{PushBack(Instr(I_MOV, opd1, opd2));}
+	void mov(const Reg32& opd1, const Imm32& imm)	{PushBack(Instr(I_MOV, opd1, imm));}
+	void mov(const Mem32& opd1, const Imm32& imm)	{PushBack(Instr(I_MOV, opd1, imm));}
 #ifdef JITASM64
-	void mov(const Reg64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_MOV, opd1, opd2));}
-	void mov(const Reg64& opd1, const Mem64& opd2) {PushBack(Instr(INSTR_MOV, opd1, opd2));}
-	void mov(const Mem64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_MOV, opd1, opd2));}
-	void mov(const Opd64& opd1, uint64 imm) {PushBack(Instr(INSTR_MOV, opd1, Imm64(imm)));}
-	void mov(const Rax& opd1, MemOffset64& opd2) {PushBack(Instr(INSTR_MOV, opd1, opd2.ToMem64()));}
+	void mov(const Reg64& opd1, const Reg64& opd2)	{PushBack(Instr(I_MOV, opd1, opd2));}
+	void mov(const Reg64& opd1, const Mem64& opd2)	{PushBack(Instr(I_MOV, opd1, opd2));}
+	void mov(const Mem64& opd1, const Reg64& opd2)	{PushBack(Instr(I_MOV, opd1, opd2));}
+	void mov(const Reg64& opd1, const Imm64& imm)	{PushBack(Instr(I_MOV, opd1, imm));}
+	void mov(const Mem64& opd1, const Imm64& imm)	{PushBack(Instr(I_MOV, opd1, imm));}
+	void mov(const Rax& opd1, MemOffset64& opd2)	{PushBack(Instr(I_MOV, opd1, opd2.ToMem64()));}
 #endif
  
 	// MOVZX
-	void movzx(const Reg16& opd1, const Opd8& opd2) {PushBack(Instr(INSTR_MOVZX, opd1, opd2));}
-	void movzx(const Reg32& opd1, const Opd8& opd2) {PushBack(Instr(INSTR_MOVZX, opd1, opd2));}
-	void movzx(const Reg32& opd1, const Opd16& opd2) {PushBack(Instr(INSTR_MOVZX, opd1, opd2));}
+	void movzx(const Reg16& opd1, const Opd8& opd2)		{PushBack(Instr(I_MOVZX, opd1, opd2));}
+	void movzx(const Reg32& opd1, const Opd8& opd2)		{PushBack(Instr(I_MOVZX, opd1, opd2));}
+	void movzx(const Reg32& opd1, const Opd16& opd2)	{PushBack(Instr(I_MOVZX, opd1, opd2));}
 #ifdef JITASM64
-	void movzx(const Reg64& opd1, const Opd8& opd2) {PushBack(Instr(INSTR_MOVZX, opd1, opd2));}
-	void movzx(const Reg64& opd1, const Opd16& opd2) {PushBack(Instr(INSTR_MOVZX, opd1, opd2));}
+	void movzx(const Reg64& opd1, const Opd8& opd2)		{PushBack(Instr(I_MOVZX, opd1, opd2));}
+	void movzx(const Reg64& opd1, const Opd16& opd2)	{PushBack(Instr(I_MOVZX, opd1, opd2));}
 #endif
 
 	// NOP
-	void nop() {PushBack(Instr(INSTR_NOP));}
+	void nop()	{PushBack(Instr(I_NOP));}
 
 	// OR
-	void or(const Reg8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_OR, opd1, opd2));}
-	void or(const Reg8& opd1, const Mem8& opd2) {PushBack(Instr(INSTR_OR, opd1, opd2));}
-	void or(const Mem8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_OR, opd1, opd2));}
-	void or(const Opd8& opd1, uint8 imm) {PushBack(Instr(INSTR_OR, opd1, Imm8(imm)));}
-	void or(const Reg16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_OR, opd1, opd2));}
-	void or(const Reg16& opd1, const Mem16& opd2) {PushBack(Instr(INSTR_OR, opd1, opd2));}
-	void or(const Mem16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_OR, opd1, opd2));}
-	void or(const Opd16& opd1, uint16 imm) {PushBack(Instr(INSTR_OR, opd1, Imm16(imm)));}
-	void or(const Reg32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_OR, opd1, opd2));}
-	void or(const Reg32& opd1, const Mem32& opd2) {PushBack(Instr(INSTR_OR, opd1, opd2));}
-	void or(const Mem32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_OR, opd1, opd2));}
-	void or(const Opd32& opd1, uint32 imm) {PushBack(Instr(INSTR_OR, opd1, Imm32(imm)));}
+	void or(const Reg8& opd1, const Reg8& opd2)		{PushBack(Instr(I_OR, opd1, opd2));}
+	void or(const Reg8& opd1, const Mem8& opd2)		{PushBack(Instr(I_OR, opd1, opd2));}
+	void or(const Mem8& opd1, const Reg8& opd2)		{PushBack(Instr(I_OR, opd1, opd2));}
+	void or(const Reg8& opd1, const Imm8& imm)		{PushBack(Instr(I_OR, opd1, imm));}
+	void or(const Mem8& opd1, const Imm8& imm)		{PushBack(Instr(I_OR, opd1, imm));}
+	void or(const Reg16& opd1, const Reg16& opd2)	{PushBack(Instr(I_OR, opd1, opd2));}
+	void or(const Reg16& opd1, const Mem16& opd2)	{PushBack(Instr(I_OR, opd1, opd2));}
+	void or(const Mem16& opd1, const Reg16& opd2)	{PushBack(Instr(I_OR, opd1, opd2));}
+	void or(const Reg16& opd1, const Imm16& imm)	{PushBack(Instr(I_OR, opd1, imm));}
+	void or(const Mem16& opd1, const Imm16& imm)	{PushBack(Instr(I_OR, opd1, imm));}
+	void or(const Reg32& opd1, const Reg32& opd2)	{PushBack(Instr(I_OR, opd1, opd2));}
+	void or(const Reg32& opd1, const Mem32& opd2)	{PushBack(Instr(I_OR, opd1, opd2));}
+	void or(const Mem32& opd1, const Reg32& opd2)	{PushBack(Instr(I_OR, opd1, opd2));}
+	void or(const Reg32& opd1, const Imm32& imm)	{PushBack(Instr(I_OR, opd1, imm));}
+	void or(const Mem32& opd1, const Imm32& imm)	{PushBack(Instr(I_OR, opd1, imm));}
 #ifdef JITASM64
-	void or(const Reg64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_OR, opd1, opd2));}
-	void or(const Reg64& opd1, const Mem64& opd2) {PushBack(Instr(INSTR_OR, opd1, opd2));}
-	void or(const Mem64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_OR, opd1, opd2));}
-	void or(const Opd64& opd1, uint32 imm) {PushBack(Instr(INSTR_OR, opd1, Imm32(imm)));}
+	void or(const Reg64& opd1, const Reg64& opd2)	{PushBack(Instr(I_OR, opd1, opd2));}
+	void or(const Reg64& opd1, const Mem64& opd2)	{PushBack(Instr(I_OR, opd1, opd2));}
+	void or(const Mem64& opd1, const Reg64& opd2)	{PushBack(Instr(I_OR, opd1, opd2));}
+	void or(const Reg64& opd1, const Imm32& imm)	{PushBack(Instr(I_OR, opd1, imm));}
+	void or(const Mem64& opd1, const Imm32& imm)	{PushBack(Instr(I_OR, opd1, imm));}
 #endif
 
 	// POP
-	void pop(const Opd16& opd) {PushBack(Instr(INSTR_POP, opd));}
+	void pop(const Reg16& opd)	{PushBack(Instr(I_POP, opd));}
+	void pop(const Mem16& opd)	{PushBack(Instr(I_POP, opd));}
 #ifdef JITASM64
-	void pop(const Opd64& opd) {PushBack(Instr(INSTR_POP, opd));}
+	void pop(const Reg64& opd)	{PushBack(Instr(I_POP, opd));}
+	void pop(const Mem64& opd)	{PushBack(Instr(I_POP, opd));}
 #else
-	void pop(const Opd32& opd) {PushBack(Instr(INSTR_POP, opd));}
+	void pop(const Reg32& opd)	{PushBack(Instr(I_POP, opd));}
+	void pop(const Mem32& opd)	{PushBack(Instr(I_POP, opd));}
 #endif
 
 	// PUSH
-	void push(const Opd16& opd) {PushBack(Instr(INSTR_PUSH, opd));}
+	void push(const Reg16& opd)	{PushBack(Instr(I_PUSH, opd));}
+	void push(const Mem16& opd)	{PushBack(Instr(I_PUSH, opd));}
 #ifdef JITASM64
-	void push(const Opd64& opd) {PushBack(Instr(INSTR_PUSH, opd));}
+	void push(const Reg64& opd)	{PushBack(Instr(I_PUSH, opd));}
+	void push(const Mem64& opd)	{PushBack(Instr(I_PUSH, opd));}
 #else
-	void push(const Opd32& opd) {PushBack(Instr(INSTR_PUSH, opd));}
+	void push(const Reg32& opd)	{PushBack(Instr(I_PUSH, opd));}
+	void push(const Mem32& opd)	{PushBack(Instr(I_PUSH, opd));}
 #endif
-	void push(uint64 imm) {PushBack(Instr(INSTR_PUSH, Imm64(imm)));}
+	void push(const Imm64& imm)	{PushBack(Instr(I_PUSH, imm));}
 
 	// RET
-	void ret() {PushBack(Instr(INSTR_RET));}
-	void ret(uint16 imm) {PushBack(Instr(INSTR_RET, Imm16(imm)));}
+	void ret()					{PushBack(Instr(I_RET));}
+	void ret(const Imm16& imm)	{PushBack(Instr(I_RET, imm));}
  
 	// SAL/SAR/SHL/SHR
-	void sal(const Opd8& opd1, uint8 imm) {shl(opd1, imm);}
-	void sar(const Opd8& opd1, uint8 imm) {PushBack(Instr(INSTR_SAR, opd1, Imm8(imm)));}
-	void shl(const Opd8& opd1, uint8 imm) {PushBack(Instr(INSTR_SHL, opd1, Imm8(imm)));}
-	void shr(const Opd8& opd1, uint8 imm) {PushBack(Instr(INSTR_SHR, opd1, Imm8(imm)));}
-	void sal(const Opd16& opd1, uint8 imm) {shl(opd1, imm);}
-	void sar(const Opd16& opd1, uint8 imm) {PushBack(Instr(INSTR_SAR, opd1, Imm8(imm)));}
-	void shl(const Opd16& opd1, uint8 imm) {PushBack(Instr(INSTR_SHL, opd1, Imm8(imm)));}
-	void shr(const Opd16& opd1, uint8 imm) {PushBack(Instr(INSTR_SHR, opd1, Imm8(imm)));}
-	void sal(const Opd32& opd1, uint8 imm) {shl(opd1, imm);}
-	void sar(const Opd32& opd1, uint8 imm) {PushBack(Instr(INSTR_SAR, opd1, Imm8(imm)));}
-	void shl(const Opd32& opd1, uint8 imm) {PushBack(Instr(INSTR_SHL, opd1, Imm8(imm)));}
-	void shr(const Opd32& opd1, uint8 imm) {PushBack(Instr(INSTR_SHR, opd1, Imm8(imm)));}
+	void sal(const Reg8& opd1, const Imm8& imm)		{shl(opd1, imm);}
+	void sal(const Mem8& opd1, const Imm8& imm)		{shl(opd1, imm);}
+	void sar(const Reg8& opd1, const Imm8& imm)		{PushBack(Instr(I_SAR, opd1, imm));}
+	void sar(const Mem8& opd1, const Imm8& imm)		{PushBack(Instr(I_SAR, opd1, imm));}
+	void shl(const Reg8& opd1, const Imm8& imm)		{PushBack(Instr(I_SHL, opd1, imm));}
+	void shl(const Mem8& opd1, const Imm8& imm)		{PushBack(Instr(I_SHL, opd1, imm));}
+	void shr(const Reg8& opd1, const Imm8& imm)		{PushBack(Instr(I_SHR, opd1, imm));}
+	void shr(const Mem8& opd1, const Imm8& imm)		{PushBack(Instr(I_SHR, opd1, imm));}
+	void sal(const Reg16& opd1, const Imm8& imm)	{shl(opd1, imm);}
+	void sal(const Mem16& opd1, const Imm8& imm)	{shl(opd1, imm);}
+	void sar(const Reg16& opd1, const Imm8& imm)	{PushBack(Instr(I_SAR, opd1, imm));}
+	void sar(const Mem16& opd1, const Imm8& imm)	{PushBack(Instr(I_SAR, opd1, imm));}
+	void shl(const Reg16& opd1, const Imm8& imm)	{PushBack(Instr(I_SHL, opd1, imm));}
+	void shl(const Mem16& opd1, const Imm8& imm)	{PushBack(Instr(I_SHL, opd1, imm));}
+	void shr(const Reg16& opd1, const Imm8& imm)	{PushBack(Instr(I_SHR, opd1, imm));}
+	void shr(const Mem16& opd1, const Imm8& imm)	{PushBack(Instr(I_SHR, opd1, imm));}
+	void sal(const Reg32& opd1, const Imm8& imm)	{shl(opd1, imm);}
+	void sal(const Mem32& opd1, const Imm8& imm)	{shl(opd1, imm);}
+	void sar(const Reg32& opd1, const Imm8& imm)	{PushBack(Instr(I_SAR, opd1, imm));}
+	void sar(const Mem32& opd1, const Imm8& imm)	{PushBack(Instr(I_SAR, opd1, imm));}
+	void shl(const Reg32& opd1, const Imm8& imm)	{PushBack(Instr(I_SHL, opd1, imm));}
+	void shl(const Mem32& opd1, const Imm8& imm)	{PushBack(Instr(I_SHL, opd1, imm));}
+	void shr(const Reg32& opd1, const Imm8& imm)	{PushBack(Instr(I_SHR, opd1, imm));}
+	void shr(const Mem32& opd1, const Imm8& imm)	{PushBack(Instr(I_SHR, opd1, imm));}
 #ifdef JITASM64
-	void sal(const Opd64& opd1, uint8 imm) {shl(opd1, imm);}
-	void sar(const Opd64& opd1, uint8 imm) {PushBack(Instr(INSTR_SAR, opd1, Imm8(imm)));}
-	void shl(const Opd64& opd1, uint8 imm) {PushBack(Instr(INSTR_SHL, opd1, Imm8(imm)));}
-	void shr(const Opd64& opd1, uint8 imm) {PushBack(Instr(INSTR_SHR, opd1, Imm8(imm)));}
+	void sal(const Reg64& opd1, const Imm8& imm)	{shl(opd1, imm);}
+	void sal(const Mem64& opd1, const Imm8& imm)	{shl(opd1, imm);}
+	void sar(const Reg64& opd1, const Imm8& imm)	{PushBack(Instr(I_SAR, opd1, imm));}
+	void sar(const Mem64& opd1, const Imm8& imm)	{PushBack(Instr(I_SAR, opd1, imm));}
+	void shl(const Reg64& opd1, const Imm8& imm)	{PushBack(Instr(I_SHL, opd1, imm));}
+	void shl(const Mem64& opd1, const Imm8& imm)	{PushBack(Instr(I_SHL, opd1, imm));}
+	void shr(const Reg64& opd1, const Imm8& imm)	{PushBack(Instr(I_SHR, opd1, imm));}
+	void shr(const Mem64& opd1, const Imm8& imm)	{PushBack(Instr(I_SHR, opd1, imm));}
 #endif
 
 	// SBB
-	void sbb(const Reg8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_SBB, opd1, opd2));}
-	void sbb(const Reg8& opd1, const Mem8& opd2) {PushBack(Instr(INSTR_SBB, opd1, opd2));}
-	void sbb(const Mem8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_SBB, opd1, opd2));}
-	void sbb(const Opd8& opd1, uint8 imm) {PushBack(Instr(INSTR_SBB, opd1, Imm8(imm)));}
-	void sbb(const Reg16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_SBB, opd1, opd2));}
-	void sbb(const Reg16& opd1, const Mem16& opd2) {PushBack(Instr(INSTR_SBB, opd1, opd2));}
-	void sbb(const Mem16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_SBB, opd1, opd2));}
-	void sbb(const Opd16& opd1, uint16 imm) {PushBack(Instr(INSTR_SBB, opd1, Imm16(imm)));}
-	void sbb(const Reg32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_SBB, opd1, opd2));}
-	void sbb(const Reg32& opd1, const Mem32& opd2) {PushBack(Instr(INSTR_SBB, opd1, opd2));}
-	void sbb(const Mem32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_SBB, opd1, opd2));}
-	void sbb(const Opd32& opd1, uint32 imm) {PushBack(Instr(INSTR_SBB, opd1, Imm32(imm)));}
+	void sbb(const Reg8& opd1, const Reg8& opd2)	{PushBack(Instr(I_SBB, opd1, opd2));}
+	void sbb(const Reg8& opd1, const Mem8& opd2)	{PushBack(Instr(I_SBB, opd1, opd2));}
+	void sbb(const Mem8& opd1, const Reg8& opd2)	{PushBack(Instr(I_SBB, opd1, opd2));}
+	void sbb(const Reg8& opd1, const Imm8& imm)		{PushBack(Instr(I_SBB, opd1, imm));}
+	void sbb(const Mem8& opd1, const Imm8& imm)		{PushBack(Instr(I_SBB, opd1, imm));}
+	void sbb(const Reg16& opd1, const Reg16& opd2)	{PushBack(Instr(I_SBB, opd1, opd2));}
+	void sbb(const Reg16& opd1, const Mem16& opd2)	{PushBack(Instr(I_SBB, opd1, opd2));}
+	void sbb(const Mem16& opd1, const Reg16& opd2)	{PushBack(Instr(I_SBB, opd1, opd2));}
+	void sbb(const Reg16& opd1, const Imm16& imm)	{PushBack(Instr(I_SBB, opd1, imm));}
+	void sbb(const Mem16& opd1, const Imm16& imm)	{PushBack(Instr(I_SBB, opd1, imm));}
+	void sbb(const Reg32& opd1, const Reg32& opd2)	{PushBack(Instr(I_SBB, opd1, opd2));}
+	void sbb(const Reg32& opd1, const Mem32& opd2)	{PushBack(Instr(I_SBB, opd1, opd2));}
+	void sbb(const Mem32& opd1, const Reg32& opd2)	{PushBack(Instr(I_SBB, opd1, opd2));}
+	void sbb(const Reg32& opd1, const Imm32& imm)	{PushBack(Instr(I_SBB, opd1, imm));}
+	void sbb(const Mem32& opd1, const Imm32& imm)	{PushBack(Instr(I_SBB, opd1, imm));}
 #ifdef JITASM64
-	void sbb(const Reg64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_SBB, opd1, opd2));}
-	void sbb(const Reg64& opd1, const Mem64& opd2) {PushBack(Instr(INSTR_SBB, opd1, opd2));}
-	void sbb(const Mem64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_SBB, opd1, opd2));}
-	void sbb(const Opd64& opd1, uint32 imm) {PushBack(Instr(INSTR_SBB, opd1, Imm32(imm)));}
+	void sbb(const Reg64& opd1, const Reg64& opd2)	{PushBack(Instr(I_SBB, opd1, opd2));}
+	void sbb(const Reg64& opd1, const Mem64& opd2)	{PushBack(Instr(I_SBB, opd1, opd2));}
+	void sbb(const Mem64& opd1, const Reg64& opd2)	{PushBack(Instr(I_SBB, opd1, opd2));}
+	void sbb(const Reg64& opd1, const Imm32& imm)	{PushBack(Instr(I_SBB, opd1, imm));}
+	void sbb(const Mem64& opd1, const Imm32& imm)	{PushBack(Instr(I_SBB, opd1, imm));}
 #endif
 
 	// SUB
-	void sub(const Reg8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_SUB, opd1, opd2));}
-	void sub(const Reg8& opd1, const Mem8& opd2) {PushBack(Instr(INSTR_SUB, opd1, opd2));}
-	void sub(const Mem8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_SUB, opd1, opd2));}
-	void sub(const Opd8& opd1, uint8 imm) {PushBack(Instr(INSTR_SUB, opd1, Imm8(imm)));}
-	void sub(const Reg16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_SUB, opd1, opd2));}
-	void sub(const Reg16& opd1, const Mem16& opd2) {PushBack(Instr(INSTR_SUB, opd1, opd2));}
-	void sub(const Mem16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_SUB, opd1, opd2));}
-	void sub(const Opd16& opd1, uint16 imm) {PushBack(Instr(INSTR_SUB, opd1, Imm16(imm)));}
-	void sub(const Reg32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_SUB, opd1, opd2));}
-	void sub(const Reg32& opd1, const Mem32& opd2) {PushBack(Instr(INSTR_SUB, opd1, opd2));}
-	void sub(const Mem32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_SUB, opd1, opd2));}
-	void sub(const Opd32& opd1, uint32 imm) {PushBack(Instr(INSTR_SUB, opd1, Imm32(imm)));}
+	void sub(const Reg8& opd1, const Reg8& opd2)	{PushBack(Instr(I_SUB, opd1, opd2));}
+	void sub(const Reg8& opd1, const Mem8& opd2)	{PushBack(Instr(I_SUB, opd1, opd2));}
+	void sub(const Mem8& opd1, const Reg8& opd2)	{PushBack(Instr(I_SUB, opd1, opd2));}
+	void sub(const Reg8& opd1, const Imm8& imm)		{PushBack(Instr(I_SUB, opd1, imm));}
+	void sub(const Mem8& opd1, const Imm8& imm)		{PushBack(Instr(I_SUB, opd1, imm));}
+	void sub(const Reg16& opd1, const Reg16& opd2)	{PushBack(Instr(I_SUB, opd1, opd2));}
+	void sub(const Reg16& opd1, const Mem16& opd2)	{PushBack(Instr(I_SUB, opd1, opd2));}
+	void sub(const Mem16& opd1, const Reg16& opd2)	{PushBack(Instr(I_SUB, opd1, opd2));}
+	void sub(const Reg16& opd1, const Imm16& imm)	{PushBack(Instr(I_SUB, opd1, imm));}
+	void sub(const Mem16& opd1, const Imm16& imm)	{PushBack(Instr(I_SUB, opd1, imm));}
+	void sub(const Reg32& opd1, const Reg32& opd2)	{PushBack(Instr(I_SUB, opd1, opd2));}
+	void sub(const Reg32& opd1, const Mem32& opd2)	{PushBack(Instr(I_SUB, opd1, opd2));}
+	void sub(const Mem32& opd1, const Reg32& opd2)	{PushBack(Instr(I_SUB, opd1, opd2));}
+	void sub(const Reg32& opd1, const Imm32& imm)	{PushBack(Instr(I_SUB, opd1, imm));}
+	void sub(const Mem32& opd1, const Imm32& imm)	{PushBack(Instr(I_SUB, opd1, imm));}
 #ifdef JITASM64
-	void sub(const Reg64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_SUB, opd1, opd2));}
-	void sub(const Reg64& opd1, const Mem64& opd2) {PushBack(Instr(INSTR_SUB, opd1, opd2));}
-	void sub(const Mem64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_SUB, opd1, opd2));}
-	void sub(const Opd64& opd1, uint32 imm) {PushBack(Instr(INSTR_SUB, opd1, Imm32(imm)));}
+	void sub(const Reg64& opd1, const Reg64& opd2)	{PushBack(Instr(I_SUB, opd1, opd2));}
+	void sub(const Reg64& opd1, const Mem64& opd2)	{PushBack(Instr(I_SUB, opd1, opd2));}
+	void sub(const Mem64& opd1, const Reg64& opd2)	{PushBack(Instr(I_SUB, opd1, opd2));}
+	void sub(const Reg64& opd1, const Imm32& imm)	{PushBack(Instr(I_SUB, opd1, imm));}
+	void sub(const Mem64& opd1, const Imm32& imm)	{PushBack(Instr(I_SUB, opd1, imm));}
 #endif
 
 	// TEST
-	void test(const Opd8& opd1, uint8 imm) {PushBack(Instr(INSTR_TEST, opd1, Imm8(imm)));}
-	void test(const Opd8& opd1, Reg8& opd2) {PushBack(Instr(INSTR_TEST, opd1, opd2));}
-	void test(const Opd16& opd1, uint16 imm) {PushBack(Instr(INSTR_TEST, opd1, Imm16(imm)));}
-	void test(const Opd16& opd1, Reg16& opd2) {PushBack(Instr(INSTR_TEST, opd1, opd2));}
-	void test(const Opd32& opd1, uint32 imm) {PushBack(Instr(INSTR_TEST, opd1, Imm32(imm)));}
-	void test(const Opd32& opd1, Reg32& opd2) {PushBack(Instr(INSTR_TEST, opd1, opd2));}
+	void test(const Reg8& opd1, const Imm8& imm)	{PushBack(Instr(I_TEST, opd1, imm));}
+	void test(const Mem8& opd1, const Imm8& imm)	{PushBack(Instr(I_TEST, opd1, imm));}
+	void test(const Reg8& opd1, const Reg8& opd2)	{PushBack(Instr(I_TEST, opd1, opd2));}
+	void test(const Mem8& opd1, const Reg8& opd2)	{PushBack(Instr(I_TEST, opd1, opd2));}
+	void test(const Reg16& opd1, const Imm16& imm)	{PushBack(Instr(I_TEST, opd1, imm));}
+	void test(const Mem16& opd1, const Imm16& imm)	{PushBack(Instr(I_TEST, opd1, imm));}
+	void test(const Reg16& opd1, const Reg16& opd2)	{PushBack(Instr(I_TEST, opd1, opd2));}
+	void test(const Mem16& opd1, const Reg16& opd2)	{PushBack(Instr(I_TEST, opd1, opd2));}
+	void test(const Reg32& opd1, const Imm32& imm)	{PushBack(Instr(I_TEST, opd1, imm));}
+	void test(const Mem32& opd1, const Imm32& imm)	{PushBack(Instr(I_TEST, opd1, imm));}
+	void test(const Reg32& opd1, const Reg32& opd2)	{PushBack(Instr(I_TEST, opd1, opd2));}
+	void test(const Mem32& opd1, const Reg32& opd2)	{PushBack(Instr(I_TEST, opd1, opd2));}
 #ifdef JITASM64
-	void test(const Opd64& opd1, uint32 imm) {PushBack(Instr(INSTR_TEST, opd1, Imm32(imm)));}
-	void test(const Opd64& opd1, Reg64& opd2) {PushBack(Instr(INSTR_TEST, opd1, opd2));}
+	void test(const Reg64& opd1, const Imm32& imm)	{PushBack(Instr(I_TEST, opd1, imm));}
+	void test(const Mem64& opd1, const Imm32& imm)	{PushBack(Instr(I_TEST, opd1, imm));}
+	void test(const Reg64& opd1, const Reg64& opd2)		{PushBack(Instr(I_TEST, opd1, opd2));}
+	void test(const Mem64& opd1, const Reg64& opd2)		{PushBack(Instr(I_TEST, opd1, opd2));}
 #endif
 
 	// XCHG
-	void xchg(const Reg8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_XCHG, opd1, opd2));}
-	void xchg(const Reg8& opd1, const Mem8& opd2) {PushBack(Instr(INSTR_XCHG, opd1, opd2));}
-	void xchg(const Mem8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_XCHG, opd1, opd2));}
-	void xchg(const Reg16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_XCHG, opd1, opd2));}
-	void xchg(const Reg16& opd1, const Mem16& opd2) {PushBack(Instr(INSTR_XCHG, opd1, opd2));}
-	void xchg(const Mem16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_XCHG, opd1, opd2));}
-	void xchg(const Reg32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_XCHG, opd1, opd2));}
-	void xchg(const Reg32& opd1, const Mem32& opd2) {PushBack(Instr(INSTR_XCHG, opd1, opd2));}
-	void xchg(const Mem32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_XCHG, opd1, opd2));}
+	void xchg(const Reg8& opd1, const Reg8& opd2)	{PushBack(Instr(I_XCHG, opd1, opd2));}
+	void xchg(const Reg8& opd1, const Mem8& opd2)	{PushBack(Instr(I_XCHG, opd1, opd2));}
+	void xchg(const Mem8& opd1, const Reg8& opd2)	{PushBack(Instr(I_XCHG, opd1, opd2));}
+	void xchg(const Reg16& opd1, const Reg16& opd2)	{PushBack(Instr(I_XCHG, opd1, opd2));}
+	void xchg(const Reg16& opd1, const Mem16& opd2)	{PushBack(Instr(I_XCHG, opd1, opd2));}
+	void xchg(const Mem16& opd1, const Reg16& opd2)	{PushBack(Instr(I_XCHG, opd1, opd2));}
+	void xchg(const Reg32& opd1, const Reg32& opd2)	{PushBack(Instr(I_XCHG, opd1, opd2));}
+	void xchg(const Reg32& opd1, const Mem32& opd2)	{PushBack(Instr(I_XCHG, opd1, opd2));}
+	void xchg(const Mem32& opd1, const Reg32& opd2)	{PushBack(Instr(I_XCHG, opd1, opd2));}
 #ifdef JITASM64
-	void xchg(const Reg64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_XCHG, opd1, opd2));}
-	void xchg(const Reg64& opd1, const Mem64& opd2) {PushBack(Instr(INSTR_XCHG, opd1, opd2));}
-	void xchg(const Mem64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_XCHG, opd1, opd2));}
+	void xchg(const Reg64& opd1, const Reg64& opd2)	{PushBack(Instr(I_XCHG, opd1, opd2));}
+	void xchg(const Reg64& opd1, const Mem64& opd2)	{PushBack(Instr(I_XCHG, opd1, opd2));}
+	void xchg(const Mem64& opd1, const Reg64& opd2)	{PushBack(Instr(I_XCHG, opd1, opd2));}
 #endif
 
 	// XOR
-	void xor(const Reg8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_XOR, opd1, opd2));}
-	void xor(const Reg8& opd1, const Mem8& opd2) {PushBack(Instr(INSTR_XOR, opd1, opd2));}
-	void xor(const Mem8& opd1, const Reg8& opd2) {PushBack(Instr(INSTR_XOR, opd1, opd2));}
-	void xor(const Opd8& opd1, uint8 imm) {PushBack(Instr(INSTR_XOR, opd1, Imm8(imm)));}
-	void xor(const Reg16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_XOR, opd1, opd2));}
-	void xor(const Reg16& opd1, const Mem16& opd2) {PushBack(Instr(INSTR_XOR, opd1, opd2));}
-	void xor(const Mem16& opd1, const Reg16& opd2) {PushBack(Instr(INSTR_XOR, opd1, opd2));}
-	void xor(const Opd16& opd1, uint16 imm) {PushBack(Instr(INSTR_XOR, opd1, Imm16(imm)));}
-	void xor(const Reg32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_XOR, opd1, opd2));}
-	void xor(const Reg32& opd1, const Mem32& opd2) {PushBack(Instr(INSTR_XOR, opd1, opd2));}
-	void xor(const Mem32& opd1, const Reg32& opd2) {PushBack(Instr(INSTR_XOR, opd1, opd2));}
-	void xor(const Opd32& opd1, uint32 imm) {PushBack(Instr(INSTR_XOR, opd1, Imm32(imm)));}
+	void xor(const Reg8& opd1, const Reg8& opd2)	{PushBack(Instr(I_XOR, opd1, opd2));}
+	void xor(const Reg8& opd1, const Mem8& opd2)	{PushBack(Instr(I_XOR, opd1, opd2));}
+	void xor(const Mem8& opd1, const Reg8& opd2)	{PushBack(Instr(I_XOR, opd1, opd2));}
+	void xor(const Reg8& opd1, const Imm8& imm)		{PushBack(Instr(I_XOR, opd1, imm));}
+	void xor(const Mem8& opd1, const Imm8& imm)		{PushBack(Instr(I_XOR, opd1, imm));}
+	void xor(const Reg16& opd1, const Reg16& opd2)	{PushBack(Instr(I_XOR, opd1, opd2));}
+	void xor(const Reg16& opd1, const Mem16& opd2)	{PushBack(Instr(I_XOR, opd1, opd2));}
+	void xor(const Mem16& opd1, const Reg16& opd2)	{PushBack(Instr(I_XOR, opd1, opd2));}
+	void xor(const Reg16& opd1, const Imm16& imm)	{PushBack(Instr(I_XOR, opd1, imm));}
+	void xor(const Mem16& opd1, const Imm16& imm)	{PushBack(Instr(I_XOR, opd1, imm));}
+	void xor(const Reg32& opd1, const Reg32& opd2)	{PushBack(Instr(I_XOR, opd1, opd2));}
+	void xor(const Reg32& opd1, const Mem32& opd2)	{PushBack(Instr(I_XOR, opd1, opd2));}
+	void xor(const Mem32& opd1, const Reg32& opd2)	{PushBack(Instr(I_XOR, opd1, opd2));}
+	void xor(const Reg32& opd1, const Imm32& imm)	{PushBack(Instr(I_XOR, opd1, imm));}
+	void xor(const Mem32& opd1, const Imm32& imm)	{PushBack(Instr(I_XOR, opd1, imm));}
 #ifdef JITASM64
-	void xor(const Reg64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_XOR, opd1, opd2));}
-	void xor(const Reg64& opd1, const Mem64& opd2) {PushBack(Instr(INSTR_XOR, opd1, opd2));}
-	void xor(const Mem64& opd1, const Reg64& opd2) {PushBack(Instr(INSTR_XOR, opd1, opd2));}
-	void xor(const Opd64& opd1, uint32 imm) {PushBack(Instr(INSTR_XOR, opd1, Imm32(imm)));}
+	void xor(const Reg64& opd1, const Reg64& opd2)	{PushBack(Instr(I_XOR, opd1, opd2));}
+	void xor(const Reg64& opd1, const Mem64& opd2)	{PushBack(Instr(I_XOR, opd1, opd2));}
+	void xor(const Mem64& opd1, const Reg64& opd2)	{PushBack(Instr(I_XOR, opd1, opd2));}
+	void xor(const Reg64& opd1, const Imm32& imm)	{PushBack(Instr(I_XOR, opd1, imm));}
+	void xor(const Mem64& opd1, const Imm32& imm)	{PushBack(Instr(I_XOR, opd1, imm));}
 #endif
 
 	// FLD
-	void fld(const Mem32& opd) {PushBack(Instr(INSTR_FLD, opd));}
-	void fld(const Mem64& opd) {PushBack(Instr(INSTR_FLD, opd));}
-	void fld(const Mem80& opd) {PushBack(Instr(INSTR_FLD, opd));}
-	void fld(const FpuReg& opd) {PushBack(Instr(INSTR_FLD, opd));}
+	void fld(const Mem32& opd)	{PushBack(Instr(I_FLD, opd));}
+	void fld(const Mem64& opd)	{PushBack(Instr(I_FLD, opd));}
+	void fld(const Mem80& opd)	{PushBack(Instr(I_FLD, opd));}
+	void fld(const FpuReg& opd)	{PushBack(Instr(I_FLD, opd));}
 
-	void addpd(const Xmm& opd1, const Xmm& opd2)	{PushBack(Instr(INSTR_ADDPD, opd1, opd2));}
-	void addpd(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(INSTR_ADDPD, opd1, opd2));}
-	void addsd(const Xmm& opd1, const Xmm& opd2)	{PushBack(Instr(INSTR_ADDSD, opd1, opd2));}
-	void addsd(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(INSTR_ADDSD, opd1, opd2));}
+	void addpd(const Xmm& opd1, const Xmm& opd2)	{PushBack(Instr(I_ADDPD, opd1, opd2));}
+	void addpd(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_ADDPD, opd1, opd2));}
+	void addsd(const Xmm& opd1, const Xmm& opd2)	{PushBack(Instr(I_ADDSD, opd1, opd2));}
+	void addsd(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_ADDSD, opd1, opd2));}
 
-	void andpd(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(INSTR_ANDPD, opd1, opd2));}
-	void andpd(const Xmm& opd1, const Mem128& opd2)		{PushBack(Instr(INSTR_ANDPD, opd1, opd2));}
-	void andnpd(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(INSTR_ANDPD, opd1, opd2));}
-	void andnpd(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(INSTR_ANDPD, opd1, opd2));}
+	void andpd(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(I_ANDPD, opd1, opd2));}
+	void andpd(const Xmm& opd1, const Mem128& opd2)		{PushBack(Instr(I_ANDPD, opd1, opd2));}
+	void andnpd(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(I_ANDPD, opd1, opd2));}
+	void andnpd(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_ANDPD, opd1, opd2));}
 
-	void clflush(const Mem8& opd) {PushBack(Instr(INSTR_CLFLUSH, opd));}
+	void clflush(const Mem8& opd) {PushBack(Instr(I_CLFLUSH, opd));}
 
-	void cmppd(const Xmm& opd1, const Xmm& opd2, uint8 opd3)	{PushBack(Instr(INSTR_CMPPD, opd1, opd2, Imm8(opd3)));}
-	void cmppd(const Xmm& opd1, const Mem128& opd2, uint8 opd3)	{PushBack(Instr(INSTR_CMPPD, opd1, opd2, Imm8(opd3)));}
-	void cmpeqpd(const Xmm& opd1, const Xmm& opd2)				{cmppd(opd1, opd2, 0);}
-	void cmpeqpd(const Xmm& opd1, const Mem128& opd2)			{cmppd(opd1, opd2, 0);}
-	void cmpltpd(const Xmm& opd1, const Xmm& opd2)				{cmppd(opd1, opd2, 1);}
-	void cmpltpd(const Xmm& opd1, const Mem128& opd2)			{cmppd(opd1, opd2, 1);}
-	void cmplepd(const Xmm& opd1, const Xmm& opd2)				{cmppd(opd1, opd2, 2);}
-	void cmplepd(const Xmm& opd1, const Mem128& opd2)			{cmppd(opd1, opd2, 2);}
-	void cmpunordpd(const Xmm& opd1, const Xmm& opd2)			{cmppd(opd1, opd2, 3);}
-	void cmpunordpd(const Xmm& opd1, const Mem128& opd2)		{cmppd(opd1, opd2, 3);}
-	void cmpneqpd(const Xmm& opd1, const Xmm& opd2)				{cmppd(opd1, opd2, 4);}
-	void cmpneqpd(const Xmm& opd1, const Mem128& opd2)			{cmppd(opd1, opd2, 4);}
-	void cmpnltpd(const Xmm& opd1, const Xmm& opd2)				{cmppd(opd1, opd2, 5);}
-	void cmpnltpd(const Xmm& opd1, const Mem128& opd2)			{cmppd(opd1, opd2, 5);}
-	void cmpnlepd(const Xmm& opd1, const Xmm& opd2)				{cmppd(opd1, opd2, 6);}
-	void cmpnlepd(const Xmm& opd1, const Mem128& opd2)			{cmppd(opd1, opd2, 6);}
-	void cmpordpd(const Xmm& opd1, const Xmm& opd2)				{cmppd(opd1, opd2, 7);}
-	void cmpordpd(const Xmm& opd1, const Mem128& opd2)			{cmppd(opd1, opd2, 7);}
+	void cmppd(const Xmm& opd1, const Xmm& opd2, const Imm8& opd3)		{PushBack(Instr(I_CMPPD, opd1, opd2, opd3));}
+	void cmppd(const Xmm& opd1, const Mem128& opd2, const Imm8& opd3)	{PushBack(Instr(I_CMPPD, opd1, opd2, opd3));}
+	void cmpeqpd(const Xmm& opd1, const Xmm& opd2)			{cmppd(opd1, opd2, 0);}
+	void cmpeqpd(const Xmm& opd1, const Mem128& opd2)		{cmppd(opd1, opd2, 0);}
+	void cmpltpd(const Xmm& opd1, const Xmm& opd2)			{cmppd(opd1, opd2, 1);}
+	void cmpltpd(const Xmm& opd1, const Mem128& opd2)		{cmppd(opd1, opd2, 1);}
+	void cmplepd(const Xmm& opd1, const Xmm& opd2)			{cmppd(opd1, opd2, 2);}
+	void cmplepd(const Xmm& opd1, const Mem128& opd2)		{cmppd(opd1, opd2, 2);}
+	void cmpunordpd(const Xmm& opd1, const Xmm& opd2)		{cmppd(opd1, opd2, 3);}
+	void cmpunordpd(const Xmm& opd1, const Mem128& opd2)	{cmppd(opd1, opd2, 3);}
+	void cmpneqpd(const Xmm& opd1, const Xmm& opd2)			{cmppd(opd1, opd2, 4);}
+	void cmpneqpd(const Xmm& opd1, const Mem128& opd2)		{cmppd(opd1, opd2, 4);}
+	void cmpnltpd(const Xmm& opd1, const Xmm& opd2)			{cmppd(opd1, opd2, 5);}
+	void cmpnltpd(const Xmm& opd1, const Mem128& opd2)		{cmppd(opd1, opd2, 5);}
+	void cmpnlepd(const Xmm& opd1, const Xmm& opd2)			{cmppd(opd1, opd2, 6);}
+	void cmpnlepd(const Xmm& opd1, const Mem128& opd2)		{cmppd(opd1, opd2, 6);}
+	void cmpordpd(const Xmm& opd1, const Xmm& opd2)			{cmppd(opd1, opd2, 7);}
+	void cmpordpd(const Xmm& opd1, const Mem128& opd2)		{cmppd(opd1, opd2, 7);}
 
-	void cmpps(const Xmm& opd1, const Xmm& opd2, uint8 opd3)	{PushBack(Instr(INSTR_CMPPS, opd1, opd2, Imm8(opd3)));}
-	void cmpps(const Xmm& opd1, const Mem128& opd2, uint8 opd3)	{PushBack(Instr(INSTR_CMPPS, opd1, opd2, Imm8(opd3)));}
-	void cmpeqps(const Xmm& opd1, const Xmm& opd2)				{cmpps(opd1, opd2, 0);}
-	void cmpeqps(const Xmm& opd1, const Mem128& opd2)			{cmpps(opd1, opd2, 0);}
-	void cmpltps(const Xmm& opd1, const Xmm& opd2)				{cmpps(opd1, opd2, 1);}
-	void cmpltps(const Xmm& opd1, const Mem128& opd2)			{cmpps(opd1, opd2, 1);}
-	void cmpleps(const Xmm& opd1, const Xmm& opd2)				{cmpps(opd1, opd2, 2);}
-	void cmpleps(const Xmm& opd1, const Mem128& opd2)			{cmpps(opd1, opd2, 2);}
-	void cmpunordps(const Xmm& opd1, const Xmm& opd2)			{cmpps(opd1, opd2, 3);}
-	void cmpunordps(const Xmm& opd1, const Mem128& opd2)		{cmpps(opd1, opd2, 3);}
-	void cmpneqps(const Xmm& opd1, const Xmm& opd2)				{cmpps(opd1, opd2, 4);}
-	void cmpneqps(const Xmm& opd1, const Mem128& opd2)			{cmpps(opd1, opd2, 4);}
-	void cmpnltps(const Xmm& opd1, const Xmm& opd2)				{cmpps(opd1, opd2, 5);}
-	void cmpnltps(const Xmm& opd1, const Mem128& opd2)			{cmpps(opd1, opd2, 5);}
-	void cmpnleps(const Xmm& opd1, const Xmm& opd2)				{cmpps(opd1, opd2, 6);}
-	void cmpnleps(const Xmm& opd1, const Mem128& opd2)			{cmpps(opd1, opd2, 6);}
-	void cmpordps(const Xmm& opd1, const Xmm& opd2)				{cmpps(opd1, opd2, 7);}
-	void cmpordps(const Xmm& opd1, const Mem128& opd2)			{cmpps(opd1, opd2, 7);}
+	void cmpps(const Xmm& opd1, const Xmm& opd2, const Imm8& opd3)		{PushBack(Instr(I_CMPPS, opd1, opd2, opd3));}
+	void cmpps(const Xmm& opd1, const Mem128& opd2, const Imm8& opd3)	{PushBack(Instr(I_CMPPS, opd1, opd2, opd3));}
+	void cmpeqps(const Xmm& opd1, const Xmm& opd2)			{cmpps(opd1, opd2, 0);}
+	void cmpeqps(const Xmm& opd1, const Mem128& opd2)		{cmpps(opd1, opd2, 0);}
+	void cmpltps(const Xmm& opd1, const Xmm& opd2)			{cmpps(opd1, opd2, 1);}
+	void cmpltps(const Xmm& opd1, const Mem128& opd2)		{cmpps(opd1, opd2, 1);}
+	void cmpleps(const Xmm& opd1, const Xmm& opd2)			{cmpps(opd1, opd2, 2);}
+	void cmpleps(const Xmm& opd1, const Mem128& opd2)		{cmpps(opd1, opd2, 2);}
+	void cmpunordps(const Xmm& opd1, const Xmm& opd2)		{cmpps(opd1, opd2, 3);}
+	void cmpunordps(const Xmm& opd1, const Mem128& opd2)	{cmpps(opd1, opd2, 3);}
+	void cmpneqps(const Xmm& opd1, const Xmm& opd2)			{cmpps(opd1, opd2, 4);}
+	void cmpneqps(const Xmm& opd1, const Mem128& opd2)		{cmpps(opd1, opd2, 4);}
+	void cmpnltps(const Xmm& opd1, const Xmm& opd2)			{cmpps(opd1, opd2, 5);}
+	void cmpnltps(const Xmm& opd1, const Mem128& opd2)		{cmpps(opd1, opd2, 5);}
+	void cmpnleps(const Xmm& opd1, const Xmm& opd2)			{cmpps(opd1, opd2, 6);}
+	void cmpnleps(const Xmm& opd1, const Mem128& opd2)		{cmpps(opd1, opd2, 6);}
+	void cmpordps(const Xmm& opd1, const Xmm& opd2)			{cmpps(opd1, opd2, 7);}
+	void cmpordps(const Xmm& opd1, const Mem128& opd2)		{cmpps(opd1, opd2, 7);}
 
-	void cmpsd(const Xmm& opd1, const Xmm& opd2, uint8 opd3)	{PushBack(Instr(INSTR_CMPSD, opd1, opd2, Imm8(opd3)));}
-	void cmpsd(const Xmm& opd1, const Mem64& opd2, uint8 opd3)	{PushBack(Instr(INSTR_CMPSD, opd1, opd2, Imm8(opd3)));}
-	void cmpeqsd(const Xmm& opd1, const Xmm& opd2)				{cmpsd(opd1, opd2, 0);}
-	void cmpeqsd(const Xmm& opd1, const Mem64& opd2)			{cmpsd(opd1, opd2, 0);}
-	void cmpltsd(const Xmm& opd1, const Xmm& opd2)				{cmpsd(opd1, opd2, 1);}
-	void cmpltsd(const Xmm& opd1, const Mem64& opd2)			{cmpsd(opd1, opd2, 1);}
-	void cmplesd(const Xmm& opd1, const Xmm& opd2)				{cmpsd(opd1, opd2, 2);}
-	void cmplesd(const Xmm& opd1, const Mem64& opd2)			{cmpsd(opd1, opd2, 2);}
-	void cmpunordsd(const Xmm& opd1, const Xmm& opd2)			{cmpsd(opd1, opd2, 3);}
-	void cmpunordsd(const Xmm& opd1, const Mem64& opd2)			{cmpsd(opd1, opd2, 3);}
-	void cmpneqsd(const Xmm& opd1, const Xmm& opd2)				{cmpsd(opd1, opd2, 4);}
-	void cmpneqsd(const Xmm& opd1, const Mem64& opd2)			{cmpsd(opd1, opd2, 4);}
-	void cmpnltsd(const Xmm& opd1, const Xmm& opd2)				{cmpsd(opd1, opd2, 5);}
-	void cmpnltsd(const Xmm& opd1, const Mem64& opd2)			{cmpsd(opd1, opd2, 5);}
-	void cmpnlesd(const Xmm& opd1, const Xmm& opd2)				{cmpsd(opd1, opd2, 6);}
-	void cmpnlesd(const Xmm& opd1, const Mem64& opd2)			{cmpsd(opd1, opd2, 6);}
-	void cmpordsd(const Xmm& opd1, const Xmm& opd2)				{cmpsd(opd1, opd2, 7);}
-	void cmpordsd(const Xmm& opd1, const Mem64& opd2)			{cmpsd(opd1, opd2, 7);}
+	void cmpsd(const Xmm& opd1, const Xmm& opd2, const Imm8& opd3)		{PushBack(Instr(I_CMPSD, opd1, opd2, opd3));}
+	void cmpsd(const Xmm& opd1, const Mem64& opd2, const Imm8& opd3)	{PushBack(Instr(I_CMPSD, opd1, opd2, opd3));}
+	void cmpeqsd(const Xmm& opd1, const Xmm& opd2)		{cmpsd(opd1, opd2, 0);}
+	void cmpeqsd(const Xmm& opd1, const Mem64& opd2)	{cmpsd(opd1, opd2, 0);}
+	void cmpltsd(const Xmm& opd1, const Xmm& opd2)		{cmpsd(opd1, opd2, 1);}
+	void cmpltsd(const Xmm& opd1, const Mem64& opd2)	{cmpsd(opd1, opd2, 1);}
+	void cmplesd(const Xmm& opd1, const Xmm& opd2)		{cmpsd(opd1, opd2, 2);}
+	void cmplesd(const Xmm& opd1, const Mem64& opd2)	{cmpsd(opd1, opd2, 2);}
+	void cmpunordsd(const Xmm& opd1, const Xmm& opd2)	{cmpsd(opd1, opd2, 3);}
+	void cmpunordsd(const Xmm& opd1, const Mem64& opd2)	{cmpsd(opd1, opd2, 3);}
+	void cmpneqsd(const Xmm& opd1, const Xmm& opd2)		{cmpsd(opd1, opd2, 4);}
+	void cmpneqsd(const Xmm& opd1, const Mem64& opd2)	{cmpsd(opd1, opd2, 4);}
+	void cmpnltsd(const Xmm& opd1, const Xmm& opd2)		{cmpsd(opd1, opd2, 5);}
+	void cmpnltsd(const Xmm& opd1, const Mem64& opd2)	{cmpsd(opd1, opd2, 5);}
+	void cmpnlesd(const Xmm& opd1, const Xmm& opd2)		{cmpsd(opd1, opd2, 6);}
+	void cmpnlesd(const Xmm& opd1, const Mem64& opd2)	{cmpsd(opd1, opd2, 6);}
+	void cmpordsd(const Xmm& opd1, const Xmm& opd2)		{cmpsd(opd1, opd2, 7);}
+	void cmpordsd(const Xmm& opd1, const Mem64& opd2)	{cmpsd(opd1, opd2, 7);}
 
-	void comisd(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(INSTR_COMISD, opd1, opd2));}
-	void comisd(const Xmm& opd1, const Mem64& opd2)		{PushBack(Instr(INSTR_COMISD, opd1, opd2));}
+	void comisd(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(I_COMISD, opd1, opd2));}
+	void comisd(const Xmm& opd1, const Mem64& opd2)		{PushBack(Instr(I_COMISD, opd1, opd2));}
 
-	void cvtdq2pd(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(INSTR_CVTDQ2PD, opd1, opd2));}
-	void cvtdq2pd(const Xmm& opd1, const Mem64& opd2)	{PushBack(Instr(INSTR_CVTDQ2PD, opd1, opd2));}
-	void cvtpd2dq(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(INSTR_CVTPD2DQ, opd1, opd2));}
-	void cvtpd2dq(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(INSTR_CVTPD2DQ, opd1, opd2));}
-	void cvtpd2pi(const Mmx& opd1, const Xmm& opd2)		{PushBack(Instr(INSTR_CVTPD2PI, opd1, opd2));}
-	void cvtpd2pi(const Mmx& opd1, const Mem128& opd2)	{PushBack(Instr(INSTR_CVTPD2PI, opd1, opd2));}
-	void cvtpd2ps(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(INSTR_CVTPD2PS, opd1, opd2));}
-	void cvtpd2ps(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(INSTR_CVTPD2PS, opd1, opd2));}
-	void cvtpi2pd(const Xmm& opd1, const Mmx& opd2)		{PushBack(Instr(INSTR_CVTPI2PD, opd1, opd2));}
-	void cvtpi2pd(const Xmm& opd1, const Mem64& opd2)	{PushBack(Instr(INSTR_CVTPI2PD, opd1, opd2));}
-	void cvtps2dq(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(INSTR_CVTPS2DQ, opd1, opd2));}
-	void cvtps2dq(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(INSTR_CVTPS2DQ, opd1, opd2));}
-	void cvtdq2ps(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(INSTR_CVTDQ2PS, opd1, opd2));}
-	void cvtdq2ps(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(INSTR_CVTDQ2PS, opd1, opd2));}
-	void cvtps2pd(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(INSTR_CVTPS2PD, opd1, opd2));}
-	void cvtps2pd(const Xmm& opd1, const Mem64& opd2)	{PushBack(Instr(INSTR_CVTPS2PD, opd1, opd2));}
-	void cvtsd2ss(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(INSTR_CVTSD2SS, opd1, opd2));}
-	void cvtsd2ss(const Xmm& opd1, const Mem64& opd2)	{PushBack(Instr(INSTR_CVTSD2SS, opd1, opd2));}
-	void cvtss2sd(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(INSTR_CVTSS2SD, opd1, opd2));}
-	void cvtss2sd(const Xmm& opd1, const Mem32& opd2)	{PushBack(Instr(INSTR_CVTSS2SD, opd1, opd2));}
-	void cvttpd2dq(const Xmm& opd1, const Xmm& opd2)	{PushBack(Instr(INSTR_CVTTPD2DQ, opd1, opd2));}
-	void cvttpd2dq(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(INSTR_CVTTPD2DQ, opd1, opd2));}
-	void cvttpd2pi(const Mmx& opd1, const Xmm& opd2)	{PushBack(Instr(INSTR_CVTTPD2PI, opd1, opd2));}
-	void cvttpd2pi(const Mmx& opd1, const Mem128& opd2)	{PushBack(Instr(INSTR_CVTTPD2PI, opd1, opd2));}
-	void cvttps2dq(const Xmm& opd1, const Xmm& opd2)	{PushBack(Instr(INSTR_CVTTPS2DQ, opd1, opd2));}
-	void cvttps2dq(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(INSTR_CVTTPS2DQ, opd1, opd2));}
+	void cvtdq2pd(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(I_CVTDQ2PD, opd1, opd2));}
+	void cvtdq2pd(const Xmm& opd1, const Mem64& opd2)	{PushBack(Instr(I_CVTDQ2PD, opd1, opd2));}
+	void cvtpd2dq(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(I_CVTPD2DQ, opd1, opd2));}
+	void cvtpd2dq(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_CVTPD2DQ, opd1, opd2));}
+	void cvtpd2pi(const Mmx& opd1, const Xmm& opd2)		{PushBack(Instr(I_CVTPD2PI, opd1, opd2));}
+	void cvtpd2pi(const Mmx& opd1, const Mem128& opd2)	{PushBack(Instr(I_CVTPD2PI, opd1, opd2));}
+	void cvtpd2ps(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(I_CVTPD2PS, opd1, opd2));}
+	void cvtpd2ps(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_CVTPD2PS, opd1, opd2));}
+	void cvtpi2pd(const Xmm& opd1, const Mmx& opd2)		{PushBack(Instr(I_CVTPI2PD, opd1, opd2));}
+	void cvtpi2pd(const Xmm& opd1, const Mem64& opd2)	{PushBack(Instr(I_CVTPI2PD, opd1, opd2));}
+	void cvtps2dq(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(I_CVTPS2DQ, opd1, opd2));}
+	void cvtps2dq(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_CVTPS2DQ, opd1, opd2));}
+	void cvtdq2ps(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(I_CVTDQ2PS, opd1, opd2));}
+	void cvtdq2ps(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_CVTDQ2PS, opd1, opd2));}
+	void cvtps2pd(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(I_CVTPS2PD, opd1, opd2));}
+	void cvtps2pd(const Xmm& opd1, const Mem64& opd2)	{PushBack(Instr(I_CVTPS2PD, opd1, opd2));}
+	void cvtsd2ss(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(I_CVTSD2SS, opd1, opd2));}
+	void cvtsd2ss(const Xmm& opd1, const Mem64& opd2)	{PushBack(Instr(I_CVTSD2SS, opd1, opd2));}
+	void cvtss2sd(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(I_CVTSS2SD, opd1, opd2));}
+	void cvtss2sd(const Xmm& opd1, const Mem32& opd2)	{PushBack(Instr(I_CVTSS2SD, opd1, opd2));}
+	void cvttpd2dq(const Xmm& opd1, const Xmm& opd2)	{PushBack(Instr(I_CVTTPD2DQ, opd1, opd2));}
+	void cvttpd2dq(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_CVTTPD2DQ, opd1, opd2));}
+	void cvttpd2pi(const Mmx& opd1, const Xmm& opd2)	{PushBack(Instr(I_CVTTPD2PI, opd1, opd2));}
+	void cvttpd2pi(const Mmx& opd1, const Mem128& opd2)	{PushBack(Instr(I_CVTTPD2PI, opd1, opd2));}
+	void cvttps2dq(const Xmm& opd1, const Xmm& opd2)	{PushBack(Instr(I_CVTTPS2DQ, opd1, opd2));}
+	void cvttps2dq(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_CVTTPS2DQ, opd1, opd2));}
 
 	// MOVDQA
-	void movdqa(const Xmm& opd1, const Xmm& opd2) {PushBack(Instr(INSTR_MOVDQA, opd1, opd2));}
-	void movdqa(const Xmm& opd1, const Mem128& opd2) {PushBack(Instr(INSTR_MOVDQA, opd1, opd2));}
-	void movdqa(const Mem128& opd1, const Xmm& opd2) {PushBack(Instr(INSTR_MOVDQA, opd1, opd2));}
+	void movdqa(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(I_MOVDQA, opd1, opd2));}
+	void movdqa(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_MOVDQA, opd1, opd2));}
+	void movdqa(const Mem128& opd1, const Xmm& opd2)	{PushBack(Instr(I_MOVDQA, opd1, opd2));}
 
 	// MOVDQU
-	void movdqu(const Xmm& opd1, const Xmm& opd2) {PushBack(Instr(INSTR_MOVDQU, opd1, opd2));}
-	void movdqu(const Xmm& opd1, const Mem128& opd2) {PushBack(Instr(INSTR_MOVDQU, opd1, opd2));}
-	void movdqu(const Mem128& opd1, const Xmm& opd2) {PushBack(Instr(INSTR_MOVDQU, opd1, opd2));}
+	void movdqu(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(I_MOVDQU, opd1, opd2));}
+	void movdqu(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_MOVDQU, opd1, opd2));}
+	void movdqu(const Mem128& opd1, const Xmm& opd2)	{PushBack(Instr(I_MOVDQU, opd1, opd2));}
 
 	// PABSB/PABSW/PABSD
-	void pabsb(const Mmx& opd1, const Mmx& opd2) {PushBack(Instr(INSTR_PABSB, opd1, opd2));}
-	void pabsb(const Mmx& opd1, const Mem64& opd2) {PushBack(Instr(INSTR_PABSB, opd1, opd2));}
-	void pabsb(const Xmm& opd1, const Xmm& opd2) {PushBack(Instr(INSTR_PABSB, opd1, opd2));}
-	void pabsb(const Xmm& opd1, const Mem128& opd2) {PushBack(Instr(INSTR_PABSB, opd1, opd2));}
-	void pabsw(const Mmx& opd1, const Mmx& opd2) {PushBack(Instr(INSTR_PABSW, opd1, opd2));}
-	void pabsw(const Mmx& opd1, const Mem64& opd2) {PushBack(Instr(INSTR_PABSW, opd1, opd2));}
-	void pabsw(const Xmm& opd1, const Xmm& opd2) {PushBack(Instr(INSTR_PABSW, opd1, opd2));}
-	void pabsw(const Xmm& opd1, const Mem128& opd2) {PushBack(Instr(INSTR_PABSW, opd1, opd2));}
-	void pabsd(const Mmx& opd1, const Mmx& opd2) {PushBack(Instr(INSTR_PABSD, opd1, opd2));}
-	void pabsd(const Mmx& opd1, const Mem64& opd2) {PushBack(Instr(INSTR_PABSD, opd1, opd2));}
-	void pabsd(const Xmm& opd1, const Xmm& opd2) {PushBack(Instr(INSTR_PABSD, opd1, opd2));}
-	void pabsd(const Xmm& opd1, const Mem128& opd2) {PushBack(Instr(INSTR_PABSD, opd1, opd2));}
+	void pabsb(const Mmx& opd1, const Mmx& opd2)	{PushBack(Instr(I_PABSB, opd1, opd2));}
+	void pabsb(const Mmx& opd1, const Mem64& opd2)	{PushBack(Instr(I_PABSB, opd1, opd2));}
+	void pabsb(const Xmm& opd1, const Xmm& opd2)	{PushBack(Instr(I_PABSB, opd1, opd2));}
+	void pabsb(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_PABSB, opd1, opd2));}
+	void pabsw(const Mmx& opd1, const Mmx& opd2)	{PushBack(Instr(I_PABSW, opd1, opd2));}
+	void pabsw(const Mmx& opd1, const Mem64& opd2)	{PushBack(Instr(I_PABSW, opd1, opd2));}
+	void pabsw(const Xmm& opd1, const Xmm& opd2)	{PushBack(Instr(I_PABSW, opd1, opd2));}
+	void pabsw(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_PABSW, opd1, opd2));}
+	void pabsd(const Mmx& opd1, const Mmx& opd2)	{PushBack(Instr(I_PABSD, opd1, opd2));}
+	void pabsd(const Mmx& opd1, const Mem64& opd2)	{PushBack(Instr(I_PABSD, opd1, opd2));}
+	void pabsd(const Xmm& opd1, const Xmm& opd2)	{PushBack(Instr(I_PABSD, opd1, opd2));}
+	void pabsd(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_PABSD, opd1, opd2));}
 
 	// PACKSSWB/PACKSSDW/PACKUSWB/PACKUSDW
-	void packsswb(const Mmx& opd1, const Mmx& opd2) {PushBack(Instr(INSTR_PACKSSWB, opd1, opd2));}
-	void packsswb(const Mmx& opd1, const Mem64& opd2) {PushBack(Instr(INSTR_PACKSSWB, opd1, opd2));}
-	void packsswb(const Xmm& opd1, const Xmm& opd2) {PushBack(Instr(INSTR_PACKSSWB, opd1, opd2));}
-	void packsswb(const Xmm& opd1, const Mem128& opd2) {PushBack(Instr(INSTR_PACKSSWB, opd1, opd2));}
-	void packssdw(const Mmx& opd1, const Mmx& opd2) {PushBack(Instr(INSTR_PACKSSDW, opd1, opd2));}
-	void packssdw(const Mmx& opd1, const Mem64& opd2) {PushBack(Instr(INSTR_PACKSSDW, opd1, opd2));}
-	void packssdw(const Xmm& opd1, const Xmm& opd2) {PushBack(Instr(INSTR_PACKSSDW, opd1, opd2));}
-	void packssdw(const Xmm& opd1, const Mem128& opd2) {PushBack(Instr(INSTR_PACKSSDW, opd1, opd2));}
-	void packuswb(const Mmx& opd1, const Mmx& opd2) {PushBack(Instr(INSTR_PACKUSWB, opd1, opd2));}
-	void packuswb(const Mmx& opd1, const Mem64& opd2) {PushBack(Instr(INSTR_PACKUSWB, opd1, opd2));}
-	void packuswb(const Xmm& opd1, const Xmm& opd2) {PushBack(Instr(INSTR_PACKUSWB, opd1, opd2));}
-	void packuswb(const Xmm& opd1, const Mem128& opd2) {PushBack(Instr(INSTR_PACKUSWB, opd1, opd2));}
-	void packusdw(const Xmm& opd1, const Xmm& opd2) {PushBack(Instr(INSTR_PACKUSDW, opd1, opd2));}
-	void packusdw(const Xmm& opd1, const Mem128& opd2) {PushBack(Instr(INSTR_PACKUSDW, opd1, opd2));}
+	void packsswb(const Mmx& opd1, const Mmx& opd2)		{PushBack(Instr(I_PACKSSWB, opd1, opd2));}
+	void packsswb(const Mmx& opd1, const Mem64& opd2)	{PushBack(Instr(I_PACKSSWB, opd1, opd2));}
+	void packsswb(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(I_PACKSSWB, opd1, opd2));}
+	void packsswb(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_PACKSSWB, opd1, opd2));}
+	void packssdw(const Mmx& opd1, const Mmx& opd2)		{PushBack(Instr(I_PACKSSDW, opd1, opd2));}
+	void packssdw(const Mmx& opd1, const Mem64& opd2)	{PushBack(Instr(I_PACKSSDW, opd1, opd2));}
+	void packssdw(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(I_PACKSSDW, opd1, opd2));}
+	void packssdw(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_PACKSSDW, opd1, opd2));}
+	void packuswb(const Mmx& opd1, const Mmx& opd2)		{PushBack(Instr(I_PACKUSWB, opd1, opd2));}
+	void packuswb(const Mmx& opd1, const Mem64& opd2)	{PushBack(Instr(I_PACKUSWB, opd1, opd2));}
+	void packuswb(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(I_PACKUSWB, opd1, opd2));}
+	void packuswb(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_PACKUSWB, opd1, opd2));}
+	void packusdw(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(I_PACKUSDW, opd1, opd2));}
+	void packusdw(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_PACKUSDW, opd1, opd2));}
 
 	// PADDB/PADDW/PADDD
-	void paddb(const Mmx& opd1, const Mmx& opd2) {PushBack(Instr(INSTR_PADDB, opd1, opd2));}
-	void paddb(const Mmx& opd1, const Mem64& opd2) {PushBack(Instr(INSTR_PADDB, opd1, opd2));}
-	void paddb(const Xmm& opd1, const Xmm& opd2) {PushBack(Instr(INSTR_PADDB, opd1, opd2));}
-	void paddb(const Xmm& opd1, const Mem128& opd2) {PushBack(Instr(INSTR_PADDB, opd1, opd2));}
-	void paddw(const Mmx& opd1, const Mmx& opd2) {PushBack(Instr(INSTR_PADDW, opd1, opd2));}
-	void paddw(const Mmx& opd1, const Mem64& opd2) {PushBack(Instr(INSTR_PADDW, opd1, opd2));}
-	void paddw(const Xmm& opd1, const Xmm& opd2) {PushBack(Instr(INSTR_PADDW, opd1, opd2));}
-	void paddw(const Xmm& opd1, const Mem128& opd2) {PushBack(Instr(INSTR_PADDW, opd1, opd2));}
-	void paddd(const Mmx& opd1, const Mmx& opd2) {PushBack(Instr(INSTR_PADDD, opd1, opd2));}
-	void paddd(const Mmx& opd1, const Mem64& opd2) {PushBack(Instr(INSTR_PADDD, opd1, opd2));}
-	void paddd(const Xmm& opd1, const Xmm& opd2) {PushBack(Instr(INSTR_PADDD, opd1, opd2));}
-	void paddd(const Xmm& opd1, const Mem128& opd2) {PushBack(Instr(INSTR_PADDD, opd1, opd2));}
+	void paddb(const Mmx& opd1, const Mmx& opd2)	{PushBack(Instr(I_PADDB, opd1, opd2));}
+	void paddb(const Mmx& opd1, const Mem64& opd2)	{PushBack(Instr(I_PADDB, opd1, opd2));}
+	void paddb(const Xmm& opd1, const Xmm& opd2)	{PushBack(Instr(I_PADDB, opd1, opd2));}
+	void paddb(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_PADDB, opd1, opd2));}
+	void paddw(const Mmx& opd1, const Mmx& opd2)	{PushBack(Instr(I_PADDW, opd1, opd2));}
+	void paddw(const Mmx& opd1, const Mem64& opd2)	{PushBack(Instr(I_PADDW, opd1, opd2));}
+	void paddw(const Xmm& opd1, const Xmm& opd2)	{PushBack(Instr(I_PADDW, opd1, opd2));}
+	void paddw(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_PADDW, opd1, opd2));}
+	void paddd(const Mmx& opd1, const Mmx& opd2)	{PushBack(Instr(I_PADDD, opd1, opd2));}
+	void paddd(const Mmx& opd1, const Mem64& opd2)	{PushBack(Instr(I_PADDD, opd1, opd2));}
+	void paddd(const Xmm& opd1, const Xmm& opd2)	{PushBack(Instr(I_PADDD, opd1, opd2));}
+	void paddd(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_PADDD, opd1, opd2));}
 
 	// PXOR
-	void pxor(const Mmx& opd1, const Mmx& opd2) {PushBack(Instr(INSTR_PXOR, opd1, opd2));}
-	void pxor(const Mmx& opd1, const Mem64& opd2) {PushBack(Instr(INSTR_PXOR, opd1, opd2));}
-	void pxor(const Xmm& opd1, const Xmm& opd2) {PushBack(Instr(INSTR_PXOR, opd1, opd2));}
-	void pxor(const Xmm& opd1, const Mem128& opd2) {PushBack(Instr(INSTR_PXOR, opd1, opd2));}
+	void pxor(const Mmx& opd1, const Mmx& opd2)		{PushBack(Instr(I_PXOR, opd1, opd2));}
+	void pxor(const Mmx& opd1, const Mem64& opd2)	{PushBack(Instr(I_PXOR, opd1, opd2));}
+	void pxor(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(I_PXOR, opd1, opd2));}
+	void pxor(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_PXOR, opd1, opd2));}
 };
-
 
 #ifdef JITASM64
 typedef Expr64_None Arg;
