@@ -1071,6 +1071,9 @@ struct test_lea : jitasm::function0<void>
 		lea(eax, dword_ptr[ebp + ecx * 2 + 0x10000]);
 		lea(eax, dword_ptr[ecx + ebp * 2 + 0x10000]);
 		lea(eax, dword_ptr[esp + ebp * 2 + 0x10000]);
+		lea(eax, dword_ptr[eax - 0x1]);
+		lea(eax, dword_ptr[eax - 0x100]);
+		lea(eax, dword_ptr[eax - 0x10000]);
 #ifdef JITASM64
 		lea(rax, qword_ptr[rax]);
 		lea(rax, qword_ptr[rsp]);
