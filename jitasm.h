@@ -375,8 +375,9 @@ enum InstrID
 	I_ADC, I_ADD, I_AND, I_CALL, I_CMP, I_DEC, I_INC,
 	I_JMP, I_JA, I_JAE, I_JB, I_JBE, I_JCXZ, I_JECXZ, I_JRCXZ, I_JE,
 	I_JG, I_JGE, I_JL, I_JLE, I_JNE, I_JNO, I_JNP, I_JNS, I_JO, I_JP, I_JS,
-	I_LEA, I_LEAVE, I_MOV, I_MOVZX, I_NOP, I_OR, I_POP, I_PUSH,
-	I_RET, I_SAR, I_SHL, I_SHR, I_SBB, I_SUB, I_TEST, I_XCHG, I_XOR,
+	I_LEA, I_LEAVE,
+	I_MOV, I_MOVS_B, I_MOVS_W, I_MOVS_D, I_MOVS_Q, I_REP_MOVS_B, I_REP_MOVS_W, I_REP_MOVS_D, I_REP_MOVS_Q, I_MOVZX,
+	I_NOP, I_OR, I_POP, I_PUSH, I_RET, I_SAR, I_SHL, I_SHR, I_SBB, I_SUB, I_TEST, I_XCHG, I_XOR,
 
 	I_FLD,
 
@@ -485,6 +486,8 @@ struct Backend
 		}
 		if (rxb) db(0x40 | rxb);
 	}
+
+	void EncodeRep() {db(0xF3);}
 
 	void EncodeModRM(uint8 reg, const Opd& r_m)
 	{
@@ -1061,6 +1064,14 @@ struct Backend
 		case I_LEA:			EncodeLEA(opd1, opd2); break;
 		case I_LEAVE:		db(0xC9); break;
 		case I_MOV:			EncodeMOV(opd1, opd2); break;
+		case I_MOVS_B:		db(0xA4); break;
+		case I_MOVS_W:		db(0x66); db(0xA5); break;
+		case I_MOVS_D:		db(0xA5); break;
+		case I_MOVS_Q:		db(0x48); db(0xA5); break;
+		case I_REP_MOVS_B:	EncodeRep(); db(0xA4); break;
+		case I_REP_MOVS_W:	EncodeRep(); db(0x66); db(0xA5); break;
+		case I_REP_MOVS_D:	EncodeRep(); db(0xA5); break;
+		case I_REP_MOVS_Q:	EncodeRep(); db(0x48); db(0xA5); break;
 		case I_MOVZX:		EncodeMOVZX(opd1, opd2); break;
 		case I_NOP:			db(0x90); break;
 		case I_OR:			EncodeADD(0x08, opd1, opd2); break;
@@ -1728,6 +1739,20 @@ struct Frontend
 	void mov(const Rax& opd1, MemOffset64& opd2)	{PushBack(Instr(I_MOV, opd1, opd2.ToMem64()));}
 #endif
  
+	// MOVSB/MOVSW/MOVSD/MOVSQ
+	void movsb() {PushBack(Instr(I_MOVS_B));}
+	void movsw() {PushBack(Instr(I_MOVS_W));}
+	void movsd() {PushBack(Instr(I_MOVS_D));}
+#ifdef JITASM64
+	void movsq() {PushBack(Instr(I_MOVS_Q));}
+#endif
+	void rep_movsb() {PushBack(Instr(I_REP_MOVS_B));}
+	void rep_movsw() {PushBack(Instr(I_REP_MOVS_W));}
+	void rep_movsd() {PushBack(Instr(I_REP_MOVS_D));}
+#ifdef JITASM64
+	void rep_movsq() {PushBack(Instr(I_REP_MOVS_Q));}
+#endif
+
 	// MOVZX
 	void movzx(const Reg16& opd1, const Opd8& opd2)		{PushBack(Instr(I_MOVZX, opd1, opd2));}
 	void movzx(const Reg32& opd1, const Opd8& opd2)		{PushBack(Instr(I_MOVZX, opd1, opd2));}
