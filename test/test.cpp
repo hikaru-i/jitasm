@@ -2,21 +2,49 @@
 #include <assert.h>
 #include "jitasm.h"
 
-#define ASSERT	assert
+#define _TOSTR(s) _T(#s)
+#define TOSTR(s) _TOSTR(s)
+#define TEST(func_name) {test_impl(TOSTR(func_name), func_name ## (), masm_ ## func_name);}
 
-template<class Func>
-void TEST(void (*func1)(), Func func2)
+template<class Fn1, class Fn2>
+void test_impl(LPCTSTR func_name, Fn1 fn1, Fn2 fn2)
 {
-	func2.Assemble();
+	_tprintf(_T("TEST(%s) ... "), func_name);
 
-	unsigned char* p1 = (unsigned char*) func1;
-	if (*p1 == 0xE9) p1 = (unsigned char*) (p1 + (unsigned long&) *(p1 + 1) + 5);	// Strip thunk
-	unsigned char* p2 = (unsigned char*) func2.GetCode();
+	fn1.Assemble();
+	size_t size = fn1.GetCodeSize();
 
-	size_t size = func2.GetCodeSize();
+	unsigned char* p1 = (unsigned char*) fn1.GetCode();
+	unsigned char* p2 = (unsigned char*) fn2;
+	if (*p2 == 0xE9) p2 = (unsigned char*) (p2 + (unsigned long&) *(p2 + 1) + 5);
+	
 	for (size_t i = 0; i < size; i++) {
-		ASSERT(p1[i] == p2[i]);
+		if (p1[i] != p2[i]) {
+			_tprintf(_T("FAILED\n"));
+
+			size_t min = (size_t) max((int) i - 10, 0);
+			size_t max = min(i + 10, size);
+
+			_tprintf(_T("    J[%d] "), min);
+			for (size_t j = min; j < max; j++) _tprintf(_T("%02X,"), p1[j]);
+			_tprintf(_T("\n"));
+
+			_tprintf(_T("    M[%d] "), min);
+			for (size_t j = min; j < max; j++) _tprintf(_T("%02X,"), p2[j]);
+			_tprintf(_T("\n"));
+
+#ifdef _DEBUG
+			::DebugBreak();
+			if (0) {
+				((void (*)()) (p2 + i))();
+			}
+#endif
+
+			return;
+		}
 	}
+
+	_tprintf(_T("OK\n"));
 }
 
 struct test_mmx_sse2 : jitasm::function0<void>
@@ -1346,27 +1374,27 @@ struct mov_disp : jitasm::function0<void>
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-	TEST(masm_test_sal, test_sal());
-	TEST(masm_test_sar, test_sar());
-	TEST(masm_test_shl, test_shl());
-	TEST(masm_test_shr, test_shr());
-	TEST(masm_test_inc_dec, test_inc_dec());
-	TEST(masm_test_push_pop, test_push_pop());
-	TEST(masm_test_add, test_add());
-	TEST(masm_test_or, test_or());
-	TEST(masm_test_adc, test_adc());
-	TEST(masm_test_sbb, test_sbb());
-	TEST(masm_test_and, test_and());
-	TEST(masm_test_sub, test_sub());
-	TEST(masm_test_xor, test_xor());
-	TEST(masm_test_cmp, test_cmp());
-	TEST(masm_test_xchg, test_xchg());
-	TEST(masm_test_test, test_test());
-	TEST(masm_test_mov, test_mov());
-	TEST(masm_test_lea, test_lea());
-	TEST(masm_test_fld, test_fld());
-	TEST(masm_test_jmp, test_jmp());
+	TEST(test_sal);
+	TEST(test_sar);
+	TEST(test_shl);
+	TEST(test_shr);
+	TEST(test_inc_dec);
+	TEST(test_push_pop);
+	TEST(test_add);
+	TEST(test_or);
+	TEST(test_adc);
+	TEST(test_sbb);
+	TEST(test_and);
+	TEST(test_sub);
+	TEST(test_xor);
+	TEST(test_cmp);
+	TEST(test_xchg);
+	TEST(test_test);
+	TEST(test_mov);
+	TEST(test_lea);
+	TEST(test_fld);
+	TEST(test_jmp);
 
-	TEST(masm_test_function0_cdecl, test_function0_cdecl());
+	TEST(test_function0_cdecl);
 	//TEST(masm_test_function1_cdecl, test_function1_cdecl());
 }
