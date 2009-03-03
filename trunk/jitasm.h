@@ -176,10 +176,10 @@ protected:
 	OpdT(sint64 imm) : Opd(imm) {}
 };
 typedef OpdT<O_SIZE_8>		Opd8;
-typedef OpdT<O_SIZE_16>	Opd16;
-typedef OpdT<O_SIZE_32>	Opd32;
-typedef OpdT<O_SIZE_64>	Opd64;
-typedef OpdT<O_SIZE_80>	Opd80;
+typedef OpdT<O_SIZE_16>		Opd16;
+typedef OpdT<O_SIZE_32>		Opd32;
+typedef OpdT<O_SIZE_64>		Opd64;
+typedef OpdT<O_SIZE_80>		Opd80;
 typedef OpdT<O_SIZE_128>	Opd128;
 
 template<class OpdN>
@@ -384,7 +384,7 @@ enum InstrID
 	I_CVTPD2DQ, I_CVTPD2PI, I_CVTPD2PS, I_CVTPI2PD, I_CVTPS2DQ, I_CVTPS2PD, I_CVTSD2SI, I_CVTSD2SS,
 	I_CVTSI2SD, I_CVTSS2SD, I_CVTTPD2DQ, I_CVTTPD2PI, I_CVTTPS2DQ, I_CVTTSD2SI, I_DIVPD, I_DIVSD, I_LFENCE,
 	I_MASKMOVDQU, I_MAXPD, I_MAXSD, I_MFENCE, I_MINPD, I_MINSD, I_MOVAPD, I_MOVD, I_MOVDQ2Q, I_MOVDQA,
-	I_MOVDQU, I_MOVHPD, I_MOVLPD, I_MOVMSKPD, I_MOVNTPD, I_MOVNTDQ, I_MOVNTI, I_MOVQ, I_MOVQ2DQ, I_MOVSD, I_MOVUPD, I_MULPD,
+	I_MOVDQU, I_MOVHPD, I_MOVLPD, I_MOVMSKPD, I_MOVNTPD, I_MOVNTDQ, I_MOVNTI, I_MOVQ, I_MOVQ2DQ, I_MOVSD, I_MOVSS, I_MOVUPD, I_MULPD,
 	I_MULSD, I_ORPD, I_PABSB, I_PABSD, I_PABSW, I_PACKSSDW, I_PACKSSWB, I_PACKUSDW, I_PACKUSWB,
 	I_PADDB, I_PADDD, I_PADDQ, I_PADDSB, I_PADDSW, I_PADDUSB, I_PADDUSW, I_PADDW, I_PALIGNR,
 	I_PAND, I_PANDN, I_PAUSE, I_PAVGB, I_PAVGW, I_PCMPEQB, I_PCMPEQW, I_PCMPEQD, I_PCMPEQQ,
@@ -1128,6 +1128,7 @@ struct Backend
 		case I_MOVQ:		EncodeMOVQ(opd1, opd2); break;
 		case I_MOVQ2DQ:		EncodeSSE2(0xF3, 0xD6, opd1, opd2); break;
 		case I_MOVSD:		EncodeSSE2(0xF2, 0x10 | (opd1.IsReg() ? 0 : 0x01), opd1, opd2); break;
+		case I_MOVSS:		EncodeSSE2(0xF3, 0x10 | (opd1.IsReg() ? 0 : 0x01), opd1, opd2); break;	// SSE
 		case I_MOVUPD:		EncodeSSE2(0x66, 0x10 | (opd1.IsReg() ? 0 : 0x01), opd1, opd2); break;
 		case I_MULPD:		EncodeSSE2(0x66, 0x59, opd1, opd2); break;
 		case I_MULSD:		EncodeSSE2(0xF2, 0x59, opd1, opd2); break;
@@ -2049,6 +2050,11 @@ struct Frontend
 	void movdqu(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_MOVDQU, opd1, opd2));}
 	void movdqu(const Mem128& opd1, const Xmm& opd2)	{PushBack(Instr(I_MOVDQU, opd1, opd2));}
 
+	// MOVSS
+	void movss(const Xmm& dst, const Xmm& src)		{PushBack(Instr(I_MOVSS, dst, src));}
+	void movss(const Xmm& dst, const Mem32& src)	{PushBack(Instr(I_MOVSS, dst, src));}
+	void movss(const Mem32& dst, const Xmm& src)	{PushBack(Instr(I_MOVSS, dst, src));}
+
 	// PABSB/PABSW/PABSD
 	void pabsb(const Mmx& opd1, const Mmx& opd2)	{PushBack(Instr(I_PABSB, opd1, opd2));}
 	void pabsb(const Mmx& opd1, const Mem64& opd2)	{PushBack(Instr(I_PABSB, opd1, opd2));}
@@ -2100,12 +2106,6 @@ struct Frontend
 	void pxor(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_PXOR, opd1, opd2));}
 };
 
-#ifdef JITASM64
-typedef Expr64_None Arg;
-#else
-typedef Expr32_None Arg;
-#endif
-
 namespace detail {
 
 	template<int N> size_t AlignSize(size_t size) {
@@ -2115,6 +2115,7 @@ namespace detail {
 	template<class T, int Size = sizeof(T)>
 	struct ResultT {
 		enum { ArgR = 1 };
+
 	};
 
 	template<class T>
@@ -2125,7 +2126,7 @@ namespace detail {
 		ResultT(const Opd8& val) : val_(val) {}
 		ResultT(uint8 imm) : val_(Imm8(imm)) {}
 		void Store(Frontend& f) {
-			if (!val_.IsReg() || val_.GetReg() != INVALID)
+			if (!(val_.IsReg() && (val_.GetReg() == INVALID || val_.GetReg() == AL)))
 				f.mov(f.al, static_cast<Reg8&>(val_));
 		}
 	};
@@ -2138,7 +2139,7 @@ namespace detail {
 		ResultT(const Opd16& val) : val_(val) {}
 		ResultT(uint16 imm) : val_(Imm16(imm)) {}
 		void Store(Frontend& f) {
-			if (!val_.IsReg() || val_.GetReg() != INVALID)
+			if (!(val_.IsReg() && (val_.GetReg() == INVALID || val_.GetReg() == AX)))
 				f.mov(f.ax, static_cast<Reg16&>(val_));
 		}
 	};
@@ -2151,7 +2152,7 @@ namespace detail {
 		ResultT(const Opd32& val) : val_(val) {}
 		ResultT(uint32 imm) : val_(Imm32(imm)) {}
 		void Store(Frontend& f) {
-			if (!val_.IsReg() || val_.GetReg() != INVALID)
+			if (!(val_.IsReg() && (val_.GetReg() == INVALID || val_.GetReg() == EAX)))
 				f.mov(f.eax, static_cast<Reg32&>(val_));
 		}
 	};
@@ -2165,8 +2166,8 @@ namespace detail {
 		ResultT(const Opd64& val) : val_(val) {}
 		ResultT(uint64 imm) : val_(Imm64(imm)) {}
 		void Store(Frontend& f) {
-			if (!val_.IsReg() || val_.GetReg() != INVALID)
-				f.mov(f.eax, static_cast<Reg64&>(val_));
+			if (!(val_.IsReg() && (val_.GetReg() == INVALID || val_.GetReg() == RAX)))
+				f.mov(f.rax, static_cast<Reg64&>(val_));
 		}
 	};
 #endif
@@ -2174,6 +2175,33 @@ namespace detail {
 	template<>
 	struct ResultT<float, sizeof(float)> {
 		enum { ArgR = 0 };
+		Opd val_;
+		ResultT() {}
+		ResultT(const FpuReg& fpu) : val_(fpu) {}
+		ResultT(const Mem32& mem) : val_(mem) {}
+		ResultT(const Xmm& xmm) : val_(xmm) {}
+		ResultT(const float imm) : val_(Imm32(*(uint32*)&imm)) {}
+		void Store(Frontend& f) {
+			if (val_.IsReg() && val_.GetSize() == O_SIZE_80) {
+				// from FPU register
+				if (val_.GetReg() != ST0)
+					f.fld(static_cast<FpuReg&>(val_));
+			}
+			else if (val_.IsMem() && val_.GetSize() == O_SIZE_32) {
+				// from memory
+				f.fld(static_cast<Mem32&>(val_));
+			}
+			else if (val_.IsReg() && val_.GetSize() == O_SIZE_128) {
+				// from XMM register
+				f.movss(f.dword_ptr[f.esp - 4], static_cast<Xmm&>(val_));
+				f.fld(f.dword_ptr[f.esp - 4]);
+			}
+			else if (val_.IsImm()) {
+				// from float immediate
+				f.mov(f.dword_ptr[f.esp - 4], static_cast<Reg32&>(val_));
+				f.fld(f.dword_ptr[f.esp - 4]);
+			}
+		}
 	};
 
 	template<>
@@ -2186,6 +2214,12 @@ namespace detail {
 	template<class FuncPtr>
 	struct Function : Frontend
 	{
+#ifdef JITASM64
+		typedef Expr64_None Arg;
+#else
+		typedef Expr32_None Arg;
+#endif
+
 		template<int ArgR> Arg Arg1() { return Arg(zbp + sizeof(void *) * (2 + ArgR)); }
 		template<int ArgR, class A1> Arg Arg2() { return Arg1<ArgR>() + AlignSize<sizeof(void *)>(sizeof(A1)); }
 		template<int ArgR, class A1, class A2> Arg Arg3() { return Arg2<A1, ArgR>() + AlignSize<sizeof(void *)>(sizeof(A2)); }

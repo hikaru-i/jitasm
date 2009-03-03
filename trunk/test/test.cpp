@@ -1299,9 +1299,21 @@ struct test_function0_cdecl : jitasm::function0_cdecl<int>
 	}
 };
 
+//----------------------------------------
+// function1_cdecl<float>
+//----------------------------------------
+extern "C" void masm_test_function1_cdecl();
+struct test_function1_cdecl : jitasm::function1_cdecl<float, float>
+{
+	Result main(Arg a1)
+	{
+		return 1.0f;
+	}
+};
+
 struct hoge : jitasm::function2_cdecl<void, short, int>
 {
-	virtual void main(jitasm::Arg a1, jitasm::Arg a2)
+	virtual void main(Arg a1, Arg a2)
 	{
 		movzx(eax, word_ptr[a1]);
 		mov(ecx, dword_ptr[a2]);
@@ -1356,4 +1368,5 @@ int _tmain(int argc, _TCHAR* argv[])
 	TEST(masm_test_jmp, test_jmp());
 
 	TEST(masm_test_function0_cdecl, test_function0_cdecl());
+	//TEST(masm_test_function1_cdecl, test_function1_cdecl());
 }

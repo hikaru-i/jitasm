@@ -1085,25 +1085,25 @@ masm_test_jmp endp
 ; function0_cdecl<int>
 ;----------------------------------------
 masm_test_function0_cdecl proc
-		push rbp
-		mov rbp, rsp
-		push rbx
-		push rdi
-		push rsi
-		push r12;
-		push r13;
-		push r14;
-		push r15;
-		mov eax, 16
-		pop r15;
-		pop r14;
-		pop r13;
-		pop r12;
-		pop rsi
-		pop rdi
-		pop rbx
-		leave
-		ret
+	push rbp
+	mov rbp, rsp
+	push rbx
+	push rdi
+	push rsi
+	push r12;
+	push r13;
+	push r14;
+	push r15;
+	mov eax, 16
+	pop r15;
+	pop r14;
+	pop r13;
+	pop r12;
+	pop rsi
+	pop rdi
+	pop rbx
+	leave
+	ret
 masm_test_function0_cdecl endp
 
 end
