@@ -216,11 +216,11 @@ typedef MemT<Opd64>		Mem64;
 typedef MemT<Opd80>		Mem80;
 typedef MemT<Opd128>	Mem128;
 
-struct MemOffset64
+struct Mem64Offset
 {
 	sint64 offset_;
 
-	explicit MemOffset64(sint64 offset) : offset_(offset) {}
+	explicit Mem64Offset(sint64 offset) : offset_(offset) {}
 	Mem64 ToMem64() {return Mem64(O_SIZE_64, INVALID, INVALID, 0, offset_);}
 };
 
@@ -229,141 +229,141 @@ struct ImmT : OpdN
 {
 	ImmT(U imm) : OpdN((S) imm) {}
 };
-typedef ImmT<Opd8, uint8, sint8>		Imm8;
-typedef ImmT<Opd16, uint16, sint16>		Imm16;
-typedef ImmT<Opd32, uint32, sint32>		Imm32;
-typedef ImmT<Opd64, uint64, sint64>		Imm64;
+typedef ImmT<Opd8, uint8, sint8>	Imm8;
+typedef ImmT<Opd16, uint16, sint16>	Imm16;
+typedef ImmT<Opd32, uint32, sint32>	Imm32;
+typedef ImmT<Opd64, uint64, sint64>	Imm64;
 
-struct Expr32_None
+struct Reg32Expr
 {
 	RegID reg_;
 	sint64 disp_;
-	Expr32_None(const Reg32& obj) : reg_(obj.reg_), disp_(0) {}	// implicit
-	Expr32_None(RegID reg, sint64 disp) : reg_(reg), disp_(disp) {}
+	Reg32Expr(const Reg32& obj) : reg_(obj.reg_), disp_(0) {}	// implicit
+	Reg32Expr(RegID reg, sint64 disp) : reg_(reg), disp_(disp) {}
 };
-inline Expr32_None operator+(const Reg32& lhs, sint64 rhs) {return Expr32_None(lhs.reg_, rhs);}
-inline Expr32_None operator+(sint64 lhs, const Reg32& rhs) {return rhs + lhs;}
-inline Expr32_None operator-(const Reg32& lhs, sint64 rhs) {return lhs + -rhs;}
-inline Expr32_None operator+(const Expr32_None& lhs, sint64 rhs) {return Expr32_None(lhs.reg_, lhs.disp_ + rhs);}
-inline Expr32_None operator+(sint64 lhs, const Expr32_None& rhs) {return rhs + lhs;}
-inline Expr32_None operator-(const Expr32_None& lhs, sint64 rhs) {return lhs + -rhs;}
+inline Reg32Expr operator+(const Reg32& lhs, sint64 rhs) {return Reg32Expr(lhs.reg_, rhs);}
+inline Reg32Expr operator+(sint64 lhs, const Reg32& rhs) {return rhs + lhs;}
+inline Reg32Expr operator-(const Reg32& lhs, sint64 rhs) {return lhs + -rhs;}
+inline Reg32Expr operator+(const Reg32Expr& lhs, sint64 rhs) {return Reg32Expr(lhs.reg_, lhs.disp_ + rhs);}
+inline Reg32Expr operator+(sint64 lhs, const Reg32Expr& rhs) {return rhs + lhs;}
+inline Reg32Expr operator-(const Reg32Expr& lhs, sint64 rhs) {return lhs + -rhs;}
 
-struct Expr32_BI
+struct Reg32ExprBI
 {
 	RegID base_;
 	RegID index_;
 	sint64 disp_;
-	Expr32_BI(RegID base, RegID index, sint64 disp) : base_(base), index_(index), disp_(disp) {}
+	Reg32ExprBI(RegID base, RegID index, sint64 disp) : base_(base), index_(index), disp_(disp) {}
 };
-inline Expr32_BI operator+(const Expr32_None& lhs, const Expr32_None& rhs) {return Expr32_BI(rhs.reg_, lhs.reg_, lhs.disp_ + rhs.disp_);}
-inline Expr32_BI operator+(const Expr32_BI& lhs, sint64 rhs) {return Expr32_BI(lhs.base_, lhs.index_, lhs.disp_ + rhs);}
-inline Expr32_BI operator+(sint64 lhs, const Expr32_BI& rhs) {return rhs + lhs;}
-inline Expr32_BI operator-(const Expr32_BI& lhs, sint64 rhs) {return lhs + -rhs;}
+inline Reg32ExprBI operator+(const Reg32Expr& lhs, const Reg32Expr& rhs) {return Reg32ExprBI(rhs.reg_, lhs.reg_, lhs.disp_ + rhs.disp_);}
+inline Reg32ExprBI operator+(const Reg32ExprBI& lhs, sint64 rhs) {return Reg32ExprBI(lhs.base_, lhs.index_, lhs.disp_ + rhs);}
+inline Reg32ExprBI operator+(sint64 lhs, const Reg32ExprBI& rhs) {return rhs + lhs;}
+inline Reg32ExprBI operator-(const Reg32ExprBI& lhs, sint64 rhs) {return lhs + -rhs;}
 
-struct Expr32_SI
+struct Reg32ExprSI
 {
 	RegID index_;
 	sint64 scale_;
 	sint64 disp_;
-	Expr32_SI(RegID index, sint64 scale, sint64 disp) : index_(index), scale_(scale), disp_(disp) {}
+	Reg32ExprSI(RegID index, sint64 scale, sint64 disp) : index_(index), scale_(scale), disp_(disp) {}
 };
-inline Expr32_SI operator*(const Reg32& lhs, sint64 rhs) {return Expr32_SI(lhs.reg_, rhs, 0);}
-inline Expr32_SI operator*(sint64 lhs, const Reg32& rhs) {return rhs * lhs;}
-inline Expr32_SI operator*(const Expr32_SI& lhs, sint64 rhs) {return Expr32_SI(lhs.index_, lhs.scale_ * rhs, lhs.disp_);}
-inline Expr32_SI operator*(sint64 lhs, const Expr32_SI& rhs) {return rhs * lhs;}
-inline Expr32_SI operator+(const Expr32_SI& lhs, sint64 rhs) {return Expr32_SI(lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
-inline Expr32_SI operator+(sint64 lhs, const Expr32_SI& rhs) {return rhs + lhs;}
-inline Expr32_SI operator-(const Expr32_SI& lhs, sint64 rhs) {return lhs + -rhs;}
+inline Reg32ExprSI operator*(const Reg32& lhs, sint64 rhs) {return Reg32ExprSI(lhs.reg_, rhs, 0);}
+inline Reg32ExprSI operator*(sint64 lhs, const Reg32& rhs) {return rhs * lhs;}
+inline Reg32ExprSI operator*(const Reg32ExprSI& lhs, sint64 rhs) {return Reg32ExprSI(lhs.index_, lhs.scale_ * rhs, lhs.disp_);}
+inline Reg32ExprSI operator*(sint64 lhs, const Reg32ExprSI& rhs) {return rhs * lhs;}
+inline Reg32ExprSI operator+(const Reg32ExprSI& lhs, sint64 rhs) {return Reg32ExprSI(lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
+inline Reg32ExprSI operator+(sint64 lhs, const Reg32ExprSI& rhs) {return rhs + lhs;}
+inline Reg32ExprSI operator-(const Reg32ExprSI& lhs, sint64 rhs) {return lhs + -rhs;}
 
-struct Expr32_SIB
+struct Reg32ExprSIB
 {
 	RegID base_;
 	RegID index_;
 	sint64 scale_;
 	sint64 disp_;
-	Expr32_SIB(RegID base, RegID index, sint64 scale, sint64 disp) : base_(base), index_(index), scale_(scale), disp_(disp) {}
+	Reg32ExprSIB(RegID base, RegID index, sint64 scale, sint64 disp) : base_(base), index_(index), scale_(scale), disp_(disp) {}
 };
-inline Expr32_SIB operator+(const Expr32_None& lhs, const Expr32_SI& rhs) {return Expr32_SIB(lhs.reg_, rhs.index_, rhs.scale_, lhs.disp_ + rhs.disp_);}
-inline Expr32_SIB operator+(const Expr32_SI& lhs, const Expr32_None& rhs) {return rhs + lhs;}
-inline Expr32_SIB operator+(const Expr32_SIB& lhs, sint64 rhs) {return Expr32_SIB(lhs.base_, lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
-inline Expr32_SIB operator+(sint64 lhs, const Expr32_SIB& rhs) {return rhs + lhs;}
-inline Expr32_SIB operator-(const Expr32_SIB& lhs, sint64 rhs) {return lhs + -rhs;}
+inline Reg32ExprSIB operator+(const Reg32Expr& lhs, const Reg32ExprSI& rhs) {return Reg32ExprSIB(lhs.reg_, rhs.index_, rhs.scale_, lhs.disp_ + rhs.disp_);}
+inline Reg32ExprSIB operator+(const Reg32ExprSI& lhs, const Reg32Expr& rhs) {return rhs + lhs;}
+inline Reg32ExprSIB operator+(const Reg32ExprSIB& lhs, sint64 rhs) {return Reg32ExprSIB(lhs.base_, lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
+inline Reg32ExprSIB operator+(sint64 lhs, const Reg32ExprSIB& rhs) {return rhs + lhs;}
+inline Reg32ExprSIB operator-(const Reg32ExprSIB& lhs, sint64 rhs) {return lhs + -rhs;}
 
 #ifdef JITASM64
-struct Expr64_None
+struct Reg64Expr
 {
 	RegID reg_;
 	sint64 disp_;
-	Expr64_None(const Reg64& obj) : reg_(obj.reg_), disp_(0) {}	// implicit
-	Expr64_None(RegID reg, sint64 disp) : reg_(reg), disp_(disp) {}
+	Reg64Expr(const Reg64& obj) : reg_(obj.reg_), disp_(0) {}	// implicit
+	Reg64Expr(RegID reg, sint64 disp) : reg_(reg), disp_(disp) {}
 };
-inline Expr64_None operator+(const Reg64& lhs, sint64 rhs) {return Expr64_None(lhs.reg_, rhs);}
-inline Expr64_None operator+(sint64 lhs, const Reg64& rhs) {return rhs + lhs;}
-inline Expr64_None operator-(const Reg64& lhs, sint64 rhs) {return lhs + -rhs;}
-inline Expr64_None operator+(const Expr64_None& lhs, sint64 rhs) {return Expr64_None(lhs.reg_, lhs.disp_ + rhs);}
-inline Expr64_None operator+(sint64 lhs, const Expr64_None& rhs) {return rhs + lhs;}
-inline Expr64_None operator-(const Expr64_None& lhs, sint64 rhs) {return lhs + -rhs;}
+inline Reg64Expr operator+(const Reg64& lhs, sint64 rhs) {return Reg64Expr(lhs.reg_, rhs);}
+inline Reg64Expr operator+(sint64 lhs, const Reg64& rhs) {return rhs + lhs;}
+inline Reg64Expr operator-(const Reg64& lhs, sint64 rhs) {return lhs + -rhs;}
+inline Reg64Expr operator+(const Reg64Expr& lhs, sint64 rhs) {return Reg64Expr(lhs.reg_, lhs.disp_ + rhs);}
+inline Reg64Expr operator+(sint64 lhs, const Reg64Expr& rhs) {return rhs + lhs;}
+inline Reg64Expr operator-(const Reg64Expr& lhs, sint64 rhs) {return lhs + -rhs;}
 
-struct Expr64_BI
+struct Reg64ExprBI
 {
 	RegID base_;
 	RegID index_;
 	sint64 disp_;
-	Expr64_BI(RegID base, RegID index, sint64 disp) : base_(base), index_(index), disp_(disp) {}
+	Reg64ExprBI(RegID base, RegID index, sint64 disp) : base_(base), index_(index), disp_(disp) {}
 };
-inline Expr64_BI operator+(const Expr64_None& lhs, const Expr64_None& rhs) {return Expr64_BI(rhs.reg_, lhs.reg_, lhs.disp_ + rhs.disp_);}
-inline Expr64_BI operator+(const Expr64_BI& lhs, sint64 rhs) {return Expr64_BI(lhs.base_, lhs.index_, lhs.disp_ + rhs);}
-inline Expr64_BI operator+(sint64 lhs, const Expr64_BI& rhs) {return rhs + lhs;}
-inline Expr64_BI operator-(const Expr64_BI& lhs, sint64 rhs) {return lhs + -rhs;}
+inline Reg64ExprBI operator+(const Reg64Expr& lhs, const Reg64Expr& rhs) {return Reg64ExprBI(rhs.reg_, lhs.reg_, lhs.disp_ + rhs.disp_);}
+inline Reg64ExprBI operator+(const Reg64ExprBI& lhs, sint64 rhs) {return Reg64ExprBI(lhs.base_, lhs.index_, lhs.disp_ + rhs);}
+inline Reg64ExprBI operator+(sint64 lhs, const Reg64ExprBI& rhs) {return rhs + lhs;}
+inline Reg64ExprBI operator-(const Reg64ExprBI& lhs, sint64 rhs) {return lhs + -rhs;}
 
-struct Expr64_SI
+struct Reg64ExprSI
 {
 	RegID index_;
 	sint64 scale_;
 	sint64 disp_;
-	Expr64_SI(RegID index, sint64 scale, sint64 disp) : index_(index), scale_(scale), disp_(disp) {}
+	Reg64ExprSI(RegID index, sint64 scale, sint64 disp) : index_(index), scale_(scale), disp_(disp) {}
 };
-inline Expr64_SI operator*(const Reg64& lhs, sint64 rhs) {return Expr64_SI(lhs.reg_, rhs, 0);}
-inline Expr64_SI operator*(sint64 lhs, const Reg64& rhs) {return rhs * lhs;}
-inline Expr64_SI operator*(const Expr64_SI& lhs, sint64 rhs) {return Expr64_SI(lhs.index_, lhs.scale_ * rhs, lhs.disp_);}
-inline Expr64_SI operator*(sint64 lhs, const Expr64_SI& rhs) {return rhs * lhs;}
-inline Expr64_SI operator+(const Expr64_SI& lhs, sint64 rhs) {return Expr64_SI(lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
-inline Expr64_SI operator+(sint64 lhs, const Expr64_SI& rhs) {return rhs + lhs;}
-inline Expr64_SI operator-(const Expr64_SI& lhs, sint64 rhs) {return lhs + -rhs;}
+inline Reg64ExprSI operator*(const Reg64& lhs, sint64 rhs) {return Reg64ExprSI(lhs.reg_, rhs, 0);}
+inline Reg64ExprSI operator*(sint64 lhs, const Reg64& rhs) {return rhs * lhs;}
+inline Reg64ExprSI operator*(const Reg64ExprSI& lhs, sint64 rhs) {return Reg64ExprSI(lhs.index_, lhs.scale_ * rhs, lhs.disp_);}
+inline Reg64ExprSI operator*(sint64 lhs, const Reg64ExprSI& rhs) {return rhs * lhs;}
+inline Reg64ExprSI operator+(const Reg64ExprSI& lhs, sint64 rhs) {return Reg64ExprSI(lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
+inline Reg64ExprSI operator+(sint64 lhs, const Reg64ExprSI& rhs) {return rhs + lhs;}
+inline Reg64ExprSI operator-(const Reg64ExprSI& lhs, sint64 rhs) {return lhs + -rhs;}
 
-struct Expr64_SIB
+struct Reg64ExprSIB
 {
 	RegID base_;
 	RegID index_;
 	sint64 scale_;
 	sint64 disp_;
-	Expr64_SIB(RegID base, RegID index, sint64 scale, sint64 disp) : base_(base), index_(index), scale_(scale), disp_(disp) {}
+	Reg64ExprSIB(RegID base, RegID index, sint64 scale, sint64 disp) : base_(base), index_(index), scale_(scale), disp_(disp) {}
 };
-inline Expr64_SIB operator+(const Expr64_None& lhs, const Expr64_SI& rhs) {return Expr64_SIB(lhs.reg_, rhs.index_, rhs.scale_, lhs.disp_ + rhs.disp_);}
-inline Expr64_SIB operator+(const Expr64_SI& lhs, const Expr64_None& rhs) {return rhs + lhs;}
-inline Expr64_SIB operator+(const Expr64_SIB& lhs, sint64 rhs) {return Expr64_SIB(lhs.base_, lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
-inline Expr64_SIB operator+(sint64 lhs, const Expr64_SIB& rhs) {return rhs + lhs;}
-inline Expr64_SIB operator-(const Expr64_SIB& lhs, sint64 rhs) {return lhs + -rhs;}
+inline Reg64ExprSIB operator+(const Reg64Expr& lhs, const Reg64ExprSI& rhs) {return Reg64ExprSIB(lhs.reg_, rhs.index_, rhs.scale_, lhs.disp_ + rhs.disp_);}
+inline Reg64ExprSIB operator+(const Reg64ExprSI& lhs, const Reg64Expr& rhs) {return rhs + lhs;}
+inline Reg64ExprSIB operator+(const Reg64ExprSIB& lhs, sint64 rhs) {return Reg64ExprSIB(lhs.base_, lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
+inline Reg64ExprSIB operator+(sint64 lhs, const Reg64ExprSIB& rhs) {return rhs + lhs;}
+inline Reg64ExprSIB operator-(const Reg64ExprSIB& lhs, sint64 rhs) {return lhs + -rhs;}
 #endif
 
 template<typename OpdN>
 struct AddressingPtr
 {
 	// 32bit-Addressing
-	MemT<OpdN> operator[](const Expr32_None& obj) {return MemT<OpdN>(O_SIZE_32, obj.reg_, INVALID, 0, obj.disp_);}
-	MemT<OpdN> operator[](const Expr32_BI& obj) {return MemT<OpdN>(O_SIZE_32, obj.base_, obj.index_, 0, obj.disp_);}
-	MemT<OpdN> operator[](const Expr32_SI& obj) {return MemT<OpdN>(O_SIZE_32, INVALID, obj.index_, obj.scale_, obj.disp_);}
-	MemT<OpdN> operator[](const Expr32_SIB& obj) {return MemT<OpdN>(O_SIZE_32, obj.base_, obj.index_, obj.scale_, obj.disp_);}
-	MemT<OpdN> operator[](sint32 disp) {return MemT<OpdN>(O_SIZE_64, INVALID, INVALID, 0, disp);}
-	MemT<OpdN> operator[](uint32 disp) {return MemT<OpdN>(O_SIZE_64, INVALID, INVALID, 0, (sint32) disp);}
+	MemT<OpdN> operator[](const Reg32Expr& obj)		{return MemT<OpdN>(O_SIZE_32, obj.reg_, INVALID, 0, obj.disp_);}
+	MemT<OpdN> operator[](const Reg32ExprBI& obj)	{return MemT<OpdN>(O_SIZE_32, obj.base_, obj.index_, 0, obj.disp_);}
+	MemT<OpdN> operator[](const Reg32ExprSI& obj)	{return MemT<OpdN>(O_SIZE_32, INVALID, obj.index_, obj.scale_, obj.disp_);}
+	MemT<OpdN> operator[](const Reg32ExprSIB& obj)	{return MemT<OpdN>(O_SIZE_32, obj.base_, obj.index_, obj.scale_, obj.disp_);}
+	MemT<OpdN> operator[](sint32 disp)				{return MemT<OpdN>(O_SIZE_64, INVALID, INVALID, 0, disp);}
+	MemT<OpdN> operator[](uint32 disp)				{return MemT<OpdN>(O_SIZE_64, INVALID, INVALID, 0, (sint32) disp);}
 #ifdef JITASM64
 	// 64bit-Addressing
-	MemT<OpdN> operator[](const Expr64_None& obj) {return MemT<OpdN>(O_SIZE_64, obj.reg_, INVALID, 0, obj.disp_);}
-	MemT<OpdN> operator[](const Expr64_BI& obj) {return MemT<OpdN>(O_SIZE_64, obj.base_, obj.index_, 0, obj.disp_);}
-	MemT<OpdN> operator[](const Expr64_SI& obj) {return MemT<OpdN>(O_SIZE_64, INVALID, obj.index_, obj.scale_, obj.disp_);}
-	MemT<OpdN> operator[](const Expr64_SIB& obj) {return MemT<OpdN>(O_SIZE_64, obj.base_, obj.index_, obj.scale_, obj.disp_);}
-	MemOffset64 operator[](sint64 offset) {return MemOffset64(offset);}
-	MemOffset64 operator[](uint64 offset) {return MemOffset64((sint64) offset);}
+	MemT<OpdN> operator[](const Reg64Expr& obj)		{return MemT<OpdN>(O_SIZE_64, obj.reg_, INVALID, 0, obj.disp_);}
+	MemT<OpdN> operator[](const Reg64ExprBI& obj)	{return MemT<OpdN>(O_SIZE_64, obj.base_, obj.index_, 0, obj.disp_);}
+	MemT<OpdN> operator[](const Reg64ExprSI& obj)	{return MemT<OpdN>(O_SIZE_64, INVALID, obj.index_, obj.scale_, obj.disp_);}
+	MemT<OpdN> operator[](const Reg64ExprSIB& obj)	{return MemT<OpdN>(O_SIZE_64, obj.base_, obj.index_, obj.scale_, obj.disp_);}
+	Mem64Offset operator[](sint64 offset)			{return Mem64Offset(offset);}
+	Mem64Offset operator[](uint64 offset)			{return Mem64Offset((sint64) offset);}
 #endif
 };
 
@@ -1525,7 +1525,7 @@ struct Frontend
 	}
 
 	// LABEL
-	void label(const std::string& label_name)
+	void L(const std::string& label_name)
 	{
 		size_t label_id = GetLabelId(label_name);
 		labels_[label_id].instr_number = instrs_.size();	// Label current instruction
@@ -1736,7 +1736,7 @@ struct Frontend
 	void mov(const Mem64& opd1, const Reg64& opd2)	{PushBack(Instr(I_MOV, opd1, opd2));}
 	void mov(const Reg64& opd1, const Imm64& imm)	{PushBack(Instr(I_MOV, opd1, imm));}
 	void mov(const Mem64& opd1, const Imm64& imm)	{PushBack(Instr(I_MOV, opd1, imm));}
-	void mov(const Rax& opd1, MemOffset64& opd2)	{PushBack(Instr(I_MOV, opd1, opd2.ToMem64()));}
+	void mov(const Rax& opd1, Mem64Offset& opd2)	{PushBack(Instr(I_MOV, opd1, opd2.ToMem64()));}
 #endif
  
 	// MOVSB/MOVSW/MOVSD/MOVSQ
@@ -1810,7 +1810,7 @@ struct Frontend
 	void push(const Reg32& opd)	{PushBack(Instr(I_PUSH, opd));}
 	void push(const Mem32& opd)	{PushBack(Instr(I_PUSH, opd));}
 #endif
-	void push(const Imm64& imm)	{PushBack(Instr(I_PUSH, imm));}
+	void push(const Imm32& imm)	{PushBack(Instr(I_PUSH, imm));}
 
 	// RET
 	void ret()					{PushBack(Instr(I_RET));}
@@ -2274,9 +2274,9 @@ namespace detail {
 	struct Function : Frontend
 	{
 #ifdef JITASM64
-		typedef Expr64_None Arg;
+		typedef Reg64Expr Arg;
 #else
-		typedef Expr32_None Arg;
+		typedef Reg32Expr Arg;
 #endif
 
 		template<int ArgR> Arg Arg1() { return Arg(zbp + sizeof(void *) * (2 + ArgR)); }
