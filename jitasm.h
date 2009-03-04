@@ -77,12 +77,12 @@ enum OpdType
 
 enum OpdSize
 {
-	O_SIZE_8,
-	O_SIZE_16,
-	O_SIZE_32,
-	O_SIZE_64,
-	O_SIZE_80,
-	O_SIZE_128,
+	O_SIZE_8 = 8,
+	O_SIZE_16 = 16,
+	O_SIZE_32 = 32,
+	O_SIZE_64 = 64,
+	O_SIZE_80 = 80,
+	O_SIZE_128 = 128,
 };
 
 enum RegID
@@ -163,14 +163,14 @@ public:
 	sint64	GetImm() const {return imm_;}
 };
 
-template<OpdSize Size>
+template<int Size>
 struct OpdT : Opd
 {
 	// REG
-	explicit OpdT(RegID reg) : Opd(Size, reg) {}
+	explicit OpdT(RegID reg) : Opd(static_cast<OpdSize>(Size), reg) {}
 	// MEM
 	OpdT(OpdSize addrsize, RegID base, RegID index, sint64 scale, sint64 disp)
-		: Opd(Size, addrsize, base, index, scale, disp) {}
+		: Opd(static_cast<OpdSize>(Size), addrsize, base, index, scale, disp) {}
 protected:
 	// IMM
 	OpdT(sint64 imm) : Opd(imm) {}
@@ -2151,7 +2151,14 @@ namespace detail {
 	template<class T, int Size = sizeof(T)>
 	struct ResultT {
 		enum { ArgR = 1 };
-
+		typedef OpdT<Size * 8> OpdN;
+		OpdN val_;
+		ResultT() : val_(INVALID) {}
+		ResultT(const MemT<OpdN>& val) : val_(val) {}
+		void Store(Frontend& f) {
+			if (val_.IsMem()) {
+			}
+		}
 	};
 
 	template<class T>
@@ -2299,6 +2306,7 @@ template<class R>
 struct function0_cdecl : detail::Function<R (__cdecl *)()>
 {
 	typedef detail::ResultT<R> Result;
+	AddressingPtr< OpdT<sizeof(R) * 8> > result_ptr;
 	virtual Result main() { return Result(); }
 	void naked_main() {
 		Prolog(0);
@@ -2323,6 +2331,7 @@ template<class R, class A1>
 struct function1_cdecl : detail::Function<R (__cdecl *)(A1)>
 {
 	typedef detail::ResultT<R> Result;
+	AddressingPtr< OpdT<sizeof(R) * 8> > result_ptr;
 	virtual Result main(Arg a1) { return Result(); }
 	void naked_main() {
 		Prolog(0);
@@ -2347,6 +2356,7 @@ template<class R, class A1, class A2>
 struct function2_cdecl : detail::Function<R (__cdecl *)(A1, A2)>
 {
 	typedef detail::ResultT<R> Result;
+	AddressingPtr< OpdT<sizeof(R) * 8> > result_ptr;
 	virtual Result main(Arg a1, Arg a2) { return Result(); }
 	void naked_main() {
 		Prolog(0);
