@@ -141,40 +141,6 @@ struct test_mmx_sse2 : jitasm::function0<void>
 	}
 };
 
-struct test_func : jitasm::function0<int>
-{
-	virtual Result main()
-	{
-		xor(zax, zax);
-		mov(zcx, 100);
-	label("loop_beg");
-		cmp(zcx, 0);
-		jle("loop_end");
-		add(zax, zcx);
-		sub(zcx, 1);
-		jmp("loop_beg");
-	label("loop_end");
-#if 0
-#ifndef JITASM64
-		push(zax);
-		push((intptr_t) "%d");
-		mov(zcx, (intptr_t) printf);
-		call(zcx);
-		add(zsp, sizeof(intptr_t) * 2);
-#else
-		sub(zsp, 40);
-		mov(zcx, (intptr_t) "%d");
-		mov(zdx, zax);
-		mov(zax, (intptr_t) printf);
-		call(zax);
-		add(zsp, 40);
-#endif
-#endif
-		ret();
-		return eax;
-	}
-};
-
 //----------------------------------------
 // SAL
 //----------------------------------------
@@ -1253,7 +1219,7 @@ struct test_jmp : jitasm::function0<void>
 		jpo("L1");
 		js("L1");
 		jz("L1");
-	label("L1");
+	L("L1");
 		pabsb(xmm0, xmmword_ptr[zsp + zcx + 0x100]);	// 10 bytes
 		pabsb(xmm0, xmmword_ptr[zsp + zcx + 0x100]);	// 10 bytes
 		pabsb(xmm0, xmmword_ptr[zsp + zcx + 0x100]);	// 10 bytes
@@ -1338,44 +1304,8 @@ struct test_movs : jitasm::function0<void>
 };
 
 //----------------------------------------
-// function0_cdecl<int>
+// mov_disp
 //----------------------------------------
-extern "C" void masm_test_function0_cdecl();
-struct test_function0_cdecl : jitasm::function0_cdecl<int>
-{
-	Result main()
-	{
-		return 16;
-	}
-};
-
-//----------------------------------------
-// function1_cdecl<float>
-//----------------------------------------
-extern "C" void masm_test_function1_cdecl();
-struct test_function1_cdecl : jitasm::function1_cdecl<float, float>
-{
-	Result main(Arg a1)
-	{
-		static float sf = 20.0f;
-		movss(xmm0, real4_ptr[(uintptr_t)&sf]);
-		return xmm0;
-		//return 11.0f;
-		//return real4_ptr[a1];
-		//fld(real4_ptr[a1]);
-		//return st(0);
-	}
-};
-
-struct hoge : jitasm::function2_cdecl<void, short, int>
-{
-	virtual void main(Arg a1, Arg a2)
-	{
-		movzx(eax, word_ptr[a1]);
-		mov(ecx, dword_ptr[a2]);
-	}
-};
-
 struct mov_disp : jitasm::function0<void>
 {
 	virtual void naked_main()
@@ -1397,6 +1327,80 @@ struct mov_disp : jitasm::function0<void>
 		mov(rax, qword_ptr[-1]);
 		mov(rax, qword_ptr[0x100000000]);
 #endif
+	}
+};
+
+//----------------------------------------
+// function0_cdecl<int>
+//----------------------------------------
+extern "C" void masm_test_function0_cdecl();
+struct test_function0_cdecl : jitasm::function0_cdecl<int>
+{
+	Result main()
+	{
+		return 16;
+	}
+};
+
+//----------------------------------------
+// function1_cdecl<float>
+//----------------------------------------
+extern "C" void masm_test_function1_cdecl();
+struct test_function1_cdecl : jitasm::function1_cdecl<float, float>
+{
+	Result main(Arg a1)
+	{
+		static float sf = 20.0f;
+		mov(zcx, (intptr_t) &sf);
+		movss(xmm0, real4_ptr[zax]);
+		return xmm0;
+		//return 11.0f;
+		//return real4_ptr[a1];
+		//fld(real4_ptr[a1]);
+		//return st(0);
+	}
+};
+
+struct hoge : jitasm::function2_cdecl<void, short, int>
+{
+	virtual void main(Arg a1, Arg a2)
+	{
+		movzx(eax, word_ptr[a1]);
+		mov(ecx, dword_ptr[a2]);
+	}
+};
+
+struct test_func : jitasm::function0<int>
+{
+	virtual Result main()
+	{
+		xor(zax, zax);
+		mov(zcx, 100);
+	L("loop_beg");
+		cmp(zcx, 0);
+		jle("loop_end");
+		add(zax, zcx);
+		sub(zcx, 1);
+		jmp("loop_beg");
+	L("loop_end");
+#if 0
+#ifndef JITASM64
+		push(zax);
+		push((intptr_t) "%d");
+		mov(zcx, (intptr_t) printf);
+		call(zcx);
+		add(zsp, sizeof(intptr_t) * 2);
+#else
+		sub(zsp, 40);
+		mov(zcx, (intptr_t) "%d");
+		mov(zdx, zax);
+		mov(zax, (intptr_t) printf);
+		call(zax);
+		add(zsp, 40);
+#endif
+#endif
+		ret();
+		return eax;
 	}
 };
 
