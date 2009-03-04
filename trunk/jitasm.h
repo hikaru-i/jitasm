@@ -194,8 +194,8 @@ typedef RegT<Opd32>		Reg32;
 typedef RegT<Opd64>		Reg64;
 #endif
 typedef RegT<Opd80>		FpuReg;
-typedef RegT<Opd64>		Mmx;
-typedef RegT<Opd128>	Xmm;
+typedef RegT<Opd64>		MmxReg;
+typedef RegT<Opd128>	XmmReg;
 
 #ifdef JITASM64
 struct Rax : Reg64
@@ -354,8 +354,14 @@ struct AddressingPtr
 	MemT<OpdN> operator[](const Reg32ExprBI& obj)	{return MemT<OpdN>(O_SIZE_32, obj.base_, obj.index_, 0, obj.disp_);}
 	MemT<OpdN> operator[](const Reg32ExprSI& obj)	{return MemT<OpdN>(O_SIZE_32, INVALID, obj.index_, obj.scale_, obj.disp_);}
 	MemT<OpdN> operator[](const Reg32ExprSIB& obj)	{return MemT<OpdN>(O_SIZE_32, obj.base_, obj.index_, obj.scale_, obj.disp_);}
+#ifdef JITASM64
 	MemT<OpdN> operator[](sint32 disp)				{return MemT<OpdN>(O_SIZE_64, INVALID, INVALID, 0, disp);}
 	MemT<OpdN> operator[](uint32 disp)				{return MemT<OpdN>(O_SIZE_64, INVALID, INVALID, 0, (sint32) disp);}
+#else
+	MemT<OpdN> operator[](sint32 disp)				{return MemT<OpdN>(O_SIZE_32, INVALID, INVALID, 0, disp);}
+	MemT<OpdN> operator[](uint32 disp)				{return MemT<OpdN>(O_SIZE_32, INVALID, INVALID, 0, (sint32) disp);}
+#endif
+
 #ifdef JITASM64
 	// 64bit-Addressing
 	MemT<OpdN> operator[](const Reg64Expr& obj)		{return MemT<OpdN>(O_SIZE_64, obj.reg_, INVALID, 0, obj.disp_);}
@@ -1291,15 +1297,15 @@ struct Frontend
 	Reg8 al, cl, dl, bl, ah, ch, dh, bh;
 	Reg16 ax, cx, dx, bx, sp, bp, si, di;
 	Reg32 eax, ecx, edx, ebx, esp, ebp, esi, edi;
-	Mmx mm0, mm1, mm2, mm3, mm4, mm5, mm6, mm7;
-	Xmm xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7;
+	MmxReg mm0, mm1, mm2, mm3, mm4, mm5, mm6, mm7;
+	XmmReg xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7;
 #ifdef JITASM64
 	Reg8 r8b, r9b, r10b, r11b, r12b, r13b, r14b, r15b;
 	Reg16 r8w, r9w, r10w, r11w, r12w, r13w, r14w, r15w;
 	Reg32 r8d, r9d, r10d, r11d, r12d, r13d, r14d, r15d;
 	Rax rax;
 	Reg64 rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r10, r11, r12, r13, r14, r15;
-	Xmm xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15;
+	XmmReg xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15;
 #endif
 	struct {FpuReg operator()(size_t n) {ASSERT(n >= ST0 && n <= ST7); return FpuReg((RegID) n);}} st;
 
@@ -1966,174 +1972,174 @@ struct Frontend
 	void fld(const Mem80& opd)	{PushBack(Instr(I_FLD, opd));}
 	void fld(const FpuReg& opd)	{PushBack(Instr(I_FLD, opd));}
 
-	void addpd(const Xmm& opd1, const Xmm& opd2)	{PushBack(Instr(I_ADDPD, opd1, opd2));}
-	void addpd(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_ADDPD, opd1, opd2));}
-	void addsd(const Xmm& opd1, const Xmm& opd2)	{PushBack(Instr(I_ADDSD, opd1, opd2));}
-	void addsd(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_ADDSD, opd1, opd2));}
+	void addpd(const XmmReg& opd1, const XmmReg& opd2)	{PushBack(Instr(I_ADDPD, opd1, opd2));}
+	void addpd(const XmmReg& opd1, const Mem128& opd2)	{PushBack(Instr(I_ADDPD, opd1, opd2));}
+	void addsd(const XmmReg& opd1, const XmmReg& opd2)	{PushBack(Instr(I_ADDSD, opd1, opd2));}
+	void addsd(const XmmReg& opd1, const Mem128& opd2)	{PushBack(Instr(I_ADDSD, opd1, opd2));}
 
-	void andpd(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(I_ANDPD, opd1, opd2));}
-	void andpd(const Xmm& opd1, const Mem128& opd2)		{PushBack(Instr(I_ANDPD, opd1, opd2));}
-	void andnpd(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(I_ANDPD, opd1, opd2));}
-	void andnpd(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_ANDPD, opd1, opd2));}
+	void andpd(const XmmReg& opd1, const XmmReg& opd2)	{PushBack(Instr(I_ANDPD, opd1, opd2));}
+	void andpd(const XmmReg& opd1, const Mem128& opd2)	{PushBack(Instr(I_ANDPD, opd1, opd2));}
+	void andnpd(const XmmReg& opd1, const XmmReg& opd2)	{PushBack(Instr(I_ANDPD, opd1, opd2));}
+	void andnpd(const XmmReg& opd1, const Mem128& opd2)	{PushBack(Instr(I_ANDPD, opd1, opd2));}
 
 	void clflush(const Mem8& opd) {PushBack(Instr(I_CLFLUSH, opd));}
 
-	void cmppd(const Xmm& opd1, const Xmm& opd2, const Imm8& opd3)		{PushBack(Instr(I_CMPPD, opd1, opd2, opd3));}
-	void cmppd(const Xmm& opd1, const Mem128& opd2, const Imm8& opd3)	{PushBack(Instr(I_CMPPD, opd1, opd2, opd3));}
-	void cmpeqpd(const Xmm& opd1, const Xmm& opd2)			{cmppd(opd1, opd2, 0);}
-	void cmpeqpd(const Xmm& opd1, const Mem128& opd2)		{cmppd(opd1, opd2, 0);}
-	void cmpltpd(const Xmm& opd1, const Xmm& opd2)			{cmppd(opd1, opd2, 1);}
-	void cmpltpd(const Xmm& opd1, const Mem128& opd2)		{cmppd(opd1, opd2, 1);}
-	void cmplepd(const Xmm& opd1, const Xmm& opd2)			{cmppd(opd1, opd2, 2);}
-	void cmplepd(const Xmm& opd1, const Mem128& opd2)		{cmppd(opd1, opd2, 2);}
-	void cmpunordpd(const Xmm& opd1, const Xmm& opd2)		{cmppd(opd1, opd2, 3);}
-	void cmpunordpd(const Xmm& opd1, const Mem128& opd2)	{cmppd(opd1, opd2, 3);}
-	void cmpneqpd(const Xmm& opd1, const Xmm& opd2)			{cmppd(opd1, opd2, 4);}
-	void cmpneqpd(const Xmm& opd1, const Mem128& opd2)		{cmppd(opd1, opd2, 4);}
-	void cmpnltpd(const Xmm& opd1, const Xmm& opd2)			{cmppd(opd1, opd2, 5);}
-	void cmpnltpd(const Xmm& opd1, const Mem128& opd2)		{cmppd(opd1, opd2, 5);}
-	void cmpnlepd(const Xmm& opd1, const Xmm& opd2)			{cmppd(opd1, opd2, 6);}
-	void cmpnlepd(const Xmm& opd1, const Mem128& opd2)		{cmppd(opd1, opd2, 6);}
-	void cmpordpd(const Xmm& opd1, const Xmm& opd2)			{cmppd(opd1, opd2, 7);}
-	void cmpordpd(const Xmm& opd1, const Mem128& opd2)		{cmppd(opd1, opd2, 7);}
+	void cmppd(const XmmReg& opd1, const XmmReg& opd2, const Imm8& opd3)	{PushBack(Instr(I_CMPPD, opd1, opd2, opd3));}
+	void cmppd(const XmmReg& opd1, const Mem128& opd2, const Imm8& opd3)	{PushBack(Instr(I_CMPPD, opd1, opd2, opd3));}
+	void cmpeqpd(const XmmReg& opd1, const XmmReg& opd2)	{cmppd(opd1, opd2, 0);}
+	void cmpeqpd(const XmmReg& opd1, const Mem128& opd2)	{cmppd(opd1, opd2, 0);}
+	void cmpltpd(const XmmReg& opd1, const XmmReg& opd2)	{cmppd(opd1, opd2, 1);}
+	void cmpltpd(const XmmReg& opd1, const Mem128& opd2)	{cmppd(opd1, opd2, 1);}
+	void cmplepd(const XmmReg& opd1, const XmmReg& opd2)	{cmppd(opd1, opd2, 2);}
+	void cmplepd(const XmmReg& opd1, const Mem128& opd2)	{cmppd(opd1, opd2, 2);}
+	void cmpunordpd(const XmmReg& opd1, const XmmReg& opd2)	{cmppd(opd1, opd2, 3);}
+	void cmpunordpd(const XmmReg& opd1, const Mem128& opd2)	{cmppd(opd1, opd2, 3);}
+	void cmpneqpd(const XmmReg& opd1, const XmmReg& opd2)	{cmppd(opd1, opd2, 4);}
+	void cmpneqpd(const XmmReg& opd1, const Mem128& opd2)	{cmppd(opd1, opd2, 4);}
+	void cmpnltpd(const XmmReg& opd1, const XmmReg& opd2)	{cmppd(opd1, opd2, 5);}
+	void cmpnltpd(const XmmReg& opd1, const Mem128& opd2)	{cmppd(opd1, opd2, 5);}
+	void cmpnlepd(const XmmReg& opd1, const XmmReg& opd2)	{cmppd(opd1, opd2, 6);}
+	void cmpnlepd(const XmmReg& opd1, const Mem128& opd2)	{cmppd(opd1, opd2, 6);}
+	void cmpordpd(const XmmReg& opd1, const XmmReg& opd2)	{cmppd(opd1, opd2, 7);}
+	void cmpordpd(const XmmReg& opd1, const Mem128& opd2)	{cmppd(opd1, opd2, 7);}
 
-	void cmpps(const Xmm& opd1, const Xmm& opd2, const Imm8& opd3)		{PushBack(Instr(I_CMPPS, opd1, opd2, opd3));}
-	void cmpps(const Xmm& opd1, const Mem128& opd2, const Imm8& opd3)	{PushBack(Instr(I_CMPPS, opd1, opd2, opd3));}
-	void cmpeqps(const Xmm& opd1, const Xmm& opd2)			{cmpps(opd1, opd2, 0);}
-	void cmpeqps(const Xmm& opd1, const Mem128& opd2)		{cmpps(opd1, opd2, 0);}
-	void cmpltps(const Xmm& opd1, const Xmm& opd2)			{cmpps(opd1, opd2, 1);}
-	void cmpltps(const Xmm& opd1, const Mem128& opd2)		{cmpps(opd1, opd2, 1);}
-	void cmpleps(const Xmm& opd1, const Xmm& opd2)			{cmpps(opd1, opd2, 2);}
-	void cmpleps(const Xmm& opd1, const Mem128& opd2)		{cmpps(opd1, opd2, 2);}
-	void cmpunordps(const Xmm& opd1, const Xmm& opd2)		{cmpps(opd1, opd2, 3);}
-	void cmpunordps(const Xmm& opd1, const Mem128& opd2)	{cmpps(opd1, opd2, 3);}
-	void cmpneqps(const Xmm& opd1, const Xmm& opd2)			{cmpps(opd1, opd2, 4);}
-	void cmpneqps(const Xmm& opd1, const Mem128& opd2)		{cmpps(opd1, opd2, 4);}
-	void cmpnltps(const Xmm& opd1, const Xmm& opd2)			{cmpps(opd1, opd2, 5);}
-	void cmpnltps(const Xmm& opd1, const Mem128& opd2)		{cmpps(opd1, opd2, 5);}
-	void cmpnleps(const Xmm& opd1, const Xmm& opd2)			{cmpps(opd1, opd2, 6);}
-	void cmpnleps(const Xmm& opd1, const Mem128& opd2)		{cmpps(opd1, opd2, 6);}
-	void cmpordps(const Xmm& opd1, const Xmm& opd2)			{cmpps(opd1, opd2, 7);}
-	void cmpordps(const Xmm& opd1, const Mem128& opd2)		{cmpps(opd1, opd2, 7);}
+	void cmpps(const XmmReg& opd1, const XmmReg& opd2, const Imm8& opd3)	{PushBack(Instr(I_CMPPS, opd1, opd2, opd3));}
+	void cmpps(const XmmReg& opd1, const Mem128& opd2, const Imm8& opd3)	{PushBack(Instr(I_CMPPS, opd1, opd2, opd3));}
+	void cmpeqps(const XmmReg& opd1, const XmmReg& opd2)	{cmpps(opd1, opd2, 0);}
+	void cmpeqps(const XmmReg& opd1, const Mem128& opd2)	{cmpps(opd1, opd2, 0);}
+	void cmpltps(const XmmReg& opd1, const XmmReg& opd2)	{cmpps(opd1, opd2, 1);}
+	void cmpltps(const XmmReg& opd1, const Mem128& opd2)	{cmpps(opd1, opd2, 1);}
+	void cmpleps(const XmmReg& opd1, const XmmReg& opd2)	{cmpps(opd1, opd2, 2);}
+	void cmpleps(const XmmReg& opd1, const Mem128& opd2)	{cmpps(opd1, opd2, 2);}
+	void cmpunordps(const XmmReg& opd1, const XmmReg& opd2)	{cmpps(opd1, opd2, 3);}
+	void cmpunordps(const XmmReg& opd1, const Mem128& opd2)	{cmpps(opd1, opd2, 3);}
+	void cmpneqps(const XmmReg& opd1, const XmmReg& opd2)	{cmpps(opd1, opd2, 4);}
+	void cmpneqps(const XmmReg& opd1, const Mem128& opd2)	{cmpps(opd1, opd2, 4);}
+	void cmpnltps(const XmmReg& opd1, const XmmReg& opd2)	{cmpps(opd1, opd2, 5);}
+	void cmpnltps(const XmmReg& opd1, const Mem128& opd2)	{cmpps(opd1, opd2, 5);}
+	void cmpnleps(const XmmReg& opd1, const XmmReg& opd2)	{cmpps(opd1, opd2, 6);}
+	void cmpnleps(const XmmReg& opd1, const Mem128& opd2)	{cmpps(opd1, opd2, 6);}
+	void cmpordps(const XmmReg& opd1, const XmmReg& opd2)	{cmpps(opd1, opd2, 7);}
+	void cmpordps(const XmmReg& opd1, const Mem128& opd2)	{cmpps(opd1, opd2, 7);}
 
-	void cmpsd(const Xmm& opd1, const Xmm& opd2, const Imm8& opd3)		{PushBack(Instr(I_CMPSD, opd1, opd2, opd3));}
-	void cmpsd(const Xmm& opd1, const Mem64& opd2, const Imm8& opd3)	{PushBack(Instr(I_CMPSD, opd1, opd2, opd3));}
-	void cmpeqsd(const Xmm& opd1, const Xmm& opd2)		{cmpsd(opd1, opd2, 0);}
-	void cmpeqsd(const Xmm& opd1, const Mem64& opd2)	{cmpsd(opd1, opd2, 0);}
-	void cmpltsd(const Xmm& opd1, const Xmm& opd2)		{cmpsd(opd1, opd2, 1);}
-	void cmpltsd(const Xmm& opd1, const Mem64& opd2)	{cmpsd(opd1, opd2, 1);}
-	void cmplesd(const Xmm& opd1, const Xmm& opd2)		{cmpsd(opd1, opd2, 2);}
-	void cmplesd(const Xmm& opd1, const Mem64& opd2)	{cmpsd(opd1, opd2, 2);}
-	void cmpunordsd(const Xmm& opd1, const Xmm& opd2)	{cmpsd(opd1, opd2, 3);}
-	void cmpunordsd(const Xmm& opd1, const Mem64& opd2)	{cmpsd(opd1, opd2, 3);}
-	void cmpneqsd(const Xmm& opd1, const Xmm& opd2)		{cmpsd(opd1, opd2, 4);}
-	void cmpneqsd(const Xmm& opd1, const Mem64& opd2)	{cmpsd(opd1, opd2, 4);}
-	void cmpnltsd(const Xmm& opd1, const Xmm& opd2)		{cmpsd(opd1, opd2, 5);}
-	void cmpnltsd(const Xmm& opd1, const Mem64& opd2)	{cmpsd(opd1, opd2, 5);}
-	void cmpnlesd(const Xmm& opd1, const Xmm& opd2)		{cmpsd(opd1, opd2, 6);}
-	void cmpnlesd(const Xmm& opd1, const Mem64& opd2)	{cmpsd(opd1, opd2, 6);}
-	void cmpordsd(const Xmm& opd1, const Xmm& opd2)		{cmpsd(opd1, opd2, 7);}
-	void cmpordsd(const Xmm& opd1, const Mem64& opd2)	{cmpsd(opd1, opd2, 7);}
+	void cmpsd(const XmmReg& opd1, const XmmReg& opd2, const Imm8& opd3)	{PushBack(Instr(I_CMPSD, opd1, opd2, opd3));}
+	void cmpsd(const XmmReg& opd1, const Mem64& opd2, const Imm8& opd3)		{PushBack(Instr(I_CMPSD, opd1, opd2, opd3));}
+	void cmpeqsd(const XmmReg& opd1, const XmmReg& opd2)	{cmpsd(opd1, opd2, 0);}
+	void cmpeqsd(const XmmReg& opd1, const Mem64& opd2)		{cmpsd(opd1, opd2, 0);}
+	void cmpltsd(const XmmReg& opd1, const XmmReg& opd2)	{cmpsd(opd1, opd2, 1);}
+	void cmpltsd(const XmmReg& opd1, const Mem64& opd2)		{cmpsd(opd1, opd2, 1);}
+	void cmplesd(const XmmReg& opd1, const XmmReg& opd2)	{cmpsd(opd1, opd2, 2);}
+	void cmplesd(const XmmReg& opd1, const Mem64& opd2)		{cmpsd(opd1, opd2, 2);}
+	void cmpunordsd(const XmmReg& opd1, const XmmReg& opd2)	{cmpsd(opd1, opd2, 3);}
+	void cmpunordsd(const XmmReg& opd1, const Mem64& opd2)	{cmpsd(opd1, opd2, 3);}
+	void cmpneqsd(const XmmReg& opd1, const XmmReg& opd2)	{cmpsd(opd1, opd2, 4);}
+	void cmpneqsd(const XmmReg& opd1, const Mem64& opd2)	{cmpsd(opd1, opd2, 4);}
+	void cmpnltsd(const XmmReg& opd1, const XmmReg& opd2)	{cmpsd(opd1, opd2, 5);}
+	void cmpnltsd(const XmmReg& opd1, const Mem64& opd2)	{cmpsd(opd1, opd2, 5);}
+	void cmpnlesd(const XmmReg& opd1, const XmmReg& opd2)	{cmpsd(opd1, opd2, 6);}
+	void cmpnlesd(const XmmReg& opd1, const Mem64& opd2)	{cmpsd(opd1, opd2, 6);}
+	void cmpordsd(const XmmReg& opd1, const XmmReg& opd2)	{cmpsd(opd1, opd2, 7);}
+	void cmpordsd(const XmmReg& opd1, const Mem64& opd2)	{cmpsd(opd1, opd2, 7);}
 
-	void comisd(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(I_COMISD, opd1, opd2));}
-	void comisd(const Xmm& opd1, const Mem64& opd2)		{PushBack(Instr(I_COMISD, opd1, opd2));}
+	void comisd(const XmmReg& opd1, const XmmReg& opd2)		{PushBack(Instr(I_COMISD, opd1, opd2));}
+	void comisd(const XmmReg& opd1, const Mem64& opd2)		{PushBack(Instr(I_COMISD, opd1, opd2));}
 
-	void cvtdq2pd(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(I_CVTDQ2PD, opd1, opd2));}
-	void cvtdq2pd(const Xmm& opd1, const Mem64& opd2)	{PushBack(Instr(I_CVTDQ2PD, opd1, opd2));}
-	void cvtpd2dq(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(I_CVTPD2DQ, opd1, opd2));}
-	void cvtpd2dq(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_CVTPD2DQ, opd1, opd2));}
-	void cvtpd2pi(const Mmx& opd1, const Xmm& opd2)		{PushBack(Instr(I_CVTPD2PI, opd1, opd2));}
-	void cvtpd2pi(const Mmx& opd1, const Mem128& opd2)	{PushBack(Instr(I_CVTPD2PI, opd1, opd2));}
-	void cvtpd2ps(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(I_CVTPD2PS, opd1, opd2));}
-	void cvtpd2ps(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_CVTPD2PS, opd1, opd2));}
-	void cvtpi2pd(const Xmm& opd1, const Mmx& opd2)		{PushBack(Instr(I_CVTPI2PD, opd1, opd2));}
-	void cvtpi2pd(const Xmm& opd1, const Mem64& opd2)	{PushBack(Instr(I_CVTPI2PD, opd1, opd2));}
-	void cvtps2dq(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(I_CVTPS2DQ, opd1, opd2));}
-	void cvtps2dq(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_CVTPS2DQ, opd1, opd2));}
-	void cvtdq2ps(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(I_CVTDQ2PS, opd1, opd2));}
-	void cvtdq2ps(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_CVTDQ2PS, opd1, opd2));}
-	void cvtps2pd(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(I_CVTPS2PD, opd1, opd2));}
-	void cvtps2pd(const Xmm& opd1, const Mem64& opd2)	{PushBack(Instr(I_CVTPS2PD, opd1, opd2));}
-	void cvtsd2ss(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(I_CVTSD2SS, opd1, opd2));}
-	void cvtsd2ss(const Xmm& opd1, const Mem64& opd2)	{PushBack(Instr(I_CVTSD2SS, opd1, opd2));}
-	void cvtss2sd(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(I_CVTSS2SD, opd1, opd2));}
-	void cvtss2sd(const Xmm& opd1, const Mem32& opd2)	{PushBack(Instr(I_CVTSS2SD, opd1, opd2));}
-	void cvttpd2dq(const Xmm& opd1, const Xmm& opd2)	{PushBack(Instr(I_CVTTPD2DQ, opd1, opd2));}
-	void cvttpd2dq(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_CVTTPD2DQ, opd1, opd2));}
-	void cvttpd2pi(const Mmx& opd1, const Xmm& opd2)	{PushBack(Instr(I_CVTTPD2PI, opd1, opd2));}
-	void cvttpd2pi(const Mmx& opd1, const Mem128& opd2)	{PushBack(Instr(I_CVTTPD2PI, opd1, opd2));}
-	void cvttps2dq(const Xmm& opd1, const Xmm& opd2)	{PushBack(Instr(I_CVTTPS2DQ, opd1, opd2));}
-	void cvttps2dq(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_CVTTPS2DQ, opd1, opd2));}
+	void cvtdq2pd(const XmmReg& opd1, const XmmReg& opd2)	{PushBack(Instr(I_CVTDQ2PD, opd1, opd2));}
+	void cvtdq2pd(const XmmReg& opd1, const Mem64& opd2)	{PushBack(Instr(I_CVTDQ2PD, opd1, opd2));}
+	void cvtpd2dq(const XmmReg& opd1, const XmmReg& opd2)	{PushBack(Instr(I_CVTPD2DQ, opd1, opd2));}
+	void cvtpd2dq(const XmmReg& opd1, const Mem128& opd2)	{PushBack(Instr(I_CVTPD2DQ, opd1, opd2));}
+	void cvtpd2pi(const MmxReg& opd1, const XmmReg& opd2)	{PushBack(Instr(I_CVTPD2PI, opd1, opd2));}
+	void cvtpd2pi(const MmxReg& opd1, const Mem128& opd2)	{PushBack(Instr(I_CVTPD2PI, opd1, opd2));}
+	void cvtpd2ps(const XmmReg& opd1, const XmmReg& opd2)	{PushBack(Instr(I_CVTPD2PS, opd1, opd2));}
+	void cvtpd2ps(const XmmReg& opd1, const Mem128& opd2)	{PushBack(Instr(I_CVTPD2PS, opd1, opd2));}
+	void cvtpi2pd(const XmmReg& opd1, const MmxReg& opd2)	{PushBack(Instr(I_CVTPI2PD, opd1, opd2));}
+	void cvtpi2pd(const XmmReg& opd1, const Mem64& opd2)	{PushBack(Instr(I_CVTPI2PD, opd1, opd2));}
+	void cvtps2dq(const XmmReg& opd1, const XmmReg& opd2)	{PushBack(Instr(I_CVTPS2DQ, opd1, opd2));}
+	void cvtps2dq(const XmmReg& opd1, const Mem128& opd2)	{PushBack(Instr(I_CVTPS2DQ, opd1, opd2));}
+	void cvtdq2ps(const XmmReg& opd1, const XmmReg& opd2)	{PushBack(Instr(I_CVTDQ2PS, opd1, opd2));}
+	void cvtdq2ps(const XmmReg& opd1, const Mem128& opd2)	{PushBack(Instr(I_CVTDQ2PS, opd1, opd2));}
+	void cvtps2pd(const XmmReg& opd1, const XmmReg& opd2)	{PushBack(Instr(I_CVTPS2PD, opd1, opd2));}
+	void cvtps2pd(const XmmReg& opd1, const Mem64& opd2)	{PushBack(Instr(I_CVTPS2PD, opd1, opd2));}
+	void cvtsd2ss(const XmmReg& opd1, const XmmReg& opd2)	{PushBack(Instr(I_CVTSD2SS, opd1, opd2));}
+	void cvtsd2ss(const XmmReg& opd1, const Mem64& opd2)	{PushBack(Instr(I_CVTSD2SS, opd1, opd2));}
+	void cvtss2sd(const XmmReg& opd1, const XmmReg& opd2)	{PushBack(Instr(I_CVTSS2SD, opd1, opd2));}
+	void cvtss2sd(const XmmReg& opd1, const Mem32& opd2)	{PushBack(Instr(I_CVTSS2SD, opd1, opd2));}
+	void cvttpd2dq(const XmmReg& opd1, const XmmReg& opd2)	{PushBack(Instr(I_CVTTPD2DQ, opd1, opd2));}
+	void cvttpd2dq(const XmmReg& opd1, const Mem128& opd2)	{PushBack(Instr(I_CVTTPD2DQ, opd1, opd2));}
+	void cvttpd2pi(const MmxReg& opd1, const XmmReg& opd2)	{PushBack(Instr(I_CVTTPD2PI, opd1, opd2));}
+	void cvttpd2pi(const MmxReg& opd1, const Mem128& opd2)	{PushBack(Instr(I_CVTTPD2PI, opd1, opd2));}
+	void cvttps2dq(const XmmReg& opd1, const XmmReg& opd2)	{PushBack(Instr(I_CVTTPS2DQ, opd1, opd2));}
+	void cvttps2dq(const XmmReg& opd1, const Mem128& opd2)	{PushBack(Instr(I_CVTTPS2DQ, opd1, opd2));}
 
 	// MOVDQA
-	void movdqa(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(I_MOVDQA, opd1, opd2));}
-	void movdqa(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_MOVDQA, opd1, opd2));}
-	void movdqa(const Mem128& opd1, const Xmm& opd2)	{PushBack(Instr(I_MOVDQA, opd1, opd2));}
+	void movdqa(const XmmReg& opd1, const XmmReg& opd2)	{PushBack(Instr(I_MOVDQA, opd1, opd2));}
+	void movdqa(const XmmReg& opd1, const Mem128& opd2)	{PushBack(Instr(I_MOVDQA, opd1, opd2));}
+	void movdqa(const Mem128& opd1, const XmmReg& opd2)	{PushBack(Instr(I_MOVDQA, opd1, opd2));}
 
 	// MOVDQU
-	void movdqu(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(I_MOVDQU, opd1, opd2));}
-	void movdqu(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_MOVDQU, opd1, opd2));}
-	void movdqu(const Mem128& opd1, const Xmm& opd2)	{PushBack(Instr(I_MOVDQU, opd1, opd2));}
+	void movdqu(const XmmReg& opd1, const XmmReg& opd2)	{PushBack(Instr(I_MOVDQU, opd1, opd2));}
+	void movdqu(const XmmReg& opd1, const Mem128& opd2)	{PushBack(Instr(I_MOVDQU, opd1, opd2));}
+	void movdqu(const Mem128& opd1, const XmmReg& opd2)	{PushBack(Instr(I_MOVDQU, opd1, opd2));}
 
 	// MOVSD
-	void movsd(const Xmm& dst, const Xmm& src)		{PushBack(Instr(I_MOVSD, dst, src));}
-	void movsd(const Xmm& dst, const Mem64& src)	{PushBack(Instr(I_MOVSD, dst, src));}
-	void movsd(const Mem64& dst, const Xmm& src)	{PushBack(Instr(I_MOVSD, dst, src));}
+	void movsd(const XmmReg& dst, const XmmReg& src)	{PushBack(Instr(I_MOVSD, dst, src));}
+	void movsd(const XmmReg& dst, const Mem64& src)		{PushBack(Instr(I_MOVSD, dst, src));}
+	void movsd(const Mem64& dst, const XmmReg& src)		{PushBack(Instr(I_MOVSD, dst, src));}
 
 	// MOVSS
-	void movss(const Xmm& dst, const Xmm& src)		{PushBack(Instr(I_MOVSS, dst, src));}
-	void movss(const Xmm& dst, const Mem32& src)	{PushBack(Instr(I_MOVSS, dst, src));}
-	void movss(const Mem32& dst, const Xmm& src)	{PushBack(Instr(I_MOVSS, dst, src));}
+	void movss(const XmmReg& dst, const XmmReg& src)	{PushBack(Instr(I_MOVSS, dst, src));}
+	void movss(const XmmReg& dst, const Mem32& src)		{PushBack(Instr(I_MOVSS, dst, src));}
+	void movss(const Mem32& dst, const XmmReg& src)		{PushBack(Instr(I_MOVSS, dst, src));}
 
 	// PABSB/PABSW/PABSD
-	void pabsb(const Mmx& opd1, const Mmx& opd2)	{PushBack(Instr(I_PABSB, opd1, opd2));}
-	void pabsb(const Mmx& opd1, const Mem64& opd2)	{PushBack(Instr(I_PABSB, opd1, opd2));}
-	void pabsb(const Xmm& opd1, const Xmm& opd2)	{PushBack(Instr(I_PABSB, opd1, opd2));}
-	void pabsb(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_PABSB, opd1, opd2));}
-	void pabsw(const Mmx& opd1, const Mmx& opd2)	{PushBack(Instr(I_PABSW, opd1, opd2));}
-	void pabsw(const Mmx& opd1, const Mem64& opd2)	{PushBack(Instr(I_PABSW, opd1, opd2));}
-	void pabsw(const Xmm& opd1, const Xmm& opd2)	{PushBack(Instr(I_PABSW, opd1, opd2));}
-	void pabsw(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_PABSW, opd1, opd2));}
-	void pabsd(const Mmx& opd1, const Mmx& opd2)	{PushBack(Instr(I_PABSD, opd1, opd2));}
-	void pabsd(const Mmx& opd1, const Mem64& opd2)	{PushBack(Instr(I_PABSD, opd1, opd2));}
-	void pabsd(const Xmm& opd1, const Xmm& opd2)	{PushBack(Instr(I_PABSD, opd1, opd2));}
-	void pabsd(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_PABSD, opd1, opd2));}
+	void pabsb(const MmxReg& opd1, const MmxReg& opd2)	{PushBack(Instr(I_PABSB, opd1, opd2));}
+	void pabsb(const MmxReg& opd1, const Mem64& opd2)	{PushBack(Instr(I_PABSB, opd1, opd2));}
+	void pabsb(const XmmReg& opd1, const XmmReg& opd2)	{PushBack(Instr(I_PABSB, opd1, opd2));}
+	void pabsb(const XmmReg& opd1, const Mem128& opd2)	{PushBack(Instr(I_PABSB, opd1, opd2));}
+	void pabsw(const MmxReg& opd1, const MmxReg& opd2)	{PushBack(Instr(I_PABSW, opd1, opd2));}
+	void pabsw(const MmxReg& opd1, const Mem64& opd2)	{PushBack(Instr(I_PABSW, opd1, opd2));}
+	void pabsw(const XmmReg& opd1, const XmmReg& opd2)	{PushBack(Instr(I_PABSW, opd1, opd2));}
+	void pabsw(const XmmReg& opd1, const Mem128& opd2)	{PushBack(Instr(I_PABSW, opd1, opd2));}
+	void pabsd(const MmxReg& opd1, const MmxReg& opd2)	{PushBack(Instr(I_PABSD, opd1, opd2));}
+	void pabsd(const MmxReg& opd1, const Mem64& opd2)	{PushBack(Instr(I_PABSD, opd1, opd2));}
+	void pabsd(const XmmReg& opd1, const XmmReg& opd2)	{PushBack(Instr(I_PABSD, opd1, opd2));}
+	void pabsd(const XmmReg& opd1, const Mem128& opd2)	{PushBack(Instr(I_PABSD, opd1, opd2));}
 
 	// PACKSSWB/PACKSSDW/PACKUSWB/PACKUSDW
-	void packsswb(const Mmx& opd1, const Mmx& opd2)		{PushBack(Instr(I_PACKSSWB, opd1, opd2));}
-	void packsswb(const Mmx& opd1, const Mem64& opd2)	{PushBack(Instr(I_PACKSSWB, opd1, opd2));}
-	void packsswb(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(I_PACKSSWB, opd1, opd2));}
-	void packsswb(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_PACKSSWB, opd1, opd2));}
-	void packssdw(const Mmx& opd1, const Mmx& opd2)		{PushBack(Instr(I_PACKSSDW, opd1, opd2));}
-	void packssdw(const Mmx& opd1, const Mem64& opd2)	{PushBack(Instr(I_PACKSSDW, opd1, opd2));}
-	void packssdw(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(I_PACKSSDW, opd1, opd2));}
-	void packssdw(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_PACKSSDW, opd1, opd2));}
-	void packuswb(const Mmx& opd1, const Mmx& opd2)		{PushBack(Instr(I_PACKUSWB, opd1, opd2));}
-	void packuswb(const Mmx& opd1, const Mem64& opd2)	{PushBack(Instr(I_PACKUSWB, opd1, opd2));}
-	void packuswb(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(I_PACKUSWB, opd1, opd2));}
-	void packuswb(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_PACKUSWB, opd1, opd2));}
-	void packusdw(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(I_PACKUSDW, opd1, opd2));}
-	void packusdw(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_PACKUSDW, opd1, opd2));}
+	void packsswb(const MmxReg& opd1, const MmxReg& opd2)	{PushBack(Instr(I_PACKSSWB, opd1, opd2));}
+	void packsswb(const MmxReg& opd1, const Mem64& opd2)	{PushBack(Instr(I_PACKSSWB, opd1, opd2));}
+	void packsswb(const XmmReg& opd1, const XmmReg& opd2)	{PushBack(Instr(I_PACKSSWB, opd1, opd2));}
+	void packsswb(const XmmReg& opd1, const Mem128& opd2)	{PushBack(Instr(I_PACKSSWB, opd1, opd2));}
+	void packssdw(const MmxReg& opd1, const MmxReg& opd2)	{PushBack(Instr(I_PACKSSDW, opd1, opd2));}
+	void packssdw(const MmxReg& opd1, const Mem64& opd2)	{PushBack(Instr(I_PACKSSDW, opd1, opd2));}
+	void packssdw(const XmmReg& opd1, const XmmReg& opd2)	{PushBack(Instr(I_PACKSSDW, opd1, opd2));}
+	void packssdw(const XmmReg& opd1, const Mem128& opd2)	{PushBack(Instr(I_PACKSSDW, opd1, opd2));}
+	void packuswb(const MmxReg& opd1, const MmxReg& opd2)	{PushBack(Instr(I_PACKUSWB, opd1, opd2));}
+	void packuswb(const MmxReg& opd1, const Mem64& opd2)	{PushBack(Instr(I_PACKUSWB, opd1, opd2));}
+	void packuswb(const XmmReg& opd1, const XmmReg& opd2)	{PushBack(Instr(I_PACKUSWB, opd1, opd2));}
+	void packuswb(const XmmReg& opd1, const Mem128& opd2)	{PushBack(Instr(I_PACKUSWB, opd1, opd2));}
+	void packusdw(const XmmReg& opd1, const XmmReg& opd2)	{PushBack(Instr(I_PACKUSDW, opd1, opd2));}
+	void packusdw(const XmmReg& opd1, const Mem128& opd2)	{PushBack(Instr(I_PACKUSDW, opd1, opd2));}
 
 	// PADDB/PADDW/PADDD
-	void paddb(const Mmx& opd1, const Mmx& opd2)	{PushBack(Instr(I_PADDB, opd1, opd2));}
-	void paddb(const Mmx& opd1, const Mem64& opd2)	{PushBack(Instr(I_PADDB, opd1, opd2));}
-	void paddb(const Xmm& opd1, const Xmm& opd2)	{PushBack(Instr(I_PADDB, opd1, opd2));}
-	void paddb(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_PADDB, opd1, opd2));}
-	void paddw(const Mmx& opd1, const Mmx& opd2)	{PushBack(Instr(I_PADDW, opd1, opd2));}
-	void paddw(const Mmx& opd1, const Mem64& opd2)	{PushBack(Instr(I_PADDW, opd1, opd2));}
-	void paddw(const Xmm& opd1, const Xmm& opd2)	{PushBack(Instr(I_PADDW, opd1, opd2));}
-	void paddw(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_PADDW, opd1, opd2));}
-	void paddd(const Mmx& opd1, const Mmx& opd2)	{PushBack(Instr(I_PADDD, opd1, opd2));}
-	void paddd(const Mmx& opd1, const Mem64& opd2)	{PushBack(Instr(I_PADDD, opd1, opd2));}
-	void paddd(const Xmm& opd1, const Xmm& opd2)	{PushBack(Instr(I_PADDD, opd1, opd2));}
-	void paddd(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_PADDD, opd1, opd2));}
+	void paddb(const MmxReg& opd1, const MmxReg& opd2)	{PushBack(Instr(I_PADDB, opd1, opd2));}
+	void paddb(const MmxReg& opd1, const Mem64& opd2)	{PushBack(Instr(I_PADDB, opd1, opd2));}
+	void paddb(const XmmReg& opd1, const XmmReg& opd2)	{PushBack(Instr(I_PADDB, opd1, opd2));}
+	void paddb(const XmmReg& opd1, const Mem128& opd2)	{PushBack(Instr(I_PADDB, opd1, opd2));}
+	void paddw(const MmxReg& opd1, const MmxReg& opd2)	{PushBack(Instr(I_PADDW, opd1, opd2));}
+	void paddw(const MmxReg& opd1, const Mem64& opd2)	{PushBack(Instr(I_PADDW, opd1, opd2));}
+	void paddw(const XmmReg& opd1, const XmmReg& opd2)	{PushBack(Instr(I_PADDW, opd1, opd2));}
+	void paddw(const XmmReg& opd1, const Mem128& opd2)	{PushBack(Instr(I_PADDW, opd1, opd2));}
+	void paddd(const MmxReg& opd1, const MmxReg& opd2)	{PushBack(Instr(I_PADDD, opd1, opd2));}
+	void paddd(const MmxReg& opd1, const Mem64& opd2)	{PushBack(Instr(I_PADDD, opd1, opd2));}
+	void paddd(const XmmReg& opd1, const XmmReg& opd2)	{PushBack(Instr(I_PADDD, opd1, opd2));}
+	void paddd(const XmmReg& opd1, const Mem128& opd2)	{PushBack(Instr(I_PADDD, opd1, opd2));}
 
 	// PXOR
-	void pxor(const Mmx& opd1, const Mmx& opd2)		{PushBack(Instr(I_PXOR, opd1, opd2));}
-	void pxor(const Mmx& opd1, const Mem64& opd2)	{PushBack(Instr(I_PXOR, opd1, opd2));}
-	void pxor(const Xmm& opd1, const Xmm& opd2)		{PushBack(Instr(I_PXOR, opd1, opd2));}
-	void pxor(const Xmm& opd1, const Mem128& opd2)	{PushBack(Instr(I_PXOR, opd1, opd2));}
+	void pxor(const MmxReg& opd1, const MmxReg& opd2)	{PushBack(Instr(I_PXOR, opd1, opd2));}
+	void pxor(const MmxReg& opd1, const Mem64& opd2)	{PushBack(Instr(I_PXOR, opd1, opd2));}
+	void pxor(const XmmReg& opd1, const XmmReg& opd2)	{PushBack(Instr(I_PXOR, opd1, opd2));}
+	void pxor(const XmmReg& opd1, const Mem128& opd2)	{PushBack(Instr(I_PXOR, opd1, opd2));}
 };
 
 namespace detail {
@@ -2209,7 +2215,7 @@ namespace detail {
 		ResultT() {}
 		ResultT(const FpuReg& fpu) : val_(fpu) {}
 		ResultT(const Mem32& mem) : val_(mem) {}
-		ResultT(const Xmm& xmm) : val_(xmm) {}
+		ResultT(const XmmReg& xmm) : val_(xmm) {}
 		ResultT(const float imm) : val_(Imm32(*(uint32*)&imm)) {}
 		void Store(Frontend& f) {
 			if (val_.IsReg() && val_.GetSize() == O_SIZE_80) {
@@ -2223,7 +2229,7 @@ namespace detail {
 			}
 			else if (val_.IsReg() && val_.GetSize() == O_SIZE_128) {
 				// from XMM register
-				f.movss(f.dword_ptr[f.esp - 4], static_cast<Xmm&>(val_));
+				f.movss(f.dword_ptr[f.esp - 4], static_cast<XmmReg&>(val_));
 				f.fld(f.real4_ptr[f.esp - 4]);
 			}
 			else if (val_.IsImm()) {
@@ -2242,7 +2248,7 @@ namespace detail {
 		ResultT() {}
 		ResultT(const FpuReg& fpu) : val_(fpu) {}
 		ResultT(const Mem64& mem) : val_(mem) {}
-		ResultT(const Xmm& xmm) : val_(xmm) {}
+		ResultT(const XmmReg& xmm) : val_(xmm) {}
 		ResultT(const double imm) : val_(Imm32(0)), imm_(imm) {}
 		void Store(Frontend& f) {
 			if (val_.IsReg() && val_.GetSize() == O_SIZE_80) {
@@ -2256,7 +2262,7 @@ namespace detail {
 			}
 			else if (val_.IsReg() && val_.GetSize() == O_SIZE_128) {
 				// from XMM register
-				f.movsd(f.qword_ptr[f.esp - 8], static_cast<Xmm&>(val_));
+				f.movsd(f.qword_ptr[f.esp - 8], static_cast<XmmReg&>(val_));
 				f.fld(f.real8_ptr[f.esp - 8]);
 			}
 			else if (val_.IsImm()) {
