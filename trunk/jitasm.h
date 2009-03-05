@@ -2168,6 +2168,7 @@ namespace detail {
 		return (size + N - 1) / N * N;
 	}
 
+	/// Result type traits
 	template<class T>
 	struct ResultTraits {
 		enum { size = sizeof(T) };
@@ -2175,6 +2176,7 @@ namespace detail {
 		typedef AddressingPtr<OpdR>	ResultPtr;
 	};
 
+	// specialization for void
 	template<>
 	struct ResultTraits<void> {
 		enum { size = 0 };
@@ -2190,7 +2192,8 @@ namespace detail {
 		OpdR val_;
 		ResultT() : val_(INVALID) {}
 		ResultT(const MemT<OpdR>& val) : val_(val) {}
-		void Store(Frontend& f) {
+		void Store(Frontend& f)
+		{
 			if (val_.IsMem()) {
 				f.mov(f.ecx, Size);
 				f.lea(f.esi, static_cast<Mem32&>(static_cast<Opd&>(val_)));
@@ -2216,7 +2219,8 @@ namespace detail {
 		ResultT() : val_(INVALID) {}
 		ResultT(const Opd8& val) : val_(val) {}
 		ResultT(uint8 imm) : val_(Imm8(imm)) {}
-		void Store(Frontend& f) {
+		void Store(Frontend& f)
+		{
 			if (!(val_.IsReg() && (val_.GetReg() == INVALID || val_.GetReg() == AL)))
 				f.mov(f.al, static_cast<Reg8&>(val_));
 		}
@@ -2230,7 +2234,8 @@ namespace detail {
 		ResultT() : val_(INVALID) {}
 		ResultT(const Opd16& val) : val_(val) {}
 		ResultT(uint16 imm) : val_(Imm16(imm)) {}
-		void Store(Frontend& f) {
+		void Store(Frontend& f)
+		{
 			if (!(val_.IsReg() && (val_.GetReg() == INVALID || val_.GetReg() == AX)))
 				f.mov(f.ax, static_cast<Reg16&>(val_));
 		}
@@ -2244,7 +2249,8 @@ namespace detail {
 		ResultT() : val_(INVALID) {}
 		ResultT(const Opd32& val) : val_(val) {}
 		ResultT(uint32 imm) : val_(Imm32(imm)) {}
-		void Store(Frontend& f) {
+		void Store(Frontend& f)
+		{
 			if (!(val_.IsReg() && (val_.GetReg() == INVALID || val_.GetReg() == EAX)))
 				f.mov(f.eax, static_cast<Reg32&>(val_));
 		}
@@ -2258,7 +2264,8 @@ namespace detail {
 		ResultT() : val_(INVALID) {}
 		ResultT(const Opd64& val) : val_(val) {}
 		ResultT(uint64 imm) : val_(Imm64(imm)) {}
-		void Store(Frontend& f) {
+		void Store(Frontend& f)
+		{
 #ifdef JITASM64
 			if (!(val_.IsReg() && (val_.GetReg() == INVALID || val_.GetReg() == RAX)))
 				f.mov(f.rax, static_cast<Reg64&>(val_));
@@ -2289,7 +2296,8 @@ namespace detail {
 		ResultT(const Mem32& mem) : val_(mem) {}
 		ResultT(const XmmReg& xmm) : val_(xmm) {}
 		ResultT(const float imm) : val_(Imm32(*(uint32*)&imm)) {}
-		void Store(Frontend& f) {
+		void Store(Frontend& f)
+		{
 			if (val_.IsReg() && val_.GetSize() == O_SIZE_80) {
 				// from FPU register
 				if (val_.GetReg() != ST0)
@@ -2323,7 +2331,8 @@ namespace detail {
 		ResultT(const Mem64& mem) : val_(mem) {}
 		ResultT(const XmmReg& xmm) : val_(xmm) {}
 		ResultT(const double imm) : val_(Imm32(0)), imm_(imm) {}
-		void Store(Frontend& f) {
+		void Store(Frontend& f)
+		{
 			if (val_.IsReg() && val_.GetSize() == O_SIZE_80) {
 				// from FPU register
 				if (val_.GetReg() != ST0)
