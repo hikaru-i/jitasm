@@ -1351,7 +1351,7 @@ struct test_function1_cdecl : jitasm::function1_cdecl<float, float>
 	Result main(Arg a1)
 	{
 		static float sf = 20.0f;
-		mov(zcx, (intptr_t) &sf);
+		mov(zax, (uintptr_t)&sf);
 		movss(xmm0, real4_ptr[zax]);
 		return xmm0;
 		//return 11.0f;
@@ -1361,12 +1361,21 @@ struct test_function1_cdecl : jitasm::function1_cdecl<float, float>
 	}
 };
 
-struct hoge : jitasm::function2_cdecl<void, short, int>
+struct Foo {
+	char c[5];
+};
+
+struct hoge : jitasm::function2_cdecl<Foo, short, int>
 {
-	virtual void main(Arg a1, Arg a2)
+	virtual Result main(Arg a1, Arg a2)
 	{
 		movzx(eax, word_ptr[a1]);
 		mov(ecx, dword_ptr[a2]);
+
+		mov(byte_ptr[esp - 8], al);
+		mov(byte_ptr[esp - 7], cl);
+		mov(byte_ptr[esp - 6], 0xAA);
+		return result_ptr[esp - 8];
 	}
 };
 

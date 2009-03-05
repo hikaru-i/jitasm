@@ -2152,19 +2152,47 @@ namespace detail {
 		return (size + N - 1) / N * N;
 	}
 
-	template<class T, int Size = sizeof(T)>
+	template<class T>
+	struct ResultTraits {
+		enum { size = sizeof(T) };
+		typedef OpdT<sizeof(T) * 8>	OpdR;
+		typedef AddressingPtr<OpdR>	ResultPtr;
+	};
+
+	template<>
+	struct ResultTraits<void> {
+		enum { size = 0 };
+		struct OpdR {};
+		struct ResultPtr {};
+	};
+
+	/// Function result
+	template<class T, int Size = ResultTraits<T>::size>
 	struct ResultT {
-		enum { ArgR = 1 };
-		typedef OpdT<Size * 8> OpdN;
-		OpdN val_;
+		enum { ArgR = 1 /* First (hidden) argument is pointer for copying result. */};
+		typedef typename ResultTraits<T>::OpdR OpdR;
+		OpdR val_;
 		ResultT() : val_(INVALID) {}
-		ResultT(const MemT<OpdN>& val) : val_(val) {}
+		ResultT(const MemT<OpdR>& val) : val_(val) {}
 		void Store(Frontend& f) {
 			if (val_.IsMem()) {
+				f.mov(f.ecx, Size);
+				f.lea(f.esi, static_cast<Mem32&>(static_cast<Opd&>(val_)));
+				f.mov(f.edi, f.dword_ptr[f.ebp + sizeof(void *) * 2]);
+				f.mov(f.eax, f.edi);
+				f.rep_movsb();
 			}
 		}
 	};
 
+	// specialization for void
+	template<>
+	struct ResultT<void, 0> {
+		enum { ArgR = 0 };
+		ResultT();
+	};
+
+	// specialization for 1byte type
 	template<class T>
 	struct ResultT<T, 1> {
 		enum { ArgR = 0 };
@@ -2178,6 +2206,7 @@ namespace detail {
 		}
 	};
 
+	// specialization for 2bytes type
 	template<class T>
 	struct ResultT<T, 2> {
 		enum { ArgR = 0 };
@@ -2191,6 +2220,7 @@ namespace detail {
 		}
 	};
 
+	// specialization for 4bytes type
 	template<class T>
 	struct ResultT<T, 4> {
 		enum { ArgR = 0 };
@@ -2205,6 +2235,7 @@ namespace detail {
 	};
 
 #ifdef JITASM64
+	// specialization for 8bytes type
 	template<class T>
 	struct ResultT<T, 8> {
 		enum { ArgR = 0 };
@@ -2219,6 +2250,7 @@ namespace detail {
 	};
 #endif
 
+	// specialization for float
 	template<>
 	struct ResultT<float, 4> {
 		enum { ArgR = 0 };
@@ -2251,6 +2283,7 @@ namespace detail {
 		}
 	};
 
+	// specialization for double
 	template<>
 	struct ResultT<double, 8> {
 		enum { ArgR = 0 };
@@ -2276,7 +2309,7 @@ namespace detail {
 				f.movsd(f.qword_ptr[f.esp - 8], static_cast<XmmReg&>(val_));
 				f.fld(f.real8_ptr[f.esp - 8]);
 			}
-			else if (val_.IsImm()) {
+			else if (val_.IsImm()) {	// val_ is immediate 0
 				// from double immediate
 				f.mov(f.dword_ptr[f.esp - 8], *reinterpret_cast<uint32*>(&imm_));
 				f.mov(f.dword_ptr[f.esp - 4], *(reinterpret_cast<uint32*>(&imm_) + 1));
@@ -2287,18 +2320,20 @@ namespace detail {
 
 
 	/// cdecl function base class
-	template<class FuncPtr>
+	template<class R, class FuncPtr>
 	struct Function : Frontend
 	{
 #ifdef JITASM64
-		typedef Reg64Expr Arg;
+		typedef Reg64Expr Arg;		///< main function argument type
 #else
-		typedef Reg32Expr Arg;
+		typedef Reg32Expr Arg;		///< main function argument type
 #endif
+		typedef ResultT<R> Result;	///< main function result type
+		typename ResultTraits<R>::ResultPtr result_ptr;
 
-		template<int ArgR> Arg Arg1() { return Arg(zbp + sizeof(void *) * (2 + ArgR)); }
-		template<int ArgR, class A1> Arg Arg2() { return Arg1<ArgR>() + AlignSize<sizeof(void *)>(sizeof(A1)); }
-		template<int ArgR, class A1, class A2> Arg Arg3() { return Arg2<A1, ArgR>() + AlignSize<sizeof(void *)>(sizeof(A2)); }
+		Arg Arg1() { return Arg(zbp + sizeof(void *) * (2 + Result::ArgR)); }
+		template<class A1> Arg Arg2() { return Arg1() + AlignSize<sizeof(void *)>(sizeof(A1)); }
+		template<class A1, class A2> Arg Arg3() { return Arg2<A1>() + AlignSize<sizeof(void *)>(sizeof(A2)); }
 
 		operator FuncPtr() { return (FuncPtr)GetCode(); }
 	};
@@ -2307,10 +2342,8 @@ namespace detail {
 
 /// cdecl function which has no argument
 template<class R>
-struct function0_cdecl : detail::Function<R (__cdecl *)()>
+struct function0_cdecl : detail::Function<R, R (__cdecl *)()>
 {
-	typedef detail::ResultT<R> Result;
-	AddressingPtr< OpdT<sizeof(R) * 8> > result_ptr;
 	virtual Result main() { return Result(); }
 	void naked_main() {
 		Prolog(0);
@@ -2320,7 +2353,7 @@ struct function0_cdecl : detail::Function<R (__cdecl *)()>
 };
 
 template<>
-struct function0_cdecl<void> : detail::Function<void (__cdecl *)()>
+struct function0_cdecl<void> : detail::Function<void, void (__cdecl *)()>
 {
 	virtual void main() {}
 	void naked_main()	{
@@ -2332,50 +2365,46 @@ struct function0_cdecl<void> : detail::Function<void (__cdecl *)()>
 
 /// cdecl function which has 1 argument
 template<class R, class A1>
-struct function1_cdecl : detail::Function<R (__cdecl *)(A1)>
+struct function1_cdecl : detail::Function<R, R (__cdecl *)(A1)>
 {
-	typedef detail::ResultT<R> Result;
-	AddressingPtr< OpdT<sizeof(R) * 8> > result_ptr;
 	virtual Result main(Arg a1) { return Result(); }
 	void naked_main() {
 		Prolog(0);
-		main(Arg1<Result::ArgR>()).Store(*this);
+		main(Arg1()).Store(*this);
 		Epilog();
 	}
 };
 
 template<class A1>
-struct function1_cdecl<void, A1> : detail::Function<void (__cdecl *)(A1)>
+struct function1_cdecl<void, A1> : detail::Function<void, void (__cdecl *)(A1)>
 {
 	virtual void main(Arg a1) {}
 	void naked_main() {
 		Prolog(0);
-		main(Arg1<0>());
+		main(Arg1());
 		Epilog();
 	}
 };
 
 /// cdecl function which has 2 arguments
 template<class R, class A1, class A2>
-struct function2_cdecl : detail::Function<R (__cdecl *)(A1, A2)>
+struct function2_cdecl : detail::Function<R, R (__cdecl *)(A1, A2)>
 {
-	typedef detail::ResultT<R> Result;
-	AddressingPtr< OpdT<sizeof(R) * 8> > result_ptr;
 	virtual Result main(Arg a1, Arg a2) { return Result(); }
 	void naked_main() {
 		Prolog(0);
-		main(Arg1<Result::ArgR>(), Arg2<Result::ArgR, A1>()).Store(*this);
+		main(Arg1(), Arg2<A1>()).Store(*this);
 		Epilog();
 	}
 };
 
 template<class A1, class A2>
-struct function2_cdecl<void, A1, A2> : detail::Function<void (__cdecl *)(A1, A2)>
+struct function2_cdecl<void, A1, A2> : detail::Function<void, void (__cdecl *)(A1, A2)>
 {
 	virtual void main(Arg a1, Arg a2) {}
 	void naked_main() {
 		Prolog(0);
-		main(Arg1<0>(), Arg2<0, A1>());
+		main(Arg1(), Arg2<A1>());
 		Epilog();
 	}
 };
