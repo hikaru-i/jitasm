@@ -140,11 +140,7 @@ protected:
 		if (detail::IsInt8(imm)) opdsize_ = O_SIZE_8;
 		else if (detail::IsInt16(imm)) opdsize_ = O_SIZE_16;
 		else if (detail::IsInt32(imm)) opdsize_ = O_SIZE_32;
-#ifdef JITASM64
 		else opdsize_ = O_SIZE_64;
-#else
-		else ASSERT(0);
-#endif
 	}
 
 public:
@@ -1378,14 +1374,34 @@ struct Frontend
 		push(r13);
 		push(r14);
 		push(r15);
-		// TODO Save XMM registers
+		sub(rsp, 160);
+		movdqu(xmmword_ptr[rsp], xmm15);
+		movdqu(xmmword_ptr[rsp + 16], xmm14);
+		movdqu(xmmword_ptr[rsp + 32], xmm13);
+		movdqu(xmmword_ptr[rsp + 48], xmm12);
+		movdqu(xmmword_ptr[rsp + 64], xmm11);
+		movdqu(xmmword_ptr[rsp + 80], xmm10);
+		movdqu(xmmword_ptr[rsp + 96], xmm9);
+		movdqu(xmmword_ptr[rsp + 112], xmm8);
+		movdqu(xmmword_ptr[rsp + 128], xmm7);
+		movdqu(xmmword_ptr[rsp + 144], xmm6);
 #endif
 	}
 
 	virtual void Epilog()
 	{
 #ifdef JITASM64
-		// TODO Restore XMM registers
+		movdqu(xmm15, xmmword_ptr[rsp]);
+		movdqu(xmm14, xmmword_ptr[rsp + 16]);
+		movdqu(xmm13, xmmword_ptr[rsp + 32]);
+		movdqu(xmm12, xmmword_ptr[rsp + 48]);
+		movdqu(xmm11, xmmword_ptr[rsp + 64]);
+		movdqu(xmm10, xmmword_ptr[rsp + 80]);
+		movdqu(xmm9, xmmword_ptr[rsp + 96]);
+		movdqu(xmm8, xmmword_ptr[rsp + 112]);
+		movdqu(xmm7, xmmword_ptr[rsp + 128]);
+		movdqu(xmm6, xmmword_ptr[rsp + 144]);
+		add(rsp, 160);
 		pop(r15);
 		pop(r14);
 		pop(r13);
@@ -2234,7 +2250,6 @@ namespace detail {
 		}
 	};
 
-#ifdef JITASM64
 	// specialization for 8bytes type
 	template<class T>
 	struct ResultT<T, 8> {
@@ -2244,11 +2259,25 @@ namespace detail {
 		ResultT(const Opd64& val) : val_(val) {}
 		ResultT(uint64 imm) : val_(Imm64(imm)) {}
 		void Store(Frontend& f) {
+#ifdef JITASM64
 			if (!(val_.IsReg() && (val_.GetReg() == INVALID || val_.GetReg() == RAX)))
 				f.mov(f.rax, static_cast<Reg64&>(val_));
+#else
+			if (val_.IsMem()) {
+				// from memory
+				Mem32 lo(val_.GetAddressSize(), val_.GetBase(), val_.GetIndex(), val_.GetScale(), val_.GetDisp());
+				Mem32 hi(val_.GetAddressSize(), val_.GetBase(), val_.GetIndex(), val_.GetScale(), val_.GetDisp() + 4);
+				f.mov(f.eax, lo);
+				f.mov(f.edx, hi);
+			}
+			else if (val_.IsImm()) {
+				// from immediate
+				f.mov(f.eax, static_cast<sint32>(val_.GetImm()));
+				f.mov(f.edx, static_cast<sint32>(val_.GetImm() >> 32));
+			}
+#endif
 		}
 	};
-#endif
 
 	// specialization for float
 	template<>
