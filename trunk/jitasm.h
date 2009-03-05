@@ -378,7 +378,7 @@ struct AddressingPtr
 //----------------------------------------
 enum InstrID
 {
-	I_ADC, I_ADD, I_AND, I_CALL, I_CMP, I_DEC, I_INC,
+	I_ADC, I_ADD, I_AND, I_CALL, I_CMP, I_DEC, I_INC, I_INT3,
 	I_JMP, I_JA, I_JAE, I_JB, I_JBE, I_JCXZ, I_JECXZ, I_JRCXZ, I_JE,
 	I_JG, I_JGE, I_JL, I_JLE, I_JNE, I_JNO, I_JNP, I_JNS, I_JO, I_JP, I_JS,
 	I_LEA, I_LEAVE,
@@ -1043,6 +1043,7 @@ struct Backend
 		case I_CMP:			EncodeADD(0x38, opd1, opd2); break;
 		case I_DEC:			EncodeINC(0x48, 1, opd1); break;
 		case I_INC:			EncodeINC(0x40, 0, opd1); break;
+		case I_INT3:		db(0xCC); break;
 		case I_JMP:			EncodeJMP(opd1); break;
 		case I_JA:			EncodeJCC(0x7, opd1); break;
 		case I_JAE:			EncodeJCC(0x3, opd1); break;
@@ -1670,6 +1671,9 @@ struct Frontend
 	void inc(const Reg64& opd)	{PushBack(Instr(I_INC, opd));}
 	void inc(const Mem64& opd)	{PushBack(Instr(I_INC, opd));}
 #endif
+
+	// INT3
+	void debugbreak()	{PushBack(Instr(I_INT3));}
 
 	// JMP
 	void jmp(const std::string& label_name)		{PushBack(Instr(I_JMP, Imm64(GetLabelId(label_name))));}

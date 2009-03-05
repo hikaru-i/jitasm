@@ -339,6 +339,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\test2.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\x64.asm"
 				>
 				<FileConfiguration
