@@ -2164,9 +2164,107 @@ struct Frontend
 
 namespace detail {
 
-	template<int N> size_t AlignSize(size_t size) {
-		return (size + N - 1) / N * N;
-	}
+	// Flags for ArgumentTraits
+	enum {
+		ARG_IN_REG		= (1<<0),	///< Argument is stored in general purpose register.
+		ARG_IN_STACK	= (1<<1),	///< Argument is stored on stack.
+		ARG_IN_XMM		= (1<<2),	///< Argument is stored in xmm register.
+		ARG_TYPE_VALUE	= (1<<3),	///< Argument is value which is passed.
+		ARG_TYPE_PTR	= (1<<4)	///< Argument is pointer which is passed to.
+	};
+
+	/// cdecl argument type traits
+	template<int N, class T, int Size = sizeof(T)>
+	struct ArgumentTraits_cdecl {
+		enum {
+			size = (Size + 4 - 1) / 4 * 4,
+			flag = ARG_IN_STACK | ARG_TYPE_VALUE,
+			reg_id = INVALID
+		};
+	};
+
+	/// Microsoft x64 fastcall argument type traits
+	template<int N, class T, int Size = sizeof(T)>
+	struct ArgumentTraits_win64 {
+		enum {
+			size = 8,
+			flag = ARG_IN_STACK | (Size == 1 || Size == 2 || Size == 4 || Size == 8 ? ARG_TYPE_VALUE : ARG_TYPE_PTR),
+			reg_id = INVALID
+		};
+	};
+
+	/**
+	 * Base class for argument which is stored in general purpose register.
+	 */
+	template<int GpRegID, int Flag> struct ArgumentTraits_win64_reg {
+		enum {
+			size = 8,
+			flag = ARG_IN_REG | Flag,
+			reg_id = GpRegID
+		};
+	};
+
+	// specialization for argument pointer stored in register
+	template<class T, int Size> struct ArgumentTraits_win64<0, T, Size> : ArgumentTraits_win64_reg<RCX, ARG_TYPE_PTR> {};
+	template<class T, int Size> struct ArgumentTraits_win64<1, T, Size> : ArgumentTraits_win64_reg<RDX, ARG_TYPE_PTR> {};
+	template<class T, int Size> struct ArgumentTraits_win64<2, T, Size> : ArgumentTraits_win64_reg<R8, ARG_TYPE_PTR> {};
+	template<class T, int Size> struct ArgumentTraits_win64<3, T, Size> : ArgumentTraits_win64_reg<R9, ARG_TYPE_PTR> {};
+
+	// specialization for 1 byte type
+	template<class T> struct ArgumentTraits_win64<0, T, 1> : ArgumentTraits_win64_reg<RCX, ARG_TYPE_VALUE> {};
+	template<class T> struct ArgumentTraits_win64<1, T, 1> : ArgumentTraits_win64_reg<RDX, ARG_TYPE_VALUE> {};
+	template<class T> struct ArgumentTraits_win64<2, T, 1> : ArgumentTraits_win64_reg<R8, ARG_TYPE_VALUE> {};
+	template<class T> struct ArgumentTraits_win64<3, T, 1> : ArgumentTraits_win64_reg<R9, ARG_TYPE_VALUE> {};
+
+	// specialization for 2 bytes type
+	template<class T> struct ArgumentTraits_win64<0, T, 2> : ArgumentTraits_win64_reg<RCX, ARG_TYPE_VALUE> {};
+	template<class T> struct ArgumentTraits_win64<1, T, 2> : ArgumentTraits_win64_reg<RDX, ARG_TYPE_VALUE> {};
+	template<class T> struct ArgumentTraits_win64<2, T, 2> : ArgumentTraits_win64_reg<R8, ARG_TYPE_VALUE> {};
+	template<class T> struct ArgumentTraits_win64<3, T, 2> : ArgumentTraits_win64_reg<R9, ARG_TYPE_VALUE> {};
+
+	// specialization for 4 bytes type
+	template<class T> struct ArgumentTraits_win64<0, T, 4> : ArgumentTraits_win64_reg<RCX, ARG_TYPE_VALUE> {};
+	template<class T> struct ArgumentTraits_win64<1, T, 4> : ArgumentTraits_win64_reg<RDX, ARG_TYPE_VALUE> {};
+	template<class T> struct ArgumentTraits_win64<2, T, 4> : ArgumentTraits_win64_reg<R8, ARG_TYPE_VALUE> {};
+	template<class T> struct ArgumentTraits_win64<3, T, 4> : ArgumentTraits_win64_reg<R9, ARG_TYPE_VALUE> {};
+
+	// specialization for 8 bytes type
+	template<class T> struct ArgumentTraits_win64<0, T, 8> : ArgumentTraits_win64_reg<RCX, ARG_TYPE_VALUE> {};
+	template<class T> struct ArgumentTraits_win64<1, T, 8> : ArgumentTraits_win64_reg<RDX, ARG_TYPE_VALUE> {};
+	template<class T> struct ArgumentTraits_win64<2, T, 8> : ArgumentTraits_win64_reg<R8, ARG_TYPE_VALUE> {};
+	template<class T> struct ArgumentTraits_win64<3, T, 8> : ArgumentTraits_win64_reg<R9, ARG_TYPE_VALUE> {};
+
+#ifdef __INTRIN_H_
+	// specialization for __m64
+	template<> struct ArgumentTraits_win64<0, __m64, 8> : ArgumentTraits_win64_reg<RCX> {};
+	template<> struct ArgumentTraits_win64<1, __m64, 8> : ArgumentTraits_win64_reg<RDX> {};
+	template<> struct ArgumentTraits_win64<2, __m64, 8> : ArgumentTraits_win64_reg<R8> {};
+	template<> struct ArgumentTraits_win64<3, __m64, 8> : ArgumentTraits_win64_reg<R9> {};
+#endif
+
+	/**
+	 * Base class for argument which is stored in xmm register.
+	 */
+	template<int XmmRegID> struct ArgumentTraits_win64_xmm {
+		enum {
+			size = 8,
+			flag = ARG_IN_XMM | ARG_TYPE_VALUE,
+			reg_id = XmmRegID
+		};
+	};
+
+	// specialization for float
+	template<> struct ArgumentTraits_win64<0, float, 4> : ArgumentTraits_win64_xmm<XMM0> {};
+	template<> struct ArgumentTraits_win64<1, float, 4> : ArgumentTraits_win64_xmm<XMM1> {};
+	template<> struct ArgumentTraits_win64<2, float, 4> : ArgumentTraits_win64_xmm<XMM2> {};
+	template<> struct ArgumentTraits_win64<3, float, 4> : ArgumentTraits_win64_xmm<XMM3> {};
+
+	// specialization for double
+	template<> struct ArgumentTraits_win64<0, double, 8> : ArgumentTraits_win64_xmm<XMM0> {};
+	template<> struct ArgumentTraits_win64<1, double, 8> : ArgumentTraits_win64_xmm<XMM1> {};
+	template<> struct ArgumentTraits_win64<2, double, 8> : ArgumentTraits_win64_xmm<XMM2> {};
+	template<> struct ArgumentTraits_win64<3, double, 8> : ArgumentTraits_win64_xmm<XMM3> {};
+
 
 	/// Result type traits
 	template<class T>
@@ -2359,7 +2457,7 @@ namespace detail {
 
 	/// cdecl function base class
 	template<class R, class FuncPtr>
-	struct Function : Frontend
+	struct Function_cdecl : Frontend
 	{
 #ifdef JITASM64
 		typedef Reg64Expr Arg;		///< main function argument type
@@ -2370,8 +2468,8 @@ namespace detail {
 		typename ResultTraits<R>::ResultPtr result_ptr;
 
 		Arg Arg1() { return Arg(zbp + sizeof(void *) * (2 + Result::ArgR)); }
-		template<class A1> Arg Arg2() { return Arg1() + AlignSize<sizeof(void *)>(sizeof(A1)); }
-		template<class A1, class A2> Arg Arg3() { return Arg2<A1>() + AlignSize<sizeof(void *)>(sizeof(A2)); }
+		template<class A1> Arg Arg2() { return Arg1() + ArgumentTraits_cdecl<0, A1>::size; }
+		template<class A1, class A2> Arg Arg3() { return Arg2<A1>() + ArgumentTraits_cdecl<1, A2>::size; }
 
 		operator FuncPtr() { return (FuncPtr)GetCode(); }
 	};
@@ -2380,7 +2478,7 @@ namespace detail {
 
 /// cdecl function which has no argument
 template<class R>
-struct function0_cdecl : detail::Function<R, R (__cdecl *)()>
+struct function0_cdecl : detail::Function_cdecl<R, R (__cdecl *)()>
 {
 	virtual Result main() { return Result(); }
 	void naked_main() {
@@ -2391,7 +2489,7 @@ struct function0_cdecl : detail::Function<R, R (__cdecl *)()>
 };
 
 template<>
-struct function0_cdecl<void> : detail::Function<void, void (__cdecl *)()>
+struct function0_cdecl<void> : detail::Function_cdecl<void, void (__cdecl *)()>
 {
 	virtual void main() {}
 	void naked_main()	{
@@ -2403,7 +2501,7 @@ struct function0_cdecl<void> : detail::Function<void, void (__cdecl *)()>
 
 /// cdecl function which has 1 argument
 template<class R, class A1>
-struct function1_cdecl : detail::Function<R, R (__cdecl *)(A1)>
+struct function1_cdecl : detail::Function_cdecl<R, R (__cdecl *)(A1)>
 {
 	virtual Result main(Arg a1) { return Result(); }
 	void naked_main() {
@@ -2414,7 +2512,7 @@ struct function1_cdecl : detail::Function<R, R (__cdecl *)(A1)>
 };
 
 template<class A1>
-struct function1_cdecl<void, A1> : detail::Function<void, void (__cdecl *)(A1)>
+struct function1_cdecl<void, A1> : detail::Function_cdecl<void, void (__cdecl *)(A1)>
 {
 	virtual void main(Arg a1) {}
 	void naked_main() {
@@ -2426,7 +2524,7 @@ struct function1_cdecl<void, A1> : detail::Function<void, void (__cdecl *)(A1)>
 
 /// cdecl function which has 2 arguments
 template<class R, class A1, class A2>
-struct function2_cdecl : detail::Function<R, R (__cdecl *)(A1, A2)>
+struct function2_cdecl : detail::Function_cdecl<R, R (__cdecl *)(A1, A2)>
 {
 	virtual Result main(Arg a1, Arg a2) { return Result(); }
 	void naked_main() {
@@ -2437,7 +2535,7 @@ struct function2_cdecl : detail::Function<R, R (__cdecl *)(A1, A2)>
 };
 
 template<class A1, class A2>
-struct function2_cdecl<void, A1, A2> : detail::Function<void, void (__cdecl *)(A1, A2)>
+struct function2_cdecl<void, A1, A2> : detail::Function_cdecl<void, void (__cdecl *)(A1, A2)>
 {
 	virtual void main(Arg a1, Arg a2) {}
 	void naked_main() {
