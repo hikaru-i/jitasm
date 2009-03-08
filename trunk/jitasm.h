@@ -2101,6 +2101,14 @@ struct Frontend
 	void movdqu(const XmmReg& opd1, const Mem128& opd2)	{PushBack(Instr(I_MOVDQU, opd1, opd2));}
 	void movdqu(const Mem128& opd1, const XmmReg& opd2)	{PushBack(Instr(I_MOVDQU, opd1, opd2));}
 
+	// MOVQ
+	void movq(const MmxReg& opd1, const MmxReg& opd2)	{PushBack(Instr(I_MOVQ, opd1, opd2));}
+	void movq(const MmxReg& opd1, const Mem64& opd2)	{PushBack(Instr(I_MOVQ, opd1, opd2));}
+	void movq(const Mem64& opd1, const MmxReg& opd2)	{PushBack(Instr(I_MOVQ, opd1, opd2));}
+	void movq(const XmmReg& opd1, const XmmReg& opd2)	{PushBack(Instr(I_MOVQ, opd1, opd2));}
+	void movq(const XmmReg& opd1, const Mem64& opd2)	{PushBack(Instr(I_MOVQ, opd1, opd2));}
+	void movq(const Mem64& opd1, const XmmReg& opd2)	{PushBack(Instr(I_MOVQ, opd1, opd2));}
+
 	// MOVSD
 	void movsd(const XmmReg& dst, const XmmReg& src)	{PushBack(Instr(I_MOVSD, dst, src));}
 	void movsd(const XmmReg& dst, const Mem64& src)		{PushBack(Instr(I_MOVSD, dst, src));}
@@ -2461,15 +2469,59 @@ namespace detail {
 	{
 #ifdef JITASM64
 		typedef Reg64Expr Arg;		///< main function argument type
+		template<int N, class T> struct ArgTraits : ArgumentTraits_win64<N, T> {};
+		bool dump_regarg_x64_;
 #else
 		typedef Reg32Expr Arg;		///< main function argument type
+		template<int N, class T> struct ArgTraits : ArgumentTraits_cdecl<N, T> {};
 #endif
+
 		typedef ResultT<R> Result;	///< main function result type
 		typename ResultTraits<R>::ResultPtr result_ptr;
 
-		Arg Arg1() { return Arg(zbp + sizeof(void *) * (2 + Result::ArgR)); }
-		template<class A1> Arg Arg2() { return Arg1() + ArgumentTraits_cdecl<0, A1>::size; }
-		template<class A1, class A2> Arg Arg3() { return Arg2<A1>() + ArgumentTraits_cdecl<1, A2>::size; }
+		/**
+		 * \param dump_regarg_x64	On x64, the caller passes the first four arguments in register.
+									If this parameter is true, the arguments in register are copied to
+									their stack space in prolog. This parameter has no effect on x86.
+		 */
+		Function_cdecl(bool dump_regarg_x64 = true)
+#ifdef JITASM64
+			: dump_regarg_x64_(dump_regarg_x64) {}
+#else
+		{}
+#endif
+
+		template<int N, class T>
+		void CopyRegArgToStack(const Arg& addr)
+		{
+#ifdef JITASM64
+			if (dump_regarg_x64_) {
+				if (ArgTraits<N, T>::flag & ARG_IN_REG)
+					mov(qword_ptr[addr], Reg64(static_cast<RegID>(ArgTraits<N, T>::reg_id)));
+				else if (ArgTraits<N, T>::flag & ARG_IN_XMM)
+					movq(qword_ptr[addr], XmmReg(static_cast<RegID>(ArgTraits<N, T>::reg_id)));
+			}
+#endif
+		}
+
+		template<class A1> Arg Arg1()
+		{
+			Arg a(zbp + sizeof(void *) * (2 + Result::ArgR));
+			CopyRegArgToStack<0, A1>(a);
+			return a;
+		}
+		template<class A1, class A2> Arg Arg2()
+		{
+			Arg a = Arg1<A1>() + ArgTraits<0, A1>::size;
+			CopyRegArgToStack<1, A2>(a);
+			return a;
+		}
+		template<class A1, class A2, class A3> Arg Arg3()
+		{
+			Arg a = Arg2<A1>() + ArgTraits<1, A2>::size;
+			CopyRegArgToStack<2, A3>(a);
+			return a;
+		}
 
 		operator FuncPtr() { return (FuncPtr)GetCode(); }
 	};
@@ -2506,7 +2558,7 @@ struct function1_cdecl : detail::Function_cdecl<R, R (__cdecl *)(A1)>
 	virtual Result main(Arg a1) { return Result(); }
 	void naked_main() {
 		Prolog(0);
-		main(Arg1()).Store(*this);
+		main(Arg1<A1>()).Store(*this);
 		Epilog();
 	}
 };
@@ -2517,7 +2569,7 @@ struct function1_cdecl<void, A1> : detail::Function_cdecl<void, void (__cdecl *)
 	virtual void main(Arg a1) {}
 	void naked_main() {
 		Prolog(0);
-		main(Arg1());
+		main(Arg1<A1>());
 		Epilog();
 	}
 };
@@ -2529,7 +2581,7 @@ struct function2_cdecl : detail::Function_cdecl<R, R (__cdecl *)(A1, A2)>
 	virtual Result main(Arg a1, Arg a2) { return Result(); }
 	void naked_main() {
 		Prolog(0);
-		main(Arg1(), Arg2<A1>()).Store(*this);
+		main(Arg1<A1>(), Arg2<A1, A2>()).Store(*this);
 		Epilog();
 	}
 };
@@ -2540,7 +2592,7 @@ struct function2_cdecl<void, A1, A2> : detail::Function_cdecl<void, void (__cdec
 	virtual void main(Arg a1, Arg a2) {}
 	void naked_main() {
 		Prolog(0);
-		main(Arg1(), Arg2<A1>());
+		main(Arg1<A1>(), Arg2<A1, A2>());
 		Epilog();
 	}
 };
