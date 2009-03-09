@@ -1219,7 +1219,7 @@ masm_test_movs endp
 ;----------------------------------------
 ; NEG/NOT
 ;----------------------------------------
-masm_neg_not proc
+masm_test_neg_not proc
 	neg al
 	neg ax
 	neg eax
@@ -1241,7 +1241,76 @@ masm_neg_not proc
 	not rax
 	not r8
 	not qword ptr[rsp]
-masm_neg_not endp
+masm_test_neg_not endp
+
+;----------------------------------------
+; DIV/IDIV/MUL
+;----------------------------------------
+masm_test_div_idiv_mul proc
+	div al
+	div ax
+	div eax
+	div byte ptr[esp]
+	div word ptr[esp]
+	div dword ptr[esp]
+	idiv al
+	idiv ax
+	idiv eax
+	idiv byte ptr[esp]
+	idiv word ptr[esp]
+	idiv dword ptr[esp]
+	mul al
+	mul ax
+	mul eax
+	mul byte ptr[esp]
+	mul word ptr[esp]
+	mul dword ptr[esp]
+
+	div r8w
+	div rax
+	div r8
+	div qword ptr[rsp]
+	idiv r8w
+	idiv rax
+	idiv r8
+	idiv qword ptr[rsp]
+	mul r8w
+	mul rax
+	mul r8
+	mul qword ptr[rsp]
+masm_test_div_idiv_mul endp
+
+;----------------------------------------
+; IMUL
+;----------------------------------------
+masm_test_imul proc
+	imul al
+	imul ax
+	imul eax
+	imul byte ptr[esp]
+	imul word ptr[esp]
+	imul dword ptr[esp]
+	imul ax, ax
+	imul ax, word ptr[esp]
+	imul eax, eax
+	imul eax, dword ptr[esp]
+	imul ax, ax, 1h
+	imul ax, ax, -1h
+	imul ax, ax, 100h
+	imul eax, eax, 1h
+	imul eax, eax, -1h
+	imul eax, eax, 100h
+
+	imul r8w
+	imul rax
+	imul r8
+	imul qword ptr[rsp]
+	imul rax, rax
+	imul rax, qword ptr[rsp]
+	imul rax, rax, 1h
+	imul rax, rax, -1h
+	imul rax, rax, 100h
+masm_test_imul endp
 
 ;----------------------------------------
 ; function0_cdecl<int>
