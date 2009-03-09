@@ -381,7 +381,7 @@ enum InstrID
 	I_MUL, I_NEG, I_NOP, I_NOT, I_OR, I_POP, I_PUSH, I_RET,
 	I_RCL, I_RCR, I_ROL, I_ROR, I_SAR, I_SHL, I_SHR, I_SBB, I_SUB, I_TEST, I_XCHG, I_XOR,
 
-	I_FLD,
+	I_FLD, I_FST, I_FSTP,
 
 	I_ADDPD, I_ADDSD, I_ANDPD, I_ANDNPD, I_CLFLUSH, I_CMPPS, I_CMPPD, I_CMPSD, I_COMISD, I_CVTDQ2PD, I_CVTDQ2PS,
 	I_CVTPD2DQ, I_CVTPD2PI, I_CVTPD2PS, I_CVTPI2PD, I_CVTPS2DQ, I_CVTPS2PD, I_CVTSD2SI, I_CVTSD2SS,
@@ -946,21 +946,43 @@ struct Backend
 		EncodeModRM(reg, r_m);
 	}
 
-	void EncodeFLD(const Opd& src)
+	void EncodeFLD(const Opd& mem)
 	{
-		if (src.IsReg()) {
+		if (mem.IsReg()) {
 			db(0xD9);
-			db(0xC0 | src.GetReg());
+			db(0xC0 | mem.GetReg());
 		} else {
 #ifdef JITASM64
-			if (src.IsMem() && src.GetAddressSize() != O_SIZE_64) EncodeAddressSizePrefix();
+			if (mem.IsMem() && mem.GetAddressSize() != O_SIZE_64) EncodeAddressSizePrefix();
 #endif
 			int digit = 0;
-			if (src.GetSize() == O_SIZE_32) db(0xD9), digit = 0;
-			else if (src.GetSize() == O_SIZE_64) db(0xDD), digit = 0;
-			else if (src.GetSize() == O_SIZE_80) db(0xDB), digit = 5;
+			if (mem.GetSize() == O_SIZE_32) db(0xD9), digit = 0;
+			else if (mem.GetSize() == O_SIZE_64) db(0xDD), digit = 0;
+			else if (mem.GetSize() == O_SIZE_80) db(0xDB), digit = 5;
 			else ASSERT(0);
-			EncodeModRM(digit, src);
+			EncodeModRM(digit, mem);
+		}
+	}
+
+	void EncodeFST(uint8 digit, uint8 opcode, const Opd& mem)
+	{
+		if (mem.IsReg()) {
+			db(0xDD);
+			db(opcode | mem.GetReg());
+		} else {
+#ifdef JITASM64
+			if (mem.IsMem() && mem.GetAddressSize() != O_SIZE_64) EncodeAddressSizePrefix();
+#endif
+
+			if (mem.GetSize() == O_SIZE_80) {
+				db(0xDB);
+				EncodeModRM(7, mem);
+			} else {
+				if (mem.GetSize() == O_SIZE_32) db(0xD9);
+				else if (mem.GetSize() == O_SIZE_64) db(0xDD);
+				else ASSERT(0);
+				EncodeModRM(digit, mem);
+			}
 		}
 	}
 
@@ -1151,6 +1173,8 @@ struct Backend
 
 		// x87 Floating-Point Instructions
 		case I_FLD:			EncodeFLD(o1); break;
+		case I_FST:			EncodeFST(2, 0xD0, o1); break;
+		case I_FSTP:		EncodeFST(3, 0xD8, o1); break;
 
 		// MMX/SSE/SSE2 Instructions
 		case I_ADDPD:		EncodeSSE2(0x66, 0x58, o1, o2); break;
@@ -1841,10 +1865,26 @@ struct Frontend
 	void jz(const std::string& label_name)		{je(label_name);}
 
 	// LEA
+	void lea(const Reg16& dst, const Mem8& src)		{PushBack(Instr(I_LEA, dst, src));}
 	void lea(const Reg16& dst, const Mem16& src)	{PushBack(Instr(I_LEA, dst, src));}
+	void lea(const Reg16& dst, const Mem32& src)	{PushBack(Instr(I_LEA, dst, src));}
+	void lea(const Reg16& dst, const Mem64& src)	{PushBack(Instr(I_LEA, dst, src));}
+	void lea(const Reg16& dst, const Mem80& src)	{PushBack(Instr(I_LEA, dst, src));}
+	void lea(const Reg16& dst, const Mem128& src)	{PushBack(Instr(I_LEA, dst, src));}
+	void lea(const Reg32& dst, const Mem8& src)		{PushBack(Instr(I_LEA, dst, src));}
+	void lea(const Reg32& dst, const Mem16& src)	{PushBack(Instr(I_LEA, dst, src));}
 	void lea(const Reg32& dst, const Mem32& src)	{PushBack(Instr(I_LEA, dst, src));}
+	void lea(const Reg32& dst, const Mem64& src)	{PushBack(Instr(I_LEA, dst, src));}
+	void lea(const Reg32& dst, const Mem80& src)	{PushBack(Instr(I_LEA, dst, src));}
+	void lea(const Reg32& dst, const Mem128& src)	{PushBack(Instr(I_LEA, dst, src));}
+
 #ifdef JITASM64
+	void lea(const Reg64& dst, const Mem8& src)		{PushBack(Instr(I_LEA, dst, src));}
+	void lea(const Reg64& dst, const Mem16& src)	{PushBack(Instr(I_LEA, dst, src));}
+	void lea(const Reg64& dst, const Mem32& src)	{PushBack(Instr(I_LEA, dst, src));}
 	void lea(const Reg64& dst, const Mem64& src)	{PushBack(Instr(I_LEA, dst, src));}
+	void lea(const Reg64& dst, const Mem80& src)	{PushBack(Instr(I_LEA, dst, src));}
+	void lea(const Reg64& dst, const Mem128& src)	{PushBack(Instr(I_LEA, dst, src));}
 #endif
 
 	// LEAVE
@@ -2173,6 +2213,15 @@ struct Frontend
 	void fld(const Mem64& src)	{PushBack(Instr(I_FLD, src));}
 	void fld(const Mem80& src)	{PushBack(Instr(I_FLD, src));}
 	void fld(const FpuReg& src)	{PushBack(Instr(I_FLD, src));}
+
+	// FST/FSTP
+	void fst(const Mem32& dst) {PushBack(Instr(I_FST, dst));}
+	void fst(const Mem64& dst) {PushBack(Instr(I_FST, dst));}
+	void fst(const FpuReg& dst) {PushBack(Instr(I_FST, dst));}
+	void fstp(const Mem32& dst) {PushBack(Instr(I_FSTP, dst));}
+	void fstp(const Mem64& dst) {PushBack(Instr(I_FSTP, dst));}
+	void fstp(const Mem80& dst) {PushBack(Instr(I_FSTP, dst));}
+	void fstp(const FpuReg& dst) {PushBack(Instr(I_FSTP, dst));}
 
 	void addpd(const XmmReg& dst, const XmmReg& src)	{PushBack(Instr(I_ADDPD, dst, src));}
 	void addpd(const XmmReg& dst, const Mem128& src)	{PushBack(Instr(I_ADDPD, dst, src));}
