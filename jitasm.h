@@ -47,7 +47,6 @@
 namespace jitasm
 {
 
-
 typedef signed __int8		sint8;
 typedef signed __int16		sint16;
 typedef signed __int32		sint32;
@@ -379,7 +378,7 @@ enum InstrID
 	I_JG, I_JGE, I_JL, I_JLE, I_JNE, I_JNO, I_JNP, I_JNS, I_JO, I_JP, I_JS,
 	I_LEA, I_LEAVE,
 	I_MOV, I_MOVS_B, I_MOVS_W, I_MOVS_D, I_MOVS_Q, I_REP_MOVS_B, I_REP_MOVS_W, I_REP_MOVS_D, I_REP_MOVS_Q, I_MOVZX,
-	I_NOP, I_OR, I_POP, I_PUSH, I_RET, I_SAR, I_SHL, I_SHR, I_SBB, I_SUB, I_TEST, I_XCHG, I_XOR,
+	I_NOP, I_OR, I_POP, I_PUSH, I_RET, I_RCL, I_RCR, I_ROL, I_ROR, I_SAR, I_SHL, I_SHR, I_SBB, I_SUB, I_TEST, I_XCHG, I_XOR,
 
 	I_FLD,
 
@@ -562,7 +561,7 @@ struct Backend
 		EncodeModRM(reg.GetReg(), r_m);
 	}
 
-	void EncodeADD(uint8 opcode, const Opd& opd1, const Opd& opd2)
+	void EncodeALU(uint8 opcode, const Opd& opd1, const Opd& opd2)
 	{
 		if (opd2.IsImm()) {
 			const Opd& r_m = opd1;
@@ -1032,11 +1031,11 @@ struct Backend
 
 		switch (instr.GetID()) {
 		// General-Purpose Instructions
-		case I_ADC:			EncodeADD(0x10, opd1, opd2); break;
-		case I_ADD:			EncodeADD(0x00, opd1, opd2); break;
-		case I_AND:			EncodeADD(0x20, opd1, opd2); break;
+		case I_ADC:			EncodeALU(0x10, opd1, opd2); break;
+		case I_ADD:			EncodeALU(0x00, opd1, opd2); break;
+		case I_AND:			EncodeALU(0x20, opd1, opd2); break;
 		case I_CALL:		EncodeCALL(opd1); break;
-		case I_CMP:			EncodeADD(0x38, opd1, opd2); break;
+		case I_CMP:			EncodeALU(0x38, opd1, opd2); break;
 		case I_DEC:			EncodeINC(0x48, 1, opd1); break;
 		case I_INC:			EncodeINC(0x40, 0, opd1); break;
 		case I_INT3:		db(0xCC); break;
@@ -1077,18 +1076,22 @@ struct Backend
 		case I_REP_MOVS_Q:	EncodeRep(); db(0x48); db(0xA5); break;
 		case I_MOVZX:		EncodeMOVZX(opd1, opd2); break;
 		case I_NOP:			db(0x90); break;
-		case I_OR:			EncodeADD(0x08, opd1, opd2); break;
+		case I_OR:			EncodeALU(0x08, opd1, opd2); break;
 		case I_POP:			EncodePOP(0x58, 0x8F, 0, opd1); break;
 		case I_PUSH:		EncodePOP(0x50, 0xFF, 6, opd1); break;
 		case I_RET:			if (opd1.IsNone()) db(0xC3); else db(0xC2), dw(opd1.GetImm()); break;
+		case I_RCL:			EncodeShift(2, opd1, opd2); break;
+		case I_RCR:			EncodeShift(3, opd1, opd2); break;
+		case I_ROL:			EncodeShift(0, opd1, opd2); break;
+		case I_ROR:			EncodeShift(1, opd1, opd2); break;
 		case I_SAR:			EncodeShift(7, opd1, opd2); break;
 		case I_SHL:			EncodeShift(4, opd1, opd2); break;
 		case I_SHR:			EncodeShift(5, opd1, opd2); break;
-		case I_SBB:			EncodeADD(0x18, opd1, opd2); break;
-		case I_SUB:			EncodeADD(0x28, opd1, opd2); break;
+		case I_SBB:			EncodeALU(0x18, opd1, opd2); break;
+		case I_SUB:			EncodeALU(0x28, opd1, opd2); break;
 		case I_TEST:		EncodeTEST(opd1, opd2); break;
 		case I_XCHG:		EncodeXCHG(opd1, opd2); break;
-		case I_XOR:			EncodeADD(0x30, opd1, opd2); break;
+		case I_XOR:			EncodeALU(0x30, opd1, opd2); break;
 
 		// x87 Floating-Point Instructions
 		case I_FLD:			EncodeFLD(opd1); break;
@@ -1842,6 +1845,42 @@ struct Frontend
 	void ret()					{PushBack(Instr(I_RET));}
 	void ret(const Imm16& imm)	{PushBack(Instr(I_RET, imm));}
  
+	// RCL/RCR/ROL/ROR
+	void rcl(const Reg8& opd1, const Imm8& imm)		{PushBack(Instr(I_RCL, opd1, imm));}
+	void rcl(const Mem8& opd1, const Imm8& imm)		{PushBack(Instr(I_RCL, opd1, imm));}
+	void rcr(const Reg8& opd1, const Imm8& imm)		{PushBack(Instr(I_RCR, opd1, imm));}
+	void rcr(const Mem8& opd1, const Imm8& imm)		{PushBack(Instr(I_RCR, opd1, imm));}
+	void rol(const Reg8& opd1, const Imm8& imm)		{PushBack(Instr(I_ROL, opd1, imm));}
+	void rol(const Mem8& opd1, const Imm8& imm)		{PushBack(Instr(I_ROL, opd1, imm));}
+	void ror(const Reg8& opd1, const Imm8& imm)		{PushBack(Instr(I_ROR, opd1, imm));}
+	void ror(const Mem8& opd1, const Imm8& imm)		{PushBack(Instr(I_ROR, opd1, imm));}
+	void rcl(const Reg16& opd1, const Imm8& imm)	{PushBack(Instr(I_RCL, opd1, imm));}
+	void rcl(const Mem16& opd1, const Imm8& imm)	{PushBack(Instr(I_RCL, opd1, imm));}
+	void rcr(const Reg16& opd1, const Imm8& imm)	{PushBack(Instr(I_RCR, opd1, imm));}
+	void rcr(const Mem16& opd1, const Imm8& imm)	{PushBack(Instr(I_RCR, opd1, imm));}
+	void rol(const Reg16& opd1, const Imm8& imm)	{PushBack(Instr(I_ROL, opd1, imm));}
+	void rol(const Mem16& opd1, const Imm8& imm)	{PushBack(Instr(I_ROL, opd1, imm));}
+	void ror(const Reg16& opd1, const Imm8& imm)	{PushBack(Instr(I_ROR, opd1, imm));}
+	void ror(const Mem16& opd1, const Imm8& imm)	{PushBack(Instr(I_ROR, opd1, imm));}
+	void rcl(const Reg32& opd1, const Imm8& imm)	{PushBack(Instr(I_RCL, opd1, imm));}
+	void rcl(const Mem32& opd1, const Imm8& imm)	{PushBack(Instr(I_RCL, opd1, imm));}
+	void rcr(const Reg32& opd1, const Imm8& imm)	{PushBack(Instr(I_RCR, opd1, imm));}
+	void rcr(const Mem32& opd1, const Imm8& imm)	{PushBack(Instr(I_RCR, opd1, imm));}
+	void rol(const Reg32& opd1, const Imm8& imm)	{PushBack(Instr(I_ROL, opd1, imm));}
+	void rol(const Mem32& opd1, const Imm8& imm)	{PushBack(Instr(I_ROL, opd1, imm));}
+	void ror(const Reg32& opd1, const Imm8& imm)	{PushBack(Instr(I_ROR, opd1, imm));}
+	void ror(const Mem32& opd1, const Imm8& imm)	{PushBack(Instr(I_ROR, opd1, imm));}
+#ifdef JITASM64
+	void rcl(const Reg64& opd1, const Imm8& imm)	{PushBack(Instr(I_RCL, opd1, imm));}
+	void rcl(const Mem64& opd1, const Imm8& imm)	{PushBack(Instr(I_RCL, opd1, imm));}
+	void rcr(const Reg64& opd1, const Imm8& imm)	{PushBack(Instr(I_RCR, opd1, imm));}
+	void rcr(const Mem64& opd1, const Imm8& imm)	{PushBack(Instr(I_RCR, opd1, imm));}
+	void rol(const Reg64& opd1, const Imm8& imm)	{PushBack(Instr(I_ROL, opd1, imm));}
+	void rol(const Mem64& opd1, const Imm8& imm)	{PushBack(Instr(I_ROL, opd1, imm));}
+	void ror(const Reg64& opd1, const Imm8& imm)	{PushBack(Instr(I_ROR, opd1, imm));}
+	void ror(const Mem64& opd1, const Imm8& imm)	{PushBack(Instr(I_ROR, opd1, imm));}
+#endif
+
 	// SAL/SAR/SHL/SHR
 	void sal(const Reg8& opd1, const Imm8& imm)		{shl(opd1, imm);}
 	void sal(const Mem8& opd1, const Imm8& imm)		{shl(opd1, imm);}

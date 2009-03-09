@@ -146,6 +146,82 @@ masm_test_shr proc
 masm_test_shr endp
 
 ;----------------------------------------
+; RCL
+;----------------------------------------
+masm_test_rcl proc
+	rcl al, 1
+	rcl al, 2
+	rcl al, -1
+	rcl ax, 1
+	rcl ax, 2
+	rcl eax, 1
+	rcl eax, 2
+	rcl byte ptr[eax], 1
+	rcl byte ptr[eax], 2
+	rcl word ptr[eax], 1
+	rcl word ptr[eax], 2
+	rcl dword ptr[eax], 1
+	rcl dword ptr[eax], 2
+masm_test_rcl endp
+
+;----------------------------------------
+; RCR
+;----------------------------------------
+masm_test_rcr proc
+	rcr al, 1
+	rcr al, 2
+	rcr al, -1
+	rcr ax, 1
+	rcr ax, 2
+	rcr eax, 1
+	rcr eax, 2
+	rcr byte ptr[eax], 1
+	rcr byte ptr[eax], 2
+	rcr word ptr[eax], 1
+	rcr word ptr[eax], 2
+	rcr dword ptr[eax], 1
+	rcr dword ptr[eax], 2
+masm_test_rcr endp
+
+;----------------------------------------
+; ROL
+;----------------------------------------
+masm_test_rol proc
+	rol al, 1
+	rol al, 2
+	rol al, -1
+	rol ax, 1
+	rol ax, 2
+	rol eax, 1
+	rol eax, 2
+	rol byte ptr[eax], 1
+	rol byte ptr[eax], 2
+	rol word ptr[eax], 1
+	rol word ptr[eax], 2
+	rol dword ptr[eax], 1
+	rol dword ptr[eax], 2
+masm_test_rol endp
+
+;----------------------------------------
+; ROR
+;----------------------------------------
+masm_test_ror proc
+	ror al, 1
+	ror al, 2
+	ror al, -1
+	ror ax, 1
+	ror ax, 2
+	ror eax, 1
+	ror eax, 2
+	ror byte ptr[eax], 1
+	ror byte ptr[eax], 2
+	ror word ptr[eax], 1
+	ror word ptr[eax], 2
+	ror dword ptr[eax], 1
+	ror dword ptr[eax], 2
+masm_test_ror endp
+
+;----------------------------------------
 ; INC/DEC
 ;----------------------------------------
 masm_test_inc_dec proc

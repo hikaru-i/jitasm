@@ -192,6 +192,126 @@ masm_test_shr proc
 masm_test_shr endp
 
 ;----------------------------------------
+; RCL
+;----------------------------------------
+masm_test_rcl proc
+	rcl al, 1
+	rcl al, 2
+	rcl al, -1
+	rcl ax, 1
+	rcl ax, 2
+	rcl eax, 1
+	rcl eax, 2
+	rcl byte ptr[eax], 1
+	rcl byte ptr[eax], 2
+	rcl word ptr[eax], 1
+	rcl word ptr[eax], 2
+	rcl dword ptr[eax], 1
+	rcl dword ptr[eax], 2
+
+	rcl r8b, 1
+	rcl r8b, 2
+	rcl r8w, 1
+	rcl r8w, 2
+	rcl r8d, 1
+	rcl r8d, 2
+	rcl r8, 1
+	rcl r8, 2
+	rcl qword ptr[rax], 1
+	rcl qword ptr[rax], 2
+masm_test_rcl endp
+
+;----------------------------------------
+; RCR
+;----------------------------------------
+masm_test_rcr proc
+	rcr al, 1
+	rcr al, 2
+	rcr al, -1
+	rcr ax, 1
+	rcr ax, 2
+	rcr eax, 1
+	rcr eax, 2
+	rcr byte ptr[eax], 1
+	rcr byte ptr[eax], 2
+	rcr word ptr[eax], 1
+	rcr word ptr[eax], 2
+	rcr dword ptr[eax], 1
+	rcr dword ptr[eax], 2
+
+	rcr r8b, 1
+	rcr r8b, 2
+	rcr r8w, 1
+	rcr r8w, 2
+	rcr r8d, 1
+	rcr r8d, 2
+	rcr r8, 1
+	rcr r8, 2
+	rcr qword ptr[rax], 1
+	rcr qword ptr[rax], 2
+masm_test_rcr endp
+
+;----------------------------------------
+; ROL
+;----------------------------------------
+masm_test_rol proc
+	rol al, 1
+	rol al, 2
+	rol al, -1
+	rol ax, 1
+	rol ax, 2
+	rol eax, 1
+	rol eax, 2
+	rol byte ptr[eax], 1
+	rol byte ptr[eax], 2
+	rol word ptr[eax], 1
+	rol word ptr[eax], 2
+	rol dword ptr[eax], 1
+	rol dword ptr[eax], 2
+
+	rol r8b, 1
+	rol r8b, 2
+	rol r8w, 1
+	rol r8w, 2
+	rol r8d, 1
+	rol r8d, 2
+	rol r8, 1
+	rol r8, 2
+	rol qword ptr[rax], 1
+	rol qword ptr[rax], 2
+masm_test_rol endp
+
+;----------------------------------------
+; ROR
+;----------------------------------------
+masm_test_ror proc
+	ror al, 1
+	ror al, 2
+	ror al, -1
+	ror ax, 1
+	ror ax, 2
+	ror eax, 1
+	ror eax, 2
+	ror byte ptr[eax], 1
+	ror byte ptr[eax], 2
+	ror word ptr[eax], 1
+	ror word ptr[eax], 2
+	ror dword ptr[eax], 1
+	ror dword ptr[eax], 2
+
+	ror r8b, 1
+	ror r8b, 2
+	ror r8w, 1
+	ror r8w, 2
+	ror r8d, 1
+	ror r8d, 2
+	ror r8, 1
+	ror r8, 2
+	ror qword ptr[rax], 1
+	ror qword ptr[rax], 2
+masm_test_ror endp
+
+;----------------------------------------
 ; INC/DEC
 ;----------------------------------------
 masm_test_inc_dec proc
