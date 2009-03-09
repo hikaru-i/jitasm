@@ -1455,19 +1455,12 @@ struct mov_disp : jitasm::function0<void>
 	{
 		mov(al, byte_ptr[1]);
 		mov(cl, byte_ptr[1]);
-		mov(al, byte_ptr[-1]);
-		mov(cl, byte_ptr[-1]);
 		mov(ax, word_ptr[1]);
 		mov(cx, word_ptr[1]);
-		mov(ax, word_ptr[-1]);
-		mov(cx, word_ptr[-1]);
 		mov(eax, dword_ptr[1]);
 		mov(ecx, dword_ptr[1]);
-		mov(eax, dword_ptr[-1]);
-		mov(ecx, dword_ptr[-1]);
 #ifdef JITASM64
 		mov(rax, qword_ptr[1]);
-		mov(rax, qword_ptr[-1]);
 		mov(rax, qword_ptr[0x100000000]);
 #endif
 	}
@@ -1476,7 +1469,7 @@ struct mov_disp : jitasm::function0<void>
 //----------------------------------------
 // NEG/NOT
 //----------------------------------------
-extern "C" void masm_neg_not();
+extern "C" void masm_test_neg_not();
 struct test_neg_not : jitasm::function0<void>
 {
 	virtual void naked_main()
@@ -1502,6 +1495,87 @@ struct test_neg_not : jitasm::function0<void>
 		not(rax);
 		not(r8);
 		not(qword_ptr[rsp]);
+#endif
+	}
+};
+
+//----------------------------------------
+// DIV/IDIV/MUL
+//----------------------------------------
+extern "C" void masm_test_div_idiv_mul();
+struct test_div_idiv_mul : jitasm::function0<void>
+{
+	virtual void naked_main()
+	{
+		div(al);
+		div(ax);
+		div(eax);
+		div(byte_ptr[esp]);
+		div(word_ptr[esp]);
+		div(dword_ptr[esp]);
+		idiv(al);
+		idiv(ax);
+		idiv(eax);
+		idiv(byte_ptr[esp]);
+		idiv(word_ptr[esp]);
+		idiv(dword_ptr[esp]);
+		mul(al);
+		mul(ax);
+		mul(eax);
+		mul(byte_ptr[esp]);
+		mul(word_ptr[esp]);
+		mul(dword_ptr[esp]);
+#ifdef JITASM64
+		div(r8w);
+		div(rax);
+		div(r8);
+		div(qword_ptr[rsp]);
+		idiv(r8w);
+		idiv(rax);
+		idiv(r8);
+		idiv(qword_ptr[rsp]);
+		mul(r8w);
+		mul(rax);
+		mul(r8);
+		mul(qword_ptr[rsp]);
+#endif
+	}
+};
+
+//----------------------------------------
+// IMUL
+//----------------------------------------
+extern "C" void masm_test_imul();
+struct test_imul : jitasm::function0<void>
+{
+	virtual void naked_main()
+	{
+		imul(al);
+		imul(ax);
+		imul(eax);
+		imul(byte_ptr[esp]);
+		imul(word_ptr[esp]);
+		imul(dword_ptr[esp]);
+		imul(ax, ax);
+		imul(ax, word_ptr[esp]);
+		imul(eax, eax);
+		imul(eax, dword_ptr[esp]);
+		imul(ax, ax, 0x1);
+		imul(ax, ax, -0x1);
+		imul(ax, ax, 0x100);
+		imul(eax, eax, 0x1);
+		imul(eax, eax, -0x1);
+		imul(eax, eax, 0x100);
+#ifdef JITASM64
+		imul(r8w);
+		imul(rax);
+		imul(r8);
+		imul(qword_ptr[rsp]);
+		imul(rax, rax);
+		imul(rax, qword_ptr[rsp]);
+		imul(rax, rax, 0x1);
+		imul(rax, rax, -0x1);
+		imul(rax, rax, 0x100);
 #endif
 	}
 };
@@ -1616,6 +1690,9 @@ int _tmain(int argc, _TCHAR* argv[])
 	TEST(test_fld);
 	TEST(test_jmp);
 	TEST(test_movs);
+	TEST(test_neg_not);
+	TEST(test_div_idiv_mul);
+	TEST(test_imul);
 
 	//TEST(test_function0_cdecl);
 	//TEST(masm_test_function1_cdecl, test_function1_cdecl());
