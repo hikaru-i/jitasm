@@ -286,6 +286,150 @@ struct test_shr : jitasm::function0<void>
 };
 
 //----------------------------------------
+// RCL
+//----------------------------------------
+extern "C" void masm_test_rcl();
+struct test_rcl : jitasm::function0<void>
+{
+	virtual void naked_main()
+	{
+		rcl(al, 1);
+		rcl(al, 2);
+		rcl(al, -1);
+		rcl(ax, 1);
+		rcl(ax, 2);
+		rcl(eax, 1);
+		rcl(eax, 2);
+		rcl(byte_ptr[eax], 1);
+		rcl(byte_ptr[eax], 2);
+		rcl(word_ptr[eax], 1);
+		rcl(word_ptr[eax], 2);
+		rcl(dword_ptr[eax], 1);
+		rcl(dword_ptr[eax], 2);
+#ifdef JITASM64
+		rcl(r8b, 1);
+		rcl(r8b, 2);
+		rcl(r8w, 1);
+		rcl(r8w, 2);
+		rcl(r8d, 1);
+		rcl(r8d, 2);
+		rcl(r8, 1);
+		rcl(r8, 2);
+		rcl(qword_ptr[rax], 1);
+		rcl(qword_ptr[rax], 2);
+#endif
+	}
+};
+
+//----------------------------------------
+// RCR
+//----------------------------------------
+extern "C" void masm_test_rcr();
+struct test_rcr : jitasm::function0<void>
+{
+	virtual void naked_main()
+	{
+		rcr(al, 1);
+		rcr(al, 2);
+		rcr(al, -1);
+		rcr(ax, 1);
+		rcr(ax, 2);
+		rcr(eax, 1);
+		rcr(eax, 2);
+		rcr(byte_ptr[eax], 1);
+		rcr(byte_ptr[eax], 2);
+		rcr(word_ptr[eax], 1);
+		rcr(word_ptr[eax], 2);
+		rcr(dword_ptr[eax], 1);
+		rcr(dword_ptr[eax], 2);
+#ifdef JITASM64
+		rcr(r8b, 1);
+		rcr(r8b, 2);
+		rcr(r8w, 1);
+		rcr(r8w, 2);
+		rcr(r8d, 1);
+		rcr(r8d, 2);
+		rcr(r8, 1);
+		rcr(r8, 2);
+		rcr(qword_ptr[rax], 1);
+		rcr(qword_ptr[rax], 2);
+#endif
+	}
+};
+
+//----------------------------------------
+// ROL
+//----------------------------------------
+extern "C" void masm_test_rol();
+struct test_rol : jitasm::function0<void>
+{
+	virtual void naked_main()
+	{
+		rol(al, 1);
+		rol(al, 2);
+		rol(al, -1);
+		rol(ax, 1);
+		rol(ax, 2);
+		rol(eax, 1);
+		rol(eax, 2);
+		rol(byte_ptr[eax], 1);
+		rol(byte_ptr[eax], 2);
+		rol(word_ptr[eax], 1);
+		rol(word_ptr[eax], 2);
+		rol(dword_ptr[eax], 1);
+		rol(dword_ptr[eax], 2);
+#ifdef JITASM64
+		rol(r8b, 1);
+		rol(r8b, 2);
+		rol(r8w, 1);
+		rol(r8w, 2);
+		rol(r8d, 1);
+		rol(r8d, 2);
+		rol(r8, 1);
+		rol(r8, 2);
+		rol(qword_ptr[rax], 1);
+		rol(qword_ptr[rax], 2);
+#endif
+	}
+};
+
+//----------------------------------------
+// ROR
+//----------------------------------------
+extern "C" void masm_test_ror();
+struct test_ror : jitasm::function0<void>
+{
+	virtual void naked_main()
+	{
+		ror(al, 1);
+		ror(al, 2);
+		ror(al, -1);
+		ror(ax, 1);
+		ror(ax, 2);
+		ror(eax, 1);
+		ror(eax, 2);
+		ror(byte_ptr[eax], 1);
+		ror(byte_ptr[eax], 2);
+		ror(word_ptr[eax], 1);
+		ror(word_ptr[eax], 2);
+		ror(dword_ptr[eax], 1);
+		ror(dword_ptr[eax], 2);
+#ifdef JITASM64
+		ror(r8b, 1);
+		ror(r8b, 2);
+		ror(r8w, 1);
+		ror(r8w, 2);
+		ror(r8d, 1);
+		ror(r8d, 2);
+		ror(r8, 1);
+		ror(r8, 2);
+		ror(qword_ptr[rax], 1);
+		ror(qword_ptr[rax], 2);
+#endif
+	}
+};
+
+//----------------------------------------
 // INC/DEC
 //----------------------------------------
 extern "C" void masm_test_inc_dec();
@@ -1419,6 +1563,10 @@ int _tmain(int argc, _TCHAR* argv[])
 	TEST(test_sar);
 	TEST(test_shl);
 	TEST(test_shr);
+	TEST(test_rcl);
+	TEST(test_rcr);
+	TEST(test_rol);
+	TEST(test_ror);
 	TEST(test_inc_dec);
 	TEST(test_push_pop);
 	TEST(test_add);
@@ -1437,6 +1585,6 @@ int _tmain(int argc, _TCHAR* argv[])
 	TEST(test_jmp);
 	TEST(test_movs);
 
-	TEST(test_function0_cdecl);
+	//TEST(test_function0_cdecl);
 	//TEST(masm_test_function1_cdecl, test_function1_cdecl());
 }
