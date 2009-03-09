@@ -32,6 +32,7 @@
 #define JITASM_H
 
 #include <windows.h>
+#include <string>
 #include <deque>
 #include <vector>
 #include <assert.h>
@@ -2482,10 +2483,15 @@ namespace detail {
 		void Store(Frontend& f)
 		{
 			if (val_.IsMem()) {
-				f.mov(f.ecx, Size);
-				f.lea(f.esi, static_cast<Mem32&>(static_cast<Opd&>(val_)));
-				f.mov(f.edi, f.dword_ptr[f.ebp + sizeof(void *) * 2]);
-				f.mov(f.eax, f.edi);
+				f.mov(f.zcx, Size);
+				//f.lea(f.zsi, static_cast<MemT<OpdR>&>(val_));
+#ifdef JITASM64
+				f.lea(f.zsi, static_cast<Mem64&>(static_cast<Opd&>(val_)));
+#else
+				f.lea(f.zsi, static_cast<Mem32&>(static_cast<Opd&>(val_)));
+#endif
+				f.mov(f.zdi, f.zword_ptr[f.zbp + sizeof(void *) * 2]);
+				f.mov(f.zax, f.zdi);
 				f.rep_movsb();
 			}
 		}
@@ -2585,6 +2591,27 @@ namespace detail {
 		ResultT(const float imm) : val_(Imm32(*(uint32*)&imm)) {}
 		void Store(Frontend& f)
 		{
+#ifdef JITASM64
+			if (val_.IsReg() && val_.GetSize() == O_SIZE_80) {
+				// from FPU register
+				//f.fstp(f.real4_ptr[f.esp - 4]);
+				f.movss(f.xmm0, f.dword_ptr[f.esp - 4]);
+			}
+			else if (val_.IsMem() && val_.GetSize() == O_SIZE_32) {
+				// from memory
+				f.movss(f.xmm0, static_cast<Mem32&>(val_));
+			}
+			else if (val_.IsReg() && val_.GetSize() == O_SIZE_128) {
+				// from XMM register
+				if (val_.GetReg() != XMM0)
+					f.movss(f.xmm0, static_cast<XmmReg&>(val_));
+			}
+			else if (val_.IsImm()) {
+				// from float immediate
+				f.mov(f.dword_ptr[f.esp - 4], static_cast<Reg32&>(val_));
+				f.movss(f.xmm0, f.dword_ptr[f.esp - 4]);
+			}
+#else
 			if (val_.IsReg() && val_.GetSize() == O_SIZE_80) {
 				// from FPU register
 				if (val_.GetReg() != ST0)
@@ -2604,6 +2631,7 @@ namespace detail {
 				f.mov(f.dword_ptr[f.esp - 4], static_cast<Reg32&>(val_));
 				f.fld(f.real4_ptr[f.esp - 4]);
 			}
+#endif
 		}
 	};
 
@@ -2620,6 +2648,28 @@ namespace detail {
 		ResultT(const double imm) : val_(Imm32(0)), imm_(imm) {}
 		void Store(Frontend& f)
 		{
+#ifdef JITASM64
+			if (val_.IsReg() && val_.GetSize() == O_SIZE_80) {
+				// from FPU register
+				//f.fstp(f.real8_ptr[f.esp - 8]);
+				f.movsd(f.xmm0, f.qword_ptr[f.esp - 8]);
+			}
+			else if (val_.IsMem() && val_.GetSize() == O_SIZE_64) {
+				// from memory
+				f.movsd(f.xmm0, static_cast<Mem64&>(val_));
+			}
+			else if (val_.IsReg() && val_.GetSize() == O_SIZE_128) {
+				// from XMM register
+				if (val_.GetReg() != XMM0)
+					f.movsd(f.xmm0, static_cast<XmmReg&>(val_));
+			}
+			else if (val_.IsImm()) {
+				// from float immediate
+				f.mov(f.dword_ptr[f.esp - 8], *reinterpret_cast<uint32*>(&imm_));
+				f.mov(f.dword_ptr[f.esp - 4], *(reinterpret_cast<uint32*>(&imm_) + 1));
+				f.movsd(f.xmm0, f.qword_ptr[f.esp - 8]);
+			}
+#else
 			if (val_.IsReg() && val_.GetSize() == O_SIZE_80) {
 				// from FPU register
 				if (val_.GetReg() != ST0)
@@ -2640,14 +2690,15 @@ namespace detail {
 				f.mov(f.dword_ptr[f.esp - 4], *(reinterpret_cast<uint32*>(&imm_) + 1));
 				f.fld(f.real8_ptr[f.esp - 8]);
 			}
+#endif
 		}
 	};
 
 
 	/// cdecl function base class
-	template<class R, class FuncPtr>
-	struct Function_cdecl : Frontend
+	class Function_cdecl : public Frontend
 	{
+	public:
 #ifdef JITASM64
 		typedef Reg64Expr Arg;		///< main function argument type
 		template<int N, class T> struct ArgTraits : ArgumentTraits_win64<N, T> {};
@@ -2656,9 +2707,6 @@ namespace detail {
 		typedef Reg32Expr Arg;		///< main function argument type
 		template<int N, class T> struct ArgTraits : ArgumentTraits_cdecl<N, T> {};
 #endif
-
-		typedef ResultT<R> Result;	///< main function result type
-		typename ResultTraits<R>::ResultPtr result_ptr;
 
 		/**
 		 * \param dump_regarg_x64	On x64, the caller passes the first four arguments in register.
@@ -2672,6 +2720,7 @@ namespace detail {
 		{}
 #endif
 
+	private:
 		template<int N, class T>
 		void CopyRegArgToStack(const Arg& addr)
 		{
@@ -2685,45 +2734,99 @@ namespace detail {
 #endif
 		}
 
-		template<class A1> Arg Arg1()
+	public:
+		template<class R>
+		Arg DumpRegArg0()
 		{
-			Arg a(zbp + sizeof(void *) * (2 + Result::ArgR));
-			CopyRegArgToStack<0, A1>(a);
-			return a;
-		}
-		template<class A1, class A2> Arg Arg2()
-		{
-			Arg a = Arg1<A1>() + ArgTraits<0, A1>::size;
-			CopyRegArgToStack<1, A2>(a);
-			return a;
-		}
-		template<class A1, class A2, class A3> Arg Arg3()
-		{
-			Arg a = Arg2<A1>() + ArgTraits<1, A2>::size;
-			CopyRegArgToStack<2, A3>(a);
-			return a;
+			Arg addr(zbp + sizeof(void *) * 2);
+			if (ResultT<R>::ArgR) {
+				CopyRegArgToStack<0, R>(addr);
+				addr = addr + ArgTraits<0, R>::size;
+			}
+			return addr;
 		}
 
-		operator FuncPtr() { return (FuncPtr)GetCode(); }
+		template<class R, class A1>
+		Arg DumpRegArg1()
+		{
+			Arg addr = DumpRegArg0<R>();
+			CopyRegArgToStack<0 + ResultT<R>::ArgR, A1>(addr);
+			return addr + ArgTraits<0 + ResultT<R>::ArgR, A1>::size;
+		}
+
+		template<class R, class A1, class A2>
+		Arg DumpRegArg2()
+		{
+			Arg addr = DumpRegArg1<R, A1>();
+			CopyRegArgToStack<1 + ResultT<R>::ArgR, A2>(addr);
+			return addr + ArgTraits<1 + ResultT<R>::ArgR, A2>::size;
+		}
+
+		template<class R, class A1, class A2, class A3>
+		Arg DumpRegArg3()
+		{
+			Arg addr = DumpRegArg2<R, A1, A2>();
+			CopyRegArgToStack<2 + ResultT<R>::ArgR, A3>(addr);
+			return addr + ArgTraits<2 + ResultT<R>::ArgR, A3>::size;
+		}
+
+		template<class R, class A1, class A2, class A3, class A4>
+		Arg DumpRegArg4()
+		{
+			Arg addr = DumpRegArg3<R, A1, A2, A3>();
+			CopyRegArgToStack<3 + ResultT<R>::ArgR, A4>(addr);
+			return addr + ArgTraits<3 + ResultT<R>::ArgR, A4>::size;
+		}
+
+		template<class R>
+		Arg Arg1() { return Arg(zbp + sizeof(void *) * (2 + ResultT<R>::ArgR)); }
+		template<class R, class A1>
+		Arg Arg2() { return Arg1<R>() + ArgTraits<0, A1>::size; }
+		template<class R, class A1, class A2>
+		Arg Arg3() { return Arg2<R, A1>() + ArgTraits<1, A2>::size; }
+		template<class R, class A1, class A2, class A3>
+		Arg Arg4() { return Arg3<R, A1, A2>() + ArgTraits<2, A3>::size; }
+		template<class R, class A1, class A2, class A3, class A4>
+		Arg Arg5() { return Arg4<R, A1, A2, A3>() + ArgTraits<3, A4>::size; }
+		template<class R, class A1, class A2, class A3, class A4, class A5>
+		Arg Arg6() { return Arg5<R, A1, A2, A3, A4>() + ArgTraits<4, A5>::size; }
+		template<class R, class A1, class A2, class A3, class A4, class A5, class A6>
+		Arg Arg7() { return Arg6<R, A1, A2, A3, A4, A5>() + ArgTraits<5, A6>::size; }
+		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7>
+		Arg Arg8() { return Arg7<R, A1, A2, A3, A4, A5, A6>() + ArgTraits<6, A7>::size; }
+		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8>
+		Arg Arg9() { return Arg8<R, A1, A2, A3, A4, A5, A6, A7>() + ArgTraits<7, A8>::size; }
+		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9>
+		Arg Arg10() { return Arg9<R, A1, A2, A3, A4, A5, A6, A7, A8>() + ArgTraits<8, A9>::size; }
 	};
 
 }	// namespace detail
 
 /// cdecl function which has no argument
 template<class R>
-struct function0_cdecl : detail::Function_cdecl<R, R (__cdecl *)()>
+struct function0_cdecl : detail::Function_cdecl
 {
+	typedef R (__cdecl *FuncPtr)();
+	typedef detail::ResultT<R> Result;	///< main function result type
+	typename detail::ResultTraits<R>::ResultPtr result_ptr;
+
+	function0_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
 	virtual Result main() { return Result(); }
 	void naked_main() {
 		Prolog(0);
+		DumpRegArg0<R>();
 		main().Store(*this);
 		Epilog();
 	}
 };
 
 template<>
-struct function0_cdecl<void> : detail::Function_cdecl<void, void (__cdecl *)()>
+struct function0_cdecl<void> : detail::Function_cdecl
 {
+	typedef void (__cdecl *FuncPtr)();
+	function0_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
 	virtual void main() {}
 	void naked_main()	{
 		Prolog(0);
@@ -2734,46 +2837,68 @@ struct function0_cdecl<void> : detail::Function_cdecl<void, void (__cdecl *)()>
 
 /// cdecl function which has 1 argument
 template<class R, class A1>
-struct function1_cdecl : detail::Function_cdecl<R, R (__cdecl *)(A1)>
+struct function1_cdecl : detail::Function_cdecl
 {
+	typedef R (__cdecl *FuncPtr)(A1);
+	typedef detail::ResultT<R> Result;	///< main function result type
+	typename detail::ResultTraits<R>::ResultPtr result_ptr;
+
+	function1_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
 	virtual Result main(Arg a1) { return Result(); }
 	void naked_main() {
 		Prolog(0);
-		main(Arg1<A1>()).Store(*this);
+		DumpRegArg1<R, A1>();
+		main(Arg1<R>()).Store(*this);
 		Epilog();
 	}
 };
 
 template<class A1>
-struct function1_cdecl<void, A1> : detail::Function_cdecl<void, void (__cdecl *)(A1)>
+struct function1_cdecl<void, A1> : detail::Function_cdecl
 {
+	typedef void (__cdecl *FuncPtr)(A1);
+	function1_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
 	virtual void main(Arg a1) {}
 	void naked_main() {
 		Prolog(0);
-		main(Arg1<A1>());
+		DumpRegArg1<void, A1>();
+		main(Arg1<void>());
 		Epilog();
 	}
 };
 
 /// cdecl function which has 2 arguments
 template<class R, class A1, class A2>
-struct function2_cdecl : detail::Function_cdecl<R, R (__cdecl *)(A1, A2)>
+struct function2_cdecl : detail::Function_cdecl
 {
+	typedef R (__cdecl *FuncPtr)(A1, A2);
+	typedef detail::ResultT<R> Result;	///< main function result type
+	typename detail::ResultTraits<R>::ResultPtr result_ptr;
+
+	function2_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
 	virtual Result main(Arg a1, Arg a2) { return Result(); }
 	void naked_main() {
 		Prolog(0);
-		main(Arg1<A1>(), Arg2<A1, A2>()).Store(*this);
+		DumpRegArg2<R, A1, A2>();
+		main(Arg1<R>(), Arg2<R, A1>()).Store(*this);
 		Epilog();
 	}
 };
 
 template<class A1, class A2>
-struct function2_cdecl<void, A1, A2> : detail::Function_cdecl<void, void (__cdecl *)(A1, A2)>
+struct function2_cdecl<void, A1, A2> : detail::Function_cdecl
 {
+	typedef void (__cdecl *FuncPtr)(A1, A2);
+	function2_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
 	virtual void main(Arg a1, Arg a2) {}
 	void naked_main() {
 		Prolog(0);
-		main(Arg1<A1>(), Arg2<A1, A2>());
+		DumpRegArg2<void, A1, A2>();
+		main(Arg1<void>(), Arg2<void, A1>());
 		Epilog();
 	}
 };
