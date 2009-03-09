@@ -1425,7 +1425,6 @@ struct test_jmp : jitasm::function0<void>
 	}
 };
 
-
 //----------------------------------------
 // MOVSB/MOVSW/MOVSD/MOVSQ
 //----------------------------------------
@@ -1470,6 +1469,39 @@ struct mov_disp : jitasm::function0<void>
 		mov(rax, qword_ptr[1]);
 		mov(rax, qword_ptr[-1]);
 		mov(rax, qword_ptr[0x100000000]);
+#endif
+	}
+};
+
+//----------------------------------------
+// NEG/NOT
+//----------------------------------------
+extern "C" void masm_neg_not();
+struct test_neg_not : jitasm::function0<void>
+{
+	virtual void naked_main()
+	{
+		neg(al);
+		neg(ax);
+		neg(eax);
+		neg(byte_ptr[esp]);
+		neg(word_ptr[esp]);
+		neg(dword_ptr[esp]);
+		not(al);
+		not(ax);
+		not(eax);
+		not(byte_ptr[esp]);
+		not(word_ptr[esp]);
+		not(dword_ptr[esp]);
+#ifdef JITASM64
+		neg(r8w);
+		neg(rax);
+		neg(r8);
+		neg(qword_ptr[rsp]);
+		not(r8w);
+		not(rax);
+		not(r8);
+		not(qword_ptr[rsp]);
 #endif
 	}
 };

@@ -870,6 +870,24 @@ masm_test_movs proc
 masm_test_movs endp
 
 ;----------------------------------------
+; NEG/NOT
+;----------------------------------------
+masm_neg_not proc
+	neg al
+	neg ax
+	neg eax
+	neg byte ptr[esp]
+	neg word ptr[esp]
+	neg dword ptr[esp]
+	not al
+	not ax
+	not eax
+	not byte ptr[esp]
+	not word ptr[esp]
+	not dword ptr[esp]
+masm_neg_not endp
+
+;----------------------------------------
 ; function0_cdecl<int>
 ;----------------------------------------
 masm_test_function0_cdecl proc

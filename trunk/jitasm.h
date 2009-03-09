@@ -378,7 +378,8 @@ enum InstrID
 	I_JG, I_JGE, I_JL, I_JLE, I_JNE, I_JNO, I_JNP, I_JNS, I_JO, I_JP, I_JS,
 	I_LEA, I_LEAVE,
 	I_MOV, I_MOVS_B, I_MOVS_W, I_MOVS_D, I_MOVS_Q, I_REP_MOVS_B, I_REP_MOVS_W, I_REP_MOVS_D, I_REP_MOVS_Q, I_MOVZX,
-	I_NOP, I_OR, I_POP, I_PUSH, I_RET, I_RCL, I_RCR, I_ROL, I_ROR, I_SAR, I_SHL, I_SHR, I_SBB, I_SUB, I_TEST, I_XCHG, I_XOR,
+	I_NEG, I_NOP, I_NOT, I_OR, I_POP, I_PUSH, I_RET,
+	I_RCL, I_RCR, I_ROL, I_ROR, I_SAR, I_SHL, I_SHR, I_SBB, I_SUB, I_TEST, I_XCHG, I_XOR,
 
 	I_FLD,
 
@@ -774,6 +775,20 @@ struct Backend
 		EncodeModRM(reg, r_m);
 	}
 
+	void EncodeNegNot(uint8 digit, const Opd& r_m)
+	{
+#ifdef JITASM64
+		if (r_m.IsMem() && r_m.GetAddressSize() != O_SIZE_64) EncodeAddressSizePrefix();
+		if (r_m.GetSize() == O_SIZE_16) EncodeOperandSizePrefix();
+		EncodeRexWRXB(r_m);
+#else
+		if (r_m.GetSize() == O_SIZE_16) EncodeOperandSizePrefix();
+#endif
+		uint8 w = r_m.GetSize() != O_SIZE_8 ? 1 : 0;
+		db(0xF6 | w);
+		EncodeModRM(digit, r_m);
+	}
+
 	void EncodePOP(uint8 opcode1, uint8 opcode2, uint8 digit, const Opd& opd)
 	{
 		if (opd.IsImm()) {
@@ -1075,7 +1090,9 @@ struct Backend
 		case I_REP_MOVS_D:	EncodeRep(); db(0xA5); break;
 		case I_REP_MOVS_Q:	EncodeRep(); db(0x48); db(0xA5); break;
 		case I_MOVZX:		EncodeMOVZX(opd1, opd2); break;
+		case I_NEG:			EncodeNegNot(3, opd1); break;
 		case I_NOP:			db(0x90); break;
+		case I_NOT:			EncodeNegNot(2, opd1); break;
 		case I_OR:			EncodeALU(0x08, opd1, opd2); break;
 		case I_POP:			EncodePOP(0x58, 0x8F, 0, opd1); break;
 		case I_PUSH:		EncodePOP(0x50, 0xFF, 6, opd1); break;
@@ -1791,8 +1808,32 @@ struct Frontend
 	void movzx(const Reg64& opd1, const Opd16& opd2)	{PushBack(Instr(I_MOVZX, opd1, opd2));}
 #endif
 
+	// NEG
+	void neg(const Reg8& opd)	{PushBack(Instr(I_NEG, opd));}
+	void neg(const Mem8& opd)	{PushBack(Instr(I_NEG, opd));}
+	void neg(const Reg16& opd)	{PushBack(Instr(I_NEG, opd));}
+	void neg(const Mem16& opd)	{PushBack(Instr(I_NEG, opd));}
+	void neg(const Reg32& opd)	{PushBack(Instr(I_NEG, opd));}
+	void neg(const Mem32& opd)	{PushBack(Instr(I_NEG, opd));}
+#ifdef JITASM64
+	void neg(const Reg64& opd)	{PushBack(Instr(I_NEG, opd));}
+	void neg(const Mem64& opd)	{PushBack(Instr(I_NEG, opd));}
+#endif
+
 	// NOP
 	void nop()	{PushBack(Instr(I_NOP));}
+
+	// NOT
+	void not(const Reg8& opd)	{PushBack(Instr(I_NOT, opd));}
+	void not(const Mem8& opd)	{PushBack(Instr(I_NOT, opd));}
+	void not(const Reg16& opd)	{PushBack(Instr(I_NOT, opd));}
+	void not(const Mem16& opd)	{PushBack(Instr(I_NOT, opd));}
+	void not(const Reg32& opd)	{PushBack(Instr(I_NOT, opd));}
+	void not(const Mem32& opd)	{PushBack(Instr(I_NOT, opd));}
+#ifdef JITASM64
+	void not(const Reg64& opd)	{PushBack(Instr(I_NOT, opd));}
+	void not(const Mem64& opd)	{PushBack(Instr(I_NOT, opd));}
+#endif
 
 	// OR
 	void or(const Reg8& opd1, const Reg8& opd2)		{PushBack(Instr(I_OR, opd1, opd2));}
