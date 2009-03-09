@@ -1313,6 +1313,27 @@ masm_test_imul proc
 masm_test_imul endp
 
 ;----------------------------------------
+; FST/FSTP
+;----------------------------------------
+masm_test_fst proc
+	fst real4 ptr[esp]
+	fst real8 ptr[esp]
+	fst st(0)
+	fst st(7)
+	fstp real4 ptr[esp]
+	fstp real8 ptr[esp]
+	fstp real10 ptr[esp]
+	fstp st(0)
+	fstp st(7)
+
+	fst real4 ptr[rsp]
+	fst real8 ptr[rsp]
+	fstp real4 ptr[rsp]
+	fstp real8 ptr[rsp]
+	fstp real10 ptr[rsp]
+masm_test_fst endp
+
+;----------------------------------------
 ; function0_cdecl<int>
 ;----------------------------------------
 masm_test_function0_cdecl proc

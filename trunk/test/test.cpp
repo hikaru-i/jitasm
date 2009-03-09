@@ -1581,6 +1581,33 @@ struct test_imul : jitasm::function0<void>
 };
 
 //----------------------------------------
+// FST/FSTP
+//----------------------------------------
+extern "C" void masm_test_fst();
+struct test_fst : jitasm::function0<void>
+{
+	virtual void naked_main()
+	{
+		fst(real4_ptr[esp]);
+		fst(real8_ptr[esp]);
+		fst(st(0));
+		fst(st(7));
+		fstp(real4_ptr[esp]);
+		fstp(real8_ptr[esp]);
+		fstp(real10_ptr[esp]);
+		fstp(st(0));
+		fstp(st(7));
+#ifdef JITASM64
+		fst(real4_ptr[rsp]);
+		fst(real8_ptr[rsp]);
+		fstp(real4_ptr[rsp]);
+		fstp(real8_ptr[rsp]);
+		fstp(real10_ptr[rsp]);
+#endif
+	}
+};
+
+//----------------------------------------
 // function0_cdecl<int>
 //----------------------------------------
 extern "C" void masm_test_function0_cdecl();
@@ -1693,6 +1720,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	TEST(test_neg_not);
 	TEST(test_div_idiv_mul);
 	TEST(test_imul);
+	TEST(test_fst);
 
 	//TEST(test_function0_cdecl);
 	//TEST(masm_test_function1_cdecl, test_function1_cdecl());
