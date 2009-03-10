@@ -1334,6 +1334,78 @@ masm_test_fst proc
 masm_test_fst endp
 
 ;----------------------------------------
+; MOVD/MOVQ
+;----------------------------------------
+masm_test_movd_movq proc
+	movd mm0, dword ptr[eax]
+	movd mm0, eax
+	movq mm0, qword ptr[eax]
+	movd dword ptr[eax], mm0
+	movd eax, mm0
+	movq qword ptr[eax], mm0
+	movd xmm0, dword ptr[eax]
+	movd xmm0, eax
+	movq xmm0, qword ptr[eax]
+	movd dword ptr[eax], xmm0
+	movd eax, xmm0
+	movq qword ptr[eax], xmm0
+	movq mm0, mm0
+	movq mm0, qword ptr[eax]
+	movq qword ptr[eax], mm0
+	movq xmm0, xmm0
+	movq xmm0, qword ptr[eax]
+	movq qword ptr[eax], xmm0
+
+	movd mm0, rax				; movq mm0, rax
+	movd rax, mm0				; movq rax, mm0
+	movd xmm0, rax				; movq xmm0, rax
+	movd rax, xmm0				; movq rax, xmm0
+	movd mm0, dword ptr[rax]
+	movq mm0, qword ptr[rax]
+	movd dword ptr[rax], mm0
+	movq qword ptr[rax], mm0
+	movd xmm0, dword ptr[rax]
+	movq xmm0, qword ptr[rax]
+	movd dword ptr[rax], xmm0
+	movq qword ptr[rax], xmm0
+	movq mm0, qword ptr[rax]
+	movq qword ptr[rax], mm0
+	movq xmm0, qword ptr[rax]
+	movq qword ptr[rax], xmm0
+	; test REX
+	movd mm0, r8				; movq mm0, r8
+	movd r8, mm0				; movq r8, mm0
+	movd xmm0, rax				; movq xmm0, rax
+	movd xmm0, r8				; movq xmm0, r8
+	movd xmm8, rax				; movq xmm8, rax
+	movd xmm8, r8				; movq xmm8, r8
+	movd rax, xmm0				; movq rax, xmm0
+	movd rax, xmm8				; movq rax, xmm8
+	movd r8, xmm0				; movq r8, xmm0
+	movd r8, xmm8				; movq r8, xmm8
+	movd mm0, dword ptr[r8]
+	movq mm0, qword ptr[r8]
+	movd dword ptr[r8], mm0
+	movq qword ptr[r8], mm0
+	movd xmm0, dword ptr[rax]
+	movd xmm0, dword ptr[r8]
+	movd xmm1, dword ptr[rax]
+	movd xmm1, dword ptr[r8]
+	movq xmm0, qword ptr[rax]
+	movq xmm0, qword ptr[r8]
+	movq xmm1, qword ptr[rax]
+	movq xmm1, qword ptr[r8]
+	movd dword ptr[rax], xmm0
+	movd dword ptr[rax], xmm1
+	movd dword ptr[r8], xmm0
+	movd dword ptr[r8], xmm1
+	movq qword ptr[rax], xmm0
+	movq qword ptr[rax], xmm1
+	movq qword ptr[r8], xmm0
+	movq qword ptr[r8], xmm1
+masm_test_movd_movq endp
+
+;----------------------------------------
 ; function0_cdecl<int>
 ;----------------------------------------
 masm_test_function0_cdecl proc

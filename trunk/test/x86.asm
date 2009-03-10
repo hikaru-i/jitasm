@@ -949,6 +949,30 @@ masm_test_fst proc
 masm_test_fst endp
 
 ;----------------------------------------
+; MOVD/MOVQ
+;----------------------------------------
+masm_test_movd_movq proc
+	movd mm0, dword ptr[eax]
+	movd mm0, eax
+	movq mm0, qword ptr[eax]
+	movd dword ptr[eax], mm0
+	movd eax, mm0
+	movq qword ptr[eax], mm0
+	movd xmm0, dword ptr[eax]
+	movd xmm0, eax
+	movq xmm0, qword ptr[eax]
+	movd dword ptr[eax], xmm0
+	movd eax, xmm0
+	movq qword ptr[eax], xmm0
+	movq mm0, mm0
+	movq mm0, qword ptr[eax]
+	movq qword ptr[eax], mm0
+	movq xmm0, xmm0
+	movq xmm0, qword ptr[eax]
+	movq qword ptr[eax], xmm0
+masm_test_movd_movq endp
+
+;----------------------------------------
 ; function0_cdecl<int>
 ;----------------------------------------
 masm_test_function0_cdecl proc

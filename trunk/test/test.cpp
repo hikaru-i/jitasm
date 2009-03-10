@@ -1608,6 +1608,84 @@ struct test_fst : jitasm::function0<void>
 };
 
 //----------------------------------------
+// MOVD/MOVQ
+//----------------------------------------
+extern "C" void masm_test_movd_movq();
+struct test_movd_movq : jitasm::function0<void>
+{
+	virtual void naked_main()
+	{
+		movd(mm0, dword_ptr[eax]);
+		movd(mm0, eax);
+		movq(mm0, qword_ptr[eax]);
+		movd(dword_ptr[eax], mm0);
+		movd(eax, mm0);
+		movq(qword_ptr[eax], mm0);
+		movd(xmm0, dword_ptr[eax]);
+		movd(xmm0, eax);
+		movq(xmm0, qword_ptr[eax]);
+		movd(dword_ptr[eax], xmm0);
+		movd(eax, xmm0);
+		movq(qword_ptr[eax], xmm0);
+		movq(mm0, mm0);
+		movq(mm0, qword_ptr[eax]);
+		movq(qword_ptr[eax], mm0);
+		movq(xmm0, xmm0);
+		movq(xmm0, qword_ptr[eax]);
+		movq(qword_ptr[eax], xmm0);
+#ifdef JITASM64
+		movd(mm0, rax);				// movq mm0, rax
+		movd(rax, mm0);				// movq rax, mm0
+		movd(xmm0, rax);			// movq xmm0, rax
+		movd(rax, xmm0);			// movq rax, xmm0
+		movd(mm0, dword_ptr[rax]);
+		movq(mm0, qword_ptr[rax]);
+		movd(dword_ptr[rax], mm0);
+		movq(qword_ptr[rax], mm0);
+		movd(xmm0, dword_ptr[rax]);
+		movq(xmm0, qword_ptr[rax]);
+		movd(dword_ptr[rax], xmm0);
+		movq(qword_ptr[rax], xmm0);
+		movq(mm0, qword_ptr[rax]);
+		movq(qword_ptr[rax], mm0);
+		movq(xmm0, qword_ptr[rax]);
+		movq(qword_ptr[rax], xmm0);
+		// test REX
+		movd(mm0, r8);				// movq mm0, r8
+		movd(r8, mm0);				// movq r8, mm0
+		movd(xmm0, rax);			// movq xmm0, rax
+		movd(xmm0, r8);				// movq xmm0, r8
+		movd(xmm8, rax);			// movq xmm8, rax
+		movd(xmm8, r8);				// movq xmm8, r8
+		movd(rax, xmm0);			// movq rax, xmm0
+		movd(rax, xmm8);			// movq rax, xmm8
+		movd(r8, xmm0);				// movq r8, xmm0
+		movd(r8, xmm8);				// movq r8, xmm8
+		movd(mm0, dword_ptr[r8]);
+		movq(mm0, qword_ptr[r8]);
+		movd(dword_ptr[r8], mm0);
+		movq(qword_ptr[r8], mm0);
+		movd(xmm0, dword_ptr[rax]);
+		movd(xmm0, dword_ptr[r8]);
+		movd(xmm1, dword_ptr[rax]);
+		movd(xmm1, dword_ptr[r8]);
+		movq(xmm0, qword_ptr[rax]);
+		movq(xmm0, qword_ptr[r8]);
+		movq(xmm1, qword_ptr[rax]);
+		movq(xmm1, qword_ptr[r8]);
+		movd(dword_ptr[rax], xmm0);
+		movd(dword_ptr[rax], xmm1);
+		movd(dword_ptr[r8], xmm0);
+		movd(dword_ptr[r8], xmm1);
+		movq(qword_ptr[rax], xmm0);
+		movq(qword_ptr[rax], xmm1);
+		movq(qword_ptr[r8], xmm0);
+		movq(qword_ptr[r8], xmm1);
+#endif
+	}
+};
+
+//----------------------------------------
 // function0_cdecl<int>
 //----------------------------------------
 extern "C" void masm_test_function0_cdecl();
@@ -1721,6 +1799,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	TEST(test_div_idiv_mul);
 	TEST(test_imul);
 	TEST(test_fst);
+	TEST(test_movd_movq);
 
 	//TEST(test_function0_cdecl);
 	//TEST(masm_test_function1_cdecl, test_function1_cdecl());

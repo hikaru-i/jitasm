@@ -164,7 +164,7 @@ namespace detail
 {
 	inline bool IsGpReg(const Opd& reg)		{return reg.IsReg() && (reg.GetReg() & 0xF00) == EAX;}
 	inline bool IsFpuReg(const Opd& reg)	{return reg.IsReg() && (reg.GetReg() & 0xF00) == ST0;}
-	inline bool IsMMxReg(const Opd& reg)	{return reg.IsReg() && (reg.GetReg() & 0xF00) == MM0;}
+	inline bool IsMmxReg(const Opd& reg)	{return reg.IsReg() && (reg.GetReg() & 0xF00) == MM0;}
 	inline bool IsXmmReg(const Opd& reg)	{return reg.IsReg() && (reg.GetReg() & 0xF00) == XMM0;}
 }	// namespace detail
 
@@ -192,15 +192,15 @@ struct RegT : OpdN
 {
 	explicit RegT(RegID reg) : OpdN(reg) {}
 };
-typedef RegT<Opd8>		Reg8;
-typedef RegT<Opd16>		Reg16;
-typedef RegT<Opd32>		Reg32;
+struct Reg8 : Opd8 { explicit Reg8(RegID reg) : Opd8(reg) {} };
+struct Reg16 : Opd16 { explicit Reg16(RegID reg) : Opd16(reg) {} };
+struct Reg32 : Opd32 { explicit Reg32(RegID reg) : Opd32(reg) {} };
 #ifdef JITASM64
-typedef RegT<Opd64>		Reg64;
+struct Reg64 : Opd64 { explicit Reg64(RegID reg) : Opd64(reg) {} };
 #endif
-typedef RegT<Opd80>		FpuReg;
-typedef RegT<Opd64>		MmxReg;
-typedef RegT<Opd128>	XmmReg;
+struct FpuReg : Opd80 { explicit FpuReg(RegID reg) : Opd80(reg) {} };
+struct MmxReg : Opd64 { explicit MmxReg(RegID reg) : Opd64(reg) {} };
+struct XmmReg : Opd128 { explicit XmmReg(RegID reg) : Opd128(reg) {} };
 
 #ifdef JITASM64
 struct Rax : Reg64
@@ -467,11 +467,11 @@ struct Backend
 	{
 		uint8 wrxb = 0;
 		if (reg.IsReg()) {
-			if (reg.GetSize() == O_SIZE_64) wrxb |= 8;
+			if (detail::IsGpReg(reg) && reg.GetSize() == O_SIZE_64) wrxb |= 8;
 			if (reg.GetReg() != INVALID && reg.GetReg() & 0x10) wrxb |= 4;
 		}
 		if (r_m.IsReg()) {
-			if (r_m.GetSize() == O_SIZE_64) wrxb |= 8;
+			if (detail::IsGpReg(r_m) && r_m.GetSize() == O_SIZE_64) wrxb |= 8;
 			if (r_m.GetReg() & 0x10) wrxb |= 1;
 		}
 		if (r_m.IsMem()) {
@@ -1090,17 +1090,50 @@ struct Backend
 		EncodeModRM(7, dst);
 	}
 
+	void EncodeMOVD(const Opd& dst, const Opd& src)
+	{
+		uint8 opcode = 0;
+		if (detail::IsMmxReg(dst))		opcode = 0x6E;
+		else if (detail::IsMmxReg(src))	opcode = 0x7E;
+		else if (detail::IsXmmReg(dst))	db(0x66), opcode = 0x6E;
+		else if (detail::IsXmmReg(src))	db(0x66), opcode = 0x7E;
+		else ASSERT(0);
+
+		const Opd& reg = detail::IsMmxReg(dst) || detail::IsXmmReg(dst) ? dst : src;
+		const Opd& r_m = detail::IsMmxReg(dst) || detail::IsXmmReg(dst) ? src : dst;
+
+#ifdef JITASM64
+		if (r_m.IsMem() && r_m.GetAddressSize() != O_SIZE_64) EncodeAddressSizePrefix();
+		if (detail::IsGpReg(r_m)) EncodeRexWRXB(reg, r_m);
+		else EncodeRexRXB(reg, r_m);
+#endif
+
+		db(0x0F);
+		db(opcode);
+		EncodeModRM(reg, r_m);
+	}
+
 	void EncodeMOVQ(const Opd& dst, const Opd& src)
 	{
-		if ((dst.IsReg() ? dst : src).GetSize() == O_SIZE_64) {
-			EncodeMMX(0x6F | (dst.IsReg() ? 0 : 0x10), dst, src);
-		}
-		else if (dst.IsReg()) {
-			EncodeSSE2(0xF3, 0x7E, dst, src);
-		}
-		else {
-			EncodeSSE2(0x66, 0xD6, dst, src);
-		}
+		uint8 opcode = 0;
+		if (detail::IsMmxReg(src))		opcode = 0x7F;
+		else if (detail::IsMmxReg(dst))	opcode = 0x6F;
+		else if (detail::IsXmmReg(dst))	db(0xF3), opcode = 0x7E;
+		else if (detail::IsXmmReg(src))	db(0x66), opcode = 0xD6;
+		else ASSERT(0);
+
+		const Opd& reg = dst.IsReg() ? dst : src;
+		const Opd& r_m = dst.IsReg() ? src : dst;
+
+#ifdef JITASM64
+		if (r_m.IsMem() && r_m.GetAddressSize() != O_SIZE_64) EncodeAddressSizePrefix();
+		if (detail::IsGpReg(r_m)) EncodeRexWRXB(reg, r_m);
+		else EncodeRexRXB(reg, r_m);
+#endif
+
+		db(0x0F);
+		db(opcode);
+		EncodeModRM(reg, r_m);
 	}
 
 	void Assemble(const Instr& instr)
@@ -1220,7 +1253,7 @@ struct Backend
 		case I_MINPD:		EncodeSSE2(0x66, 0x5D, o1, o2); break;
 		case I_MINSD:		EncodeSSE2(0xF2, 0x5D, o1, o2); break;
 		case I_MOVAPD:		EncodeSSE2(0x66, 0x28 | (o1.IsReg() ? 0 : 0x01), o1, o2); break;
-		//case I_MOVD:
+		case I_MOVD:		EncodeMOVD(o1, o2); break;
 		case I_MOVDQ2Q:		EncodeSSE2(0xF2, 0xD6, o1, o2); break;
 		case I_MOVDQA:		EncodeSSE2(0x66, 0x6F | (o1.IsReg() ? 0 : 0x10), o1, o2); break;
 		case I_MOVDQU:		EncodeSSE2(0xF3, 0x6F | (o1.IsReg() ? 0 : 0x10), o1, o2); break;
@@ -2339,9 +2372,25 @@ struct Frontend
 	void movdqu(const XmmReg& dst, const Mem128& src)	{PushBack(Instr(I_MOVDQU, dst, src));}
 	void movdqu(const Mem128& dst, const XmmReg& src)	{PushBack(Instr(I_MOVDQU, dst, src));}
 
+	// MOVD
+	void movd(const MmxReg& dst, const Reg32& src)	{PushBack(Instr(I_MOVD, dst, src));}
+	void movd(const MmxReg& dst, const Mem32& src)	{PushBack(Instr(I_MOVD, dst, src));}
+	void movd(const Reg32& dst, const MmxReg& src)	{PushBack(Instr(I_MOVD, dst, src));}
+	void movd(const Mem32& dst, const MmxReg& src)	{PushBack(Instr(I_MOVD, dst, src));}
+	void movd(const XmmReg& dst, const Reg32& src)	{PushBack(Instr(I_MOVD, dst, src));}
+	void movd(const XmmReg& dst, const Mem32& src)	{PushBack(Instr(I_MOVD, dst, src));}
+	void movd(const Reg32& dst, const XmmReg& src)	{PushBack(Instr(I_MOVD, dst, src));}
+	void movd(const Mem32& dst, const XmmReg& src)	{PushBack(Instr(I_MOVD, dst, src));}
+#ifdef JITASM64
+	void movd(const MmxReg& dst, const Reg64& src)	{PushBack(Instr(I_MOVD, dst, src));}
+	void movd(const Reg64& dst, const MmxReg& src)	{PushBack(Instr(I_MOVD, dst, src));}
+	void movd(const XmmReg& dst, const Reg64& src)	{PushBack(Instr(I_MOVD, dst, src));}
+	void movd(const Reg64& dst, const XmmReg& src)	{PushBack(Instr(I_MOVD, dst, src));}
+#endif
+
 	// MOVQ
-	void movq(const MmxReg& dst, const MmxReg& src)	{PushBack(Instr(I_MOVQ, dst, src));}
 	void movq(const MmxReg& dst, const Mem64& src)	{PushBack(Instr(I_MOVQ, dst, src));}
+	void movq(const MmxReg& dst, const MmxReg& src)	{PushBack(Instr(I_MOVQ, dst, src));}
 	void movq(const Mem64& dst, const MmxReg& src)	{PushBack(Instr(I_MOVQ, dst, src));}
 	void movq(const XmmReg& dst, const XmmReg& src)	{PushBack(Instr(I_MOVQ, dst, src));}
 	void movq(const XmmReg& dst, const Mem64& src)	{PushBack(Instr(I_MOVQ, dst, src));}
