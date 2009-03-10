@@ -1505,6 +1505,21 @@ struct Frontend
 		ret();
 	}
 
+	/// Make function prolog and epilog
+	void MakePrologAndEpilog()
+	{
+		// Find out which registers need to save
+		uint32 gpreg = 0, xmmreg = 0;
+		for (InstrList::iterator it = instrs_.begin(); it != instrs_.end(); ++it) {
+			for (size_t i = 0; i < Instr::MAX_OPERAND_COUNT; ++i) {
+				const Opd& opd = it->GetOpd(i);
+				if (opd.IsReg()) {
+					
+				}
+			}
+		}
+	}
+
 	bool IsJmpOrJcc(InstrID id) const
 	{
 		return id == I_JMP || id == I_JA || id == I_JAE || id == I_JB
@@ -1645,7 +1660,7 @@ struct Frontend
 		labels_[label_id].instr_number = instrs_.size();	// Label current instruction
 	}
 
-	// ALIGN
+	/// ALIGN
 	void align(size_t n)
 	{
 		PushBack(Instr(I_PSEUDO_ALIGN, Imm64(n)));
@@ -2408,7 +2423,7 @@ namespace detail {
 	template<int N, class T, int Size = sizeof(T)>
 	struct ArgumentTraits_cdecl {
 		enum {
-			size = (Size + 4 - 1) / 4 * 4,
+			stack_size = (Size + 4 - 1) / 4 * 4,
 			flag = ARG_IN_STACK | ARG_TYPE_VALUE,
 			reg_id = INVALID
 		};
@@ -2418,7 +2433,7 @@ namespace detail {
 	template<int N, class T, int Size = sizeof(T)>
 	struct ArgumentTraits_win64 {
 		enum {
-			size = 8,
+			stack_size = 8,
 			flag = ARG_IN_STACK | (Size == 1 || Size == 2 || Size == 4 || Size == 8 ? ARG_TYPE_VALUE : ARG_TYPE_PTR),
 			reg_id = INVALID
 		};
@@ -2429,7 +2444,7 @@ namespace detail {
 	 */
 	template<int GpRegID, int Flag> struct ArgumentTraits_win64_reg {
 		enum {
-			size = 8,
+			stack_size = 8,
 			flag = ARG_IN_REG | Flag,
 			reg_id = GpRegID
 		};
@@ -2478,7 +2493,7 @@ namespace detail {
 	 */
 	template<int XmmRegID> struct ArgumentTraits_win64_xmm {
 		enum {
-			size = 8,
+			stack_size = 8,
 			flag = ARG_IN_XMM | ARG_TYPE_VALUE,
 			reg_id = XmmRegID
 		};
@@ -2525,12 +2540,7 @@ namespace detail {
 		{
 			if (val_.IsMem()) {
 				f.mov(f.zcx, Size);
-				//f.lea(f.zsi, static_cast<MemT<OpdR>&>(val_));
-#ifdef JITASM64
-				f.lea(f.zsi, static_cast<Mem64&>(static_cast<Opd&>(val_)));
-#else
-				f.lea(f.zsi, static_cast<Mem32&>(static_cast<Opd&>(val_)));
-#endif
+				f.lea(f.zsi, static_cast<MemT<OpdR>&>(val_));
 				f.mov(f.zdi, f.zword_ptr[f.zbp + sizeof(void *) * 2]);
 				f.mov(f.zax, f.zdi);
 				f.rep_movsb();
@@ -2601,8 +2611,12 @@ namespace detail {
 		void Store(Frontend& f)
 		{
 #ifdef JITASM64
-			if (!(val_.IsReg() && (val_.GetReg() == INVALID || val_.GetReg() == RAX)))
+			if (val_.IsMem() || val_.IsImm() || (detail::IsGpReg(val_) && val_.GetReg() != RAX)) {
 				f.mov(f.rax, static_cast<Reg64&>(val_));
+			}
+			else if (detail::IsMMxReg(val_)) {
+				//f.movq(f.rax, static_cast<MmxReg&>(val_));
+			}
 #else
 			if (val_.IsMem()) {
 				// from memory
@@ -2635,7 +2649,7 @@ namespace detail {
 #ifdef JITASM64
 			if (val_.IsReg() && val_.GetSize() == O_SIZE_80) {
 				// from FPU register
-				//f.fstp(f.real4_ptr[f.esp - 4]);
+				f.fstp(f.real4_ptr[f.esp - 4]);
 				f.movss(f.xmm0, f.dword_ptr[f.esp - 4]);
 			}
 			else if (val_.IsMem() && val_.GetSize() == O_SIZE_32) {
@@ -2692,7 +2706,7 @@ namespace detail {
 #ifdef JITASM64
 			if (val_.IsReg() && val_.GetSize() == O_SIZE_80) {
 				// from FPU register
-				//f.fstp(f.real8_ptr[f.esp - 8]);
+				f.fstp(f.real8_ptr[f.esp - 8]);
 				f.movsd(f.xmm0, f.qword_ptr[f.esp - 8]);
 			}
 			else if (val_.IsMem() && val_.GetSize() == O_SIZE_64) {
@@ -2782,7 +2796,7 @@ namespace detail {
 			Arg addr(zbp + sizeof(void *) * 2);
 			if (ResultT<R>::ArgR) {
 				CopyRegArgToStack<0, R>(addr);
-				addr = addr + ArgTraits<0, R>::size;
+				addr = addr + ArgTraits<0, R>::stack_size;
 			}
 			return addr;
 		}
@@ -2792,7 +2806,7 @@ namespace detail {
 		{
 			Arg addr = DumpRegArg0<R>();
 			CopyRegArgToStack<0 + ResultT<R>::ArgR, A1>(addr);
-			return addr + ArgTraits<0 + ResultT<R>::ArgR, A1>::size;
+			return addr + ArgTraits<0 + ResultT<R>::ArgR, A1>::stack_size;
 		}
 
 		template<class R, class A1, class A2>
@@ -2800,7 +2814,7 @@ namespace detail {
 		{
 			Arg addr = DumpRegArg1<R, A1>();
 			CopyRegArgToStack<1 + ResultT<R>::ArgR, A2>(addr);
-			return addr + ArgTraits<1 + ResultT<R>::ArgR, A2>::size;
+			return addr + ArgTraits<1 + ResultT<R>::ArgR, A2>::stack_size;
 		}
 
 		template<class R, class A1, class A2, class A3>
@@ -2808,7 +2822,7 @@ namespace detail {
 		{
 			Arg addr = DumpRegArg2<R, A1, A2>();
 			CopyRegArgToStack<2 + ResultT<R>::ArgR, A3>(addr);
-			return addr + ArgTraits<2 + ResultT<R>::ArgR, A3>::size;
+			return addr + ArgTraits<2 + ResultT<R>::ArgR, A3>::stack_size;
 		}
 
 		template<class R, class A1, class A2, class A3, class A4>
@@ -2816,29 +2830,29 @@ namespace detail {
 		{
 			Arg addr = DumpRegArg3<R, A1, A2, A3>();
 			CopyRegArgToStack<3 + ResultT<R>::ArgR, A4>(addr);
-			return addr + ArgTraits<3 + ResultT<R>::ArgR, A4>::size;
+			return addr + ArgTraits<3 + ResultT<R>::ArgR, A4>::stack_size;
 		}
 
 		template<class R>
 		Arg Arg1() { return Arg(zbp + sizeof(void *) * (2 + ResultT<R>::ArgR)); }
 		template<class R, class A1>
-		Arg Arg2() { return Arg1<R>() + ArgTraits<0, A1>::size; }
+		Arg Arg2() { return Arg1<R>() + ArgTraits<0, A1>::stack_size; }
 		template<class R, class A1, class A2>
-		Arg Arg3() { return Arg2<R, A1>() + ArgTraits<1, A2>::size; }
+		Arg Arg3() { return Arg2<R, A1>() + ArgTraits<1, A2>::stack_size; }
 		template<class R, class A1, class A2, class A3>
-		Arg Arg4() { return Arg3<R, A1, A2>() + ArgTraits<2, A3>::size; }
+		Arg Arg4() { return Arg3<R, A1, A2>() + ArgTraits<2, A3>::stack_size; }
 		template<class R, class A1, class A2, class A3, class A4>
-		Arg Arg5() { return Arg4<R, A1, A2, A3>() + ArgTraits<3, A4>::size; }
+		Arg Arg5() { return Arg4<R, A1, A2, A3>() + ArgTraits<3, A4>::stack_size; }
 		template<class R, class A1, class A2, class A3, class A4, class A5>
-		Arg Arg6() { return Arg5<R, A1, A2, A3, A4>() + ArgTraits<4, A5>::size; }
+		Arg Arg6() { return Arg5<R, A1, A2, A3, A4>() + ArgTraits<4, A5>::stack_size; }
 		template<class R, class A1, class A2, class A3, class A4, class A5, class A6>
-		Arg Arg7() { return Arg6<R, A1, A2, A3, A4, A5>() + ArgTraits<5, A6>::size; }
+		Arg Arg7() { return Arg6<R, A1, A2, A3, A4, A5>() + ArgTraits<5, A6>::stack_size; }
 		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7>
-		Arg Arg8() { return Arg7<R, A1, A2, A3, A4, A5, A6>() + ArgTraits<6, A7>::size; }
+		Arg Arg8() { return Arg7<R, A1, A2, A3, A4, A5, A6>() + ArgTraits<6, A7>::stack_size; }
 		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8>
-		Arg Arg9() { return Arg8<R, A1, A2, A3, A4, A5, A6, A7>() + ArgTraits<7, A8>::size; }
+		Arg Arg9() { return Arg8<R, A1, A2, A3, A4, A5, A6, A7>() + ArgTraits<7, A8>::stack_size; }
 		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9>
-		Arg Arg10() { return Arg9<R, A1, A2, A3, A4, A5, A6, A7, A8>() + ArgTraits<8, A9>::size; }
+		Arg Arg10() { return Arg9<R, A1, A2, A3, A4, A5, A6, A7, A8>() + ArgTraits<8, A9>::stack_size; }
 	};
 
 }	// namespace detail
@@ -2855,10 +2869,9 @@ struct function0_cdecl : detail::Function_cdecl
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
 	virtual Result main() { return Result(); }
 	void naked_main() {
-		Prolog(0);
 		DumpRegArg0<R>();
 		main().Store(*this);
-		Epilog();
+		MakePrologAndEpilog();
 	}
 };
 
@@ -2870,9 +2883,8 @@ struct function0_cdecl<void> : detail::Function_cdecl
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
 	virtual void main() {}
 	void naked_main()	{
-		Prolog(0);
 		main();
-		Epilog();
+		MakePrologAndEpilog();
 	}
 };
 
@@ -2888,10 +2900,9 @@ struct function1_cdecl : detail::Function_cdecl
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
 	virtual Result main(Arg a1) { return Result(); }
 	void naked_main() {
-		Prolog(0);
 		DumpRegArg1<R, A1>();
 		main(Arg1<R>()).Store(*this);
-		Epilog();
+		MakePrologAndEpilog();
 	}
 };
 
@@ -2903,10 +2914,9 @@ struct function1_cdecl<void, A1> : detail::Function_cdecl
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
 	virtual void main(Arg a1) {}
 	void naked_main() {
-		Prolog(0);
 		DumpRegArg1<void, A1>();
 		main(Arg1<void>());
-		Epilog();
+		MakePrologAndEpilog();
 	}
 };
 
@@ -2922,10 +2932,9 @@ struct function2_cdecl : detail::Function_cdecl
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
 	virtual Result main(Arg a1, Arg a2) { return Result(); }
 	void naked_main() {
-		Prolog(0);
 		DumpRegArg2<R, A1, A2>();
 		main(Arg1<R>(), Arg2<R, A1>()).Store(*this);
-		Epilog();
+		MakePrologAndEpilog();
 	}
 };
 
@@ -2937,10 +2946,9 @@ struct function2_cdecl<void, A1, A2> : detail::Function_cdecl
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
 	virtual void main(Arg a1, Arg a2) {}
 	void naked_main() {
-		Prolog(0);
 		DumpRegArg2<void, A1, A2>();
 		main(Arg1<void>(), Arg2<void, A1>());
-		Epilog();
+		MakePrologAndEpilog();
 	}
 };
 
