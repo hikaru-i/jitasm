@@ -99,11 +99,11 @@ enum RegID
 	R8W=0x10, R9W, R10W, R11W, R12W, R13W, R14W, R15W,
 	R8D=0x10, R9D, R10D, R11D, R12D, R13D, R14D, R15D,
 
-	ST0=0, ST1, ST2, ST3, ST4, ST5, ST6, ST7,
+	ST0=0x100, ST1, ST2, ST3, ST4, ST5, ST6, ST7,
 
-	MM0=0, MM1, MM2, MM3, MM4, MM5, MM6, MM7,
-	XMM0=0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7,
-	XMM8=0x10, XMM9, XMM10, XMM11, XMM12, XMM13, XMM14, XMM15,
+	MM0=0x200, MM1, MM2, MM3, MM4, MM5, MM6, MM7,
+	XMM0=0x300, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7,
+	XMM8=0x310, XMM9, XMM10, XMM11, XMM12, XMM13, XMM14, XMM15,
 };
 
 /// Operand base class
@@ -159,6 +159,14 @@ public:
 	sint64	GetDisp() const {return disp_;}
 	sint64	GetImm() const {return imm_;}
 };
+
+namespace detail
+{
+	inline bool IsGpReg(const Opd& reg)		{return reg.IsReg() && (reg.GetReg() & 0xF00) == EAX;}
+	inline bool IsFpuReg(const Opd& reg)	{return reg.IsReg() && (reg.GetReg() & 0xF00) == ST0;}
+	inline bool IsMMxReg(const Opd& reg)	{return reg.IsReg() && (reg.GetReg() & 0xF00) == MM0;}
+	inline bool IsXmmReg(const Opd& reg)	{return reg.IsReg() && (reg.GetReg() & 0xF00) == XMM0;}
+}	// namespace detail
 
 template<int Size>
 struct OpdT : Opd
@@ -460,16 +468,16 @@ struct Backend
 		uint8 wrxb = 0;
 		if (reg.IsReg()) {
 			if (reg.GetSize() == O_SIZE_64) wrxb |= 8;
-			if (reg.GetReg() >= R8) wrxb |= 4;
+			if (reg.GetReg() != INVALID && reg.GetReg() & 0x10) wrxb |= 4;
 		}
 		if (r_m.IsReg()) {
 			if (r_m.GetSize() == O_SIZE_64) wrxb |= 8;
-			if (r_m.GetReg() >= R8) wrxb |= 1;
+			if (r_m.GetReg() & 0x10) wrxb |= 1;
 		}
 		if (r_m.IsMem()) {
 			if (r_m.GetSize() == O_SIZE_64) wrxb |= 8;
-			if (r_m.GetIndex() >= R8) wrxb |= 2;
-			if (r_m.GetBase() >= R8) wrxb |= 1;
+			if (r_m.GetIndex() != INVALID && r_m.GetIndex() & 0x10) wrxb |= 2;
+			if (r_m.GetBase() != INVALID && r_m.GetBase() & 0x10) wrxb |= 1;
 		}
 		if (wrxb) db(0x40 | wrxb);
 	}
@@ -479,14 +487,14 @@ struct Backend
 	{
 		uint8 rxb = 0;
 		if (reg.IsReg()) {
-			if (reg.GetReg() >= R8) rxb |= 4;
+			if (reg.GetReg() != INVALID &&reg.GetReg() & 0x10) rxb |= 4;
 		}
 		if (r_m.IsReg()) {
-			if (r_m.GetReg() >= R8) rxb |= 1;
+			if (r_m.GetReg() != INVALID && r_m.GetReg() & 0x10) rxb |= 1;
 		}
 		if (r_m.IsMem()) {
-			if (r_m.GetIndex() >= R8) rxb |= 2;
-			if (r_m.GetBase() >= R8) rxb |= 1;
+			if (r_m.GetIndex() != INVALID && r_m.GetIndex() & 0x10) rxb |= 2;
+			if (r_m.GetBase() != INVALID && r_m.GetBase() & 0x10) rxb |= 1;
 		}
 		if (rxb) db(0x40 | rxb);
 	}
@@ -946,42 +954,42 @@ struct Backend
 		EncodeModRM(reg, r_m);
 	}
 
-	void EncodeFLD(const Opd& mem)
+	void EncodeFLD(const Opd& src)
 	{
-		if (mem.IsReg()) {
+		if (src.IsReg()) {
 			db(0xD9);
-			db(0xC0 | mem.GetReg());
+			db(0xC0 | src.GetReg() & 0xF);
 		} else {
 #ifdef JITASM64
-			if (mem.IsMem() && mem.GetAddressSize() != O_SIZE_64) EncodeAddressSizePrefix();
+			if (src.IsMem() && src.GetAddressSize() != O_SIZE_64) EncodeAddressSizePrefix();
 #endif
 			int digit = 0;
-			if (mem.GetSize() == O_SIZE_32) db(0xD9), digit = 0;
-			else if (mem.GetSize() == O_SIZE_64) db(0xDD), digit = 0;
-			else if (mem.GetSize() == O_SIZE_80) db(0xDB), digit = 5;
+			if (src.GetSize() == O_SIZE_32) db(0xD9), digit = 0;
+			else if (src.GetSize() == O_SIZE_64) db(0xDD), digit = 0;
+			else if (src.GetSize() == O_SIZE_80) db(0xDB), digit = 5;
 			else ASSERT(0);
-			EncodeModRM(digit, mem);
+			EncodeModRM(digit, src);
 		}
 	}
 
-	void EncodeFST(uint8 digit, uint8 opcode, const Opd& mem)
+	void EncodeFST(uint8 digit, uint8 opcode, const Opd& dst)
 	{
-		if (mem.IsReg()) {
+		if (dst.IsReg()) {
 			db(0xDD);
-			db(opcode | mem.GetReg());
+			db(opcode | dst.GetReg() & 0xF);
 		} else {
 #ifdef JITASM64
-			if (mem.IsMem() && mem.GetAddressSize() != O_SIZE_64) EncodeAddressSizePrefix();
+			if (dst.IsMem() && dst.GetAddressSize() != O_SIZE_64) EncodeAddressSizePrefix();
 #endif
 
-			if (mem.GetSize() == O_SIZE_80) {
+			if (dst.GetSize() == O_SIZE_80) {
 				db(0xDB);
-				EncodeModRM(7, mem);
+				EncodeModRM(7, dst);
 			} else {
-				if (mem.GetSize() == O_SIZE_32) db(0xD9);
-				else if (mem.GetSize() == O_SIZE_64) db(0xDD);
+				if (dst.GetSize() == O_SIZE_32) db(0xD9);
+				else if (dst.GetSize() == O_SIZE_64) db(0xDD);
 				else ASSERT(0);
-				EncodeModRM(digit, mem);
+				EncodeModRM(digit, dst);
 			}
 		}
 	}
@@ -1387,7 +1395,7 @@ struct Frontend
 	Reg64 rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r10, r11, r12, r13, r14, r15;
 	XmmReg xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15;
 #endif
-	struct {FpuReg operator()(size_t n) {ASSERT(n >= ST0 && n <= ST7); return FpuReg((RegID) n);}} st;
+	struct {FpuReg operator()(size_t n) {ASSERT(n >= 0 && n <= 7); return FpuReg((RegID) (ST0 + n));}} st;
 
 	AddressingPtr<Opd8>		byte_ptr;
 	AddressingPtr<Opd16>	word_ptr;
@@ -1865,26 +1873,10 @@ struct Frontend
 	void jz(const std::string& label_name)		{je(label_name);}
 
 	// LEA
-	void lea(const Reg16& dst, const Mem8& src)		{PushBack(Instr(I_LEA, dst, src));}
-	void lea(const Reg16& dst, const Mem16& src)	{PushBack(Instr(I_LEA, dst, src));}
-	void lea(const Reg16& dst, const Mem32& src)	{PushBack(Instr(I_LEA, dst, src));}
-	void lea(const Reg16& dst, const Mem64& src)	{PushBack(Instr(I_LEA, dst, src));}
-	void lea(const Reg16& dst, const Mem80& src)	{PushBack(Instr(I_LEA, dst, src));}
-	void lea(const Reg16& dst, const Mem128& src)	{PushBack(Instr(I_LEA, dst, src));}
-	void lea(const Reg32& dst, const Mem8& src)		{PushBack(Instr(I_LEA, dst, src));}
-	void lea(const Reg32& dst, const Mem16& src)	{PushBack(Instr(I_LEA, dst, src));}
-	void lea(const Reg32& dst, const Mem32& src)	{PushBack(Instr(I_LEA, dst, src));}
-	void lea(const Reg32& dst, const Mem64& src)	{PushBack(Instr(I_LEA, dst, src));}
-	void lea(const Reg32& dst, const Mem80& src)	{PushBack(Instr(I_LEA, dst, src));}
-	void lea(const Reg32& dst, const Mem128& src)	{PushBack(Instr(I_LEA, dst, src));}
-
+	template<class Ty> void lea(const Reg16& dst, const MemT<Ty>& src)	{PushBack(Instr(I_LEA, dst, src));}
+	template<class Ty> void lea(const Reg32& dst, const MemT<Ty>& src)	{PushBack(Instr(I_LEA, dst, src));}
 #ifdef JITASM64
-	void lea(const Reg64& dst, const Mem8& src)		{PushBack(Instr(I_LEA, dst, src));}
-	void lea(const Reg64& dst, const Mem16& src)	{PushBack(Instr(I_LEA, dst, src));}
-	void lea(const Reg64& dst, const Mem32& src)	{PushBack(Instr(I_LEA, dst, src));}
-	void lea(const Reg64& dst, const Mem64& src)	{PushBack(Instr(I_LEA, dst, src));}
-	void lea(const Reg64& dst, const Mem80& src)	{PushBack(Instr(I_LEA, dst, src));}
-	void lea(const Reg64& dst, const Mem128& src)	{PushBack(Instr(I_LEA, dst, src));}
+	template<class Ty> void lea(const Reg64& dst, const MemT<Ty>& src)	{PushBack(Instr(I_LEA, dst, src));}
 #endif
 
 	// LEAVE
