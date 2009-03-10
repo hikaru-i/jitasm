@@ -1546,11 +1546,62 @@ struct Frontend
 		for (InstrList::iterator it = instrs_.begin(); it != instrs_.end(); ++it) {
 			for (size_t i = 0; i < Instr::MAX_OPERAND_COUNT; ++i) {
 				const Opd& opd = it->GetOpd(i);
-				if (opd.IsReg()) {
-					
+				if (detail::IsGpReg(opd)) {
+					gpreg |= 1 << (opd.GetReg() - EAX);
+				}
+				else if (detail::IsXmmReg(opd)) {
+					xmmreg |= 1 << (opd.GetReg() - XMM0);
 				}
 			}
 		}
+
+		// Prolog
+		struct Prolog : Frontend {
+			void naked_main() {}
+		};
+		Prolog prolog;
+		prolog.push(zbp);
+		prolog.mov(zbp, zsp);
+		if (gpreg & (1 << (EBX - EAX))) prolog.push(zbx);
+		if (gpreg & (1 << (EDI - EAX))) prolog.push(zdi);
+		if (gpreg & (1 << (ESI - EAX))) prolog.push(zsi);
+#ifdef JITASM64
+		if (gpreg & (1 << (R12 - RAX))) prolog.push(r12);
+		if (gpreg & (1 << (R13 - RAX))) prolog.push(r13);
+		if (gpreg & (1 << (R14 - RAX))) prolog.push(r14);
+		if (gpreg & (1 << (R15 - RAX))) prolog.push(r15);
+		uint32 xmm_save_size = 160;
+		prolog.sub(rsp, xmm_save_size);
+		size_t offset = 0;
+		for (int reg_id = XMM15; reg_id >= XMM6; --reg_id) {
+			if (xmmreg & (1 << (reg_id - XMM0))) {
+				prolog.movdqa(xmmword_ptr[rsp + offset], XmmReg(static_cast<RegID>(reg_id)));
+				offset += 16;
+			}
+		}
+#endif
+
+		instrs_.insert(instrs_.begin(), prolog.instrs_.begin(), prolog.instrs_.end());
+
+		// Epilog
+#ifdef JITASM64
+		for (int reg_id = XMM6; reg_id <= XMM15; ++reg_id) {
+			if (xmmreg & (1 << (reg_id - XMM0))) {
+				offset -= 16;
+				movdqa(XmmReg(static_cast<RegID>(reg_id)), xmmword_ptr[rsp + offset]);
+			}
+		}
+		add(rsp, xmm_save_size);
+		if (gpreg & (1 << (R15 - RAX))) pop(r15);
+		if (gpreg & (1 << (R14 - RAX))) pop(r14);
+		if (gpreg & (1 << (R13 - RAX))) pop(r13);
+		if (gpreg & (1 << (R12 - RAX))) pop(r12);
+#endif
+		if (gpreg & (1 << (ESI - EAX))) pop(zsi);
+		if (gpreg & (1 << (EDI - EAX))) pop(zdi);
+		if (gpreg & (1 << (EBX - EAX))) pop(zbx);
+		leave();
+		ret();
 	}
 
 	bool IsJmpOrJcc(InstrID id) const
