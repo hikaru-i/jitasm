@@ -1406,28 +1406,35 @@ masm_test_movd_movq proc
 masm_test_movd_movq endp
 
 ;----------------------------------------
-; function0_cdecl<int>
+; function0_cdecl<int> (return immediate)
 ;----------------------------------------
-masm_test_function0_cdecl proc
+masm_test_function0_cdecl_int_imm proc
 	push rbp
 	mov rbp, rsp
-	push rbx
-	push rdi
-	push rsi
-	push r12;
-	push r13;
-	push r14;
-	push r15;
 	mov eax, 16
-	pop r15;
-	pop r14;
-	pop r13;
-	pop r12;
-	pop rsi
-	pop rdi
-	pop rbx
 	leave
 	ret
-masm_test_function0_cdecl endp
+masm_test_function0_cdecl_int_imm endp
+
+;----------------------------------------
+; function0_cdecl<int> (return eax)
+;----------------------------------------
+masm_test_function0_cdecl_int_eax proc
+	push rbp
+	mov rbp, rsp
+	leave
+	ret
+masm_test_function0_cdecl_int_eax endp
+
+;----------------------------------------
+; function0_cdecl<short>
+;----------------------------------------
+masm_test_function0_cdecl_short proc
+	push rbp
+	mov rbp, rsp
+	mov ax, word ptr[rsi]
+	leave
+	ret
+masm_test_function0_cdecl_short endp
 
 end

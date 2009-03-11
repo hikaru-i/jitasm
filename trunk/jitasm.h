@@ -1368,6 +1368,17 @@ struct Backend
 
 namespace detail
 {
+	/// Counting 1-Bits
+	inline uint32 Count1Bits(uint32 x)
+	{
+		x = x - ((x >> 1) & 0x55555555);
+		x = (x & 0x33333333) + ((x >> 2) & 0x33333333);
+		x = (x + (x >> 4)) & 0x0F0F0F0F;
+		x = x + (x >> 8);
+		x = x + (x >> 16);
+		return x & 0x0000003F;
+	}
+
 	class CodeBuffer
 	{
 		void*	pbuff_;
@@ -1513,32 +1524,33 @@ struct Frontend
 		}
 
 		// Prolog
-		struct Prolog : Frontend {
-			void naked_main() {}
-		};
-		Prolog prolog;
-		prolog.push(zbp);
-		prolog.mov(zbp, zsp);
-		if (gpreg & (1 << (EBX - EAX))) prolog.push(zbx);
-		if (gpreg & (1 << (EDI - EAX))) prolog.push(zdi);
-		if (gpreg & (1 << (ESI - EAX))) prolog.push(zsi);
+		InstrList main_instr;
+		main_instr.swap(instrs_);	// Put main instructions aside for prolog
+		push(zbp);
+		mov(zbp, zsp);
+		size_t count = 0;
+		if (gpreg & (1 << (EBX - EAX))) { push(zbx); ++count; }
+		if (gpreg & (1 << (EDI - EAX))) { push(zdi); ++count; }
+		if (gpreg & (1 << (ESI - EAX))) { push(zsi); ++count; }
 #ifdef JITASM64
-		if (gpreg & (1 << (R12 - RAX))) prolog.push(r12);
-		if (gpreg & (1 << (R13 - RAX))) prolog.push(r13);
-		if (gpreg & (1 << (R14 - RAX))) prolog.push(r14);
-		if (gpreg & (1 << (R15 - RAX))) prolog.push(r15);
-		uint32 xmm_save_size = 160;
-		prolog.sub(rsp, xmm_save_size);
+		if (gpreg & (1 << (R12 - RAX))) { push(r12); ++count; }
+		if (gpreg & (1 << (R13 - RAX))) { push(r13); ++count; }
+		if (gpreg & (1 << (R14 - RAX))) { push(r14); ++count; }
+		if (gpreg & (1 << (R15 - RAX))) { push(r15); ++count; }
+		uint32 xmm_store = detail::Count1Bits(xmmreg & 0xFFC0) * 16 + (count & 1) * 8;
+		if (xmm_store > 0)
+			sub(rsp, xmm_store);
 		size_t offset = 0;
 		for (int reg_id = XMM15; reg_id >= XMM6; --reg_id) {
 			if (xmmreg & (1 << (reg_id - XMM0))) {
-				prolog.movdqa(xmmword_ptr[rsp + offset], XmmReg(static_cast<RegID>(reg_id)));
+				movdqa(xmmword_ptr[rsp + offset], XmmReg(static_cast<RegID>(reg_id)));
 				offset += 16;
 			}
 		}
 #endif
 
-		instrs_.insert(instrs_.begin(), prolog.instrs_.begin(), prolog.instrs_.end());
+		// Put main instructions after prolog
+		instrs_.insert(instrs_.end(), main_instr.begin(), main_instr.end());
 
 		// Epilog
 #ifdef JITASM64
@@ -1548,7 +1560,8 @@ struct Frontend
 				movdqa(XmmReg(static_cast<RegID>(reg_id)), xmmword_ptr[rsp + offset]);
 			}
 		}
-		add(rsp, xmm_save_size);
+		if (xmm_store > 0)
+			add(rsp, xmm_store);
 		if (gpreg & (1 << (R15 - RAX))) pop(r15);
 		if (gpreg & (1 << (R14 - RAX))) pop(r14);
 		if (gpreg & (1 << (R13 - RAX))) pop(r13);
@@ -2680,7 +2693,7 @@ namespace detail {
 			if (val_.IsMem() || val_.IsImm() || (detail::IsGpReg(val_) && val_.GetReg() != RAX)) {
 				f.mov(f.rax, static_cast<Reg64&>(val_));
 			}
-			else if (detail::IsMMxReg(val_)) {
+			else if (detail::IsMmxReg(val_)) {
 				//f.movq(f.rax, static_cast<MmxReg&>(val_));
 			}
 #else
