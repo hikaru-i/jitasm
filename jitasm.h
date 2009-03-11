@@ -1122,8 +1122,8 @@ struct Backend
 		else if (detail::IsXmmReg(src))	db(0x66), opcode = 0xD6;
 		else ASSERT(0);
 
-		const Opd& reg = dst.IsReg() ? dst : src;
-		const Opd& r_m = dst.IsReg() ? src : dst;
+		const Opd& reg = detail::IsMmxReg(dst) || detail::IsXmmReg(dst) ? dst : src;
+		const Opd& r_m = detail::IsMmxReg(dst) || detail::IsXmmReg(dst) ? src : dst;
 
 #ifdef JITASM64
 		if (r_m.IsMem() && r_m.GetAddressSize() != O_SIZE_64) EncodeAddressSizePrefix();
@@ -1366,69 +1366,78 @@ struct Backend
 	}
 };
 
-struct VirtualMemory
+namespace detail
 {
-	PVOID	pbuff_;
-	size_t	buffsize_;
-
-	VirtualMemory() : pbuff_(NULL), buffsize_(0)
+	class CodeBuffer
 	{
-	}
+		void*	pbuff_;
+		size_t	codesize_;
+		size_t	buffsize_;
 
-	~VirtualMemory()
-	{
-		Free();
-	}
+	public:
+		CodeBuffer() : pbuff_(NULL), codesize_(0), buffsize_(0) {}
+		~CodeBuffer() {Reset(0);}
 
-	PVOID GetPointer() const
-	{
-		return pbuff_;
-	}
+		void* GetPointer() const {return pbuff_;}
+		size_t GetCodeSize() const {return codesize_;}
+		size_t GetBufferSize() const {return buffsize_;}
 
-	size_t GetSize() const
-	{
-		return buffsize_;
-	}
+		void Reset(size_t codesize)
+		{
+			if (pbuff_) {
+				::VirtualFree(pbuff_, 0, MEM_RELEASE);
+				pbuff_ = NULL;
+				codesize_ = 0;
+				buffsize_ = 0;
+			}
+			if (codesize) {
+				void* pbuff = ::VirtualAlloc(NULL, codesize, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+				if (pbuff == NULL) ASSERT(0);
+				MEMORY_BASIC_INFORMATION info;
+				::VirtualQuery(pbuff, &info, sizeof(info));
 
-	void Resize(size_t size)
-	{
-		Free();
-		if (size > 0) {
-			SYSTEM_INFO sysinfo;
-			::GetSystemInfo(&sysinfo);
-			size = (size + sysinfo.dwPageSize - 1) / sysinfo.dwPageSize * sysinfo.dwPageSize;
-
-			pbuff_ = ::VirtualAlloc(NULL, size, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
-			if (pbuff_ == NULL) ASSERT(0);
-			buffsize_ = size;
+				pbuff_ = pbuff;
+				codesize_ = codesize;
+				buffsize_ = info.RegionSize;
+			}
 		}
-	}
+	};
 
-	void Free()
+	class SpinLock
 	{
-		if (pbuff_) {
-			::VirtualFree(pbuff_, 0, MEM_RELEASE);
-			buffsize_ = 0;
-		}
-	}
-};
+		long lock_;
+	public:
+		SpinLock() : lock_(0) {}
+		void Lock() {while (::InterlockedExchange(&lock_, 1));}
+		void Unlock() {::InterlockedExchange(&lock_, 0);}
+	};
+
+	template<class Ty>
+	class ScopedLock
+	{
+		Ty& lock_;
+	public:
+		ScopedLock(Ty& lock) : lock_(lock) {lock.Lock();}
+		~ScopedLock() {lock_.Unlock();}
+	};
+}	// namespace detail
 
 struct Frontend
 {
-	Reg8 al, cl, dl, bl, ah, ch, dh, bh;
-	Reg16 ax, cx, dx, bx, sp, bp, si, di;
-	Reg32 eax, ecx, edx, ebx, esp, ebp, esi, edi;
-	MmxReg mm0, mm1, mm2, mm3, mm4, mm5, mm6, mm7;
-	XmmReg xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7;
+	Reg8	al, cl, dl, bl, ah, ch, dh, bh;
+	Reg16	ax, cx, dx, bx, sp, bp, si, di;
+	Reg32	eax, ecx, edx, ebx, esp, ebp, esi, edi;
+	MmxReg	mm0, mm1, mm2, mm3, mm4, mm5, mm6, mm7;
+	XmmReg	xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7;
 #ifdef JITASM64
-	Reg8 r8b, r9b, r10b, r11b, r12b, r13b, r14b, r15b;
-	Reg16 r8w, r9w, r10w, r11w, r12w, r13w, r14w, r15w;
-	Reg32 r8d, r9d, r10d, r11d, r12d, r13d, r14d, r15d;
-	Rax rax;
-	Reg64 rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r10, r11, r12, r13, r14, r15;
-	XmmReg xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15;
+	Reg8	r8b, r9b, r10b, r11b, r12b, r13b, r14b, r15b;
+	Reg16	r8w, r9w, r10w, r11w, r12w, r13w, r14w, r15w;
+	Reg32	r8d, r9d, r10d, r11d, r12d, r13d, r14d, r15d;
+	Rax		rax;
+	Reg64	rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r10, r11, r12, r13, r14, r15;
+	XmmReg	xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15;
 #endif
-	struct {FpuReg operator()(size_t n) {ASSERT(n >= 0 && n <= 7); return FpuReg((RegID) (ST0 + n));}} st;
+	struct {FpuReg operator()(size_t n) const {ASSERT(n >= 0 && n <= 7); return FpuReg((RegID) (ST0 + n));}} st;
 
 	AddressingPtr<Opd8>		byte_ptr;
 	AddressingPtr<Opd16>	word_ptr;
@@ -1441,11 +1450,11 @@ struct Frontend
 	AddressingPtr<Opd80>	real10_ptr;
 
 #ifdef JITASM64
-	Rax zax;
-	Reg64 zcx, zdx, zbx, zsp, zbp, zsi, zdi;
+	Rax		zax;
+	Reg64	zcx, zdx, zbx, zsp, zbp, zsi, zdi;
 	AddressingPtr<Opd64>	zword_ptr;
 #else
-	Reg32 zax, zcx, zdx, zbx, zsp, zbp, zsi, zdi;
+	Reg32	zax, zcx, zdx, zbx, zsp, zbp, zsi, zdi;
 	AddressingPtr<Opd32>	zword_ptr;
 #endif
 
@@ -1466,14 +1475,15 @@ struct Frontend
 #else
 		zax(EAX), zcx(ECX), zdx(EDX), zbx(EBX), zsp(ESP), zbp(EBP), zsi(ESI), zdi(EDI),
 #endif
-		buffsize_(0)
+		assembled_(false)
 	{
 	}
 
 	typedef std::deque<Instr> InstrList;
-	InstrList		instrs_;
-	VirtualMemory	buff_;
-	size_t			buffsize_;
+	InstrList			instrs_;
+	bool				assembled_;
+	detail::CodeBuffer	codebuff_;
+	detail::SpinLock	codelock_;
 
 	struct Label
 	{
@@ -1484,59 +1494,6 @@ struct Frontend
 	LabelList	labels_;
 
 	virtual void naked_main() = 0;
-
-	virtual void Prolog(size_t localVarSize)
-	{
-		push(zbp);
-		mov(zbp, zsp);
-		//sub(rsp, localVarSize)
-		push(zbx);
-		push(zdi);
-		push(zsi);
-#ifdef JITASM64
-		push(r12);
-		push(r13);
-		push(r14);
-		push(r15);
-		sub(rsp, 160);
-		movdqu(xmmword_ptr[rsp], xmm15);
-		movdqu(xmmword_ptr[rsp + 16], xmm14);
-		movdqu(xmmword_ptr[rsp + 32], xmm13);
-		movdqu(xmmword_ptr[rsp + 48], xmm12);
-		movdqu(xmmword_ptr[rsp + 64], xmm11);
-		movdqu(xmmword_ptr[rsp + 80], xmm10);
-		movdqu(xmmword_ptr[rsp + 96], xmm9);
-		movdqu(xmmword_ptr[rsp + 112], xmm8);
-		movdqu(xmmword_ptr[rsp + 128], xmm7);
-		movdqu(xmmword_ptr[rsp + 144], xmm6);
-#endif
-	}
-
-	virtual void Epilog()
-	{
-#ifdef JITASM64
-		movdqu(xmm15, xmmword_ptr[rsp]);
-		movdqu(xmm14, xmmword_ptr[rsp + 16]);
-		movdqu(xmm13, xmmword_ptr[rsp + 32]);
-		movdqu(xmm12, xmmword_ptr[rsp + 48]);
-		movdqu(xmm11, xmmword_ptr[rsp + 64]);
-		movdqu(xmm10, xmmword_ptr[rsp + 80]);
-		movdqu(xmm9, xmmword_ptr[rsp + 96]);
-		movdqu(xmm8, xmmword_ptr[rsp + 112]);
-		movdqu(xmm7, xmmword_ptr[rsp + 128]);
-		movdqu(xmm6, xmmword_ptr[rsp + 144]);
-		add(rsp, 160);
-		pop(r15);
-		pop(r14);
-		pop(r13);
-		pop(r12);
-#endif
-		pop(zsi);
-		pop(zdi);
-		pop(zbx);
-		leave();
-		ret();
-	}
 
 	/// Make function prolog and epilog
 	void MakePrologAndEpilog()
@@ -1680,6 +1637,9 @@ struct Frontend
 
 	void Assemble()
 	{
+		detail::ScopedLock<detail::SpinLock> lock(codelock_);
+		if (assembled_) return;
+
 		instrs_.clear();
 		labels_.clear();
 		naked_main();
@@ -1694,30 +1654,30 @@ struct Frontend
 		for (InstrList::const_iterator it = instrs_.begin(); it != instrs_.end(); ++it) {
 			pre.Assemble(*it);
 		}
-		size_t buffsize = pre.GetSize();
+		size_t codesize = pre.GetSize();
 
 		// Write machine code to the buffer
-		buff_.Resize(buffsize);
-		Backend backend(buff_.GetPointer(), buff_.GetSize());
+		codebuff_.Reset(codesize);
+		Backend backend(codebuff_.GetPointer(), codebuff_.GetBufferSize());
 		for (InstrList::const_iterator it = instrs_.begin(); it != instrs_.end(); ++it) {
 			backend.Assemble(*it);
 		}
 
-		buffsize_ = buffsize;
+		assembled_ = true;
 	}
 
 	/// Get assembled code
 	void *GetCode()
 	{
-		if (!buff_.GetPointer()) {
+		if (!assembled_) {
 			Assemble();
 		}
-		return buff_.GetPointer();
+		return codebuff_.GetPointer();
 	}
 
 	size_t GetCodeSize() const
 	{
-		return buffsize_;
+		return codebuff_.GetCodeSize();
 	}
 
 	void PushBack(const Instr& instr)
@@ -2446,6 +2406,12 @@ struct Frontend
 	void movq(const XmmReg& dst, const XmmReg& src)	{PushBack(Instr(I_MOVQ, dst, src));}
 	void movq(const XmmReg& dst, const Mem64& src)	{PushBack(Instr(I_MOVQ, dst, src));}
 	void movq(const Mem64& dst, const XmmReg& src)	{PushBack(Instr(I_MOVQ, dst, src));}
+#ifdef JITASM64
+	void movq(const MmxReg& dst, const Reg64& src)	{movd(dst, src);}
+	void movq(const Reg64& dst, const MmxReg& src)	{movd(dst, src);}
+	void movq(const XmmReg& dst, const Reg64& src)	{movd(dst, src);}
+	void movq(const Reg64& dst, const XmmReg& src)	{movd(dst, src);}
+#endif
 
 	// MOVSD
 	void movsd(const XmmReg& dst, const XmmReg& src)	{PushBack(Instr(I_MOVSD, dst, src));}
