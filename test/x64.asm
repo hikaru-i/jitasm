@@ -1356,10 +1356,10 @@ masm_test_movd_movq proc
 	movq xmm0, qword ptr[eax]
 	movq qword ptr[eax], xmm0
 
-	movd mm0, rax				; movq mm0, rax
-	movd rax, mm0				; movq rax, mm0
-	movd xmm0, rax				; movq xmm0, rax
-	movd rax, xmm0				; movq rax, xmm0
+	movd mm0, rax				; movq
+	movd rax, mm0				; movq
+	movd xmm0, rax				; movq
+	movd rax, xmm0				; movq
 	movd mm0, dword ptr[rax]
 	movq mm0, qword ptr[rax]
 	movd dword ptr[rax], mm0
@@ -1373,16 +1373,16 @@ masm_test_movd_movq proc
 	movq xmm0, qword ptr[rax]
 	movq qword ptr[rax], xmm0
 	; test REX
-	movd mm0, r8				; movq mm0, r8
-	movd r8, mm0				; movq r8, mm0
-	movd xmm0, rax				; movq xmm0, rax
-	movd xmm0, r8				; movq xmm0, r8
-	movd xmm8, rax				; movq xmm8, rax
-	movd xmm8, r8				; movq xmm8, r8
-	movd rax, xmm0				; movq rax, xmm0
-	movd rax, xmm8				; movq rax, xmm8
-	movd r8, xmm0				; movq r8, xmm0
-	movd r8, xmm8				; movq r8, xmm8
+	movd mm0, r8				; movq
+	movd r8, mm0				; movq
+	movd xmm0, rax				; movq
+	movd xmm0, r8				; movq
+	movd xmm8, rax				; movq
+	movd xmm8, r8				; movq
+	movd rax, xmm0				; movq
+	movd rax, xmm8				; movq
+	movd r8, xmm0				; movq
+	movd r8, xmm8				; movq
 	movd mm0, dword ptr[r8]
 	movq mm0, qword ptr[r8]
 	movd dword ptr[r8], mm0

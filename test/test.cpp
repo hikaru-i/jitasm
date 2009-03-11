@@ -1634,10 +1634,10 @@ struct test_movd_movq : jitasm::function0<void>
 		movq(xmm0, qword_ptr[eax]);
 		movq(qword_ptr[eax], xmm0);
 #ifdef JITASM64
-		movd(mm0, rax);				// movq mm0, rax
-		movd(rax, mm0);				// movq rax, mm0
-		movd(xmm0, rax);			// movq xmm0, rax
-		movd(rax, xmm0);			// movq rax, xmm0
+		movd(mm0, rax);				// movq
+		movd(rax, mm0);				// movq
+		movd(xmm0, rax);			// movq
+		movd(rax, xmm0);			// movq
 		movd(mm0, dword_ptr[rax]);
 		movq(mm0, qword_ptr[rax]);
 		movd(dword_ptr[rax], mm0);
@@ -1651,16 +1651,16 @@ struct test_movd_movq : jitasm::function0<void>
 		movq(xmm0, qword_ptr[rax]);
 		movq(qword_ptr[rax], xmm0);
 		// test REX
-		movd(mm0, r8);				// movq mm0, r8
-		movd(r8, mm0);				// movq r8, mm0
-		movd(xmm0, rax);			// movq xmm0, rax
-		movd(xmm0, r8);				// movq xmm0, r8
-		movd(xmm8, rax);			// movq xmm8, rax
-		movd(xmm8, r8);				// movq xmm8, r8
-		movd(rax, xmm0);			// movq rax, xmm0
-		movd(rax, xmm8);			// movq rax, xmm8
-		movd(r8, xmm0);				// movq r8, xmm0
-		movd(r8, xmm8);				// movq r8, xmm8
+		movd(mm0, r8);				// movq
+		movd(r8, mm0);				// movq
+		movd(xmm0, rax);			// movq
+		movd(xmm0, r8);				// movq
+		movd(xmm8, rax);			// movq
+		movd(xmm8, r8);				// movq
+		movd(rax, xmm0);			// movq
+		movd(rax, xmm8);			// movq
+		movd(r8, xmm0);				// movq
+		movd(r8, xmm8);				// movq
 		movd(mm0, dword_ptr[r8]);
 		movq(mm0, qword_ptr[r8]);
 		movd(dword_ptr[r8], mm0);
@@ -1764,37 +1764,17 @@ struct hoge : jitasm::function2_cdecl<__m64, short, int>
 	}
 };
 
-struct test_func : jitasm::function0<int>
+struct test_func : jitasm::function0<void>
 {
-	virtual Result main()
+	virtual void naked_main()
 	{
-		xor(zax, zax);
-		mov(zcx, 100);
-	L("loop_beg");
-		cmp(zcx, 0);
-		jle("loop_end");
-		add(zax, zcx);
-		sub(zcx, 1);
-		jmp("loop_beg");
-	L("loop_end");
-#if 0
-#ifndef JITASM64
-		push(zax);
-		push((intptr_t) "%d");
-		mov(zcx, (intptr_t) printf);
-		call(zcx);
-		add(zsp, sizeof(intptr_t) * 2);
-#else
-		sub(zsp, 40);
-		mov(zcx, (intptr_t) "%d");
-		mov(zdx, zax);
-		mov(zax, (intptr_t) printf);
-		call(zax);
-		add(zsp, 40);
-#endif
-#endif
+		mov(eax, jitasm::Imm32(10));
+		IF(eax > jitasm::Imm32(10));
+			mov(eax, jitasm::Imm32(0));
+		ELSE();
+			mov(eax, jitasm::Imm32(1));
+		ENDIF();
 		ret();
-		return eax;
 	}
 };
 

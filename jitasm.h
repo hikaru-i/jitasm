@@ -1431,7 +1431,73 @@ namespace detail
 		ScopedLock(Ty& lock) : lock_(lock) {lock.Lock();}
 		~ScopedLock() {lock_.Unlock();}
 	};
+
+	struct CondExpr
+	{
+		Instr	cmp;
+		InstrID	jcc;
+
+		template<class Ty1, class Ty2>
+		CondExpr(const Ty1& lhs, const Ty2& rhs, InstrID id) : cmp(I_CMP, lhs, rhs), jcc(id)
+		{
+			void (Frontend::*f)(const Ty1&, const Ty2&) = &Frontend::cmp;	// Check type of operands
+		}
+	};
 }	// namespace detail
+
+template<class Ty> detail::CondExpr operator>(const Reg8& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JA);}
+template<class Ty> detail::CondExpr operator<(const Reg8& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JB);}
+template<class Ty> detail::CondExpr operator>=(const Reg8& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JAE);}
+template<class Ty> detail::CondExpr operator<=(const Reg8& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JBE);}
+template<class Ty> detail::CondExpr operator==(const Reg8& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JZ);}
+template<class Ty> detail::CondExpr operator!=(const Reg8& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JNZ);}
+template<class Ty> detail::CondExpr operator>(const Mem8& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JA);}
+template<class Ty> detail::CondExpr operator<(const Mem8& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JB);}
+template<class Ty> detail::CondExpr operator>=(const Mem8& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JAE);}
+template<class Ty> detail::CondExpr operator<=(const Mem8& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JBE);}
+template<class Ty> detail::CondExpr operator==(const Mem8& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JZ);}
+template<class Ty> detail::CondExpr operator!=(const Mem8& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JNZ);}
+
+template<class Ty> detail::CondExpr operator>(const Reg16& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JA);}
+template<class Ty> detail::CondExpr operator<(const Reg16& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JB);}
+template<class Ty> detail::CondExpr operator>=(const Reg16& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JAE);}
+template<class Ty> detail::CondExpr operator<=(const Reg16& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JBE);}
+template<class Ty> detail::CondExpr operator==(const Reg16& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JZ);}
+template<class Ty> detail::CondExpr operator!=(const Reg16& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JNZ);}
+template<class Ty> detail::CondExpr operator>(const Mem16& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JA);}
+template<class Ty> detail::CondExpr operator<(const Mem16& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JB);}
+template<class Ty> detail::CondExpr operator>=(const Mem16& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JAE);}
+template<class Ty> detail::CondExpr operator<=(const Mem16& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JBE);}
+template<class Ty> detail::CondExpr operator==(const Mem16& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JZ);}
+template<class Ty> detail::CondExpr operator!=(const Mem16& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JNZ);}
+
+template<class Ty> detail::CondExpr operator>(const Reg32& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JA);}
+template<class Ty> detail::CondExpr operator<(const Reg32& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JB);}
+template<class Ty> detail::CondExpr operator>=(const Reg32& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JAE);}
+template<class Ty> detail::CondExpr operator<=(const Reg32& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JBE);}
+template<class Ty> detail::CondExpr operator==(const Reg32& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JZ);}
+template<class Ty> detail::CondExpr operator!=(const Reg32& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JNZ);}
+template<class Ty> detail::CondExpr operator>(const Mem32& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JA);}
+template<class Ty> detail::CondExpr operator<(const Mem32& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JB);}
+template<class Ty> detail::CondExpr operator>=(const Mem32& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JAE);}
+template<class Ty> detail::CondExpr operator<=(const Mem32& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JBE);}
+template<class Ty> detail::CondExpr operator==(const Mem32& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JZ);}
+template<class Ty> detail::CondExpr operator!=(const Mem32& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JNZ);}
+
+#ifdef JITASM64
+template<class Ty> detail::CondExpr operator>(const Reg64& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JA);}
+template<class Ty> detail::CondExpr operator<(const Reg64& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JB);}
+template<class Ty> detail::CondExpr operator>=(const Reg64& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JAE);}
+template<class Ty> detail::CondExpr operator<=(const Reg64& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JBE);}
+template<class Ty> detail::CondExpr operator==(const Reg64& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JZ);}
+template<class Ty> detail::CondExpr operator!=(const Reg64& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JNZ);}
+#endif
+template<class Ty> detail::CondExpr operator>(const Mem64& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JA);}
+template<class Ty> detail::CondExpr operator<(const Mem64& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JB);}
+template<class Ty> detail::CondExpr operator>=(const Mem64& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JAE);}
+template<class Ty> detail::CondExpr operator<=(const Mem64& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JBE);}
+template<class Ty> detail::CondExpr operator==(const Mem64& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JZ);}
+template<class Ty> detail::CondExpr operator!=(const Mem64& lhs, const Ty& rhs)	{return detail::CondExpr(lhs, rhs, I_JNZ);}
 
 struct Frontend
 {
@@ -1710,11 +1776,59 @@ struct Frontend
 		return labels_.size() - 1;
 	}
 
+	struct if_sequence
+	{
+		size_t	else_index;
+		size_t	end_index;
+	};
+	std::deque<if_sequence> if_seq;
+
+	size_t NextAutoLabel()
+	{
+		Label label = {""};
+		labels_.push_back(label);
+		return labels_.size() - 1;
+	}
+
+	void IF(const detail::CondExpr& expr)
+	{
+		if_sequence seq = {NextAutoLabel(), NextAutoLabel()};
+		PushBack(expr.cmp);
+		PushBack(Instr(expr.jcc, Imm64(seq.else_index)));
+		if_seq.push_back(seq);
+	}
+
+	void ELSE()
+	{
+		if_sequence& seq = *if_seq.rbegin();
+		PushBack(Instr(I_JMP, Imm64(seq.end_index)));
+		SetLabel(seq.else_index);
+		seq.else_index = NextAutoLabel();
+	}
+
+	void ELSEIF(const detail::CondExpr& expr)
+	{
+		ELSE();
+		IF(expr);
+	}
+
+	void ENDIF()
+	{
+		const if_sequence& seq = *if_seq.rbegin();
+		SetLabel(seq.else_index);
+		SetLabel(seq.end_index);
+		if_seq.pop_back();
+	}
+
+	void SetLabel(size_t index)
+	{
+		labels_[index].instr_number = instrs_.size();	// Label current instruction
+	}
+
 	// LABEL
 	void L(const std::string& label_name)
 	{
-		size_t label_id = GetLabelId(label_name);
-		labels_[label_id].instr_number = instrs_.size();	// Label current instruction
+		SetLabel(GetLabelId(label_name));
 	}
 
 	/// ALIGN
