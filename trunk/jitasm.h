@@ -1615,6 +1615,12 @@ struct Frontend
 		}
 #endif
 
+		// Adjust labels
+		const size_t prolog_instr_count = instrs_.size();
+		for (LabelList::iterator it = labels_.begin(); it != labels_.end(); ++it) {
+			it->instr_number += prolog_instr_count;
+		}
+
 		// Put main instructions after prolog
 		instrs_.insert(instrs_.end(), main_instr.begin(), main_instr.end());
 
