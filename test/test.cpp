@@ -1686,14 +1686,38 @@ struct test_movd_movq : jitasm::function0<void>
 };
 
 //----------------------------------------
-// function0_cdecl<int>
+// function0_cdecl<int> (return immediate)
 //----------------------------------------
-extern "C" void masm_test_function0_cdecl();
-struct test_function0_cdecl : jitasm::function0_cdecl<int>
+extern "C" void masm_test_function0_cdecl_int_imm();
+struct test_function0_cdecl_int_imm : jitasm::function0_cdecl<int>
 {
 	Result main()
 	{
-		return 16;
+		return 16;	// mov eax, 16
+	}
+};
+
+//----------------------------------------
+// function0_cdecl<int> (return eax)
+//----------------------------------------
+extern "C" void masm_test_function0_cdecl_int_eax();
+struct test_function0_cdecl_int_eax : jitasm::function0_cdecl<int>
+{
+	Result main()
+	{
+		return eax;	// no instruction. (because mov eax, eax)
+	}
+};
+
+//----------------------------------------
+// function0_cdecl<short>
+//----------------------------------------
+extern "C" void masm_test_function0_cdecl_short();
+struct test_function0_cdecl_short : jitasm::function0_cdecl<short>
+{
+	Result main()
+	{
+		return result_ptr[zsi];	// mov ax, word_ptr[zsi]
 	}
 };
 
@@ -1716,21 +1740,27 @@ struct test_function1_cdecl : jitasm::function1_cdecl<float, float>
 	}
 };
 
+#include <intrin.h>
 struct Foo {
 	char c[5];
 };
 
-struct hoge : jitasm::function2_cdecl<Foo, short, int>
+struct hoge : jitasm::function2_cdecl<__m64, short, int>
 {
+//	hoge() : jitasm::function2_cdecl<__int64, short, int>(false) {}
+
 	virtual Result main(Arg a1, Arg a2)
 	{
 		movzx(eax, word_ptr[a1]);
 		mov(ecx, dword_ptr[a2]);
+		mov(esi, ecx);
 
 		mov(byte_ptr[esp - 8], al);
 		mov(byte_ptr[esp - 7], cl);
 		mov(byte_ptr[esp - 6], 0xAA);
-		return result_ptr[esp - 8];
+		//return result_ptr[esp - 8];
+		return mm0;
+		//return 0xFFFFFFFF;
 	}
 };
 
@@ -1801,6 +1831,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	TEST(test_fst);
 	TEST(test_movd_movq);
 
-	//TEST(test_function0_cdecl);
-	//TEST(masm_test_function1_cdecl, test_function1_cdecl());
+	TEST(test_function0_cdecl_int_imm);
+	TEST(test_function0_cdecl_int_eax);
+	TEST(test_function0_cdecl_short);
 }
