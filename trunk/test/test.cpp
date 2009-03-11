@@ -1686,6 +1686,31 @@ struct test_movd_movq : jitasm::function0<void>
 };
 
 //----------------------------------------
+// function0_cdecl<char>
+//----------------------------------------
+extern "C" void masm_test_function0_cdecl_char();
+struct test_function0_cdecl_char : jitasm::function0_cdecl<char>
+{
+	Result main()
+	{
+		movzx(esi, cl);
+		return cl;	// mov ax, cl
+	}
+};
+
+//----------------------------------------
+// function0_cdecl<short>
+//----------------------------------------
+extern "C" void masm_test_function0_cdecl_short();
+struct test_function0_cdecl_short : jitasm::function0_cdecl<short>
+{
+	Result main()
+	{
+		return result_ptr[zsi];	// mov ax, word_ptr[zsi]
+	}
+};
+
+//----------------------------------------
 // function0_cdecl<int> (return immediate)
 //----------------------------------------
 extern "C" void masm_test_function0_cdecl_int_imm();
@@ -1706,18 +1731,6 @@ struct test_function0_cdecl_int_eax : jitasm::function0_cdecl<int>
 	Result main()
 	{
 		return eax;	// no instruction. (because mov eax, eax)
-	}
-};
-
-//----------------------------------------
-// function0_cdecl<short>
-//----------------------------------------
-extern "C" void masm_test_function0_cdecl_short();
-struct test_function0_cdecl_short : jitasm::function0_cdecl<short>
-{
-	Result main()
-	{
-		return result_ptr[zsi];	// mov ax, word_ptr[zsi]
 	}
 };
 
@@ -1811,7 +1824,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	TEST(test_fst);
 	TEST(test_movd_movq);
 
+	TEST(test_function0_cdecl_char);
+	TEST(test_function0_cdecl_short);
 	TEST(test_function0_cdecl_int_imm);
 	TEST(test_function0_cdecl_int_eax);
-	TEST(test_function0_cdecl_short);
 }

@@ -2814,7 +2814,7 @@ namespace detail {
 				f.mov(f.rax, static_cast<Reg64&>(val_));
 			}
 			else if (detail::IsMmxReg(val_)) {
-				//f.movq(f.rax, static_cast<MmxReg&>(val_));
+				f.movq(f.rax, static_cast<MmxReg&>(val_));
 			}
 #else
 			if (val_.IsMem()) {
