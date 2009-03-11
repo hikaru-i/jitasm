@@ -1781,12 +1781,12 @@ struct test_func : jitasm::function0<void>
 {
 	virtual void naked_main()
 	{
-		mov(eax, jitasm::Imm32(10));
-		IF(eax > jitasm::Imm32(10));
-			mov(eax, jitasm::Imm32(0));
-		ELSE();
-			mov(eax, jitasm::Imm32(1));
-		ENDIF();
+		xor(eax, eax);
+		mov(ecx, 100);
+		REPEAT();
+			add(eax, ecx);
+			dec(ecx);
+		UNTIL(ecx > jitasm::Imm32(0));
 		ret();
 	}
 };
