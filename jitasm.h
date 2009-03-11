@@ -1787,13 +1787,29 @@ struct Frontend
 		size_t	else_index;
 		size_t	end_index;
 	};
-	std::deque<if_sequence> if_seq;
+	std::deque<if_sequence>	if_seq;
+	std::deque<size_t>		repeat_seq;
 
 	size_t NextAutoLabel()
 	{
 		Label label = {""};
 		labels_.push_back(label);
 		return labels_.size() - 1;
+	}
+
+	void REPEAT()
+	{
+		size_t seq = NextAutoLabel();
+		SetLabel(seq);
+		repeat_seq.push_back(seq);
+	}
+
+	void UNTIL(const detail::CondExpr& expr)
+	{
+		size_t seq = *repeat_seq.rbegin();
+		PushBack(expr.cmp);
+		PushBack(Instr(expr.jcc, Imm64(seq)));
+		repeat_seq.pop_back();
 	}
 
 	void IF(const detail::CondExpr& expr)
