@@ -1609,6 +1609,37 @@ struct test_fst : jitasm::function0<void>
 	}
 };
 
+
+//----------------------------------------
+// SSE2 A~
+//----------------------------------------
+extern "C" void masm_test_sse2_a();
+struct test_sse2_a : jitasm::function0<void>
+{
+	virtual void naked_main()
+	{
+		addpd(xmm0, xmmword_ptr[esp]);
+		addpd(xmm0, xmm0);
+		addsd(xmm0, qword_ptr[esp]);
+		addsd(xmm0, xmm0);
+		andpd(xmm0, xmmword_ptr[esp]);
+		andpd(xmm0, xmm0);
+		andnpd(xmm0, xmmword_ptr[esp]);
+		andnpd(xmm0, xmm0);
+		clflush(byte_ptr[esp]);
+#ifdef JITASM64
+		addpd(xmm8, xmmword_ptr[rsp]);
+		addpd(xmm8, xmm8);
+		addsd(xmm8, qword_ptr[rsp]);
+		addsd(xmm8, xmm8);
+		andpd(xmm8, xmmword_ptr[rsp]);
+		andpd(xmm8, xmm8);
+		andnpd(xmm8, xmmword_ptr[rsp]);
+		andnpd(xmm8, xmm8);
+#endif
+	}
+};
+
 //----------------------------------------
 // MOVD/MOVQ
 //----------------------------------------
@@ -1683,6 +1714,31 @@ struct test_movd_movq : jitasm::function0<void>
 		movq(qword_ptr[rax], xmm1);
 		movq(qword_ptr[r8], xmm0);
 		movq(qword_ptr[r8], xmm1);
+#endif
+	}
+};
+
+//----------------------------------------
+// MOVSD/MOVSS
+//----------------------------------------
+extern "C" void masm_test_movsd_movss();
+struct test_movsd_movss : jitasm::function0<void>
+{
+	virtual void naked_main()
+	{
+		movsd(xmm0, xmm1);
+		movsd(xmm0, qword_ptr[esp]);
+		movsd(qword_ptr[esp], xmm0);
+		movss(xmm0, xmm1);
+		movss(xmm0, dword_ptr[esp]);
+		movss(dword_ptr[esp], xmm0);
+#ifdef JITASM64
+		movsd(xmm8, xmm1);
+		movsd(xmm8, qword_ptr[rsp]);
+		movsd(qword_ptr[r8], xmm8);
+		movss(xmm8, xmm1);
+		movss(xmm8, dword_ptr[rsp]);
+		movss(dword_ptr[r8], xmm8);
 #endif
 	}
 };
@@ -1905,7 +1961,9 @@ int _tmain(int argc, _TCHAR* argv[])
 	TEST(test_div_idiv_mul);
 	TEST(test_imul);
 	TEST(test_fst);
+	TEST(test_sse2_a);
 	TEST(test_movd_movq);
+	TEST(test_movsd_movss);
 
 	TEST(test_function_return_char);
 	TEST(test_function_return_short);

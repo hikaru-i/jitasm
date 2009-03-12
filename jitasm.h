@@ -1238,14 +1238,14 @@ struct Backend
 		case I_CVTPS2DQ:	EncodeSSE2(0x66, 0x5B, o1, o2); break;
 		case I_CVTDQ2PS:	EncodeSSE(0x5B, o1, o2); break;
 		case I_CVTPS2PD:	EncodeSSE(0x5A, o1, o2); break;	// SSE2!!!
-		//case I_CVTSD2SI:
+		case I_CVTSD2SI:	EncodeSSE2(0xF2, 0x2D, o1, o2); break;
 		case I_CVTSD2SS:	EncodeSSE2(0xF2, 0x5A, o1, o2); break;
-		//case I_CVTSI2SD:
+		case I_CVTSI2SD:	EncodeSSE2(0xF2, 0x2A, o1, o2); break;
 		case I_CVTSS2SD:	EncodeSSE2(0xF3, 0x5A, o1, o2); break;
 		case I_CVTTPD2DQ:	EncodeSSE2(0x66, 0xE6, o1, o2); break;
 		case I_CVTTPD2PI:	EncodeSSE2(0x66, 0x2C, o1, o2); break;
 		case I_CVTTPS2DQ:	EncodeSSE2(0xF3, 0x5B, o1, o2); break;
-		//case I_CVTTSD2SI:
+		case I_CVTTSD2SI:	EncodeSSE2(0xF2, 0x2C, o1, o2); break;
 		case I_DIVPD:		EncodeSSE2(0x66, 0x5E, o1, o2); break;
 		case I_DIVSD:		EncodeSSE2(0xF2, 0x5E, o1, o2); break;
 		//case I_LFENCE:
@@ -2429,15 +2429,16 @@ struct Frontend
 	void fstp(const Mem80& dst) {PushBack(Instr(I_FSTP, dst));}
 	void fstp(const FpuReg& dst) {PushBack(Instr(I_FSTP, dst));}
 
+	// ADDPD/ADDSD
 	void addpd(const XmmReg& dst, const XmmReg& src)	{PushBack(Instr(I_ADDPD, dst, src));}
 	void addpd(const XmmReg& dst, const Mem128& src)	{PushBack(Instr(I_ADDPD, dst, src));}
 	void addsd(const XmmReg& dst, const XmmReg& src)	{PushBack(Instr(I_ADDSD, dst, src));}
-	void addsd(const XmmReg& dst, const Mem128& src)	{PushBack(Instr(I_ADDSD, dst, src));}
+	void addsd(const XmmReg& dst, const Mem64& src)		{PushBack(Instr(I_ADDSD, dst, src));}
 
 	void andpd(const XmmReg& dst, const XmmReg& src)	{PushBack(Instr(I_ANDPD, dst, src));}
 	void andpd(const XmmReg& dst, const Mem128& src)	{PushBack(Instr(I_ANDPD, dst, src));}
-	void andnpd(const XmmReg& dst, const XmmReg& src)	{PushBack(Instr(I_ANDPD, dst, src));}
-	void andnpd(const XmmReg& dst, const Mem128& src)	{PushBack(Instr(I_ANDPD, dst, src));}
+	void andnpd(const XmmReg& dst, const XmmReg& src)	{PushBack(Instr(I_ANDNPD, dst, src));}
+	void andnpd(const XmmReg& dst, const Mem128& src)	{PushBack(Instr(I_ANDNPD, dst, src));}
 
 	void clflush(const Mem8& dst) {PushBack(Instr(I_CLFLUSH, dst));}
 

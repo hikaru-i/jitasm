@@ -949,6 +949,21 @@ masm_test_fst proc
 masm_test_fst endp
 
 ;----------------------------------------
+; SSE2 A~
+;----------------------------------------
+masm_test_sse2_a proc
+	addpd xmm0, xmmword ptr[esp]
+	addpd xmm0, xmm0
+	addsd xmm0, qword ptr[esp]
+	addsd xmm0, xmm0
+	andpd xmm0, xmmword ptr[esp]
+	andpd xmm0, xmm0
+	andnpd xmm0, xmmword ptr[esp]
+	andnpd xmm0, xmm0
+	clflush byte ptr[esp]
+masm_test_sse2_a endp
+
+;----------------------------------------
 ; MOVD/MOVQ
 ;----------------------------------------
 masm_test_movd_movq proc
@@ -971,6 +986,18 @@ masm_test_movd_movq proc
 	movq xmm0, qword ptr[eax]
 	movq qword ptr[eax], xmm0
 masm_test_movd_movq endp
+
+;----------------------------------------
+; MOVSD/MOVSS
+;----------------------------------------
+masm_test_movsd_movss proc
+	movsd xmm0, xmm1
+	movsd xmm0, qword ptr[esp]
+	movsd qword ptr[esp], xmm0
+	movss xmm0, xmm1
+	movss xmm0, dword ptr[esp]
+	movss dword ptr[esp], xmm0
+masm_test_movsd_movss endp
 
 ;----------------------------------------
 ; function0_cdecl<char>
