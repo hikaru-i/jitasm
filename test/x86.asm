@@ -975,7 +975,7 @@ masm_test_movd_movq endp
 ;----------------------------------------
 ; function0_cdecl<char>
 ;----------------------------------------
-masm_test_function0_cdecl_char proc
+masm_test_function_return_char proc
 	push ebp
 	mov ebp, esp
 	push esi
@@ -984,38 +984,133 @@ masm_test_function0_cdecl_char proc
 	pop esi
 	leave
 	ret
-masm_test_function0_cdecl_char endp
+masm_test_function_return_char endp
 
 ;----------------------------------------
 ; function0_cdecl<short>
 ;----------------------------------------
-masm_test_function0_cdecl_short proc
+masm_test_function_return_short proc
 	push ebp
 	mov ebp, esp
 	mov ax, word ptr[esi]
 	leave
 	ret
-masm_test_function0_cdecl_short endp
+masm_test_function_return_short endp
 
 ;----------------------------------------
 ; function0_cdecl<int> (return immediate)
 ;----------------------------------------
-masm_test_function0_cdecl_int_imm proc
+masm_test_function_return_int_imm proc
 	push ebp
 	mov ebp, esp
 	mov eax, 16
 	leave
 	ret
-masm_test_function0_cdecl_int_imm endp
+masm_test_function_return_int_imm endp
 
 ;----------------------------------------
 ; function0_cdecl<int> (return eax)
 ;----------------------------------------
-masm_test_function0_cdecl_int_eax proc
+masm_test_function_return_int_eax proc
 	push ebp
 	mov ebp, esp
 	leave
 	ret
-masm_test_function0_cdecl_int_eax endp
+masm_test_function_return_int_eax endp
+
+;----------------------------------------
+; function0_cdecl<float> (return immediate)
+;----------------------------------------
+masm_test_function_return_float_imm proc
+	push ebp
+	mov ebp, esp
+	mov dword ptr[esp - 4], 41300000h
+	fld real4 ptr[esp - 4]
+	leave
+	ret
+masm_test_function_return_float_imm endp
+
+;----------------------------------------
+; function0_cdecl<float> (return xmm)
+;----------------------------------------
+masm_test_function_return_float_xmm proc
+	push ebp
+	mov ebp, esp
+	movss xmm7, dword ptr[esp]
+	movss dword ptr[esp - 4], xmm7
+	fld real4 ptr[esp - 4]
+	leave
+	ret
+masm_test_function_return_float_xmm endp
+
+;----------------------------------------
+; function1_cdecl<float> (return ptr)
+;----------------------------------------
+masm_test_function_return_float_ptr proc
+	push ebp
+	mov ebp, esp
+	fld real4 ptr[ebp + 8]
+	leave
+	ret
+masm_test_function_return_float_ptr endp
+
+;----------------------------------------
+; function1_cdecl<float> (return st(0))
+;----------------------------------------
+masm_test_function_return_float_st0 proc
+	push ebp
+	mov ebp, esp
+	fld real4 ptr[ebp + 8]
+	leave
+	ret
+masm_test_function_return_float_st0 endp
+
+;----------------------------------------
+; function0_cdecl<double> (return immediate)
+;----------------------------------------
+masm_test_function_return_double_imm proc
+	push ebp
+	mov ebp, esp
+	mov dword ptr[esp - 8], 0
+	mov dword ptr[esp - 4], 40260000h
+	fld real8 ptr[esp - 8]
+	leave
+	ret
+masm_test_function_return_double_imm endp
+
+;----------------------------------------
+; function0_cdecl<double> (return xmm)
+;----------------------------------------
+masm_test_function_return_double_xmm proc
+	push ebp
+	mov ebp, esp
+	movsd xmm7, qword ptr[esp]
+	movsd qword ptr[esp - 8], xmm7
+	fld real8 ptr[esp - 8]
+	leave
+	ret
+masm_test_function_return_double_xmm endp
+
+;----------------------------------------
+; function1_cdecl<double> (return ptr)
+;----------------------------------------
+masm_test_function_return_double_ptr proc
+	push ebp
+	mov ebp, esp
+	fld real8 ptr[ebp + 8]
+	leave
+	ret
+masm_test_function_return_double_ptr endp
+
+;----------------------------------------
+; function1_cdecl<double> (return st(0))
+;----------------------------------------
+masm_test_function_return_double_st0 proc
+	push ebp
+	mov ebp, esp
+	fld real8 ptr[ebp + 8]
+	leave
+	ret
+masm_test_function_return_double_st0 endp
 
 end

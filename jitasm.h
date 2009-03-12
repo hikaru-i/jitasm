@@ -37,6 +37,9 @@
 #include <vector>
 #include <assert.h>
 
+#pragma warning( push )
+#pragma warning( disable : 4127 )	// conditional expression is constant.
+
 #ifndef ASSERT
 #define ASSERT assert
 #endif
@@ -226,7 +229,7 @@ struct Mem64Offset
 	sint64 offset_;
 
 	explicit Mem64Offset(sint64 offset) : offset_(offset) {}
-	Mem64 ToMem64() {return Mem64(O_SIZE_64, INVALID, INVALID, 0, offset_);}
+	Mem64 ToMem64() const {return Mem64(O_SIZE_64, INVALID, INVALID, 0, offset_);}
 };
 
 template<class OpdN, class U, class S>
@@ -1427,6 +1430,7 @@ namespace detail
 	class ScopedLock
 	{
 		Ty& lock_;
+		ScopedLock<Ty>& operator=(const ScopedLock<Ty>&);
 	public:
 		ScopedLock(Ty& lock) : lock_(lock) {lock.Lock();}
 		~ScopedLock() {lock_.Unlock();}
@@ -1603,9 +1607,11 @@ struct Frontend
 		if (gpreg & (1 << (R13 - RAX))) { push(r13); ++count; }
 		if (gpreg & (1 << (R14 - RAX))) { push(r14); ++count; }
 		if (gpreg & (1 << (R15 - RAX))) { push(r15); ++count; }
-		uint32 xmm_store = detail::Count1Bits(xmmreg & 0xFFC0) * 16 + (count & 1) * 8;
-		if (xmm_store > 0)
+		uint32 xmm_store = detail::Count1Bits(xmmreg & 0xFFC0) * 16;
+		if (xmm_store > 0) {
+			xmm_store += (count & 1) * 8;	// align 16 bytes
 			sub(rsp, xmm_store);
+		}
 		size_t offset = 0;
 		for (int reg_id = XMM15; reg_id >= XMM6; --reg_id) {
 			if (xmmreg & (1 << (reg_id - XMM0))) {
@@ -2112,7 +2118,7 @@ struct Frontend
 	void mov(const Mem64& dst, const Reg64& src)	{PushBack(Instr(I_MOV, dst, src));}
 	void mov(const Reg64& dst, const Imm64& imm)	{PushBack(Instr(I_MOV, dst, imm));}
 	void mov(const Mem64& dst, const Imm64& imm)	{PushBack(Instr(I_MOV, dst, imm));}
-	void mov(const Rax& dst, Mem64Offset& src)		{PushBack(Instr(I_MOV, dst, src.ToMem64()));}
+	void mov(const Rax& dst, const Mem64Offset& src){PushBack(Instr(I_MOV, dst, src.ToMem64()));}
 #endif
  
 	// MOVSB/MOVSW/MOVSD/MOVSQ
@@ -2629,9 +2635,10 @@ namespace detail {
 	enum {
 		ARG_IN_REG		= (1<<0),	///< Argument is stored in general purpose register.
 		ARG_IN_STACK	= (1<<1),	///< Argument is stored on stack.
-		ARG_IN_XMM		= (1<<2),	///< Argument is stored in xmm register.
-		ARG_TYPE_VALUE	= (1<<3),	///< Argument is value which is passed.
-		ARG_TYPE_PTR	= (1<<4)	///< Argument is pointer which is passed to.
+		ARG_IN_XMM_SP	= (1<<2),	///< Argument is stored in xmm register as single precision.
+		ARG_IN_XMM_DP	= (1<<3),	///< Argument is stored in xmm register as double precision.
+		ARG_TYPE_VALUE	= (1<<4),	///< Argument is value which is passed.
+		ARG_TYPE_PTR	= (1<<5)	///< Argument is pointer which is passed to.
 	};
 
 	/// cdecl argument type traits
@@ -2706,25 +2713,25 @@ namespace detail {
 	/**
 	 * Base class for argument which is stored in xmm register.
 	 */
-	template<int XmmRegID> struct ArgumentTraits_win64_xmm {
+	template<int XmmRegID, int Flag> struct ArgumentTraits_win64_xmm {
 		enum {
 			stack_size = 8,
-			flag = ARG_IN_XMM | ARG_TYPE_VALUE,
+			flag = Flag | ARG_TYPE_VALUE,
 			reg_id = XmmRegID
 		};
 	};
 
 	// specialization for float
-	template<> struct ArgumentTraits_win64<0, float, 4> : ArgumentTraits_win64_xmm<XMM0> {};
-	template<> struct ArgumentTraits_win64<1, float, 4> : ArgumentTraits_win64_xmm<XMM1> {};
-	template<> struct ArgumentTraits_win64<2, float, 4> : ArgumentTraits_win64_xmm<XMM2> {};
-	template<> struct ArgumentTraits_win64<3, float, 4> : ArgumentTraits_win64_xmm<XMM3> {};
+	template<> struct ArgumentTraits_win64<0, float, 4> : ArgumentTraits_win64_xmm<XMM0, ARG_IN_XMM_SP> {};
+	template<> struct ArgumentTraits_win64<1, float, 4> : ArgumentTraits_win64_xmm<XMM1, ARG_IN_XMM_SP> {};
+	template<> struct ArgumentTraits_win64<2, float, 4> : ArgumentTraits_win64_xmm<XMM2, ARG_IN_XMM_SP> {};
+	template<> struct ArgumentTraits_win64<3, float, 4> : ArgumentTraits_win64_xmm<XMM3, ARG_IN_XMM_SP> {};
 
 	// specialization for double
-	template<> struct ArgumentTraits_win64<0, double, 8> : ArgumentTraits_win64_xmm<XMM0> {};
-	template<> struct ArgumentTraits_win64<1, double, 8> : ArgumentTraits_win64_xmm<XMM1> {};
-	template<> struct ArgumentTraits_win64<2, double, 8> : ArgumentTraits_win64_xmm<XMM2> {};
-	template<> struct ArgumentTraits_win64<3, double, 8> : ArgumentTraits_win64_xmm<XMM3> {};
+	template<> struct ArgumentTraits_win64<0, double, 8> : ArgumentTraits_win64_xmm<XMM0, ARG_IN_XMM_DP> {};
+	template<> struct ArgumentTraits_win64<1, double, 8> : ArgumentTraits_win64_xmm<XMM1, ARG_IN_XMM_DP> {};
+	template<> struct ArgumentTraits_win64<2, double, 8> : ArgumentTraits_win64_xmm<XMM2, ARG_IN_XMM_DP> {};
+	template<> struct ArgumentTraits_win64<3, double, 8> : ArgumentTraits_win64_xmm<XMM3, ARG_IN_XMM_DP> {};
 
 
 	/// Result type traits
@@ -2864,8 +2871,8 @@ namespace detail {
 #ifdef JITASM64
 			if (val_.IsReg() && val_.GetSize() == O_SIZE_80) {
 				// from FPU register
-				f.fstp(f.real4_ptr[f.esp - 4]);
-				f.movss(f.xmm0, f.dword_ptr[f.esp - 4]);
+				f.fstp(f.real4_ptr[f.rsp - 4]);
+				f.movss(f.xmm0, f.dword_ptr[f.rsp - 4]);
 			}
 			else if (val_.IsMem() && val_.GetSize() == O_SIZE_32) {
 				// from memory
@@ -2878,8 +2885,8 @@ namespace detail {
 			}
 			else if (val_.IsImm()) {
 				// from float immediate
-				f.mov(f.dword_ptr[f.esp - 4], static_cast<Reg32&>(val_));
-				f.movss(f.xmm0, f.dword_ptr[f.esp - 4]);
+				f.mov(f.dword_ptr[f.rsp - 4], static_cast<Reg32&>(val_));
+				f.movss(f.xmm0, f.dword_ptr[f.rsp - 4]);
 			}
 #else
 			if (val_.IsReg() && val_.GetSize() == O_SIZE_80) {
@@ -2921,8 +2928,8 @@ namespace detail {
 #ifdef JITASM64
 			if (val_.IsReg() && val_.GetSize() == O_SIZE_80) {
 				// from FPU register
-				f.fstp(f.real8_ptr[f.esp - 8]);
-				f.movsd(f.xmm0, f.qword_ptr[f.esp - 8]);
+				f.fstp(f.real8_ptr[f.rsp - 8]);
+				f.movsd(f.xmm0, f.qword_ptr[f.rsp - 8]);
 			}
 			else if (val_.IsMem() && val_.GetSize() == O_SIZE_64) {
 				// from memory
@@ -2935,9 +2942,9 @@ namespace detail {
 			}
 			else if (val_.IsImm()) {
 				// from float immediate
-				f.mov(f.dword_ptr[f.esp - 8], *reinterpret_cast<uint32*>(&imm_));
-				f.mov(f.dword_ptr[f.esp - 4], *(reinterpret_cast<uint32*>(&imm_) + 1));
-				f.movsd(f.xmm0, f.qword_ptr[f.esp - 8]);
+				f.mov(f.dword_ptr[f.rsp - 8], *reinterpret_cast<uint32*>(&imm_));
+				f.mov(f.dword_ptr[f.rsp - 4], *(reinterpret_cast<uint32*>(&imm_) + 1));
+				f.movsd(f.xmm0, f.qword_ptr[f.rsp - 8]);
 			}
 #else
 			if (val_.IsReg() && val_.GetSize() == O_SIZE_80) {
@@ -2998,8 +3005,10 @@ namespace detail {
 			if (dump_regarg_x64_) {
 				if (ArgTraits<N, T>::flag & ARG_IN_REG)
 					mov(qword_ptr[addr], Reg64(static_cast<RegID>(ArgTraits<N, T>::reg_id)));
-				else if (ArgTraits<N, T>::flag & ARG_IN_XMM)
-					movq(qword_ptr[addr], XmmReg(static_cast<RegID>(ArgTraits<N, T>::reg_id)));
+				else if (ArgTraits<N, T>::flag & ARG_IN_XMM_SP)
+					movss(dword_ptr[addr], XmmReg(static_cast<RegID>(ArgTraits<N, T>::reg_id)));
+				else if (ArgTraits<N, T>::flag & ARG_IN_XMM_DP)
+					movsd(qword_ptr[addr], XmmReg(static_cast<RegID>(ArgTraits<N, T>::reg_id)));
 			}
 #endif
 		}
@@ -3113,7 +3122,7 @@ struct function1_cdecl : detail::Function_cdecl
 
 	function1_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual Result main(Arg a1) { return Result(); }
+	virtual Result main(Arg /*a1*/) { return Result(); }
 	void naked_main() {
 		DumpRegArg1<R, A1>();
 		main(Arg1<R>()).Store(*this);
@@ -3127,7 +3136,7 @@ struct function1_cdecl<void, A1> : detail::Function_cdecl
 	typedef void (__cdecl *FuncPtr)(A1);
 	function1_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual void main(Arg a1) {}
+	virtual void main(Arg /*a1*/) {}
 	void naked_main() {
 		DumpRegArg1<void, A1>();
 		main(Arg1<void>());
@@ -3145,7 +3154,7 @@ struct function2_cdecl : detail::Function_cdecl
 
 	function2_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual Result main(Arg a1, Arg a2) { return Result(); }
+	virtual Result main(Arg /*a1*/, Arg /*a2*/) { return Result(); }
 	void naked_main() {
 		DumpRegArg2<R, A1, A2>();
 		main(Arg1<R>(), Arg2<R, A1>()).Store(*this);
@@ -3159,7 +3168,7 @@ struct function2_cdecl<void, A1, A2> : detail::Function_cdecl
 	typedef void (__cdecl *FuncPtr)(A1, A2);
 	function2_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual void main(Arg a1, Arg a2) {}
+	virtual void main(Arg /*a1*/, Arg /*a2*/) {}
 	void naked_main() {
 		DumpRegArg2<void, A1, A2>();
 		main(Arg1<void>(), Arg2<void, A1>());
@@ -3172,4 +3181,7 @@ template<class R, class A1> struct function1 : function1_cdecl<R, A1> {};
 template<class R, class A1, class A2> struct function2 : function2_cdecl<R, A1, A2> {};
 
 }	// namespace jitasm
+
+#pragma warning( pop )
+
 #endif	// #ifndef JITASM_H
