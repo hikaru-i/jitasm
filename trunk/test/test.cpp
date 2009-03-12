@@ -34,9 +34,11 @@ void test_impl(LPCTSTR func_name, Fn1 fn1, Fn2 fn2)
 			_tprintf(_T("\n"));
 
 #ifdef _DEBUG
-			::DebugBreak();
-			if (0) {
-				((void (*)()) (p2 + i))();
+			if (::IsDebuggerPresent()) {
+				::DebugBreak();
+				if (0) {
+					((void (*)()) (p2 + i))();
+				}
 			}
 #endif
 
@@ -1688,8 +1690,8 @@ struct test_movd_movq : jitasm::function0<void>
 //----------------------------------------
 // function0_cdecl<char>
 //----------------------------------------
-extern "C" void masm_test_function0_cdecl_char();
-struct test_function0_cdecl_char : jitasm::function0_cdecl<char>
+extern "C" void masm_test_function_return_char();
+struct test_function_return_char : jitasm::function0_cdecl<char>
 {
 	Result main()
 	{
@@ -1701,8 +1703,8 @@ struct test_function0_cdecl_char : jitasm::function0_cdecl<char>
 //----------------------------------------
 // function0_cdecl<short>
 //----------------------------------------
-extern "C" void masm_test_function0_cdecl_short();
-struct test_function0_cdecl_short : jitasm::function0_cdecl<short>
+extern "C" void masm_test_function_return_short();
+struct test_function_return_short : jitasm::function0_cdecl<short>
 {
 	Result main()
 	{
@@ -1713,8 +1715,8 @@ struct test_function0_cdecl_short : jitasm::function0_cdecl<short>
 //----------------------------------------
 // function0_cdecl<int> (return immediate)
 //----------------------------------------
-extern "C" void masm_test_function0_cdecl_int_imm();
-struct test_function0_cdecl_int_imm : jitasm::function0_cdecl<int>
+extern "C" void masm_test_function_return_int_imm();
+struct test_function_return_int_imm : jitasm::function0_cdecl<int>
 {
 	Result main()
 	{
@@ -1725,8 +1727,8 @@ struct test_function0_cdecl_int_imm : jitasm::function0_cdecl<int>
 //----------------------------------------
 // function0_cdecl<int> (return eax)
 //----------------------------------------
-extern "C" void masm_test_function0_cdecl_int_eax();
-struct test_function0_cdecl_int_eax : jitasm::function0_cdecl<int>
+extern "C" void masm_test_function_return_int_eax();
+struct test_function_return_int_eax : jitasm::function0_cdecl<int>
 {
 	Result main()
 	{
@@ -1735,21 +1737,102 @@ struct test_function0_cdecl_int_eax : jitasm::function0_cdecl<int>
 };
 
 //----------------------------------------
-// function1_cdecl<float>
+// function0_cdecl<float> (return immediate)
 //----------------------------------------
-extern "C" void masm_test_function1_cdecl();
-struct test_function1_cdecl : jitasm::function1_cdecl<float, float>
+extern "C" void masm_test_function_return_float_imm();
+struct test_function_return_float_imm : jitasm::function0_cdecl<float>
+{
+	Result main()
+	{
+		return 11.0f;
+	}
+};
+
+//----------------------------------------
+// function0_cdecl<float> (return xmm)
+//----------------------------------------
+extern "C" void masm_test_function_return_float_xmm();
+struct test_function_return_float_xmm : jitasm::function0_cdecl<float>
+{
+	Result main()
+	{
+		movss(xmm7, dword_ptr[zsp]);
+		return xmm7;
+	}
+};
+
+//----------------------------------------
+// function1_cdecl<float> (return ptr)
+//----------------------------------------
+extern "C" void masm_test_function_return_float_ptr();
+struct test_function_return_float_ptr : jitasm::function1_cdecl<float, float>
 {
 	Result main(Arg a1)
 	{
-		static float sf = 20.0f;
-		mov(zax, (uintptr_t)&sf);
-		movss(xmm0, real4_ptr[zax]);
-		return xmm0;
-		//return 11.0f;
-		//return real4_ptr[a1];
-		//fld(real4_ptr[a1]);
-		//return st(0);
+		return result_ptr[a1];
+	}
+};
+
+//----------------------------------------
+// function1_cdecl<float> (return st(0))
+//----------------------------------------
+extern "C" void masm_test_function_return_float_st0();
+struct test_function_return_float_st0 : jitasm::function1_cdecl<float, float>
+{
+	Result main(Arg a1)
+	{
+		fld(real4_ptr[a1]);
+		return st(0);
+	}
+};
+
+//----------------------------------------
+// function0_cdecl<double> (return immediate)
+//----------------------------------------
+extern "C" void masm_test_function_return_double_imm();
+struct test_function_return_double_imm : jitasm::function0_cdecl<double>
+{
+	Result main()
+	{
+		return 11.0;
+	}
+};
+
+//----------------------------------------
+// function0_cdecl<double> (return xmm)
+//----------------------------------------
+extern "C" void masm_test_function_return_double_xmm();
+struct test_function_return_double_xmm : jitasm::function0_cdecl<double>
+{
+	Result main()
+	{
+		movsd(xmm7, qword_ptr[zsp]);
+		return xmm7;
+	}
+};
+
+//----------------------------------------
+// function1_cdecl<double> (return ptr)
+//----------------------------------------
+extern "C" void masm_test_function_return_double_ptr();
+struct test_function_return_double_ptr : jitasm::function1_cdecl<double, double>
+{
+	Result main(Arg a1)
+	{
+		return result_ptr[a1];
+	}
+};
+
+//----------------------------------------
+// function1_cdecl<double> (return st(0))
+//----------------------------------------
+extern "C" void masm_test_function_return_double_st0();
+struct test_function_return_double_st0 : jitasm::function1_cdecl<double, double>
+{
+	Result main(Arg a1)
+	{
+		fld(real8_ptr[a1]);
+		return st(0);
 	}
 };
 
@@ -1824,8 +1907,16 @@ int _tmain(int argc, _TCHAR* argv[])
 	TEST(test_fst);
 	TEST(test_movd_movq);
 
-	TEST(test_function0_cdecl_char);
-	TEST(test_function0_cdecl_short);
-	TEST(test_function0_cdecl_int_imm);
-	TEST(test_function0_cdecl_int_eax);
+	TEST(test_function_return_char);
+	TEST(test_function_return_short);
+	TEST(test_function_return_int_imm);
+	TEST(test_function_return_int_eax);
+	TEST(test_function_return_float_imm);
+	TEST(test_function_return_float_xmm);
+	TEST(test_function_return_float_ptr);
+	TEST(test_function_return_float_st0);
+	TEST(test_function_return_double_imm);
+	TEST(test_function_return_double_xmm);
+	TEST(test_function_return_double_ptr);
+	TEST(test_function_return_double_st0);
 }

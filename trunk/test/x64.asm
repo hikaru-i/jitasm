@@ -1408,7 +1408,7 @@ masm_test_movd_movq endp
 ;----------------------------------------
 ; function0_cdecl<char>
 ;----------------------------------------
-masm_test_function0_cdecl_char proc
+masm_test_function_return_char proc
 	push rbp
 	mov rbp, rsp
 	push rsi
@@ -1417,38 +1417,147 @@ masm_test_function0_cdecl_char proc
 	pop rsi
 	leave
 	ret
-masm_test_function0_cdecl_char endp
+masm_test_function_return_char endp
 
 ;----------------------------------------
 ; function0_cdecl<short>
 ;----------------------------------------
-masm_test_function0_cdecl_short proc
+masm_test_function_return_short proc
 	push rbp
 	mov rbp, rsp
 	mov ax, word ptr[rsi]
 	leave
 	ret
-masm_test_function0_cdecl_short endp
+masm_test_function_return_short endp
 
 ;----------------------------------------
 ; function0_cdecl<int> (return immediate)
 ;----------------------------------------
-masm_test_function0_cdecl_int_imm proc
+masm_test_function_return_int_imm proc
 	push rbp
 	mov rbp, rsp
 	mov eax, 16
 	leave
 	ret
-masm_test_function0_cdecl_int_imm endp
+masm_test_function_return_int_imm endp
 
 ;----------------------------------------
 ; function0_cdecl<int> (return eax)
 ;----------------------------------------
-masm_test_function0_cdecl_int_eax proc
+masm_test_function_return_int_eax proc
 	push rbp
 	mov rbp, rsp
 	leave
 	ret
-masm_test_function0_cdecl_int_eax endp
+masm_test_function_return_int_eax endp
+
+;----------------------------------------
+; function0_cdecl<float> (return immediate)
+;----------------------------------------
+masm_test_function_return_float_imm proc
+	push rbp
+	mov rbp, rsp
+	mov dword ptr[rsp - 4], 41300000h
+	movss xmm0, dword ptr[rsp - 4]
+	leave
+	ret
+masm_test_function_return_float_imm endp
+
+;----------------------------------------
+; function0_cdecl<float> (return xmm)
+;----------------------------------------
+masm_test_function_return_float_xmm proc
+	push rbp
+	mov rbp, rsp
+	sub rsp, 16
+	movdqa xmmword ptr[rsp], xmm7
+	movss xmm7, dword ptr[rsp]
+	movss xmm0, xmm7
+	movdqa xmm7, xmmword ptr[rsp]
+	add rsp, 16
+	leave
+	ret
+masm_test_function_return_float_xmm endp
+
+;----------------------------------------
+; function1_cdecl<float> (return ptr)
+;----------------------------------------
+masm_test_function_return_float_ptr proc
+	push rbp
+	mov rbp, rsp
+	movss dword ptr[rbp + 16], xmm0
+	movss xmm0, dword ptr[rbp + 16]
+	leave
+	ret
+masm_test_function_return_float_ptr endp
+
+;----------------------------------------
+; function1_cdecl<float> (return st(0))
+;----------------------------------------
+masm_test_function_return_float_st0 proc
+	push rbp
+	mov rbp, rsp
+	movss dword ptr[rbp + 16], xmm0
+	fld real4 ptr[rbp + 16]
+	fstp real4 ptr[rsp - 4]
+	movss xmm0, dword ptr[rsp - 4]
+	leave
+	ret
+masm_test_function_return_float_st0 endp
+
+;----------------------------------------
+; function0_cdecl<double> (return immediate)
+;----------------------------------------
+masm_test_function_return_double_imm proc
+	push rbp
+	mov rbp, rsp
+	mov dword ptr[rsp - 8], 0
+	mov dword ptr[rsp - 4], 40260000h
+	movsd xmm0, qword ptr[rsp - 8]
+	leave
+	ret
+masm_test_function_return_double_imm endp
+
+;----------------------------------------
+; function0_cdecl<double> (return xmm)
+;----------------------------------------
+masm_test_function_return_double_xmm proc
+	push rbp
+	mov rbp, rsp
+	sub rsp, 16
+	movdqa xmmword ptr[rsp], xmm7
+	movsd xmm7, qword ptr[rsp]
+	movsd xmm0, xmm7
+	movdqa xmm7, xmmword ptr[rsp]
+	add rsp, 16
+	leave
+	ret
+masm_test_function_return_double_xmm endp
+
+;----------------------------------------
+; function1_cdecl<double> (return ptr)
+;----------------------------------------
+masm_test_function_return_double_ptr proc
+	push rbp
+	mov rbp, rsp
+	movsd qword ptr[rbp + 16], xmm0
+	movsd xmm0, qword ptr[rbp + 16]
+	leave
+	ret
+masm_test_function_return_double_ptr endp
+
+;----------------------------------------
+; function1_cdecl<double> (return st(0))
+;----------------------------------------
+masm_test_function_return_double_st0 proc
+	push rbp
+	mov rbp, rsp
+	movsd qword ptr[rbp + 16], xmm0
+	fld real8 ptr[rbp + 16]
+	fstp real8 ptr[rsp - 8]
+	movsd xmm0, qword ptr[rsp - 8]
+	leave
+	ret
+masm_test_function_return_double_st0 endp
 
 end
