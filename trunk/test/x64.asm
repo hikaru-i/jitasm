@@ -1334,6 +1334,30 @@ masm_test_fst proc
 masm_test_fst endp
 
 ;----------------------------------------
+; SSE2 A~
+;----------------------------------------
+masm_test_sse2_a proc
+	addpd xmm0, xmmword ptr[esp]
+	addpd xmm0, xmm0
+	addsd xmm0, qword ptr[esp]
+	addsd xmm0, xmm0
+	andpd xmm0, xmmword ptr[esp]
+	andpd xmm0, xmm0
+	andnpd xmm0, xmmword ptr[esp]
+	andnpd xmm0, xmm0
+	clflush byte ptr[esp]
+
+	addpd xmm8, xmmword ptr[rsp]
+	addpd xmm8, xmm8
+	addsd xmm8, qword ptr[rsp]
+	addsd xmm8, xmm8
+	andpd xmm8, xmmword ptr[rsp]
+	andpd xmm8, xmm8
+	andnpd xmm8, xmmword ptr[rsp]
+	andnpd xmm8, xmm8
+masm_test_sse2_a endp
+
+;----------------------------------------
 ; MOVD/MOVQ
 ;----------------------------------------
 masm_test_movd_movq proc
@@ -1404,6 +1428,25 @@ masm_test_movd_movq proc
 	movq qword ptr[r8], xmm0
 	movq qword ptr[r8], xmm1
 masm_test_movd_movq endp
+
+;----------------------------------------
+; MOVSD/MOVSS
+;----------------------------------------
+masm_test_movsd_movss proc
+	movsd xmm0, xmm1
+	movsd xmm0, qword ptr[esp]
+	movsd qword ptr[esp], xmm0
+	movss xmm0, xmm1
+	movss xmm0, dword ptr[esp]
+	movss dword ptr[esp], xmm0
+
+	movsd xmm8, xmm1
+	movsd xmm8, qword ptr[rsp]
+	movsd qword ptr[r8], xmm8
+	movss xmm8, xmm1
+	movss xmm8, dword ptr[rsp]
+	movss dword ptr[r8], xmm8
+masm_test_movsd_movss endp
 
 ;----------------------------------------
 ; function0_cdecl<char>
