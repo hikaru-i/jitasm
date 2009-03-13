@@ -65,6 +65,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalDependencies="nasm_x86.lib"
 				LinkIncremental="2"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -140,6 +141,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalDependencies="nasm_x64.lib"
 				LinkIncremental="2"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -216,6 +218,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalDependencies="nasm_x86.lib"
 				LinkIncremental="1"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -295,6 +298,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalDependencies="nasm_x64.lib"
 				LinkIncremental="1"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -359,7 +363,7 @@
 					<Tool
 						Name="VCCustomBuildTool"
 						Description="ml64 &gt; assembling..."
-						CommandLine="&quot;$(VSInstallDir)VC\bin\x86_amd64\ml64&quot; /c /Zi /Sa &quot;/Fl$(InputDir)\$(InputName).lst&quot; &quot;/Fo$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;&#x0D;&#x0A;&quot;$(VSInstallDir)VC\bin\x86_amd64\dumpbin.exe&quot; /DISASM:BYTES &quot;$(IntDir)\$(InputName).obj&quot;&#x0D;&#x0A;"
+						CommandLine="&quot;$(VSInstallDir)VC\bin\x86_amd64\ml64&quot; /c /Zi /Sa &quot;/Fl$(InputDir)\$(InputName).lst&quot; &quot;/Fo$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;&#x0D;&#x0A;&quot;$(VSInstallDir)VC\bin\x86_amd64\dumpbin.exe&quot; /DISASM:BYTES &quot;$(IntDir)\$(InputName).obj&quot; /OUT:&quot;$(InputDir)\$(InputName).disasm&quot;&#x0D;&#x0A;"
 						Outputs="$(IntDir)\$(InputName).obj"
 					/>
 				</FileConfiguration>
@@ -377,7 +381,7 @@
 					<Tool
 						Name="VCCustomBuildTool"
 						Description="ml64 &gt; assembling..."
-						CommandLine="&quot;$(VSInstallDir)VC\bin\x86_amd64\ml64&quot; /c /Zi /Sa &quot;/Fl$(InputDir)\$(InputName).lst&quot; &quot;/Fo$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;&#x0D;&#x0A;&quot;$(VSInstallDir)VC\bin\x86_amd64\dumpbin.exe&quot; /DISASM:BYTES &quot;$(IntDir)\$(InputName).obj&quot;&#x0D;&#x0A;"
+						CommandLine="&quot;$(VSInstallDir)VC\bin\x86_amd64\ml64&quot; /c /Zi /Sa &quot;/Fl$(InputDir)\$(InputName).lst&quot; &quot;/Fo$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;&#x0D;&#x0A;&quot;$(VSInstallDir)VC\bin\x86_amd64\dumpbin.exe&quot; /DISASM:BYTES &quot;$(IntDir)\$(InputName).obj&quot; /OUT:&quot;$(InputDir)\$(InputName).disasm&quot;&#x0D;&#x0A;"
 						Outputs="$(IntDir)\$(InputName).obj"
 					/>
 				</FileConfiguration>
@@ -391,7 +395,7 @@
 					<Tool
 						Name="VCCustomBuildTool"
 						Description="ml &gt; assembling..."
-						CommandLine="&quot;$(VSInstallDir)VC\bin\ml&quot; /c /Zi /Sa &quot;/Fl$(InputDir)\$(InputName).lst&quot; &quot;/Fo$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;&#x0D;&#x0A;&quot;$(VSInstallDir)VC\bin\dumpbin.exe&quot; /DISASM:BYTES &quot;$(IntDir)\$(InputName).obj&quot;&#x0D;&#x0A;"
+						CommandLine="&quot;$(VSInstallDir)VC\bin\ml&quot; /c /Zi /Sa &quot;/Fl$(InputDir)\$(InputName).lst&quot; &quot;/Fo$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;&#x0D;&#x0A;&quot;$(VSInstallDir)VC\bin\dumpbin.exe&quot; /DISASM:BYTES &quot;$(IntDir)\$(InputName).obj&quot; /OUT:&quot;$(InputDir)\$(InputName).disasm&quot;&#x0D;&#x0A;"
 						Outputs="$(IntDir)\$(InputName).obj"
 					/>
 				</FileConfiguration>
@@ -409,7 +413,7 @@
 					<Tool
 						Name="VCCustomBuildTool"
 						Description="ml &gt; assembling..."
-						CommandLine="&quot;$(VSInstallDir)VC\bin\ml&quot; /c /Zi /Sa &quot;/Fl$(InputDir)\$(InputName).lst&quot; &quot;/Fo$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;&#x0D;&#x0A;&quot;$(VSInstallDir)VC\bin\dumpbin.exe&quot; /DISASM:BYTES &quot;$(IntDir)\$(InputName).obj&quot;&#x0D;&#x0A;"
+						CommandLine="&quot;$(VSInstallDir)VC\bin\ml&quot; /c /Zi /Sa &quot;/Fl$(InputDir)\$(InputName).lst&quot; &quot;/Fo$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;&#x0D;&#x0A;&quot;$(VSInstallDir)VC\bin\dumpbin.exe&quot; /DISASM:BYTES &quot;$(IntDir)\$(InputName).obj&quot; /OUT:&quot;$(InputDir)\$(InputName).disasm&quot;&#x0D;&#x0A;"
 						Outputs="$(IntDir)\$(InputName).obj"
 					/>
 				</FileConfiguration>
