@@ -1,15 +1,15 @@
-#include <tchar.h>
 #include <assert.h>
 #include "jitasm.h"
 
-#define _TOSTR(s) _T(#s)
+#define _TOSTR(s) #s
 #define TOSTR(s) _TOSTR(s)
-#define TEST(func_name) {test_impl(TOSTR(func_name), func_name ## (), masm_ ## func_name);}
+#define TEST_M(func_name) {test_impl(TOSTR(func_name), func_name ## (), masm_ ## func_name);}
+#define TEST_N(func_name) {test_impl(TOSTR(func_name), func_name ## (), nasm_ ## func_name);}
 
 template<class Fn1, class Fn2>
-void test_impl(LPCTSTR func_name, Fn1 fn1, Fn2 fn2)
+void test_impl(const char* func_name, Fn1 fn1, Fn2 fn2)
 {
-	_tprintf(_T("TEST(%s) ... "), func_name);
+	printf("TEST_M(%s) ... ", func_name);
 
 	fn1.Assemble();
 	size_t size = fn1.GetCodeSize();
@@ -20,33 +20,27 @@ void test_impl(LPCTSTR func_name, Fn1 fn1, Fn2 fn2)
 	
 	for (size_t i = 0; i < size; i++) {
 		if (p1[i] != p2[i]) {
-			_tprintf(_T("FAILED\n"));
+			printf("FAILED\n");
 
 			size_t min = (size_t) max((int) i - 10, 0);
 			size_t max = min(i + 10, size);
 
-			_tprintf(_T("    J[%d] "), min);
-			for (size_t j = min; j < max; j++) _tprintf(_T("%02X,"), p1[j]);
-			_tprintf(_T("\n"));
+			printf("    J[%d] ", min);
+			for (size_t j = min; j < max; j++) printf("%02X,", p1[j]);
+			printf("\n");
 
-			_tprintf(_T("    M[%d] "), min);
-			for (size_t j = min; j < max; j++) _tprintf(_T("%02X,"), p2[j]);
-			_tprintf(_T("\n"));
+			printf("    M[%d] ", min);
+			for (size_t j = min; j < max; j++) printf("%02X,", p2[j]);
+			printf("\n");
 
-#ifdef _DEBUG
 			if (::IsDebuggerPresent()) {
 				::DebugBreak();
-				if (0) {
-					((void (*)()) (p2 + i))();
-				}
 			}
-#endif
-
 			return;
 		}
 	}
 
-	_tprintf(_T("OK\n"));
+	printf("OK\n");
 }
 
 struct test_mmx_sse2 : jitasm::function0<void>
@@ -1032,7 +1026,7 @@ struct test_xchg : jitasm::function0<void>
 };
 
 //----------------------------------------
-// TEST
+// test
 //----------------------------------------
 extern "C" void masm_test_test();
 struct test_test : jitasm::function0<void>
@@ -1449,9 +1443,10 @@ struct test_movs : jitasm::function0<void>
 };
 
 //----------------------------------------
-// mov_disp
+// mov with disp
 //----------------------------------------
-struct mov_disp : jitasm::function0<void>
+extern "C" void nasm_test_mov_disp();
+struct test_mov_disp : jitasm::function0<void>
 {
 	virtual void naked_main()
 	{
@@ -2065,61 +2060,70 @@ struct test_func : jitasm::function0<void>
 {
 	virtual void naked_main()
 	{
+		//xor(eax, eax);
+		//mov(ecx, 100);
+		//REPEAT();
+		//	add(eax, ecx);
+		//	dec(ecx);
+		//UNTIL(ecx > jitasm::Imm32(0));
+		//ret();
+
 		xor(eax, eax);
 		mov(ecx, 100);
-		REPEAT();
+		WHILE(ecx > 0);
 			add(eax, ecx);
 			dec(ecx);
-		UNTIL(ecx > jitasm::Imm32(0));
+		ENDW();
 		ret();
 	}
 };
 
-int _tmain(int argc, _TCHAR* argv[])
+int wmain()
 {
-	TEST(test_sal);
-	TEST(test_sar);
-	TEST(test_shl);
-	TEST(test_shr);
-	TEST(test_rcl);
-	TEST(test_rcr);
-	TEST(test_rol);
-	TEST(test_ror);
-	TEST(test_inc_dec);
-	TEST(test_push_pop);
-	TEST(test_add);
-	TEST(test_or);
-	TEST(test_adc);
-	TEST(test_sbb);
-	TEST(test_and);
-	TEST(test_sub);
-	TEST(test_xor);
-	TEST(test_cmp);
-	TEST(test_xchg);
-	TEST(test_test);
-	TEST(test_mov);
-	TEST(test_lea);
-	TEST(test_fld);
-	TEST(test_jmp);
-	TEST(test_movs);
-	TEST(test_neg_not);
-	TEST(test_div_idiv_mul);
-	TEST(test_imul);
-	TEST(test_fst);
-	TEST(test_sse2_a);
-	TEST(test_movd_movq);
-	TEST(test_movsd_movss);
+	TEST_M(test_sal);
+	TEST_M(test_sar);
+	TEST_M(test_shl);
+	TEST_M(test_shr);
+	TEST_M(test_rcl);
+	TEST_M(test_rcr);
+	TEST_M(test_rol);
+	TEST_M(test_ror);
+	TEST_M(test_inc_dec);
+	TEST_M(test_push_pop);
+	TEST_M(test_add);
+	TEST_M(test_or);
+	TEST_M(test_adc);
+	TEST_M(test_sbb);
+	TEST_M(test_and);
+	TEST_M(test_sub);
+	TEST_M(test_xor);
+	TEST_M(test_cmp);
+	TEST_M(test_xchg);
+	TEST_M(test_test);
+	TEST_M(test_mov);
+	TEST_N(test_mov_disp);
+	TEST_M(test_lea);
+	TEST_M(test_fld);
+	TEST_M(test_jmp);
+	TEST_M(test_movs);
+	TEST_M(test_neg_not);
+	TEST_M(test_div_idiv_mul);
+	TEST_M(test_imul);
+	TEST_M(test_fst);
+	TEST_M(test_sse2_a);
+	TEST_M(test_movd_movq);
+	TEST_M(test_movsd_movss);
 
-	TEST(test_function_return_char);
-	TEST(test_function_return_short);
-	TEST(test_function_return_int_imm);
-	TEST(test_function_return_int_eax);
-	TEST(test_function_return_float_imm);
-	TEST(test_function_return_float_xmm);
-	TEST(test_function_return_float_ptr);
-	TEST(test_function_return_float_st0);
-	TEST(test_function_return_double_imm);
-	TEST(test_function_return_double_xmm);
-	TEST(test_function_return_double_ptr);
-	TEST(test_function_return_double_st0);
+	TEST_M(test_function_return_char);
+	TEST_M(test_function_return_short);
+	TEST_M(test_function_return_int_imm);
+	TEST_M(test_function_return_int_eax);
+	TEST_M(test_function_return_float_imm);
+	TEST_M(test_function_return_float_xmm);
+	TEST_M(test_function_return_float_ptr);
+	TEST_M(test_function_return_float_st0);
+	TEST_M(test_function_return_double_imm);
+	TEST_M(test_function_return_double_xmm);
+	TEST_M(test_function_return_double_ptr);
+	TEST_M(test_function_return_double_st0);
 }
