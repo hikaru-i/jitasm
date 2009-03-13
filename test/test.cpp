@@ -1721,6 +1721,67 @@ struct test_sse2_a : jitasm::function0<void>
 		comisd(xmm8, qword_ptr[r8]);
 		comisd(xmm8, xmm8);
 #endif
+
+		cvtdq2pd(xmm0, xmm1);
+		cvtdq2pd(xmm0, qword_ptr[esp]);
+		cvtpd2dq(xmm0, xmm1);
+		cvtpd2dq(xmm0, xmmword_ptr[esp]);
+		cvtpd2pi(mm0, xmm1);
+		cvtpd2pi(mm0, xmmword_ptr[esp]);
+		cvtpd2ps(xmm0, xmm1);
+		cvtpd2ps(xmm0, xmmword_ptr[esp]);
+		cvtpi2pd(xmm0, mm1);
+		cvtpi2pd(xmm0, qword_ptr[esp]);
+		cvtps2dq(xmm0, xmm1);
+		cvtps2dq(xmm0, xmmword_ptr[esp]);
+		cvtdq2ps(xmm0, xmm1);
+		cvtdq2ps(xmm0, xmmword_ptr[esp]);
+		cvtps2pd(xmm0, xmm1);
+		cvtps2pd(xmm0, qword_ptr[esp]);
+		cvtsd2ss(xmm0, xmm1);
+		cvtsd2ss(xmm0, qword_ptr[esp]);
+		cvtss2sd(xmm0, xmm1);
+		cvtss2sd(xmm0, dword_ptr[esp]);
+		cvttpd2dq(xmm0, xmm1);
+		cvttpd2dq(xmm0, xmmword_ptr[esp]);
+		cvttpd2pi(mm0, xmm1);
+		cvttpd2pi(mm0, xmmword_ptr[esp]);
+		cvttps2dq(xmm0, xmm1);
+		cvttps2dq(xmm0, xmmword_ptr[esp]);
+		cvttsd2si(eax, xmm1);
+		cvttsd2si(eax, qword_ptr[esp]);
+#ifdef JITASM64
+		cvtdq2pd(xmm8, xmm9);
+		cvtdq2pd(xmm8, qword_ptr[r8]);
+		cvtpd2dq(xmm8, xmm9);
+		cvtpd2dq(xmm8, xmmword_ptr[r8]);
+		cvtpd2pi(mm0, xmm9);
+		cvtpd2pi(mm0, xmmword_ptr[r8]);
+		cvtpd2ps(xmm8, xmm9);
+		cvtpd2ps(xmm8, xmmword_ptr[r8]);
+		cvtpi2pd(xmm8, mm1);
+		cvtpi2pd(xmm8, qword_ptr[r8]);
+		cvtps2dq(xmm8, xmm9);
+		cvtps2dq(xmm8, xmmword_ptr[r8]);
+		cvtdq2ps(xmm8, xmm9);
+		cvtdq2ps(xmm8, xmmword_ptr[r8]);
+		cvtps2pd(xmm8, xmm9);
+		cvtps2pd(xmm8, qword_ptr[r8]);
+		cvtsd2ss(xmm8, xmm9);
+		cvtsd2ss(xmm8, qword_ptr[r8]);
+		cvtss2sd(xmm8, xmm9);
+		cvtss2sd(xmm8, dword_ptr[r8]);
+		cvttpd2dq(xmm8, xmm9);
+		cvttpd2dq(xmm8, xmmword_ptr[r8]);
+		cvttpd2pi(mm0, xmm9);
+		cvttpd2pi(mm0, xmmword_ptr[r8]);
+		cvttps2dq(xmm8, xmm9);
+		cvttps2dq(xmm8, xmmword_ptr[r8]);
+		cvttsd2si(rax, xmm1);
+		cvttsd2si(rax, qword_ptr[r8]);
+		cvttsd2si(r8, xmm1);
+		cvttsd2si(r8, qword_ptr[r8]);
+#endif
 	}
 };
 

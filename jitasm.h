@@ -2536,6 +2536,12 @@ struct Frontend
 	void cvttpd2pi(const MmxReg& dst, const Mem128& src)	{PushBack(Instr(I_CVTTPD2PI, dst, src));}
 	void cvttps2dq(const XmmReg& dst, const XmmReg& src)	{PushBack(Instr(I_CVTTPS2DQ, dst, src));}
 	void cvttps2dq(const XmmReg& dst, const Mem128& src)	{PushBack(Instr(I_CVTTPS2DQ, dst, src));}
+	void cvttsd2si(const Reg32& dst, const XmmReg& src)		{PushBack(Instr(I_CVTTSD2SI, dst, src));}
+	void cvttsd2si(const Reg32& dst, const Mem64& src)		{PushBack(Instr(I_CVTTSD2SI, dst, src));}
+#ifdef JITASM64
+	void cvttsd2si(const Reg64& dst, const XmmReg& src)		{PushBack(Instr(I_CVTTSD2SI, dst, src));}
+	void cvttsd2si(const Reg64& dst, const Mem64& src)		{PushBack(Instr(I_CVTTSD2SI, dst, src));}
+#endif
 
 	// MOVDQA
 	void movdqa(const XmmReg& dst, const XmmReg& src)	{PushBack(Instr(I_MOVDQA, dst, src));}
