@@ -999,11 +999,13 @@ struct Backend
 
 	void EncodeMMX(uint8 opcode2, const Opd& dst, const Opd& src)
 	{
-		const Opd& reg = dst.IsReg() ? dst : src;
-		const Opd& r_m = dst.IsReg() ? src : dst;
+		const Opd& reg = detail::IsMmxReg(dst) || detail::IsXmmReg(dst) ? dst : src;
+		const Opd& r_m = detail::IsMmxReg(dst) || detail::IsXmmReg(dst) ? src : dst;
 
 #ifdef JITASM64
-		EncodeRexWRXB(reg, r_m);
+		if (r_m.IsMem() && r_m.GetAddressSize() != O_SIZE_64) EncodeAddressSizePrefix();
+		if (detail::IsGpReg(r_m)) EncodeRexWRXB(reg, r_m);
+		else EncodeRexRXB(reg, r_m);
 #endif
 		db(0x0F);
 		db(opcode2);
@@ -1012,11 +1014,13 @@ struct Backend
 
 	void EncodeMMX(uint8 opcode2, uint8 opcode3, const Opd& dst, const Opd& src)
 	{
-		const Opd& reg = dst.IsReg() ? dst : src;
-		const Opd& r_m = dst.IsReg() ? src : dst;
+		const Opd& reg = detail::IsMmxReg(dst) || detail::IsXmmReg(dst) ? dst : src;
+		const Opd& r_m = detail::IsMmxReg(dst) || detail::IsXmmReg(dst) ? src : dst;
 
 #ifdef JITASM64
-		EncodeRexWRXB(reg, r_m);
+		if (r_m.IsMem() && r_m.GetAddressSize() != O_SIZE_64) EncodeAddressSizePrefix();
+		if (detail::IsGpReg(r_m)) EncodeRexWRXB(reg, r_m);
+		else EncodeRexRXB(reg, r_m);
 #endif
 		db(0x0F);
 		db(opcode2);
@@ -1088,6 +1092,10 @@ struct Backend
 	void EncodeCLFLUSH(const Opd& dst)
 	{
 		ASSERT(dst.IsMem() && dst.GetSize() == O_SIZE_8);
+#ifdef JITASM64
+		if (dst.IsMem() && dst.GetAddressSize() != O_SIZE_64) EncodeAddressSizePrefix();
+		EncodeRexRXB(dst);
+#endif
 		db(0x0F);
 		db(0xAE);
 		EncodeModRM(7, dst);

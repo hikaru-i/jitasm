@@ -1626,16 +1626,100 @@ struct test_sse2_a : jitasm::function0<void>
 		andpd(xmm0, xmm0);
 		andnpd(xmm0, xmmword_ptr[esp]);
 		andnpd(xmm0, xmm0);
-		clflush(byte_ptr[esp]);
 #ifdef JITASM64
 		addpd(xmm8, xmmword_ptr[rsp]);
+		addpd(xmm8, xmmword_ptr[r8]);
 		addpd(xmm8, xmm8);
 		addsd(xmm8, qword_ptr[rsp]);
+		addsd(xmm8, qword_ptr[r8]);
 		addsd(xmm8, xmm8);
 		andpd(xmm8, xmmword_ptr[rsp]);
+		andpd(xmm8, xmmword_ptr[r8]);
 		andpd(xmm8, xmm8);
 		andnpd(xmm8, xmmword_ptr[rsp]);
+		andnpd(xmm8, xmmword_ptr[r8]);
 		andnpd(xmm8, xmm8);
+#endif
+
+		clflush(byte_ptr[esp]);
+#ifdef JITASM64
+		clflush(byte_ptr[r8]);
+#endif
+
+		cmpeqpd(xmm0, xmmword_ptr[esp]);
+		cmpeqpd(xmm0, xmm0);
+		cmpltpd(xmm0, xmmword_ptr[esp]);
+		cmpltpd(xmm0, xmm0);
+		cmplepd(xmm0, xmmword_ptr[esp]);
+		cmplepd(xmm0, xmm0);
+		cmpunordpd(xmm0, xmmword_ptr[esp]);
+		cmpunordpd(xmm0, xmm0);
+		cmpneqpd(xmm0, xmmword_ptr[esp]);
+		cmpneqpd(xmm0, xmm0);
+		cmpnltpd(xmm0, xmmword_ptr[esp]);
+		cmpnltpd(xmm0, xmm0);
+		cmpnlepd(xmm0, xmmword_ptr[esp]);
+		cmpnlepd(xmm0, xmm0);
+		cmpordpd(xmm0, xmmword_ptr[esp]);
+		cmpordpd(xmm0, xmm0);
+
+		cmpeqsd(xmm0, qword_ptr[esp]);
+		cmpeqsd(xmm0, xmm0);
+		cmpltsd(xmm0, qword_ptr[esp]);
+		cmpltsd(xmm0, xmm0);
+		cmplesd(xmm0, qword_ptr[esp]);
+		cmplesd(xmm0, xmm0);
+		cmpunordsd(xmm0, qword_ptr[esp]);
+		cmpunordsd(xmm0, xmm0);
+		cmpneqsd(xmm0, qword_ptr[esp]);
+		cmpneqsd(xmm0, xmm0);
+		cmpnltsd(xmm0, qword_ptr[esp]);
+		cmpnltsd(xmm0, xmm0);
+		cmpnlesd(xmm0, qword_ptr[esp]);
+		cmpnlesd(xmm0, xmm0);
+		cmpordsd(xmm0, qword_ptr[esp]);
+		cmpordsd(xmm0, xmm0);
+
+		comisd(xmm0, qword_ptr[esp]);
+		comisd(xmm0, xmm0);
+#ifdef JITASM64
+		cmpeqpd(xmm8, xmmword_ptr[rsp]);
+		cmpeqpd(xmm8, xmm8);
+		cmpltpd(xmm8, xmmword_ptr[r8]);
+		cmpltpd(xmm8, xmm8);
+		cmplepd(xmm8, xmmword_ptr[rsp]);
+		cmplepd(xmm8, xmm8);
+		cmpunordpd(xmm8, xmmword_ptr[r8]);
+		cmpunordpd(xmm8, xmm8);
+		cmpneqpd(xmm8, xmmword_ptr[rsp]);
+		cmpneqpd(xmm8, xmm8);
+		cmpnltpd(xmm8, xmmword_ptr[r8]);
+		cmpnltpd(xmm8, xmm8);
+		cmpnlepd(xmm8, xmmword_ptr[rsp]);
+		cmpnlepd(xmm8, xmm8);
+		cmpordpd(xmm8, xmmword_ptr[r8]);
+		cmpordpd(xmm8, xmm8);
+
+		cmpeqsd(xmm8, qword_ptr[rsp]);
+		cmpeqsd(xmm8, xmm8);
+		cmpltsd(xmm8, qword_ptr[r8]);
+		cmpltsd(xmm8, xmm8);
+		cmplesd(xmm8, qword_ptr[rsp]);
+		cmplesd(xmm8, xmm8);
+		cmpunordsd(xmm8, qword_ptr[r8]);
+		cmpunordsd(xmm8, xmm8);
+		cmpneqsd(xmm8, qword_ptr[rsp]);
+		cmpneqsd(xmm8, xmm8);
+		cmpnltsd(xmm8, qword_ptr[r8]);
+		cmpnltsd(xmm8, xmm8);
+		cmpnlesd(xmm8, qword_ptr[rsp]);
+		cmpnlesd(xmm8, xmm8);
+		cmpordsd(xmm8, qword_ptr[r8]);
+		cmpordsd(xmm8, xmm8);
+
+		comisd(xmm8, qword_ptr[rsp]);
+		comisd(xmm8, qword_ptr[r8]);
+		comisd(xmm8, xmm8);
 #endif
 	}
 };
