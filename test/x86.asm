@@ -961,6 +961,43 @@ masm_test_sse2_a proc
 	andnpd xmm0, xmmword ptr[esp]
 	andnpd xmm0, xmm0
 	clflush byte ptr[esp]
+
+	cmpeqpd xmm0, xmmword ptr[esp]
+	cmpeqpd xmm0, xmm0
+	cmpltpd xmm0, xmmword ptr[esp]
+	cmpltpd xmm0, xmm0
+	cmplepd xmm0, xmmword ptr[esp]
+	cmplepd xmm0, xmm0
+	cmpunordpd xmm0, xmmword ptr[esp]
+	cmpunordpd xmm0, xmm0
+	cmpneqpd xmm0, xmmword ptr[esp]
+	cmpneqpd xmm0, xmm0
+	cmpnltpd xmm0, xmmword ptr[esp]
+	cmpnltpd xmm0, xmm0
+	cmpnlepd xmm0, xmmword ptr[esp]
+	cmpnlepd xmm0, xmm0
+	cmpordpd xmm0, xmmword ptr[esp]
+	cmpordpd xmm0, xmm0
+
+	cmpeqsd xmm0, qword ptr[esp]
+	cmpeqsd xmm0, xmm0
+	cmpltsd xmm0, qword ptr[esp]
+	cmpltsd xmm0, xmm0
+	cmplesd xmm0, qword ptr[esp]
+	cmplesd xmm0, xmm0
+	cmpunordsd xmm0, qword ptr[esp]
+	cmpunordsd xmm0, xmm0
+	cmpneqsd xmm0, qword ptr[esp]
+	cmpneqsd xmm0, xmm0
+	cmpnltsd xmm0, qword ptr[esp]
+	cmpnltsd xmm0, xmm0
+	cmpnlesd xmm0, qword ptr[esp]
+	cmpnlesd xmm0, xmm0
+	cmpordsd xmm0, qword ptr[esp]
+	cmpordsd xmm0, xmm0
+
+	comisd xmm0, qword ptr[esp]
+	comisd xmm0, xmm0
 masm_test_sse2_a endp
 
 ;----------------------------------------
