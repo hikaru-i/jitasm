@@ -1715,8 +1715,8 @@ struct test_sse2_a : jitasm::function0<void>
 		comisd(xmm8, qword_ptr[rsp]);
 		comisd(xmm8, qword_ptr[r8]);
 		comisd(xmm8, xmm8);
-#endif
 
+#endif
 		cvtdq2pd(xmm0, xmm1);
 		cvtdq2pd(xmm0, qword_ptr[esp]);
 		cvtpd2dq(xmm0, xmm1);
@@ -1735,6 +1735,8 @@ struct test_sse2_a : jitasm::function0<void>
 		cvtps2pd(xmm0, qword_ptr[esp]);
 		cvtsd2ss(xmm0, xmm1);
 		cvtsd2ss(xmm0, qword_ptr[esp]);
+		cvtsi2sd(xmm0, eax);
+		cvtsi2sd(xmm0, dword_ptr[esp]);
 		cvtss2sd(xmm0, xmm1);
 		cvtss2sd(xmm0, dword_ptr[esp]);
 		cvttpd2dq(xmm0, xmm1);
@@ -1764,6 +1766,8 @@ struct test_sse2_a : jitasm::function0<void>
 		cvtps2pd(xmm8, qword_ptr[r8]);
 		cvtsd2ss(xmm8, xmm9);
 		cvtsd2ss(xmm8, qword_ptr[r8]);
+		cvtsi2sd(xmm8, r8);
+		cvtsi2sd(xmm8, dword_ptr[r8]);
 		cvtss2sd(xmm8, xmm9);
 		cvtss2sd(xmm8, dword_ptr[r8]);
 		cvttpd2dq(xmm8, xmm9);

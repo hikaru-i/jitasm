@@ -1000,8 +1000,8 @@ struct Backend
 
 	void EncodeMMX(uint8 opcode2, const Opd& dst, const Opd& src)
 	{
-		const Opd& reg = detail::IsMmxReg(dst) || detail::IsXmmReg(dst) ? dst : src;
-		const Opd& r_m = detail::IsMmxReg(dst) || detail::IsXmmReg(dst) ? src : dst;
+		const Opd& reg = dst.IsReg() ? dst : src;
+		const Opd& r_m = dst.IsReg() ? src : dst;
 
 #ifdef JITASM64
 		if (r_m.IsMem() && r_m.GetAddressSize() != O_SIZE_64) EncodeAddressSizePrefix();
@@ -1015,8 +1015,8 @@ struct Backend
 
 	void EncodeMMX(uint8 opcode2, uint8 opcode3, const Opd& dst, const Opd& src)
 	{
-		const Opd& reg = detail::IsMmxReg(dst) || detail::IsXmmReg(dst) ? dst : src;
-		const Opd& r_m = detail::IsMmxReg(dst) || detail::IsXmmReg(dst) ? src : dst;
+		const Opd& reg = dst.IsReg() ? dst : src;
+		const Opd& r_m = dst.IsReg() ? src : dst;
 
 #ifdef JITASM64
 		if (r_m.IsMem() && r_m.GetAddressSize() != O_SIZE_64) EncodeAddressSizePrefix();
@@ -2462,6 +2462,12 @@ struct Frontend
 	void cvtps2pd(const XmmReg& dst, const Mem64& src)		{PushBack(Instr(I_CVTPS2PD, dst, src));}
 	void cvtsd2ss(const XmmReg& dst, const XmmReg& src)		{PushBack(Instr(I_CVTSD2SS, dst, src));}
 	void cvtsd2ss(const XmmReg& dst, const Mem64& src)		{PushBack(Instr(I_CVTSD2SS, dst, src));}
+	void cvtsi2sd(const XmmReg& dst, const Reg32& src)		{PushBack(Instr(I_CVTSI2SD, dst, src));}
+	void cvtsi2sd(const XmmReg& dst, const Mem32& src)		{PushBack(Instr(I_CVTSI2SD, dst, src));}
+#ifdef JITASM64
+	void cvtsi2sd(const XmmReg& dst, const Reg64& src)		{PushBack(Instr(I_CVTSI2SD, dst, src));}
+	void cvtsi2sd(const XmmReg& dst, const Mem64& src)		{PushBack(Instr(I_CVTSI2SD, dst, src));}
+#endif
 	void cvtss2sd(const XmmReg& dst, const XmmReg& src)		{PushBack(Instr(I_CVTSS2SD, dst, src));}
 	void cvtss2sd(const XmmReg& dst, const Mem32& src)		{PushBack(Instr(I_CVTSS2SD, dst, src));}
 	void cvttpd2dq(const XmmReg& dst, const XmmReg& src)	{PushBack(Instr(I_CVTTPD2DQ, dst, src));}
