@@ -2483,6 +2483,28 @@ struct Frontend
 	void cvttsd2si(const Reg64& dst, const Mem64& src)		{PushBack(Instr(I_CVTTSD2SI, dst, src));}
 #endif
 
+	// DIVPD/DIVSD
+	void divpd(const XmmReg& dst, const XmmReg& src)	{PushBack(Instr(I_DIVPD, dst, src));}
+	void divpd(const XmmReg& dst, const Mem128& src)	{PushBack(Instr(I_DIVPD, dst, src));}
+	void divsd(const XmmReg& dst, const XmmReg& src)	{PushBack(Instr(I_DIVSD, dst, src));}
+	void divsd(const XmmReg& dst, const Mem64& src)		{PushBack(Instr(I_DIVSD, dst, src));}
+
+	//void lfence()										{PushBack(Instr(I_LFENCE));}
+
+	void maskmovdqu(const XmmReg& dst, const XmmReg& src)	{PushBack(Instr(I_MASKMOVDQU, dst, src));}
+
+	void maxpd(const XmmReg& dst, const XmmReg& src)	{PushBack(Instr(I_MAXPD, dst, src));}
+	void maxpd(const XmmReg& dst, const Mem128& src)	{PushBack(Instr(I_MAXPD, dst, src));}
+	void maxsd(const XmmReg& dst, const XmmReg& src)	{PushBack(Instr(I_MAXSD, dst, src));}
+	void maxsd(const XmmReg& dst, const Mem64& src)		{PushBack(Instr(I_MAXSD, dst, src));}
+
+	//void mfence()										{PushBack(Instr(I_MFENCE));}
+
+	void minpd(const XmmReg& dst, const XmmReg& src)	{PushBack(Instr(I_MINPD, dst, src));}
+	void minpd(const XmmReg& dst, const Mem128& src)	{PushBack(Instr(I_MINPD, dst, src));}
+	void minsd(const XmmReg& dst, const XmmReg& src)	{PushBack(Instr(I_MINSD, dst, src));}
+	void minsd(const XmmReg& dst, const Mem64& src)		{PushBack(Instr(I_MINSD, dst, src));}
+
 	// MOVDQA
 	void movdqa(const XmmReg& dst, const XmmReg& src)	{PushBack(Instr(I_MOVDQA, dst, src));}
 	void movdqa(const XmmReg& dst, const Mem128& src)	{PushBack(Instr(I_MOVDQA, dst, src));}
