@@ -1781,6 +1781,35 @@ struct test_sse2_a : jitasm::function0<void>
 		cvttsd2si(r8, xmm1);
 		cvttsd2si(r8, qword_ptr[r8]);
 #endif
+
+		divpd(xmm0, xmm1);
+		divpd(xmm0, xmmword_ptr[esp]);
+		divsd(xmm0, xmm1);
+		divsd(xmm0, qword_ptr[esp]);
+		maskmovdqu(xmm0, xmm1);
+		maxpd(xmm0, xmm1);
+		maxpd(xmm0, xmmword_ptr[esp]);
+		maxsd(xmm0, xmm1);
+		maxsd(xmm0, qword_ptr[esp]);
+		minpd(xmm0, xmm1);
+		minpd(xmm0, xmmword_ptr[esp]);
+		minsd(xmm0, xmm1);
+		minsd(xmm0, qword_ptr[esp]);
+#ifdef JITASM64
+		divpd(xmm8, xmm9);
+		divpd(xmm8, xmmword_ptr[r8]);
+		divsd(xmm8, xmm9);
+		divsd(xmm8, qword_ptr[r8]);
+		maskmovdqu(xmm8, xmm9);
+		maxpd(xmm8, xmm9);
+		maxpd(xmm8, xmmword_ptr[r8]);
+		maxsd(xmm8, xmm9);
+		maxsd(xmm8, qword_ptr[r8]);
+		minpd(xmm8, xmm9);
+		minpd(xmm8, xmmword_ptr[r8]);
+		minsd(xmm8, xmm9);
+		minsd(xmm8, qword_ptr[r8]);
+#endif
 	}
 };
 

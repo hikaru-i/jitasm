@@ -1029,6 +1029,20 @@ masm_test_sse2_a proc
 	cvttps2dq xmm0, xmmword ptr[esp]
 	cvttsd2si eax, xmm1
 	cvttsd2si eax, qword ptr[esp]
+
+	divpd xmm0, xmm1
+	divpd xmm0, xmmword ptr[esp]
+	divsd xmm0, xmm1
+	divsd xmm0, qword ptr[esp]
+	maskmovdqu xmm0, xmm1
+	maxpd xmm0, xmm1
+	maxpd xmm0, xmmword ptr[esp]
+	maxsd xmm0, xmm1
+	maxsd xmm0, qword ptr[esp]
+	minpd xmm0, xmm1
+	minpd xmm0, xmmword ptr[esp]
+	minsd xmm0, xmm1
+	minsd xmm0, qword ptr[esp]
 masm_test_sse2_a endp
 
 ;----------------------------------------
