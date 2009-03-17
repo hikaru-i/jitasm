@@ -1836,6 +1836,10 @@ struct test_sse2_d : jitasm::function0<void>
 		movlpd(qword_ptr[esp], xmm1);
 		movlpd(xmm0, qword_ptr[esp]);
 		movmskpd(eax, xmm1);
+		movntdq(xmmword_ptr[esp], xmm1);
+		movnti(dword_ptr[esp], eax);
+		movntpd(xmmword_ptr[esp], xmm1);
+		movq2dq(xmm0, mm1);
 #ifdef JITASM64
 		movapd(xmm8, xmm9);
 		movapd(xmm8, xmmword_ptr[r8]);
@@ -1853,6 +1857,11 @@ struct test_sse2_d : jitasm::function0<void>
 		movlpd(xmm8, qword_ptr[r8]);
 		movmskpd(eax, xmm9);
 		movmskpd(rax, xmm9);
+		movntdq(xmmword_ptr[r8], xmm9);
+		movnti(dword_ptr[r8], ecx);
+		movnti(qword_ptr[r8], rcx);
+		movntpd(xmmword_ptr[r8], xmm9);
+		movq2dq(xmm8, mm1);
 #endif
 	}
 };

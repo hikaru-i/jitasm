@@ -399,7 +399,7 @@ enum InstrID
 	I_CVTPD2DQ, I_CVTPD2PI, I_CVTPD2PS, I_CVTPI2PD, I_CVTPS2DQ, I_CVTPS2PD, I_CVTSD2SI, I_CVTSD2SS,
 	I_CVTSI2SD, I_CVTSS2SD, I_CVTTPD2DQ, I_CVTTPD2PI, I_CVTTPS2DQ, I_CVTTSD2SI, I_DIVPD, I_DIVSD, I_LFENCE,
 	I_MASKMOVDQU, I_MAXPD, I_MAXSD, I_MFENCE, I_MINPD, I_MINSD, I_MOVAPD, I_MOVD, I_MOVDQA, I_MOVDQU, I_MOVDQ2Q,
-	I_MOVHPD, I_MOVLPD, I_MOVMSKPD, I_MOVNTPD, I_MOVNTDQ, I_MOVNTI, I_MOVQ, I_MOVQ2DQ, I_MOVSD, I_MOVSS, I_MOVUPD, I_MULPD,
+	I_MOVHPD, I_MOVLPD, I_MOVMSKPD, I_MOVNTDQ, I_MOVNTI, I_MOVNTPD, I_MOVQ, I_MOVQ2DQ, I_MOVSD, I_MOVSS, I_MOVUPD, I_MULPD,
 	I_MULSD, I_ORPD, I_PABSB, I_PABSD, I_PABSW, I_PACKSSDW, I_PACKSSWB, I_PACKUSDW, I_PACKUSWB,
 	I_PADDB, I_PADDD, I_PADDQ, I_PADDSB, I_PADDSW, I_PADDUSB, I_PADDUSW, I_PADDW, I_PALIGNR,
 	I_PAND, I_PANDN, I_PAUSE, I_PAVGB, I_PAVGW, I_PCMPEQB, I_PCMPEQW, I_PCMPEQD, I_PCMPEQQ,
@@ -1272,9 +1272,9 @@ struct Backend
 		case I_MOVHPD:		EncodeSSE2(0x66, 0x16 | (o1.IsReg() ? 0 : 0x01), o1, o2); break;
 		case I_MOVLPD:		EncodeSSE2(0x66, 0x12 | (o1.IsReg() ? 0 : 0x01), o1, o2); break;
 		case I_MOVMSKPD:	EncodeSSE2(0x66, 0x50, o1, o2); break;
-		case I_MOVNTPD:		EncodeSSE2(0x66, 0x2B, o1, o2); break;
 		case I_MOVNTDQ:		EncodeSSE2(0x66, 0xE7, o1, o2); break;
-		//case I_MOVNTI:
+		case I_MOVNTI:		EncodeSSE(0xC3, o1, o2); break;
+		case I_MOVNTPD:		EncodeSSE2(0x66, 0x2B, o1, o2); break;
 		case I_MOVQ:		EncodeMOVQ(o1, o2); break;
 		case I_MOVQ2DQ:		EncodeSSE2(0xF3, 0xD6, o1, o2); break;
 		case I_MOVSD:		EncodeSSE2(0xF2, 0x10 | (o1.IsReg() ? 0 : 0x01), o1, o2); break;
@@ -2547,6 +2547,15 @@ struct Frontend
 	void movmskpd(const Reg64& dst, XmmReg& src)		{PushBack(Instr(I_MOVMSKPD, dst, src));}
 #endif
 
+	void movntdq(const Mem128& dst, const XmmReg& src)	{PushBack(Instr(I_MOVNTDQ, dst, src));}
+
+	void movnti(const Mem32& dst, const Reg32& src)		{PushBack(Instr(I_MOVNTI, dst, src));}
+#ifdef JITASM64
+	void movnti(const Mem64& dst, const Reg64& src)		{PushBack(Instr(I_MOVNTI, dst, src));}
+#endif
+
+	void movntpd(const Mem128& dst, const XmmReg& src)	{PushBack(Instr(I_MOVNTPD, dst, src));}
+
 	// MOVQ
 	void movq(const MmxReg& dst, const Mem64& src)	{PushBack(Instr(I_MOVQ, dst, src));}
 	void movq(const MmxReg& dst, const MmxReg& src)	{PushBack(Instr(I_MOVQ, dst, src));}
@@ -2560,6 +2569,8 @@ struct Frontend
 	void movq(const XmmReg& dst, const Reg64& src)	{movd(dst, src);}
 	void movq(const Reg64& dst, const XmmReg& src)	{movd(dst, src);}
 #endif
+
+	void movq2dq(const XmmReg& dst, const MmxReg& src)	{PushBack(Instr(I_MOVQ2DQ, dst, src));}
 
 	// MOVSD
 	void movsd(const XmmReg& dst, const XmmReg& src)	{PushBack(Instr(I_MOVSD, dst, src));}
