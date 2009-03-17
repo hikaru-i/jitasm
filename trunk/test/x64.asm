@@ -1498,7 +1498,12 @@ masm_test_sse2_a proc
 	cvttsd2si rax, qword ptr[r8]
 	cvttsd2si r8, xmm1
 	cvttsd2si r8, qword ptr[r8]
+masm_test_sse2_a endp
 
+;----------------------------------------
+; SSE2 D~
+;----------------------------------------
+masm_test_sse2_d proc
 	divpd xmm0, xmm1
 	divpd xmm0, xmmword ptr[esp]
 	divsd xmm0, xmm1
@@ -1525,7 +1530,39 @@ masm_test_sse2_a proc
 	minpd xmm8, xmmword ptr[r8]
 	minsd xmm8, xmm9
 	minsd xmm8, qword ptr[r8]
-masm_test_sse2_a endp
+
+	movapd xmm0, xmm1
+	movapd xmm0, xmmword ptr[esp]
+	movapd xmmword ptr[esp], xmm0
+	movdqa xmm0, xmm1
+	movdqa xmm0, xmmword ptr[esp]
+	movdqa xmmword ptr[esp], xmm0
+	movdqu xmm0, xmm1
+	movdqu xmm0, xmmword ptr[esp]
+	movdqu xmmword ptr[esp], xmm0
+	movdq2q mm0, xmm1
+	movhpd qword ptr[esp], xmm1
+	movhpd xmm0, qword ptr[esp]
+	movlpd qword ptr[esp], xmm1
+	movlpd xmm0, qword ptr[esp]
+	movmskpd eax, xmm1
+	movapd xmm8, xmm9
+	movapd xmm8, xmmword ptr[r8]
+	movapd xmmword ptr[r8], xmm8
+	movdqa xmm8, xmm9
+	movdqa xmm8, xmmword ptr[r8]
+	movdqa xmmword ptr[r8], xmm8
+	movdqu xmm8, xmm9
+	movdqu xmm8, xmmword ptr[r8]
+	movdqu xmmword ptr[r8], xmm8
+	movdq2q mm0, xmm9
+	movhpd qword ptr[r8], xmm9
+	movhpd xmm8, qword ptr[r8]
+	movlpd qword ptr[r8], xmm9
+	movlpd xmm8, qword ptr[r8]
+	movmskpd eax, xmm9
+	movmskpd rax, xmm9
+masm_test_sse2_d endp
 
 ;----------------------------------------
 ; MOVD/MOVQ

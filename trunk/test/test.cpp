@@ -1781,7 +1781,17 @@ struct test_sse2_a : jitasm::function0<void>
 		cvttsd2si(r8, xmm1);
 		cvttsd2si(r8, qword_ptr[r8]);
 #endif
+	}
+};
 
+//----------------------------------------
+// SSE2 D~
+//----------------------------------------
+extern "C" void masm_test_sse2_d();
+struct test_sse2_d : jitasm::function0<void>
+{
+	virtual void naked_main()
+	{
 		divpd(xmm0, xmm1);
 		divpd(xmm0, xmmword_ptr[esp]);
 		divsd(xmm0, xmm1);
@@ -1809,6 +1819,40 @@ struct test_sse2_a : jitasm::function0<void>
 		minpd(xmm8, xmmword_ptr[r8]);
 		minsd(xmm8, xmm9);
 		minsd(xmm8, qword_ptr[r8]);
+#endif
+
+		movapd(xmm0, xmm1);
+		movapd(xmm0, xmmword_ptr[esp]);
+		movapd(xmmword_ptr[esp], xmm0);
+		movdqa(xmm0, xmm1);
+		movdqa(xmm0, xmmword_ptr[esp]);
+		movdqa(xmmword_ptr[esp], xmm0);
+		movdqu(xmm0, xmm1);
+		movdqu(xmm0, xmmword_ptr[esp]);
+		movdqu(xmmword_ptr[esp], xmm0);
+		movdq2q(mm0, xmm1);
+		movhpd(qword_ptr[esp], xmm1);
+		movhpd(xmm0, qword_ptr[esp]);
+		movlpd(qword_ptr[esp], xmm1);
+		movlpd(xmm0, qword_ptr[esp]);
+		movmskpd(eax, xmm1);
+#ifdef JITASM64
+		movapd(xmm8, xmm9);
+		movapd(xmm8, xmmword_ptr[r8]);
+		movapd(xmmword_ptr[r8], xmm8);
+		movdqa(xmm8, xmm9);
+		movdqa(xmm8, xmmword_ptr[r8]);
+		movdqa(xmmword_ptr[r8], xmm8);
+		movdqu(xmm8, xmm9);
+		movdqu(xmm8, xmmword_ptr[r8]);
+		movdqu(xmmword_ptr[r8], xmm8);
+		movdq2q(mm0, xmm9);
+		movhpd(qword_ptr[r8], xmm9);
+		movhpd(xmm8, qword_ptr[r8]);
+		movlpd(qword_ptr[r8], xmm9);
+		movlpd(xmm8, qword_ptr[r8]);
+		movmskpd(eax, xmm9);
+		movmskpd(rax, xmm9);
 #endif
 	}
 };
@@ -2144,6 +2188,7 @@ int wmain()
 	TEST_M(test_imul);
 	TEST_M(test_fst);
 	TEST_M(test_sse2_a);
+	TEST_M(test_sse2_d);
 	TEST_M(test_movd_movq);
 	TEST_M(test_movsd_movss);
 
