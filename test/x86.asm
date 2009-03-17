@@ -1029,7 +1029,12 @@ masm_test_sse2_a proc
 	cvttps2dq xmm0, xmmword ptr[esp]
 	cvttsd2si eax, xmm1
 	cvttsd2si eax, qword ptr[esp]
+masm_test_sse2_a endp
 
+;----------------------------------------
+; SSE2 D~
+;----------------------------------------
+masm_test_sse2_d proc
 	divpd xmm0, xmm1
 	divpd xmm0, xmmword ptr[esp]
 	divsd xmm0, xmm1
@@ -1043,7 +1048,23 @@ masm_test_sse2_a proc
 	minpd xmm0, xmmword ptr[esp]
 	minsd xmm0, xmm1
 	minsd xmm0, qword ptr[esp]
-masm_test_sse2_a endp
+
+	movapd xmm0, xmm1
+	movapd xmm0, xmmword ptr[esp]
+	movapd xmmword ptr[esp], xmm0
+	movdqa xmm0, xmm1
+	movdqa xmm0, xmmword ptr[esp]
+	movdqa xmmword ptr[esp], xmm0
+	movdqu xmm0, xmm1
+	movdqu xmm0, xmmword ptr[esp]
+	movdqu xmmword ptr[esp], xmm0
+	movdq2q mm0, xmm1
+	movhpd qword ptr[esp], xmm1
+	movhpd xmm0, qword ptr[esp]
+	movlpd qword ptr[esp], xmm1
+	movlpd xmm0, qword ptr[esp]
+	movmskpd eax, xmm1
+masm_test_sse2_d endp
 
 ;----------------------------------------
 ; MOVD/MOVQ
