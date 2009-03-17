@@ -1064,6 +1064,10 @@ masm_test_sse2_d proc
 	movlpd qword ptr[esp], xmm1
 	movlpd xmm0, qword ptr[esp]
 	movmskpd eax, xmm1
+	movntdq xmmword ptr[esp], xmm1
+	movnti dword ptr[esp], eax
+	movntpd xmmword ptr[esp], xmm1
+	movq2dq xmm0, mm1
 masm_test_sse2_d endp
 
 ;----------------------------------------

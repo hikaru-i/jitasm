@@ -1546,6 +1546,11 @@ masm_test_sse2_d proc
 	movlpd qword ptr[esp], xmm1
 	movlpd xmm0, qword ptr[esp]
 	movmskpd eax, xmm1
+	movntdq xmmword ptr[esp], xmm1
+	movnti dword ptr[esp], eax
+	movntpd xmmword ptr[esp], xmm1
+	movq2dq xmm0, mm1
+
 	movapd xmm8, xmm9
 	movapd xmm8, xmmword ptr[r8]
 	movapd xmmword ptr[r8], xmm8
@@ -1562,6 +1567,11 @@ masm_test_sse2_d proc
 	movlpd xmm8, qword ptr[r8]
 	movmskpd eax, xmm9
 	movmskpd rax, xmm9
+	movntdq xmmword ptr[r8], xmm9
+	movnti dword ptr[r8], ecx
+	movnti qword ptr[r8], rcx
+	movntpd xmmword ptr[r8], xmm9
+	movq2dq xmm8, mm1
 masm_test_sse2_d endp
 
 ;----------------------------------------
