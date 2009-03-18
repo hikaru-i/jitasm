@@ -1840,6 +1840,15 @@ struct test_sse2_d : jitasm::function0<void>
 		movnti(dword_ptr[esp], eax);
 		movntpd(xmmword_ptr[esp], xmm1);
 		movq2dq(xmm0, mm1);
+		movupd(xmm0, xmm1);
+		movupd(xmm0, xmmword_ptr[esp]);
+		movupd(xmmword_ptr[esp], xmm0);
+		mulpd(xmm0, xmm1);
+		mulpd(xmm0, xmmword_ptr[esp]);
+		mulsd(xmm0, xmm1);
+		mulsd(xmm0, qword_ptr[esp]);
+		orpd(xmm0, xmm1);
+		orpd(xmm0, xmmword_ptr[esp]);
 #ifdef JITASM64
 		movapd(xmm8, xmm9);
 		movapd(xmm8, xmmword_ptr[r8]);
@@ -1862,7 +1871,27 @@ struct test_sse2_d : jitasm::function0<void>
 		movnti(qword_ptr[r8], rcx);
 		movntpd(xmmword_ptr[r8], xmm9);
 		movq2dq(xmm8, mm1);
+		movupd(xmm8, xmm9);
+		movupd(xmm8, xmmword_ptr[r8]);
+		movupd(xmmword_ptr[r8], xmm8);
+		mulpd(xmm8, xmm9);
+		mulpd(xmm8, xmmword_ptr[r8]);
+		mulsd(xmm8, xmm9);
+		mulsd(xmm8, qword_ptr[r8]);
+		orpd(xmm8, xmm9);
+		orpd(xmm8, xmmword_ptr[r8]);
 #endif
+	}
+};
+
+//----------------------------------------
+// SSE2 P~
+//----------------------------------------
+extern "C" void masm_test_sse2_p();
+struct test_sse2_p : jitasm::function0<void>
+{
+	virtual void naked_main()
+	{
 	}
 };
 
@@ -2198,6 +2227,7 @@ int wmain()
 	TEST_M(test_fst);
 	TEST_M(test_sse2_a);
 	TEST_M(test_sse2_d);
+	TEST_M(test_sse2_p);
 	TEST_M(test_movd_movq);
 	TEST_M(test_movsd_movss);
 
