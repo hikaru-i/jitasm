@@ -1670,7 +1670,7 @@ struct Frontend
 					instr = Instr(instr.GetID(), Imm8((uint8) rel));
 				} else if (size == O_SIZE_32) {
 					ASSERT(detail::IsInt32(rel));
-					instr = Instr(instr.GetID(), Imm32((uint8) rel));
+					instr = Instr(instr.GetID(), Imm32((uint32) rel));
 				}
 			}
 		}
@@ -2724,11 +2724,11 @@ struct Frontend
 namespace detail
 {
 	template<class L, class R>
-	struct CondExprB
+	struct CondExpr_Below
 	{
 		L	lhs_;
 		R	rhs_;
-		CondExprB(const L& lhs, const R& rhs) : lhs_(lhs), rhs_(rhs) {}
+		CondExpr_Below(const L& lhs, const R& rhs) : lhs_(lhs), rhs_(rhs) {}
 		void operator()(Frontend& f, bool not) const
 		{
 			detail::ControlStructureState& state = f.GetControlStructureState();
@@ -2738,11 +2738,11 @@ namespace detail
 	};
 
 	template<class L, class R>
-	struct CondExprA
+	struct CondExpr_Above
 	{
 		L	lhs_;
 		R	rhs_;
-		CondExprA(const L& lhs, const R& rhs) : lhs_(lhs), rhs_(rhs) {}
+		CondExpr_Above(const L& lhs, const R& rhs) : lhs_(lhs), rhs_(rhs) {}
 		void operator()(Frontend& f, bool not) const
 		{
 			detail::ControlStructureState& state = f.GetControlStructureState();
@@ -2751,8 +2751,8 @@ namespace detail
 		}
 	};
 }
-template<class R> detail::CondExprB<Reg32, R> operator<(const Reg32& lhs, const R& rhs)	{return detail::CondExprB<Reg32, R>(lhs, rhs);}
-template<class R> detail::CondExprA<Reg32, R> operator>(const Reg32& lhs, const R& rhs)	{return detail::CondExprA<Reg32, R>(lhs, rhs);}
+template<class R> detail::CondExpr_Below<Reg32, R> operator<(const Reg32& lhs, const R& rhs)	{return detail::CondExpr_Below<Reg32, R>(lhs, rhs);}
+template<class R> detail::CondExpr_Above<Reg32, R> operator>(const Reg32& lhs, const R& rhs)	{return detail::CondExpr_Above<Reg32, R>(lhs, rhs);}
 //template<class L, class R> detail::ExprAnd<L, R> operator&&(const L& lhs, const R& rhs)	{return detail::ExprAnd<L, R>(lhs, rhs);}
 //template<class L, class R> detail::ExprOr<L, R> operator||(const L& lhs, const R& rhs)	{return detail::ExprOr<L, R>(lhs, rhs);}
 
