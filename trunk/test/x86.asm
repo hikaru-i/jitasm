@@ -1083,7 +1083,172 @@ masm_test_sse2_d endp
 ; SSE2 P~
 ;----------------------------------------
 masm_test_sse2_p proc
+	packsswb xmm0, xmm1
+	packsswb xmm0, xmmword ptr[esp]
+	packssdw xmm0, xmm1
+	packssdw xmm0, xmmword ptr[esp]
+	packuswb xmm0, xmm1
+	packuswb xmm0, xmmword ptr[esp]
+	paddb xmm0, xmm1
+	paddb xmm0, xmmword ptr[esp]
+	paddw xmm0, xmm1
+	paddw xmm0, xmmword ptr[esp]
+	paddd xmm0, xmm1
+	paddd xmm0, xmmword ptr[esp]
+	paddq mm0, mm1
+	paddq mm0, qword ptr[esp]
+	paddq xmm0, xmm1
+	paddq xmm0, xmmword ptr[esp]
+	paddsb xmm0, xmm1
+	paddsb xmm0, xmmword ptr[esp]
+	paddsw xmm0, xmm1
+	paddsw xmm0, xmmword ptr[esp]
+	paddusb xmm0, xmm1
+	paddusb xmm0, xmmword ptr[esp]
+	paddusw xmm0, xmm1
+	paddusw xmm0, xmmword ptr[esp]
+	pand xmm0, xmm1
+	pand xmm0, xmmword ptr[esp]
+	pandn xmm0, xmm1
+	pandn xmm0, xmmword ptr[esp]
+	pause 
+	pavgb xmm0, xmm1
+	pavgb xmm0, xmmword ptr[esp]
+	pavgw xmm0, xmm1
+	pavgw xmm0, xmmword ptr[esp]
+	pcmpeqb xmm0, xmm1
+	pcmpeqb xmm0, xmmword ptr[esp]
+	pcmpeqw xmm0, xmm1
+	pcmpeqw xmm0, xmmword ptr[esp]
+	pcmpeqd xmm0, xmm1
+	pcmpeqd xmm0, xmmword ptr[esp]
+	pcmpgtb xmm0, xmm1
+	pcmpgtb xmm0, xmmword ptr[esp]
+	pcmpgtw xmm0, xmm1
+	pcmpgtw xmm0, xmmword ptr[esp]
+	pcmpgtd xmm0, xmm1
+	pcmpgtd xmm0, xmmword ptr[esp]
+;	pextrw eax, xmm1, 1
+	pinsrw xmm0, ecx, 3
+	pinsrw xmm0, word ptr[esp], 4
+	pmaddwd xmm0, xmm1
+	pmaddwd xmm0, xmmword ptr[esp]
+	pmaxsw xmm0, xmm1
+	pmaxsw xmm0, xmmword ptr[esp]
+	pmaxub xmm0, xmm1
+	pmaxub xmm0, xmmword ptr[esp]
+	pminsw xmm0, xmm1
+	pminsw xmm0, xmmword ptr[esp]
+	pminub xmm0, xmm1
+	pminub xmm0, xmmword ptr[esp]
+	pmovmskb eax, xmm1
+	pmulhuw xmm0, xmm1
+	pmulhuw xmm0, xmmword ptr[esp]
+	pmulhw xmm0, xmm1
+	pmulhw xmm0, xmmword ptr[esp]
+	pmullw xmm0, xmm1
+	pmullw xmm0, xmmword ptr[esp]
+	pmuludq mm0, mm1
+	pmuludq mm0, qword ptr[esp]
+	pmuludq xmm0, xmm1
+	pmuludq xmm0, xmmword ptr[esp]
+	por xmm0, xmm1
+	por xmm0, xmmword ptr[esp]
+	psadbw xmm0, xmm1
+	psadbw xmm0, xmmword ptr[esp]
+	pshufd xmm0, xmm1, 1Bh
+	pshufd xmm0, xmmword ptr[esp], 0Bh
+	pshufhw xmm0, xmm1, 1Ah
+	pshufhw xmm0, xmmword ptr[esp], 18h
+	pshuflw xmm0, xmm1, 14h
+	pshuflw xmm0, xmmword ptr[esp], 12h
+;	psllw xmm0, xmm1
+;	psllw xmm0, xmmword ptr[ebp]
+;	psllw xmm0, 2
+;	pslld xmm0, xmm1
+;	pslld xmm0, xmmword ptr[ebp]
+;	pslld xmm0, 2
+;	psllq xmm0, xmm1
+;	psllq xmm0, xmmword ptr[ebp]
+;	psllq xmm0, 2
+;	pslldq xmm0, 2
+;	psraw xmm0, xmm1
+;	psraw xmm0, xmmword ptr[ebp]
+;	psraw xmm0, 2
+;	psrad xmm0, xmm1
+;	psrad xmm0, xmmword ptr[ebp]
+;	psrad xmm0, 2
+;	psrlw xmm0, xmm1
+;	psrlw xmm0, xmmword ptr[ebp]
+;	psrlw xmm0, 2
+;	psrld xmm0, xmm1
+;	psrld xmm0, xmmword ptr[ebp]
+;	psrld xmm0, 2
+;	psrlq xmm0, xmm1
+;	psrlq xmm0, xmmword ptr[ebp]
+;	psrlq xmm0, 2
+;	psrldq xmm0, 2
+	psubb xmm0, xmm1
+	psubb xmm0, xmmword ptr[esp]
+	psubw xmm0, xmm1
+	psubw xmm0, xmmword ptr[esp]
+	psubd xmm0, xmm1
+	psubd xmm0, xmmword ptr[esp]
+	psubq mm0, mm1
+	psubq mm0, qword ptr[esp]
+	psubq xmm0, xmm1
+	psubq xmm0, xmmword ptr[esp]
+	psubsb xmm0, xmm1
+	psubsb xmm0, xmmword ptr[esp]
+	psubsw xmm0, xmm1
+	psubsw xmm0, xmmword ptr[esp]
+	psubusb xmm0, xmm1
+	psubusb xmm0, xmmword ptr[esp]
+	psubusw xmm0, xmm1
+	psubusw xmm0, xmmword ptr[esp]
+	punpckhbw xmm0, xmm1
+	punpckhbw xmm0, xmmword ptr[esp]
+	punpckhwd xmm0, xmm1
+	punpckhwd xmm0, xmmword ptr[esp]
+	punpckhdq xmm0, xmm1
+	punpckhdq xmm0, xmmword ptr[esp]
+	punpckhqdq xmm0, xmm1
+	punpckhqdq xmm0, xmmword ptr[esp]
+	punpcklbw xmm0, xmm1
+	punpcklbw xmm0, xmmword ptr[esp]
+	punpcklwd xmm0, xmm1
+	punpcklwd xmm0, xmmword ptr[esp]
+	punpckldq xmm0, xmm1
+	punpckldq xmm0, xmmword ptr[esp]
+	punpcklqdq xmm0, xmm1
+	punpcklqdq xmm0, xmmword ptr[esp]
+	pxor xmm0, xmm1
+	pxor xmm0, xmmword ptr[esp]
 masm_test_sse2_p endp
+
+;----------------------------------------
+; SSE2 S~
+;----------------------------------------
+masm_test_sse2_s proc
+	shufpd xmm0, xmm1, 2
+	shufpd xmm0, xmmword ptr[esp], 1
+	sqrtpd xmm0, xmm1
+	sqrtpd xmm0, xmmword ptr[esp]
+	sqrtsd xmm0, xmm1
+	sqrtsd xmm0, qword ptr[ebp]
+	subpd xmm0, xmm1
+	subpd xmm0, xmmword ptr[esp]
+	subsd xmm0, xmm1
+	subsd xmm0, qword ptr[ebp]
+	ucomisd xmm0, xmm1
+	ucomisd xmm0, qword ptr[ebp]
+	unpckhpd xmm0, xmm1
+	unpckhpd xmm0, xmmword ptr[esp]
+	unpcklpd xmm0, xmm1
+	unpcklpd xmm0, xmmword ptr[esp]
+	xorpd xmm0, xmm1
+	xorpd xmm0, xmmword ptr[esp]
+masm_test_sse2_s endp
 
 ;----------------------------------------
 ; MOVD/MOVQ
