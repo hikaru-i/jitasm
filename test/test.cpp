@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <intrin.h>
 #include "jitasm.h"
 
 #define _TOSTR(s) #s
@@ -2254,7 +2255,7 @@ struct test_movd_movq : jitasm::function0<void>
 		movd(dword_ptr[eax], xmm0);
 		movd(eax, xmm0);
 		movq(qword_ptr[eax], xmm0);
-		movq(mm0, mm0);
+		movq(mm0, mm1);
 		movq(mm0, qword_ptr[eax]);
 		movq(qword_ptr[eax], mm0);
 		movq(xmm0, xmm0);
@@ -2412,7 +2413,7 @@ struct test_function_return_float_xmm : jitasm::function0_cdecl<float>
 };
 
 //----------------------------------------
-// function1_cdecl<float> (return ptr)
+// function1_cdecl<float, float> (return ptr)
 //----------------------------------------
 extern "C" void masm_test_function_return_float_ptr();
 struct test_function_return_float_ptr : jitasm::function1_cdecl<float, float>
@@ -2424,7 +2425,7 @@ struct test_function_return_float_ptr : jitasm::function1_cdecl<float, float>
 };
 
 //----------------------------------------
-// function1_cdecl<float> (return st(0))
+// function1_cdecl<float, float> (return st(0))
 //----------------------------------------
 extern "C" void masm_test_function_return_float_st0();
 struct test_function_return_float_st0 : jitasm::function1_cdecl<float, float>
@@ -2462,7 +2463,7 @@ struct test_function_return_double_xmm : jitasm::function0_cdecl<double>
 };
 
 //----------------------------------------
-// function1_cdecl<double> (return ptr)
+// function1_cdecl<double, double> (return ptr)
 //----------------------------------------
 extern "C" void masm_test_function_return_double_ptr();
 struct test_function_return_double_ptr : jitasm::function1_cdecl<double, double>
@@ -2474,7 +2475,7 @@ struct test_function_return_double_ptr : jitasm::function1_cdecl<double, double>
 };
 
 //----------------------------------------
-// function1_cdecl<double> (return st(0))
+// function1_cdecl<double, double> (return st(0))
 //----------------------------------------
 extern "C" void masm_test_function_return_double_st0();
 struct test_function_return_double_st0 : jitasm::function1_cdecl<double, double>
@@ -2486,7 +2487,58 @@ struct test_function_return_double_st0 : jitasm::function1_cdecl<double, double>
 	}
 };
 
-#include <intrin.h>
+//----------------------------------------
+// function1_cdecl<__m64, int> (return mm1)
+//----------------------------------------
+extern "C" void masm_test_function_return_m64_mm1();
+struct test_function_return_m64_mm1 : jitasm::function1_cdecl<__m64, int>
+{
+	Result main(Arg a1)
+	{
+		movd(mm1, dword_ptr[a1]);
+		punpckldq(mm1, mm1);
+		paddw(mm1, mm1);
+		return mm1;
+	}
+};
+
+//----------------------------------------
+// function0_cdecl<__m64> (return ptr)
+//----------------------------------------
+extern "C" void masm_test_function_return_m64_ptr();
+struct test_function_return_m64_ptr : jitasm::function0_cdecl<__m64>
+{
+	Result main()
+	{
+		return result_ptr[zsp - 8];
+	}
+};
+
+//----------------------------------------
+// function0_cdecl<__m128> (return xmm1)
+//----------------------------------------
+extern "C" void masm_test_function_return_m128_xmm1();
+struct test_function_return_m128_xmm1 : jitasm::function0_cdecl<__m128>
+{
+	Result main()
+	{
+		pxor(xmm1, xmm1);
+		return xmm1;
+	}
+};
+
+//----------------------------------------
+// function0_cdecl<__m128> (return ptr)
+//----------------------------------------
+extern "C" void masm_test_function_return_m128_ptr();
+struct test_function_return_m128_ptr : jitasm::function0_cdecl<__m128>
+{
+	Result main()
+	{
+		return xmmword_ptr[zsp - 16];
+	}
+};
+
 struct Foo {
 	char c[5];
 };
@@ -2583,4 +2635,8 @@ int wmain()
 	TEST_M(test_function_return_double_xmm);
 	TEST_M(test_function_return_double_ptr);
 	TEST_M(test_function_return_double_st0);
+	TEST_M(test_function_return_m64_mm1);
+	TEST_M(test_function_return_m64_ptr);
+	TEST_M(test_function_return_m128_xmm1);
+	TEST_M(test_function_return_m128_ptr);
 }

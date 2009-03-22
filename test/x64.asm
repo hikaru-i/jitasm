@@ -1944,7 +1944,7 @@ masm_test_movd_movq proc
 	movd dword ptr[eax], xmm0
 	movd eax, xmm0
 	movq qword ptr[eax], xmm0
-	movq mm0, mm0
+	movq mm0, mm1
 	movq mm0, qword ptr[eax]
 	movq qword ptr[eax], mm0
 	movq xmm0, xmm0
@@ -2094,7 +2094,7 @@ masm_test_function_return_float_xmm proc
 masm_test_function_return_float_xmm endp
 
 ;----------------------------------------
-; function1_cdecl<float> (return ptr)
+; function1_cdecl<float, float> (return ptr)
 ;----------------------------------------
 masm_test_function_return_float_ptr proc
 	push rbp
@@ -2106,7 +2106,7 @@ masm_test_function_return_float_ptr proc
 masm_test_function_return_float_ptr endp
 
 ;----------------------------------------
-; function1_cdecl<float> (return st(0))
+; function1_cdecl<float, float> (return st(0))
 ;----------------------------------------
 masm_test_function_return_float_st0 proc
 	push rbp
@@ -2149,7 +2149,7 @@ masm_test_function_return_double_xmm proc
 masm_test_function_return_double_xmm endp
 
 ;----------------------------------------
-; function1_cdecl<double> (return ptr)
+; function1_cdecl<double, double> (return ptr)
 ;----------------------------------------
 masm_test_function_return_double_ptr proc
 	push rbp
@@ -2161,7 +2161,7 @@ masm_test_function_return_double_ptr proc
 masm_test_function_return_double_ptr endp
 
 ;----------------------------------------
-; function1_cdecl<double> (return st(0))
+; function1_cdecl<double, double> (return st(0))
 ;----------------------------------------
 masm_test_function_return_double_st0 proc
 	push rbp
@@ -2173,5 +2173,53 @@ masm_test_function_return_double_st0 proc
 	leave
 	ret
 masm_test_function_return_double_st0 endp
+
+;----------------------------------------
+; function1_cdecl<__m64, int> (return mm1)
+;----------------------------------------
+masm_test_function_return_m64_mm1 proc
+	push rbp
+	mov rbp, rsp
+	movd mm1, dword ptr[rbp + 8]
+	punpckldq mm1, mm1
+	paddw mm1, mm1
+	movq rax, mm1
+	leave
+	ret
+masm_test_function_return_m64_mm1 endp
+
+;----------------------------------------
+; function1_cdecl<__m64> (return ptr)
+;----------------------------------------
+masm_test_function_return_m64_ptr proc
+	push rbp
+	mov rbp, rsp
+	movq mm0, qword ptr[rsp - 8]
+	leave
+	ret
+masm_test_function_return_m64_ptr endp
+
+;----------------------------------------
+; function0_cdecl<__m128> (return xmm1)
+;----------------------------------------
+masm_test_function_return_m128_xmm1 proc
+	push rbp
+	mov rbp, rsp
+	pxor xmm1, xmm1
+	movapd xmm0, xmm1
+	leave
+	ret
+masm_test_function_return_m128_xmm1 endp
+
+;----------------------------------------
+; function0_cdecl<__m128> (return ptr)
+;----------------------------------------
+masm_test_function_return_m128_ptr proc
+	push rbp
+	mov rbp, rsp
+	movapd xmm0, xmmword ptr[rsp - 16]
+	leave
+	ret
+masm_test_function_return_m128_ptr endp
 
 end

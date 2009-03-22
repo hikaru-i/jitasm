@@ -3053,10 +3053,10 @@ namespace detail {
 
 #ifdef __INTRIN_H_
 	// specialization for __m64
-	template<> struct ArgumentTraits_win64<0, __m64, 8> : ArgumentTraits_win64_reg<RCX> {};
-	template<> struct ArgumentTraits_win64<1, __m64, 8> : ArgumentTraits_win64_reg<RDX> {};
-	template<> struct ArgumentTraits_win64<2, __m64, 8> : ArgumentTraits_win64_reg<R8> {};
-	template<> struct ArgumentTraits_win64<3, __m64, 8> : ArgumentTraits_win64_reg<R9> {};
+	template<> struct ArgumentTraits_win64<0, __m64, 8> : ArgumentTraits_win64_reg<RCX, ARG_TYPE_VALUE> {};
+	template<> struct ArgumentTraits_win64<1, __m64, 8> : ArgumentTraits_win64_reg<RDX, ARG_TYPE_VALUE> {};
+	template<> struct ArgumentTraits_win64<2, __m64, 8> : ArgumentTraits_win64_reg<R8, ARG_TYPE_VALUE> {};
+	template<> struct ArgumentTraits_win64<3, __m64, 8> : ArgumentTraits_win64_reg<R9, ARG_TYPE_VALUE> {};
 #endif
 
 	/**
@@ -3136,8 +3136,16 @@ namespace detail {
 		ResultT(uint8 imm) : val_(Imm8(imm)) {}
 		void Store(Frontend& f)
 		{
-			if (!(val_.IsReg() && (val_.GetReg() == INVALID || val_.GetReg() == AL)))
-				f.mov(f.al, static_cast<Reg8&>(val_));
+			if (detail::IsGpReg(val_)) {
+				if (val_.GetReg() != AL)
+					f.mov(f.al, static_cast<Reg8&>(val_));
+			}
+			else if (val_.IsMem()) {
+				f.mov(f.al, static_cast<Mem8&>(val_));
+			}
+			else if (val_.IsImm()) {
+				f.mov(f.al, static_cast<Imm8&>(val_));
+			}
 		}
 	};
 
@@ -3151,8 +3159,16 @@ namespace detail {
 		ResultT(uint16 imm) : val_(Imm16(imm)) {}
 		void Store(Frontend& f)
 		{
-			if (!(val_.IsReg() && (val_.GetReg() == INVALID || val_.GetReg() == AX)))
-				f.mov(f.ax, static_cast<Reg16&>(val_));
+			if (detail::IsGpReg(val_)) {
+				if (val_.GetReg() != AX)
+					f.mov(f.ax, static_cast<Reg16&>(val_));
+			}
+			else if (val_.IsMem()) {
+				f.mov(f.ax, static_cast<Mem16&>(val_));
+			}
+			else if (val_.IsImm()) {
+				f.mov(f.ax, static_cast<Imm16&>(val_));
+			}
 		}
 	};
 
@@ -3166,8 +3182,16 @@ namespace detail {
 		ResultT(uint32 imm) : val_(Imm32(imm)) {}
 		void Store(Frontend& f)
 		{
-			if (!(val_.IsReg() && (val_.GetReg() == INVALID || val_.GetReg() == EAX)))
-				f.mov(f.eax, static_cast<Reg32&>(val_));
+			if (detail::IsGpReg(val_)) {
+				if (val_.GetReg() != EAX)
+					f.mov(f.eax, static_cast<Reg32&>(val_));
+			}
+			else if (val_.IsMem()) {
+				f.mov(f.eax, static_cast<Mem32&>(val_));
+			}
+			else if (val_.IsImm()) {
+				f.mov(f.eax, static_cast<Imm32&>(val_));
+			}
 		}
 	};
 
@@ -3182,8 +3206,15 @@ namespace detail {
 		void Store(Frontend& f)
 		{
 #ifdef JITASM64
-			if (val_.IsMem() || val_.IsImm() || (detail::IsGpReg(val_) && val_.GetReg() != RAX)) {
-				f.mov(f.rax, static_cast<Reg64&>(val_));
+			if (detail::IsGpReg(val_)) {
+				if (val_.GetReg() != RAX)
+					f.mov(f.rax, static_cast<Reg64&>(val_));
+			}
+			else if (val_.IsMem()) {
+				f.mov(f.rax, static_cast<Mem64&>(val_));
+			}
+			else if (val_.IsImm()) {
+				f.mov(f.rax, static_cast<Imm64&>(val_));
 			}
 			else if (detail::IsMmxReg(val_)) {
 				f.movq(f.rax, static_cast<MmxReg&>(val_));
@@ -3218,7 +3249,7 @@ namespace detail {
 		void Store(Frontend& f)
 		{
 #ifdef JITASM64
-			if (val_.IsReg() && val_.GetSize() == O_SIZE_80) {
+			if (detail::IsFpuReg(val_)) {
 				// from FPU register
 				f.fstp(f.real4_ptr[f.rsp - 4]);
 				f.movss(f.xmm0, f.dword_ptr[f.rsp - 4]);
@@ -3227,7 +3258,7 @@ namespace detail {
 				// from memory
 				f.movss(f.xmm0, static_cast<Mem32&>(val_));
 			}
-			else if (val_.IsReg() && val_.GetSize() == O_SIZE_128) {
+			else if (detail::IsXmmReg(val_)) {
 				// from XMM register
 				if (val_.GetReg() != XMM0)
 					f.movss(f.xmm0, static_cast<XmmReg&>(val_));
@@ -3238,7 +3269,7 @@ namespace detail {
 				f.movss(f.xmm0, f.dword_ptr[f.rsp - 4]);
 			}
 #else
-			if (val_.IsReg() && val_.GetSize() == O_SIZE_80) {
+			if (detail::IsFpuReg(val_)) {
 				// from FPU register
 				if (val_.GetReg() != ST0)
 					f.fld(static_cast<FpuReg&>(val_));
@@ -3247,7 +3278,7 @@ namespace detail {
 				// from memory
 				f.fld(static_cast<Mem32&>(val_));
 			}
-			else if (val_.IsReg() && val_.GetSize() == O_SIZE_128) {
+			else if (detail::IsXmmReg(val_)) {
 				// from XMM register
 				f.movss(f.dword_ptr[f.esp - 4], static_cast<XmmReg&>(val_));
 				f.fld(f.real4_ptr[f.esp - 4]);
@@ -3275,7 +3306,7 @@ namespace detail {
 		void Store(Frontend& f)
 		{
 #ifdef JITASM64
-			if (val_.IsReg() && val_.GetSize() == O_SIZE_80) {
+			if (detail::IsFpuReg(val_)) {
 				// from FPU register
 				f.fstp(f.real8_ptr[f.rsp - 8]);
 				f.movsd(f.xmm0, f.qword_ptr[f.rsp - 8]);
@@ -3284,7 +3315,7 @@ namespace detail {
 				// from memory
 				f.movsd(f.xmm0, static_cast<Mem64&>(val_));
 			}
-			else if (val_.IsReg() && val_.GetSize() == O_SIZE_128) {
+			else if (detail::IsXmmReg(val_)) {
 				// from XMM register
 				if (val_.GetReg() != XMM0)
 					f.movsd(f.xmm0, static_cast<XmmReg&>(val_));
@@ -3296,7 +3327,7 @@ namespace detail {
 				f.movsd(f.xmm0, f.qword_ptr[f.rsp - 8]);
 			}
 #else
-			if (val_.IsReg() && val_.GetSize() == O_SIZE_80) {
+			if (detail::IsFpuReg(val_)) {
 				// from FPU register
 				if (val_.GetReg() != ST0)
 					f.fld(static_cast<FpuReg&>(val_));
@@ -3305,7 +3336,7 @@ namespace detail {
 				// from memory
 				f.fld(static_cast<Mem64&>(val_));
 			}
-			else if (val_.IsReg() && val_.GetSize() == O_SIZE_128) {
+			else if (detail::IsXmmReg(val_)) {
 				// from XMM register
 				f.movsd(f.qword_ptr[f.esp - 8], static_cast<XmmReg&>(val_));
 				f.fld(f.real8_ptr[f.esp - 8]);
@@ -3319,6 +3350,70 @@ namespace detail {
 #endif
 		}
 	};
+
+#ifdef __INTRIN_H_
+#ifndef JITASM64
+	// specialization for __m64
+	template<>
+	struct ResultT<__m64, 8> {
+		enum { ArgR = 0 };
+		Opd64 val_;
+		ResultT() : val_(INVALID) {}
+		ResultT(const MmxReg& mm) : val_(mm) {}
+		ResultT(const Mem64& mem) : val_(mem) {}
+		void Store(Frontend& f)
+		{
+			if (detail::IsMmxReg(val_)) {
+				if (val_.IsReg() != MM0)
+					f.movq(f.mm0, static_cast<const MmxReg&>(val_));
+			}
+			else if (val_.IsMem()) {
+				f.movq(f.mm0, static_cast<const Mem64&>(val_));
+			}
+		}
+	};
+
+	// specialization for __m128
+	template<>
+	struct ResultT<__m128, 16> {
+		enum { ArgR = 0 };
+		Opd128 val_;
+		ResultT() : val_(INVALID) {}
+		ResultT(const XmmReg& xmm) : val_(xmm) {}
+		ResultT(const Mem128& mem) : val_(mem) {}
+		void Store(Frontend& f)
+		{
+			if (detail::IsXmmReg(val_)) {
+				if (val_.GetReg() != XMM0)
+					f.movapd(f.xmm0, static_cast<const XmmReg&>(val_));
+			}
+			else if (val_.IsMem()) {
+				f.movapd(f.xmm0, static_cast<const Mem128&>(val_));
+			}
+		}
+	};
+
+	// specialization for __m128i
+	template<>
+	struct ResultT<__m128i, 16> {
+		enum { ArgR = 0 };
+		Opd128 val_;
+		ResultT() : val_(INVALID) {}
+		ResultT(const XmmReg& xmm) : val_(xmm) {}
+		ResultT(const Mem128& mem) : val_(mem) {}
+		void Store(Frontend& f)
+		{
+			if (detail::IsXmmReg(val_)) {
+				if (val_.GetReg() != XMM0)
+					f.movdqa(f.xmm0, static_cast<const XmmReg&>(val_));
+			}
+			else if (val_.IsMem()) {
+				f.movdqa(f.xmm0, static_cast<const Mem128&>(val_));
+			}
+		}
+	};
+#endif	// JITASM64
+#endif	// __INTRIN_H_
 
 
 	/// cdecl function base class
@@ -3347,11 +3442,11 @@ namespace detail {
 #endif
 
 	private:
-		template<int N, class T>
-		void CopyRegArgToStack(const Arg& addr)
-		{
 #ifdef JITASM64
-			if (dump_regarg_x64_) {
+		template<int N, class T>
+		void CopyRegArgToStack(const Arg& addr, bool bForceCopy)
+		{
+			if (dump_regarg_x64_ || bForceCopy) {
 				if (ArgTraits<N, T>::flag & ARG_IN_REG)
 					mov(qword_ptr[addr], Reg64(static_cast<RegID>(ArgTraits<N, T>::reg_id)));
 				else if (ArgTraits<N, T>::flag & ARG_IN_XMM_SP)
@@ -3359,8 +3454,11 @@ namespace detail {
 				else if (ArgTraits<N, T>::flag & ARG_IN_XMM_DP)
 					movsd(qword_ptr[addr], XmmReg(static_cast<RegID>(ArgTraits<N, T>::reg_id)));
 			}
-#endif
 		}
+#else
+		template<int N, class T>
+		void CopyRegArgToStack(const Arg&, bool) {}
+#endif
 
 	public:
 		template<class R>
@@ -3368,7 +3466,8 @@ namespace detail {
 		{
 			Arg addr(zbp + sizeof(void *) * 2);
 			if (ResultT<R>::ArgR) {
-				CopyRegArgToStack<0, R>(addr);
+				// Copy result address to stack irrespectively of dump_regarg_x64_ for result.
+				CopyRegArgToStack<0, R>(addr, true);
 				addr = addr + ArgTraits<0, R>::stack_size;
 			}
 			return addr;
@@ -3378,7 +3477,7 @@ namespace detail {
 		Arg DumpRegArg1()
 		{
 			Arg addr = DumpRegArg0<R>();
-			CopyRegArgToStack<0 + ResultT<R>::ArgR, A1>(addr);
+			CopyRegArgToStack<0 + ResultT<R>::ArgR, A1>(addr, false);
 			return addr + ArgTraits<0 + ResultT<R>::ArgR, A1>::stack_size;
 		}
 
@@ -3386,7 +3485,7 @@ namespace detail {
 		Arg DumpRegArg2()
 		{
 			Arg addr = DumpRegArg1<R, A1>();
-			CopyRegArgToStack<1 + ResultT<R>::ArgR, A2>(addr);
+			CopyRegArgToStack<1 + ResultT<R>::ArgR, A2>(addr, false);
 			return addr + ArgTraits<1 + ResultT<R>::ArgR, A2>::stack_size;
 		}
 
@@ -3394,7 +3493,7 @@ namespace detail {
 		Arg DumpRegArg3()
 		{
 			Arg addr = DumpRegArg2<R, A1, A2>();
-			CopyRegArgToStack<2 + ResultT<R>::ArgR, A3>(addr);
+			CopyRegArgToStack<2 + ResultT<R>::ArgR, A3>(addr, false);
 			return addr + ArgTraits<2 + ResultT<R>::ArgR, A3>::stack_size;
 		}
 
@@ -3402,7 +3501,7 @@ namespace detail {
 		Arg DumpRegArg4()
 		{
 			Arg addr = DumpRegArg3<R, A1, A2, A3>();
-			CopyRegArgToStack<3 + ResultT<R>::ArgR, A4>(addr);
+			CopyRegArgToStack<3 + ResultT<R>::ArgR, A4>(addr, false);
 			return addr + ArgTraits<3 + ResultT<R>::ArgR, A4>::stack_size;
 		}
 
