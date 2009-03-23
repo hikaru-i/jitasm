@@ -1128,14 +1128,12 @@ struct Backend
 	void EncodeMOVQ(const Opd& dst, const Opd& src)
 	{
 		uint8 opcode = 0;
-		if (detail::IsMmxReg(src))		opcode = 0x7F;
-		else if (detail::IsMmxReg(dst))	opcode = 0x6F;
-		else if (detail::IsXmmReg(dst))	db(0xF3), opcode = 0x7E;
-		else if (detail::IsXmmReg(src))	db(0x66), opcode = 0xD6;
-		else ASSERT(0);
-
-		const Opd& reg = detail::IsMmxReg(dst) || detail::IsXmmReg(dst) ? dst : src;
-		const Opd& r_m = detail::IsMmxReg(dst) || detail::IsXmmReg(dst) ? src : dst;
+		const Opd& reg = detail::IsMmxReg(src) ? (opcode = 0x7F, src)
+			: detail::IsMmxReg(dst) ? (opcode = 0x6F, dst)
+			: detail::IsXmmReg(dst) ? (db(0xF3), opcode = 0x7E, dst)
+			: detail::IsXmmReg(src) ? (db(0x66), opcode = 0xD6, src)
+			: (ASSERT(0), dst);
+		const Opd& r_m = &reg != &dst ? dst : src;
 
 #ifdef JITASM64
 		if (r_m.IsMem() && r_m.GetAddressSize() != O_SIZE_64) EncodeAddressSizePrefix();
