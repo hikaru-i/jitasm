@@ -1459,7 +1459,7 @@ masm_test_function_return_m128_xmm1 proc
 	push ebp
 	mov ebp, esp
 	pxor xmm1, xmm1
-	movapd xmm0, xmm1
+	movaps xmm0, xmm1
 	leave
 	ret
 masm_test_function_return_m128_xmm1 endp
@@ -1470,9 +1470,55 @@ masm_test_function_return_m128_xmm1 endp
 masm_test_function_return_m128_ptr proc
 	push ebp
 	mov ebp, esp
-	movapd xmm0, xmmword ptr[esp - 16]
+	movaps xmm0, xmmword ptr[esp - 16]
 	leave
 	ret
 masm_test_function_return_m128_ptr endp
+
+;----------------------------------------
+; function0_cdecl<__m128d> (return xmm1)
+;----------------------------------------
+masm_test_function_return_m128d_xmm1 proc
+	push ebp
+	mov ebp, esp
+	pxor xmm1, xmm1
+	movapd xmm0, xmm1
+	leave
+	ret
+masm_test_function_return_m128d_xmm1 endp
+
+;----------------------------------------
+; function0_cdecl<__m128d> (return ptr)
+;----------------------------------------
+masm_test_function_return_m128d_ptr proc
+	push ebp
+	mov ebp, esp
+	movapd xmm0, xmmword ptr[esp - 16]
+	leave
+	ret
+masm_test_function_return_m128d_ptr endp
+
+;----------------------------------------
+; function0_cdecl<__m128i> (return xmm1)
+;----------------------------------------
+masm_test_function_return_m128i_xmm1 proc
+	push ebp
+	mov ebp, esp
+	pxor xmm1, xmm1
+	movdqa xmm0, xmm1
+	leave
+	ret
+masm_test_function_return_m128i_xmm1 endp
+
+;----------------------------------------
+; function0_cdecl<__m128i> (return ptr)
+;----------------------------------------
+masm_test_function_return_m128i_ptr proc
+	push ebp
+	mov ebp, esp
+	movdqa xmm0, xmmword ptr[esp - 16]
+	leave
+	ret
+masm_test_function_return_m128i_ptr endp
 
 end

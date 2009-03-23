@@ -398,7 +398,7 @@ enum InstrID
 	I_ADDPD, I_ADDSD, I_ANDPD, I_ANDNPD, I_CLFLUSH, I_CMPPS, I_CMPPD, I_CMPSD, I_COMISD, I_CVTDQ2PD, I_CVTDQ2PS,
 	I_CVTPD2DQ, I_CVTPD2PI, I_CVTPD2PS, I_CVTPI2PD, I_CVTPS2DQ, I_CVTPS2PD, I_CVTSD2SI, I_CVTSD2SS,
 	I_CVTSI2SD, I_CVTSS2SD, I_CVTTPD2DQ, I_CVTTPD2PI, I_CVTTPS2DQ, I_CVTTSD2SI, I_DIVPD, I_DIVSD, I_LFENCE,
-	I_MASKMOVDQU, I_MAXPD, I_MAXSD, I_MFENCE, I_MINPD, I_MINSD, I_MOVAPD, I_MOVD, I_MOVDQA, I_MOVDQU, I_MOVDQ2Q,
+	I_MASKMOVDQU, I_MAXPD, I_MAXSD, I_MFENCE, I_MINPD, I_MINSD, I_MOVAPD, I_MOVAPS, I_MOVD, I_MOVDQA, I_MOVDQU, I_MOVDQ2Q,
 	I_MOVHPD, I_MOVLPD, I_MOVMSKPD, I_MOVNTDQ, I_MOVNTI, I_MOVNTPD, I_MOVQ, I_MOVQ2DQ, I_MOVSD, I_MOVSS, I_MOVUPD,
 	I_MULPD, I_MULSD, I_ORPD, I_PABSB, I_PABSD, I_PABSW, I_PACKSSDW, I_PACKSSWB, I_PACKUSDW, I_PACKUSWB,
 	I_PADDB, I_PADDD, I_PADDQ, I_PADDSB, I_PADDSW, I_PADDUSB, I_PADDUSW, I_PADDW, I_PALIGNR,
@@ -1265,6 +1265,7 @@ struct Backend
 		case I_MINPD:		EncodeSSE2(0x66, 0x5D, o1, o2); break;
 		case I_MINSD:		EncodeSSE2(0xF2, 0x5D, o1, o2); break;
 		case I_MOVAPD:		EncodeSSE2(0x66, 0x28 | (o1.IsReg() ? 0 : 0x01), o1, o2); break;
+		case I_MOVAPS:		EncodeSSE(0x28 | (o1.IsReg() ? 0 : 0x01), o1, o2); break;
 		case I_MOVD:		EncodeMOVD(o1, o2); break;
 		case I_MOVDQA:		EncodeSSE2(0x66, 0x6F | (o1.IsReg() ? 0 : 0x10), o1, o2); break;
 		case I_MOVDQU:		EncodeSSE2(0xF3, 0x6F | (o1.IsReg() ? 0 : 0x10), o1, o2); break;
@@ -2534,6 +2535,9 @@ struct Frontend
 	void cmpnleps(const XmmReg& dst, const Mem128& src)		{cmpps(dst, src, 6);}
 	void cmpordps(const XmmReg& dst, const XmmReg& src)		{cmpps(dst, src, 7);}
 	void cmpordps(const XmmReg& dst, const Mem128& src)		{cmpps(dst, src, 7);}
+	void movaps(const XmmReg& dst, const XmmReg& src)	{PushBack(Instr(I_MOVAPS, dst, src));}
+	void movaps(const XmmReg& dst, const Mem128& src)	{PushBack(Instr(I_MOVAPS, dst, src));}
+	void movaps(const Mem128& dst, const XmmReg& src)	{PushBack(Instr(I_MOVAPS, dst, src));}
 	void movss(const XmmReg& dst, const XmmReg& src)	{PushBack(Instr(I_MOVSS, dst, src));}
 	void movss(const XmmReg& dst, const Mem32& src)		{PushBack(Instr(I_MOVSS, dst, src));}
 	void movss(const Mem32& dst, const XmmReg& src)		{PushBack(Instr(I_MOVSS, dst, src));}
@@ -3372,10 +3376,95 @@ namespace detail {
 			}
 		}
 	};
+#endif	// JITASM64
 
+#ifdef JITASM64
 	// specialization for __m128
 	template<>
 	struct ResultT<__m128, 16> {
+		enum { ArgR = 1 };
+		Opd128 val_;
+		ResultT() : val_(INVALID) {}
+		ResultT(const XmmReg& xmm) : val_(xmm) {}
+		ResultT(const Mem128& mem) : val_(mem) {}
+		void Store(Frontend& f)
+		{
+			f.mov(f.zax, f.zword_ptr[f.zbp + sizeof(void *) * 2]);
+			if (detail::IsXmmReg(val_)) {
+				f.movaps(f.xmmword_ptr[f.zax], static_cast<const XmmReg&>(val_));
+			}
+			else if (val_.IsMem()) {
+				f.movaps(f.xmm0, static_cast<const Mem128&>(val_));
+				f.movaps(f.xmmword_ptr[f.zax], f.xmm0);
+			}
+		}
+	};
+
+	// specialization for __m128d
+	template<>
+	struct ResultT<__m128d, 16> {
+		enum { ArgR = 1 };
+		Opd128 val_;
+		ResultT() : val_(INVALID) {}
+		ResultT(const XmmReg& xmm) : val_(xmm) {}
+		ResultT(const Mem128& mem) : val_(mem) {}
+		void Store(Frontend& f)
+		{
+			f.mov(f.zax, f.zword_ptr[f.zbp + sizeof(void *) * 2]);
+			if (detail::IsXmmReg(val_)) {
+				f.movapd(f.xmmword_ptr[f.zax], static_cast<const XmmReg&>(val_));
+			}
+			else if (val_.IsMem()) {
+				f.movapd(f.xmm0, static_cast<const Mem128&>(val_));
+				f.movapd(f.xmmword_ptr[f.zax], f.xmm0);
+			}
+		}
+	};
+
+	// specialization for __m128i
+	template<>
+	struct ResultT<__m128i, 16> {
+		enum { ArgR = 1 };
+		Opd128 val_;
+		ResultT() : val_(INVALID) {}
+		ResultT(const XmmReg& xmm) : val_(xmm) {}
+		ResultT(const Mem128& mem) : val_(mem) {}
+		void Store(Frontend& f)
+		{
+			f.mov(f.zax, f.zword_ptr[f.zbp + sizeof(void *) * 2]);
+			if (detail::IsXmmReg(val_)) {
+				f.movdqa(f.xmmword_ptr[f.zax], static_cast<const XmmReg&>(val_));
+			}
+			else if (val_.IsMem()) {
+				f.movdqa(f.xmm0, static_cast<const Mem128&>(val_));
+				f.movdqa(f.xmmword_ptr[f.zax], f.xmm0);
+			}
+		}
+	};
+#else	// JITASM64
+	// specialization for __m128
+	template<>
+	struct ResultT<__m128, 16> {
+		enum { ArgR = 0 };
+		Opd128 val_;
+		ResultT() : val_(INVALID) {}
+		ResultT(const XmmReg& xmm) : val_(xmm) {}
+		ResultT(const Mem128& mem) : val_(mem) {}
+		void Store(Frontend& f)
+		{
+			if (detail::IsXmmReg(val_)) {
+				if (val_.GetReg() != XMM0)
+					f.movaps(f.xmm0, static_cast<const XmmReg&>(val_));
+			}
+			else if (val_.IsMem()) {
+				f.movaps(f.xmm0, static_cast<const Mem128&>(val_));
+			}
+		}
+	};
+
+	// specialization for __m128d
+	template<>
+	struct ResultT<__m128d, 16> {
 		enum { ArgR = 0 };
 		Opd128 val_;
 		ResultT() : val_(INVALID) {}

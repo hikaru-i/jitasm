@@ -2080,9 +2080,9 @@ struct test_sse2_p : jitasm::function0<void>
 		pcmpgtw(xmm8, xmmword_ptr[r8]);
 		pcmpgtd(xmm8, xmm9);
 		pcmpgtd(xmm8, xmmword_ptr[r8]);
-		pextrw(eax, xmm9, 1);
-		pextrw(rax, xmm9, 2);
-		pextrw(r8, xmm9, 2);
+		//pextrw(eax, xmm9, 1);
+		//pextrw(rax, xmm9, 2);
+		//pextrw(r8, xmm9, 2);
 		pinsrw(xmm8, ecx, 3);
 		pinsrw(xmm8, word_ptr[r8], 4);
 		pinsrw(xmm8, rcx, 1);
@@ -2120,32 +2120,32 @@ struct test_sse2_p : jitasm::function0<void>
 		pshufhw(xmm8, xmmword_ptr[r8], 0x18);
 		pshuflw(xmm8, xmm9, 0x14);
 		pshuflw(xmm8, xmmword_ptr[r8], 0x12);
-		psllw(xmm8, xmm9);
-		psllw(xmm8, xmmword_ptr[rbp]);
-		psllw(xmm8, 2);
-		pslld(xmm8, xmm9);
-		pslld(xmm8, xmmword_ptr[rbp]);
-		pslld(xmm8, 2);
-		psllq(xmm8, xmm9);
-		psllq(xmm8, xmmword_ptr[rbp]);
-		psllq(xmm8, 2);
-		pslldq(xmm8, 2);
-		psraw(xmm8, xmm9);
-		psraw(xmm8, xmmword_ptr[rbp]);
-		psraw(xmm8, 2);
-		psrad(xmm8, xmm9);
-		psrad(xmm8, xmmword_ptr[rbp]);
-		psrad(xmm8, 2);
-		psrlw(xmm8, xmm9);
-		psrlw(xmm8, xmmword_ptr[rbp]);
-		psrlw(xmm8, 2);
-		psrld(xmm8, xmm9);
-		psrld(xmm8, xmmword_ptr[rbp]);
-		psrld(xmm8, 2);
-		psrlq(xmm8, xmm9);
-		psrlq(xmm8, xmmword_ptr[rbp]);
-		psrlq(xmm8, 2);
-		psrldq(xmm8, 2);
+		//psllw(xmm8, xmm9);
+		//psllw(xmm8, xmmword_ptr[rbp]);
+		//psllw(xmm8, 2);
+		//pslld(xmm8, xmm9);
+		//pslld(xmm8, xmmword_ptr[rbp]);
+		//pslld(xmm8, 2);
+		//psllq(xmm8, xmm9);
+		//psllq(xmm8, xmmword_ptr[rbp]);
+		//psllq(xmm8, 2);
+		//pslldq(xmm8, 2);
+		//psraw(xmm8, xmm9);
+		//psraw(xmm8, xmmword_ptr[rbp]);
+		//psraw(xmm8, 2);
+		//psrad(xmm8, xmm9);
+		//psrad(xmm8, xmmword_ptr[rbp]);
+		//psrad(xmm8, 2);
+		//psrlw(xmm8, xmm9);
+		//psrlw(xmm8, xmmword_ptr[rbp]);
+		//psrlw(xmm8, 2);
+		//psrld(xmm8, xmm9);
+		//psrld(xmm8, xmmword_ptr[rbp]);
+		//psrld(xmm8, 2);
+		//psrlq(xmm8, xmm9);
+		//psrlq(xmm8, xmmword_ptr[rbp]);
+		//psrlq(xmm8, 2);
+		//psrldq(xmm8, 2);
 		psubb(xmm8, xmm9);
 		psubb(xmm8, xmmword_ptr[r8]);
 		psubw(xmm8, xmm9);
@@ -2539,6 +2539,56 @@ struct test_function_return_m128_ptr : jitasm::function0_cdecl<__m128>
 	}
 };
 
+//----------------------------------------
+// function0_cdecl<__m128d> (return xmm1)
+//----------------------------------------
+extern "C" void masm_test_function_return_m128d_xmm1();
+struct test_function_return_m128d_xmm1 : jitasm::function0_cdecl<__m128d>
+{
+	Result main()
+	{
+		pxor(xmm1, xmm1);
+		return xmm1;
+	}
+};
+
+//----------------------------------------
+// function0_cdecl<__m128d> (return ptr)
+//----------------------------------------
+extern "C" void masm_test_function_return_m128d_ptr();
+struct test_function_return_m128d_ptr : jitasm::function0_cdecl<__m128d>
+{
+	Result main()
+	{
+		return xmmword_ptr[zsp - 16];
+	}
+};
+
+//----------------------------------------
+// function0_cdecl<__m128i> (return xmm1)
+//----------------------------------------
+extern "C" void masm_test_function_return_m128i_xmm1();
+struct test_function_return_m128i_xmm1 : jitasm::function0_cdecl<__m128i>
+{
+	Result main()
+	{
+		pxor(xmm1, xmm1);
+		return xmm1;
+	}
+};
+
+//----------------------------------------
+// function0_cdecl<__m128i> (return ptr)
+//----------------------------------------
+extern "C" void masm_test_function_return_m128i_ptr();
+struct test_function_return_m128i_ptr : jitasm::function0_cdecl<__m128i>
+{
+	Result main()
+	{
+		return xmmword_ptr[zsp - 16];
+	}
+};
+
 struct Foo {
 	char c[5];
 };
@@ -2639,4 +2689,8 @@ int wmain()
 	TEST_M(test_function_return_m64_ptr);
 	TEST_M(test_function_return_m128_xmm1);
 	TEST_M(test_function_return_m128_ptr);
+	TEST_M(test_function_return_m128d_xmm1);
+	TEST_M(test_function_return_m128d_ptr);
+	TEST_M(test_function_return_m128i_xmm1);
+	TEST_M(test_function_return_m128i_ptr);
 }
