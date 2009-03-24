@@ -3366,7 +3366,7 @@ namespace detail {
 		void Store(Frontend& f)
 		{
 			if (detail::IsMmxReg(val_)) {
-				if (val_.IsReg() != MM0)
+				if (val_.GetReg() != MM0)
 					f.movq(f.mm0, static_cast<const MmxReg&>(val_));
 			}
 			else if (val_.IsMem()) {
