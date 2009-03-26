@@ -1321,8 +1321,10 @@ struct test_jmp : jitasm::function0<void>
 {
 	virtual void naked_main()
 	{
-		// jmp short
-		nop();
+		// jump short
+		loop("L1");
+		loope("L1");
+		loopne("L1");
 		jmp("L1");
 		ja("L1");
 		jae("L1");
@@ -1387,7 +1389,7 @@ struct test_jmp : jitasm::function0<void>
 		pabsb(xmm0, xmmword_ptr[zsp + zcx + 0x100]);	// 10 bytes
 		pabsb(xmm0, xmmword_ptr[zsp + zcx + 0x100]);	// 10 bytes
 		pabsb(xmm0, xmmword_ptr[zsp + zcx + 0x100]);	// 10 bytes
-		// jmp near
+		// jump near
 		jmp("L1");
 		ja("L1");
 		jae("L1");

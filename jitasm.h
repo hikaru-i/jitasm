@@ -385,7 +385,7 @@ enum InstrID
 {
 	I_ADC, I_ADD, I_AND, I_BSF, I_BSR, I_BSWAP, I_BT, I_BTC, I_BTR, I_BTS, I_CALL, I_CBW, I_CLC, I_CLD, I_CLI, I_CLTS, I_CMC, I_CMOVCC, I_CMP,
 	I_CMPXCHG, I_CMPXCHG8B, I_CMPXCHG16B, I_CPUID, I_CWD, I_CDQ, I_CQO, I_DEC, I_DIV, I_ENTER, I_HLT, I_IDIV, I_IMUL, I_INC, I_INVD,
-	I_INVLPG, I_INT3, I_IRET, I_IRETD, I_IRETQ, I_LAR, I_JMP, I_JCC, I_LEA, I_LEAVE, I_LODS_B, I_LODS_W, I_LODS_D, I_LODS_Q,
+	I_INVLPG, I_INT3, I_IRET, I_IRETD, I_IRETQ, I_LAR, I_JMP, I_JCC, I_LEA, I_LEAVE, I_LODS_B, I_LODS_W, I_LODS_D, I_LODS_Q, I_LOOP,
 	I_MOV, I_MOVBE, I_MOVS_B, I_MOVS_W, I_MOVS_D, I_MOVS_Q, I_MOVZX, I_MOVSX, I_MOVSXD,	I_MUL, I_NEG, I_NOP, I_NOT,
 	I_OR, I_POP, I_PUSH, I_RDTSC, I_RET, I_RCL, I_RCR, I_ROL, I_ROR, I_SAR, I_SHL, I_SHR, I_SBB, I_SETCC, I_SHLD, I_SHRD, I_STC, I_STD, I_STI,
 	I_STOS_B, I_STOS_W, I_STOS_D, I_STOS_Q, I_SUB, I_TEST, I_UD2, I_FWAIT, I_XADD, I_XCHG, I_XOR,
@@ -417,7 +417,7 @@ enum JumpCondition
 {
 	JCC_O, JCC_NO, JCC_B, JCC_AE, JCC_E, JCC_NE, JCC_BE, JCC_A, JCC_S, JCC_NS,
 	JCC_P, JCC_NP, JCC_L, JCC_GE, JCC_LE, JCC_G,
-	JCC_C, JCC_CXZ, JCC_ECXZ, JCC_RCXZ,
+	JCC_CXZ, JCC_ECXZ, JCC_RCXZ,
 };
 
 enum EncodingFlags
@@ -703,16 +703,19 @@ struct Backend
 		if (instr.GetID() == I_JMP) {
 			Encode(Instr(instr.GetID(), imm.GetSize() == O_SIZE_8 ? 0xEB : 0xE9, instr.encoding_flag_, imm));
 		} else if (instr.GetID() == I_JCC) {
-			uint32 tttn = instr.opcode_;
-			if (tttn == JCC_C)			Encode(Instr(instr.GetID(), 0x70, instr.encoding_flag_, imm));
 #ifndef JITASM64
-			else if (tttn == JCC_CXZ)	Encode(Instr(instr.GetID(), 0x67E3, instr.encoding_flag_, imm));
+			uint32 tttn = instr.opcode_;
+			if (tttn == JCC_CXZ)		Encode(Instr(instr.GetID(), 0x67E3, instr.encoding_flag_, imm));
 			else if (tttn == JCC_ECXZ)	Encode(Instr(instr.GetID(), 0xE3, instr.encoding_flag_, imm));
+			else Encode(Instr(instr.GetID(), (imm.GetSize() == O_SIZE_8 ? 0x70 : 0x0F80) | tttn, instr.encoding_flag_, imm));
 #else
-			else if (tttn == JCC_ECXZ)	Encode(Instr(instr.GetID(), 0x67E3, instr.encoding_flag_, imm));
+			uint32 tttn = instr.opcode_;
+			if (tttn == JCC_ECXZ)		Encode(Instr(instr.GetID(), 0x67E3, instr.encoding_flag_, imm));
 			else if (tttn == JCC_RCXZ)	Encode(Instr(instr.GetID(), 0xE3, instr.encoding_flag_, imm));
+			else Encode(Instr(instr.GetID(), (imm.GetSize() == O_SIZE_8 ? 0x70 : 0x0F80) | tttn, instr.encoding_flag_, imm));
 #endif
-			else	Encode(Instr(instr.GetID(), (imm.GetSize() == O_SIZE_8 ? 0x70 : 0x0F80) | tttn, instr.encoding_flag_, imm));
+		} else if (instr.GetID() == I_LOOP) {
+			Encode(Instr(instr.GetID(), instr.opcode_, instr.encoding_flag_, imm));
 		} else {
 			ASSERT(0);
 		}
@@ -779,6 +782,7 @@ struct Backend
 			case I_CMP:		EncodeALU(instr, 0x3C); break;
 			case I_JMP:		EncodeJMP(instr); break;
 			case I_JCC:		EncodeJMP(instr); break;
+			case I_LOOP:	EncodeJMP(instr); break;
 			case I_MOV:		EncodeMOV(instr); break;
 			case I_TEST:	EncodeTEST(instr); break;
 			case I_XCHG:	EncodeXCHG(instr); break;
@@ -1025,7 +1029,10 @@ struct Frontend
 		ret();
 	}
 
-	bool IsJmpOrJcc(InstrID id) const {return id == I_JMP || id == I_JCC;}
+	bool IsJump(InstrID id) const
+	{
+		return id == I_JMP || id == I_JCC || id == I_LOOP;
+	}
 
 	// TODO: Return an error when there is no destination.
 	void ResolveJump()
@@ -1033,7 +1040,7 @@ struct Frontend
 		// Replace label indexes with instruncion numbers.
 		for (InstrList::iterator it = instrs_.begin(); it != instrs_.end(); ++it) {
 			Instr& instr = *it;
-			if (IsJmpOrJcc(instr.GetID())) {
+			if (IsJump(instr.GetID())) {
 				size_t label_id = (size_t) instr.GetOpd(0).GetImm();
 				instr = Instr(instr.GetID(), instr.opcode_, instr.encoding_flag_, Imm8(0x7F), Imm64(labels_[label_id].instr_number));	// Opd(0) = max value in sint8, Opd(1) = instruction number
 			}
@@ -1047,7 +1054,7 @@ struct Frontend
 			offsets.clear();
 			offsets.push_back(0);
 			Backend pre;
-			for (InstrList::iterator it = instrs_.begin(); it != instrs_.end(); ++it) {
+			for (InstrList::const_iterator it = instrs_.begin(); it != instrs_.end(); ++it) {
 				pre.Assemble(*it);
 				offsets.push_back((int) pre.GetSize());
 			}
@@ -1055,14 +1062,16 @@ struct Frontend
 			retry = false;
 			for (size_t i = 0; i < instrs_.size(); i++) {
 				Instr& instr = instrs_[i];
-				if (IsJmpOrJcc(instr.GetID())) {
+				if (IsJump(instr.GetID())) {
 					size_t d = (size_t) instr.GetOpd(1).GetImm();
 					int rel = offsets[d] - offsets[i] - (int) Backend::GetInstrCodeSize(instr);
 					OpdSize size = instr.GetOpd(0).GetSize();
 					if (size == O_SIZE_8) {
 						if (!detail::IsInt8(rel)) {
-							sint64 jcc = instr.opcode_;
-							if (instr.GetID() == I_JCC && (jcc == JCC_RCXZ || jcc == JCC_CXZ || jcc == JCC_ECXZ)) ASSERT(0);	// jrcxz, jcxz, jecxz are only for short jump
+							// jrcxz, jcxz, jecxz, loop, loope, loopne are only for short jump
+							uint32 tttn = instr.opcode_;
+							if (instr.GetID() == I_JCC && (tttn == JCC_CXZ || tttn == JCC_ECXZ || tttn == JCC_RCXZ)) ASSERT(0);
+							if (instr.GetID() == I_LOOP) ASSERT(0);
 
 							// Retry with immediate 32
 							instr = Instr(instr.GetID(), instr.opcode_, instr.encoding_flag_, Imm32(0x7FFFFFFF), Imm64(instr.GetOpd(1).GetImm()));
@@ -1078,9 +1087,9 @@ struct Frontend
 		// Resolve immediates
 		for (size_t i = 0; i < instrs_.size(); i++) {
 			Instr& instr = instrs_[i];
-			if (IsJmpOrJcc(instr.GetID())) {
+			if (IsJump(instr.GetID())) {
 				size_t d = (size_t) instr.GetOpd(1).GetImm();
-				int rel = offsets[d] - offsets[i] - (int) Backend::GetInstrCodeSize(instr);
+				int rel = offsets[d] - offsets[i] - (int) Backend::GetInstrCodeSize(Instr(instr.GetID(), instr.opcode_, instr.encoding_flag_, instr.GetOpd(0)));
 				OpdSize size = instr.GetOpd(0).GetSize();
 				if (size == O_SIZE_8) {
 					ASSERT(detail::IsInt8(rel));
@@ -1696,11 +1705,12 @@ struct Frontend
 	void jb(const std::string& label_name)		{PushBack(Instr(I_JCC, JCC_B,		E_SPECIAL, Imm64(GetLabelId(label_name))));}
 	void jbe(const std::string& label_name)		{PushBack(Instr(I_JCC, JCC_BE,		E_SPECIAL, Imm64(GetLabelId(label_name))));}
 	void jc(const std::string& label_name)		{jb(label_name);}
-	void jecxz(const std::string& label_name)	{PushBack(Instr(I_JCC, JCC_ECXZ,	E_SPECIAL, Imm64(GetLabelId(label_name))));}	// short jump only
 #ifdef JITASM64
+	void jecxz(const std::string& label_name)	{PushBack(Instr(I_JCC, JCC_ECXZ,	E_SPECIAL, Imm64(GetLabelId(label_name))));}	// short jump only
 	void jrcxz (const std::string& label_name)	{PushBack(Instr(I_JCC, JCC_RCXZ,	E_SPECIAL, Imm64(GetLabelId(label_name))));}	// short jump only
 #else
-	void jcxz(const std::string& label_name)	{PushBack(Instr(I_JCC, JCC_CXZ,		E_SPECIAL, Imm64(GetLabelId(label_name))));}	// short jump only
+	void jcxz(const std::string& label_name)	{PushBack(Instr(I_JCC, JCC_CXZ, 	E_SPECIAL, Imm64(GetLabelId(label_name))));}	// short jump only
+	void jecxz(const std::string& label_name)	{PushBack(Instr(I_JCC, JCC_ECXZ,	E_SPECIAL, Imm64(GetLabelId(label_name))));}	// short jump only
 #endif
 	void je(const std::string& label_name)		{PushBack(Instr(I_JCC, JCC_E,		E_SPECIAL, Imm64(GetLabelId(label_name))));}
 	void jg(const std::string& label_name)		{PushBack(Instr(I_JCC, JCC_G,		E_SPECIAL, Imm64(GetLabelId(label_name))));}
@@ -1740,13 +1750,16 @@ struct Frontend
 #ifdef JITASM64
 	template<class Ty> void lea(const Reg64& dst, const MemT<Ty>& src)	{PushBack(Instr(I_LEA, 0x8D, E_REXW_PREFIX, dst, src));}
 #endif
-	void leave()	{PushBack(Instr(I_LEAVE, 0xC9, 0));}
+	void leave()		{PushBack(Instr(I_LEAVE, 0xC9, 0));}
 	void lodsb()		{PushBack(Instr(I_LODS_B, 0xAC, 0));}
 	void lodsw()		{PushBack(Instr(I_LODS_W, 0xAD, E_OPERAND_SIZE_PREFIX));}
 	void lodsd()		{PushBack(Instr(I_LODS_D, 0xAD, 0));}
 #ifdef JITASM64
 	void lodsq()		{PushBack(Instr(I_LODS_Q, 0xAD, E_REXW_PREFIX));}
 #endif
+	void loop(const std::string& label_name)	{PushBack(Instr(I_LOOP, 0xE2, E_SPECIAL, Imm64(GetLabelId(label_name))));}	// short jump only
+	void loope(const std::string& label_name)	{PushBack(Instr(I_LOOP, 0xE1, E_SPECIAL, Imm64(GetLabelId(label_name))));}	// short jump only
+	void loopne(const std::string& label_name)	{PushBack(Instr(I_LOOP, 0xE0, E_SPECIAL, Imm64(GetLabelId(label_name))));}	// short jump only
 	void rep_lodsb()	{PushBack(Instr(I_LODS_B, 0xAC, E_REPEAT_PREFIX));}
 	void rep_lodsw()	{PushBack(Instr(I_LODS_W, 0xAD, E_REPEAT_PREFIX | E_OPERAND_SIZE_PREFIX));}
 	void rep_lodsd()	{PushBack(Instr(I_LODS_D, 0xAD, E_REPEAT_PREFIX));}
@@ -2050,12 +2063,12 @@ struct Frontend
 	void setz(const Mem8& dst)		{sete(dst);}
 	void shld(const Reg16& dst, const Reg16& src, const Imm8& place)	{PushBack(Instr(I_SHLD, 0x0FA4, E_OPERAND_SIZE_PREFIX, src, dst, place));}
 	void shld(const Mem16& dst, const Reg16& src, const Imm8& place)	{PushBack(Instr(I_SHLD, 0x0FA4, E_OPERAND_SIZE_PREFIX, src, dst, place));}
-	void shld(const Reg16& dst, const Reg16& src, const Reg8_cl& place)	{PushBack(Instr(I_SHLD, 0x0FA5, E_OPERAND_SIZE_PREFIX, src, dst));}
-	void shld(const Mem16& dst, const Reg16& src, const Reg8_cl& place)	{PushBack(Instr(I_SHLD, 0x0FA5, E_OPERAND_SIZE_PREFIX, src, dst));}
+	void shld(const Reg16& dst, const Reg16& src, const Reg8_cl&)		{PushBack(Instr(I_SHLD, 0x0FA5, E_OPERAND_SIZE_PREFIX, src, dst));}
+	void shld(const Mem16& dst, const Reg16& src, const Reg8_cl&)		{PushBack(Instr(I_SHLD, 0x0FA5, E_OPERAND_SIZE_PREFIX, src, dst));}
 	void shld(const Reg32& dst, const Reg32& src, const Imm8& place)	{PushBack(Instr(I_SHLD, 0x0FA4, 0, src, dst, place));}
 	void shld(const Mem32& dst, const Reg32& src, const Imm8& place)	{PushBack(Instr(I_SHLD, 0x0FA4, 0, src, dst, place));}
-	void shld(const Reg32& dst, const Reg32& src, const Reg8_cl& place)	{PushBack(Instr(I_SHLD, 0x0FA5, 0, src, dst));}
-	void shld(const Mem32& dst, const Reg32& src, const Reg8_cl& place)	{PushBack(Instr(I_SHLD, 0x0FA5, 0, src, dst));}
+	void shld(const Reg32& dst, const Reg32& src, const Reg8_cl&)		{PushBack(Instr(I_SHLD, 0x0FA5, 0, src, dst));}
+	void shld(const Mem32& dst, const Reg32& src, const Reg8_cl&)		{PushBack(Instr(I_SHLD, 0x0FA5, 0, src, dst));}
 #ifdef JITASM64
 	void shld(const Reg64& dst, const Reg64& src, const Imm8& place)	{PushBack(Instr(I_SHLD, 0x0FA4, E_REXW_PREFIX, src, dst, place));}
 	void shld(const Mem64& dst, const Reg64& src, const Imm8& place)	{PushBack(Instr(I_SHLD, 0x0FA4, E_REXW_PREFIX, src, dst, place));}
@@ -2064,17 +2077,17 @@ struct Frontend
 #endif
 	void shrd(const Reg16& dst, const Reg16& src, const Imm8& place)	{PushBack(Instr(I_SHRD, 0x0FAC, E_OPERAND_SIZE_PREFIX, src, dst, place));}
 	void shrd(const Mem16& dst, const Reg16& src, const Imm8& place)	{PushBack(Instr(I_SHRD, 0x0FAC, E_OPERAND_SIZE_PREFIX, src, dst, place));}
-	void shrd(const Reg16& dst, const Reg16& src, const Reg8_cl& place)	{PushBack(Instr(I_SHRD, 0x0FAD, E_OPERAND_SIZE_PREFIX, src, dst));}
-	void shrd(const Mem16& dst, const Reg16& src, const Reg8_cl& place)	{PushBack(Instr(I_SHRD, 0x0FAD, E_OPERAND_SIZE_PREFIX, src, dst));}
+	void shrd(const Reg16& dst, const Reg16& src, const Reg8_cl&)		{PushBack(Instr(I_SHRD, 0x0FAD, E_OPERAND_SIZE_PREFIX, src, dst));}
+	void shrd(const Mem16& dst, const Reg16& src, const Reg8_cl&)		{PushBack(Instr(I_SHRD, 0x0FAD, E_OPERAND_SIZE_PREFIX, src, dst));}
 	void shrd(const Reg32& dst, const Reg32& src, const Imm8& place)	{PushBack(Instr(I_SHRD, 0x0FAC, 0, src, dst, place));}
 	void shrd(const Mem32& dst, const Reg32& src, const Imm8& place)	{PushBack(Instr(I_SHRD, 0x0FAC, 0, src, dst, place));}
-	void shrd(const Reg32& dst, const Reg32& src, const Reg8_cl& place)	{PushBack(Instr(I_SHRD, 0x0FAD, 0, src, dst));}
-	void shrd(const Mem32& dst, const Reg32& src, const Reg8_cl& place)	{PushBack(Instr(I_SHRD, 0x0FAD, 0, src, dst));}
+	void shrd(const Reg32& dst, const Reg32& src, const Reg8_cl&)		{PushBack(Instr(I_SHRD, 0x0FAD, 0, src, dst));}
+	void shrd(const Mem32& dst, const Reg32& src, const Reg8_cl&)		{PushBack(Instr(I_SHRD, 0x0FAD, 0, src, dst));}
 #ifdef JITASM64
 	void shrd(const Reg64& dst, const Reg64& src, const Imm8& place)	{PushBack(Instr(I_SHRD, 0x0FAC, E_REXW_PREFIX, src, dst, place));}
 	void shrd(const Mem64& dst, const Reg64& src, const Imm8& place)	{PushBack(Instr(I_SHRD, 0x0FAC, E_REXW_PREFIX, src, dst, place));}
-	void shrd(const Reg64& dst, const Reg64& src, const Reg8_cl& place)	{PushBack(Instr(I_SHRD, 0x0FAD, E_REXW_PREFIX, src, dst));}
-	void shrd(const Mem64& dst, const Reg64& src, const Reg8_cl& place)	{PushBack(Instr(I_SHRD, 0x0FAD, E_REXW_PREFIX, src, dst));}
+	void shrd(const Reg64& dst, const Reg64& src, const Reg8_cl&)		{PushBack(Instr(I_SHRD, 0x0FAD, E_REXW_PREFIX, src, dst));}
+	void shrd(const Mem64& dst, const Reg64& src, const Reg8_cl&)		{PushBack(Instr(I_SHRD, 0x0FAD, E_REXW_PREFIX, src, dst));}
 #endif
 	void stc()	{PushBack(Instr(I_STC, 0xF9, 0));}
 	void std()	{PushBack(Instr(I_STD, 0xFD, 0));}

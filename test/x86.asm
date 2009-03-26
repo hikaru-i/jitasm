@@ -697,8 +697,10 @@ masm_test_fld endp
 ; JMP
 ;----------------------------------------
 masm_test_jmp proc
-	; jmp short
-	nop
+	; jump short
+	loop L1
+	loope L1
+	loopne L1
 	jmp L1
 	ja L1
 	jae L1
@@ -759,7 +761,7 @@ L1:
 	pabsb xmm0, xmmword ptr[esp + ecx + 100h]	; 10 bytes
 	pabsb xmm0, xmmword ptr[esp + ecx + 100h]	; 10 bytes
 	pabsb xmm0, xmmword ptr[esp + ecx + 100h]	; 10 bytes
-	; jmp near
+	; jump near
 	jmp L1
 	ja L1
 	jae L1
