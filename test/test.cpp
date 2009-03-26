@@ -1440,6 +1440,26 @@ struct test_movs : jitasm::function0<void>
 		movsq();
 		rep_movsq();
 #endif
+		lodsb();
+		lodsw();
+		lodsd();
+		rep_lodsb();
+		rep_lodsw();
+		rep_lodsd();
+#ifdef JITASM64
+		lodsq();
+		rep_lodsq();
+#endif
+		stosb();
+		stosw();
+		stosd();
+		rep_stosb();
+		rep_stosw();
+		rep_stosd();
+#ifdef JITASM64
+		stosq();
+		rep_stosq();
+#endif
 	}
 };
 
@@ -1614,19 +1634,494 @@ struct test_fst : jitasm::function0<void>
 };
 
 //----------------------------------------
-// Simple Instructions
+// setcc
 //----------------------------------------
-extern "C" void masm_test_simple();
-struct test_simple : jitasm::function0<void>
+extern "C" void masm_test_setcc();
+struct test_setcc : jitasm::function0<void>
 {
 	virtual void naked_main()
 	{
-		debugbreak();
+		seta(bl);
+		seta(byte_ptr[esp]);
+		setae(bl);
+		setae(byte_ptr[esp]);
+		setb(bl);
+		setb(byte_ptr[esp]);
+		setbe(bl);
+		setbe(byte_ptr[esp]);
+		setc(bl);
+		setc(byte_ptr[esp]);
+		sete(bl);
+		sete(byte_ptr[esp]);
+		setg(bl);
+		setg(byte_ptr[esp]);
+		setge(bl);
+		setge(byte_ptr[esp]);
+		setl(bl);
+		setl(byte_ptr[esp]);
+		setle(bl);
+		setle(byte_ptr[esp]);
+		setna(bl);
+		setna(byte_ptr[esp]);
+		setnae(bl);
+		setnae(byte_ptr[esp]);
+		setnb(bl);
+		setnb(byte_ptr[esp]);
+		setnbe(bl);
+		setnbe(byte_ptr[esp]);
+		setnc(bl);
+		setnc(byte_ptr[esp]);
+		setne(bl);
+		setne(byte_ptr[esp]);
+		setng(bl);
+		setng(byte_ptr[esp]);
+		setnge(bl);
+		setnge(byte_ptr[esp]);
+		setnl(bl);
+		setnl(byte_ptr[esp]);
+		setnle(bl);
+		setnle(byte_ptr[esp]);
+		setno(bl);
+		setno(byte_ptr[esp]);
+		setnp(bl);
+		setnp(byte_ptr[esp]);
+		setns(bl);
+		setns(byte_ptr[esp]);
+		setnz(bl);
+		setnz(byte_ptr[esp]);
+		seto(bl);
+		seto(byte_ptr[esp]);
+		setp(bl);
+		setp(byte_ptr[esp]);
+		setpe(bl);
+		setpe(byte_ptr[esp]);
+		setpo(bl);
+		setpo(byte_ptr[esp]);
+		sets(bl);
+		sets(byte_ptr[esp]);
+		setz(bl);
+		setz(byte_ptr[esp]);
+	}
+};
+
+//----------------------------------------
+// cmovcc
+//----------------------------------------
+extern "C" void masm_test_cmovcc();
+struct test_cmovcc : jitasm::function0<void>
+{
+	virtual void naked_main()
+	{
+		cmova(bx, dx);
+		cmova(bx, word_ptr[esp]);
+		cmovae(bx, dx);
+		cmovae(bx, word_ptr[esp]);
+		cmovb(bx, dx);
+		cmovb(bx, word_ptr[esp]);
+		cmovbe(bx, dx);
+		cmovbe(bx, word_ptr[esp]);
+		cmovc(bx, dx);
+		cmovc(bx, word_ptr[esp]);
+		cmove(bx, dx);
+		cmove(bx, word_ptr[esp]);
+		cmovg(bx, dx);
+		cmovg(bx, word_ptr[esp]);
+		cmovge(bx, dx);
+		cmovge(bx, word_ptr[esp]);
+		cmovl(bx, dx);
+		cmovl(bx, word_ptr[esp]);
+		cmovle(bx, dx);
+		cmovle(bx, word_ptr[esp]);
+		cmovna(bx, dx);
+		cmovna(bx, word_ptr[esp]);
+		cmovnae(bx, dx);
+		cmovnae(bx, word_ptr[esp]);
+		cmovnb(bx, dx);
+		cmovnb(bx, word_ptr[esp]);
+		cmovnbe(bx, dx);
+		cmovnbe(bx, word_ptr[esp]);
+		cmovnc(bx, dx);
+		cmovnc(bx, word_ptr[esp]);
+		cmovne(bx, dx);
+		cmovne(bx, word_ptr[esp]);
+		cmovng(bx, dx);
+		cmovng(bx, word_ptr[esp]);
+		cmovnge(bx, dx);
+		cmovnge(bx, word_ptr[esp]);
+		cmovnl(bx, dx);
+		cmovnl(bx, word_ptr[esp]);
+		cmovnle(bx, dx);
+		cmovnle(bx, word_ptr[esp]);
+		cmovno(bx, dx);
+		cmovno(bx, word_ptr[esp]);
+		cmovnp(bx, dx);
+		cmovnp(bx, word_ptr[esp]);
+		cmovns(bx, dx);
+		cmovns(bx, word_ptr[esp]);
+		cmovnz(bx, dx);
+		cmovnz(bx, word_ptr[esp]);
+		cmovo(bx, dx);
+		cmovo(bx, word_ptr[esp]);
+		cmovp(bx, dx);
+		cmovp(bx, word_ptr[esp]);
+		cmovpe(bx, dx);
+		cmovpe(bx, word_ptr[esp]);
+		cmovpo(bx, dx);
+		cmovpo(bx, word_ptr[esp]);
+		cmovs(bx, dx);
+		cmovs(bx, word_ptr[esp]);
+		cmovz(bx, dx);
+		cmovz(bx, word_ptr[esp]);
+		cmova(ebx, edx);
+		cmova(ebx, dword_ptr[esp]);
+		cmovae(ebx, edx);
+		cmovae(ebx, dword_ptr[esp]);
+		cmovb(ebx, edx);
+		cmovb(ebx, dword_ptr[esp]);
+		cmovbe(ebx, edx);
+		cmovbe(ebx, dword_ptr[esp]);
+		cmovc(ebx, edx);
+		cmovc(ebx, dword_ptr[esp]);
+		cmove(ebx, edx);
+		cmove(ebx, dword_ptr[esp]);
+		cmovg(ebx, edx);
+		cmovg(ebx, dword_ptr[esp]);
+		cmovge(ebx, edx);
+		cmovge(ebx, dword_ptr[esp]);
+		cmovl(ebx, edx);
+		cmovl(ebx, dword_ptr[esp]);
+		cmovle(ebx, edx);
+		cmovle(ebx, dword_ptr[esp]);
+		cmovna(ebx, edx);
+		cmovna(ebx, dword_ptr[esp]);
+		cmovnae(ebx, edx);
+		cmovnae(ebx, dword_ptr[esp]);
+		cmovnb(ebx, edx);
+		cmovnb(ebx, dword_ptr[esp]);
+		cmovnbe(ebx, edx);
+		cmovnbe(ebx, dword_ptr[esp]);
+		cmovnc(ebx, edx);
+		cmovnc(ebx, dword_ptr[esp]);
+		cmovne(ebx, edx);
+		cmovne(ebx, dword_ptr[esp]);
+		cmovng(ebx, edx);
+		cmovng(ebx, dword_ptr[esp]);
+		cmovnge(ebx, edx);
+		cmovnge(ebx, dword_ptr[esp]);
+		cmovnl(ebx, edx);
+		cmovnl(ebx, dword_ptr[esp]);
+		cmovnle(ebx, edx);
+		cmovnle(ebx, dword_ptr[esp]);
+		cmovno(ebx, edx);
+		cmovno(ebx, dword_ptr[esp]);
+		cmovnp(ebx, edx);
+		cmovnp(ebx, dword_ptr[esp]);
+		cmovns(ebx, edx);
+		cmovns(ebx, dword_ptr[esp]);
+		cmovnz(ebx, edx);
+		cmovnz(ebx, dword_ptr[esp]);
+		cmovo(ebx, edx);
+		cmovo(ebx, dword_ptr[esp]);
+		cmovp(ebx, edx);
+		cmovp(ebx, dword_ptr[esp]);
+		cmovpe(ebx, edx);
+		cmovpe(ebx, dword_ptr[esp]);
+		cmovpo(ebx, edx);
+		cmovpo(ebx, dword_ptr[esp]);
+		cmovs(ebx, edx);
+		cmovs(ebx, dword_ptr[esp]);
+		cmovz(ebx, edx);
+		cmovz(ebx, dword_ptr[esp]);
+#ifdef JITASM64
+		cmova(rbx, rdx);
+		cmova(rbx, qword_ptr[esp]);
+		cmovae(rbx, rdx);
+		cmovae(rbx, qword_ptr[esp]);
+		cmovb(rbx, rdx);
+		cmovb(rbx, qword_ptr[esp]);
+		cmovbe(rbx, rdx);
+		cmovbe(rbx, qword_ptr[esp]);
+		cmovc(rbx, rdx);
+		cmovc(rbx, qword_ptr[esp]);
+		cmove(rbx, rdx);
+		cmove(rbx, qword_ptr[esp]);
+		cmovg(rbx, rdx);
+		cmovg(rbx, qword_ptr[esp]);
+		cmovge(rbx, rdx);
+		cmovge(rbx, qword_ptr[esp]);
+		cmovl(rbx, rdx);
+		cmovl(rbx, qword_ptr[esp]);
+		cmovle(rbx, rdx);
+		cmovle(rbx, qword_ptr[esp]);
+		cmovna(rbx, rdx);
+		cmovna(rbx, qword_ptr[esp]);
+		cmovnae(rbx, rdx);
+		cmovnae(rbx, qword_ptr[esp]);
+		cmovnb(rbx, rdx);
+		cmovnb(rbx, qword_ptr[esp]);
+		cmovnbe(rbx, rdx);
+		cmovnbe(rbx, qword_ptr[esp]);
+		cmovnc(rbx, rdx);
+		cmovnc(rbx, qword_ptr[esp]);
+		cmovne(rbx, rdx);
+		cmovne(rbx, qword_ptr[esp]);
+		cmovng(rbx, rdx);
+		cmovng(rbx, qword_ptr[esp]);
+		cmovnge(rbx, rdx);
+		cmovnge(rbx, qword_ptr[esp]);
+		cmovnl(rbx, rdx);
+		cmovnl(rbx, qword_ptr[esp]);
+		cmovnle(rbx, rdx);
+		cmovnle(rbx, qword_ptr[esp]);
+		cmovno(rbx, rdx);
+		cmovno(rbx, qword_ptr[esp]);
+		cmovnp(rbx, rdx);
+		cmovnp(rbx, qword_ptr[esp]);
+		cmovns(rbx, rdx);
+		cmovns(rbx, qword_ptr[esp]);
+		cmovnz(rbx, rdx);
+		cmovnz(rbx, qword_ptr[esp]);
+		cmovo(rbx, rdx);
+		cmovo(rbx, qword_ptr[esp]);
+		cmovp(rbx, rdx);
+		cmovp(rbx, qword_ptr[esp]);
+		cmovpe(rbx, rdx);
+		cmovpe(rbx, qword_ptr[esp]);
+		cmovpo(rbx, rdx);
+		cmovpo(rbx, qword_ptr[esp]);
+		cmovs(rbx, rdx);
+		cmovs(rbx, qword_ptr[esp]);
+		cmovz(rbx, rdx);
+		cmovz(rbx, qword_ptr[esp]);
+#endif
+	}
+};
+
+//----------------------------------------
+// General-Purpose Instructions B~
+//----------------------------------------
+extern "C" void masm_test_gpi_b();
+struct test_gpi_b : jitasm::function0<void>
+{
+	virtual void naked_main()
+	{
+		bsf(bx, dx);
+		bsf(bx, word_ptr[esp]);
+		bsf(ebx, edx);
+		bsf(ebx, dword_ptr[esp]);
+#ifdef JITASM64
+		bsf(rbx, r11);
+		bsf(rbx, qword_ptr[rsp]);
+#endif
+		bsr(bx, dx);
+		bsr(bx, word_ptr[esp]);
+		bsr(ebx, edx);
+		bsr(ebx, dword_ptr[esp]);
+#ifdef JITASM64
+		bsr(rbx, r11);
+		bsr(rbx, qword_ptr[rsp]);
+#endif
+		bswap(ebx);
+#ifdef JITASM64
+		bswap(ebx);
+#endif
+		bt(bx, dx);
+		bt(word_ptr[eax], dx);
+		bt(ebx, edx);
+		bt(dword_ptr[ecx], edx);
+		bt(bx, 0x55);
+		bt(word_ptr[eax], 0x55);
+		bt(ebx, 0x55);
+		bt(dword_ptr[ecx], 0x55);
+#ifdef JITASM64
+		bt(rbx, r11);
+		bt(qword_ptr[ecx], r11);
+		bt(rbx, 0x55);
+		bt(qword_ptr[ecx], 0x55);
+#endif
+		btc(bx, dx);
+		btc(word_ptr[eax], dx);
+		btc(ebx, edx);
+		btc(dword_ptr[ecx], edx);
+		btc(bx, 0x55);
+		btc(word_ptr[eax], 0x55);
+		btc(ebx, 0x55);
+		btc(dword_ptr[ecx], 0x55);
+#ifdef JITASM64
+		btc(rbx, r11);
+		btc(qword_ptr[ecx], r11);
+		btc(rbx, 0x55);
+		btc(qword_ptr[ecx], 0x55);
+#endif
+		btr(bx, dx);
+		btr(word_ptr[eax], dx);
+		btr(ebx, edx);
+		btr(dword_ptr[ecx], edx);
+		btr(bx, 0x55);
+		btr(word_ptr[eax], 0x55);
+		btr(ebx, 0x55);
+		btr(dword_ptr[ecx], 0x55);
+#ifdef JITASM64
+		btr(rbx, r11);
+		btr(qword_ptr[ecx], r11);
+		btr(rbx, 0x55);
+		btr(qword_ptr[ecx], 0x55);
+#endif
+		bts(bx, dx);
+		bts(word_ptr[eax], dx);
+		bts(ebx, edx);
+		bts(dword_ptr[ecx], edx);
+		bts(bx, 0x55);
+		bts(word_ptr[eax], 0x55);
+		bts(ebx, 0x55);
+		bts(dword_ptr[ecx], 0x55);
+#ifdef JITASM64
+		bts(rbx, r11);
+		bts(qword_ptr[ecx], r11);
+		bts(rbx, 0x55);
+		bts(qword_ptr[ecx], 0x55);
+#endif
+#ifndef JITASM64
+		call(bx);
+		call(ebx);
+#else
+		call(rbx);
+#endif
+		cbw();
+		cwde();
+#ifdef JITASM64
+		cdqe();
+#endif
+		clc();
+		cld();
+		cli();
+#ifdef JITASM64
+		clts();
+#endif
+		cmc();
+		cmpxchg(bl, dl);
+		cmpxchg(byte_ptr[esp], dl);
+		cmpxchg(bx, dx);
+		cmpxchg(word_ptr[eax], dx);
+		cmpxchg(ebx, edx);
+		cmpxchg(dword_ptr[ecx], edx);
+#ifdef JITASM64
+		cmpxchg(rbx, r11);
+		cmpxchg(qword_ptr[ecx], r11);
+#endif
+		cmpxchg8b(qword_ptr[ecx]);
+#ifdef JITASM64
+		cmpxchg16b(xmmword_ptr[esp]);
+#endif
+		cpuid();
+		cwd();
+		cdq();
+#ifdef JITASM64
+		cqo();
+#endif
+	}
+};
+
+//----------------------------------------
+// General-Purpose Instructions E~
+//----------------------------------------
+extern "C" void masm_test_gpi_e();
+struct test_gpi_e : jitasm::function0<void>
+{
+	virtual void naked_main()
+	{
+		enter(0x100, 0);
+		enter(0x100, 1);
+		enter(0x100, 2);
+		hlt();
+		int3();
+		invd();
+		invlpg(dword_ptr[esp]);
+		iret();
+		iretd();
+#ifdef JITASM64
+		iretq();
+#endif
+		lar(bx, dx);
+		lar(bx, word_ptr[esp]);
+		lar(ebx, edx);
+		lar(ebx, word_ptr[esp]);
+#ifdef JITASM64
+		lar(rbx, rdx);
+		lar(rbx, word_ptr[esp]);
+#endif
 		leave();
+		//movbe(bx, word_ptr[esp]);
+		//movbe(ebx, dword_ptr[esp]);
+		//movbe(word_ptr[esp], bx);
+		//movbe(dword_ptr[esp], ebx);
+#ifdef JITASM64
+		//movbe(rbx, qword_ptr[esp]);
+		//movbe(qword_ptr[esp], rbx);
+#endif
+		movsx(bx, dl);
+		movsx(bx, byte_ptr[esp]);
+		movsx(ebx, dl);
+		movsx(ebx, byte_ptr[esp]);
+		movsx(ebx, dx);
+		movsx(ebx, word_ptr[esp]);
+#ifdef JITASM64
+		movsx(rbx, dl);
+		movsx(rbx, byte_ptr[esp]);
+		movsx(rbx, dx);
+		movsx(rbx, word_ptr[esp]);
+		movsxd(rbx, edx);
+		movsxd(rbx, dword_ptr[esp]);
+#endif
 		nop();
+		rdtsc();
 		ret();
 		ret(1);
 		ret(-1);
+		shld(bx, dx, 1);
+		shld(word_ptr[esp], dx, 1);
+		shld(bx, dx, cl);
+		shld(word_ptr[esp], dx, cl);
+		shld(ebx, edx, 1);
+		shld(dword_ptr[esp], edx, 1);
+		shld(ebx, edx, cl);
+		shld(dword_ptr[esp], edx, cl);
+#ifdef JITASM64
+		shld(rbx, rdx, 1);
+		shld(qword_ptr[esp], rdx, 1);
+		shld(rbx, rdx, cl);
+		shld(qword_ptr[esp], rdx, cl);
+#endif
+		shrd(bx, dx, 1);
+		shrd(word_ptr[esp], dx, 1);
+		shrd(bx, dx, cl);
+		shrd(word_ptr[esp], dx, cl);
+		shrd(ebx, edx, 1);
+		shrd(dword_ptr[esp], edx, 1);
+		shrd(ebx, edx, cl);
+		shrd(dword_ptr[esp], edx, cl);
+#ifdef JITASM64
+		shrd(rbx, rdx, 1);
+		shrd(qword_ptr[esp], rdx, 1);
+		shrd(rbx, rdx, cl);
+		shrd(qword_ptr[esp], rdx, cl);
+#endif
+		stc();
+		std();
+		sti();
+		ud2();
+		wait();
+		fwait();
+		xadd(bl, dl);
+		xadd(byte_ptr[esp], dl);
+		xadd(bx, dx);
+		xadd(word_ptr[esp], dx);
+		xadd(ebx, edx);
+		xadd(dword_ptr[esp], edx);
+#ifdef JITASM64
+		xadd(rbx, rdx);
+		xadd(qword_ptr[esp], rdx);
+#endif
 	}
 };
 
@@ -3178,7 +3673,10 @@ int wmain()
 	TEST_M(test_div_idiv_mul);
 	TEST_M(test_imul);
 	TEST_M(test_fst);
-	TEST_M(test_simple);
+	TEST_M(test_setcc);
+	TEST_M(test_cmovcc);
+	TEST_M(test_gpi_b);
+	TEST_M(test_gpi_e);
 	TEST_M(test_mmx);
 	TEST_M(test_mmx2);
 	TEST_M(test_sse);

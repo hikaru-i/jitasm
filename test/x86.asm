@@ -4,75 +4,11 @@
 
 .code
 
-hoge proc
-	movdqa xmm0, xmm1
-	movdqa xmm0, xmmword ptr[ecx]
-	movdqa xmmword ptr[eax], xmm1
-
-	movdqu xmm0, xmm1
-	movdqu xmm0, xmmword ptr[ecx]
-	movdqu xmmword ptr[eax], xmm1
-
-	pabsb mm0, mm1
-	pabsb mm0, qword ptr[ecx]
-	pabsb xmm0, xmm1
-	pabsb xmm0, xmmword ptr[ecx]
-	pabsw mm0, mm1
-	pabsw mm0, qword ptr[ecx]
-	pabsw xmm0, xmm1
-	pabsw xmm0, xmmword ptr[ecx]
-	pabsd mm0, mm1
-	pabsd mm0, qword ptr[ecx]
-	pabsd xmm0, xmm1
-	pabsd xmm0, xmmword ptr[ecx]
-
-	packsswb mm0, mm1
-	packsswb mm0, qword ptr[ecx]
-	packsswb xmm0, xmm1
-	packsswb xmm0, xmmword ptr[ecx]
-	packssdw mm0, mm1
-	packssdw mm0, qword ptr[ecx]
-	packssdw xmm0, xmm1
-	packssdw xmm0, xmmword ptr[ecx]
-	packuswb mm0, mm1
-	packuswb mm0, qword ptr[ecx]
-	packuswb xmm0, xmm1
-	packuswb xmm0, xmmword ptr[ecx]
-	packusdw xmm0, xmm1
-	packusdw xmm0, xmmword ptr[ecx]
-
-	paddb mm0, mm1
-	paddb mm0, qword ptr[ecx]
-	paddb xmm0, xmm1
-	paddb xmm0, xmmword ptr[ecx]
-	paddw mm0, mm1
-	paddw mm0, qword ptr[ecx]
-	paddw xmm0, xmm1
-	paddw xmm0, xmmword ptr[ecx]
-	paddd mm0, mm1
-	paddd mm0, qword ptr[ecx]
-	paddd xmm0, xmm1
-	paddd xmm0, xmmword ptr[ecx]
-
-	pxor mm0, mm1
-	pxor mm0, qword ptr[ecx]
-	pxor xmm0, xmm1
-	pxor xmm0, xmmword ptr[ecx]
-hoge endp
-
-hoge2 proc C USES esi edi ebx, pDst: PTR, pSrc: PTR, nLen: SDWORD
-	LOCAL a:SDWORD
-	mov esi, pSrc
-	mov edi, pDst
-	mov esi, [pSrc]
-	mov edi, [pDst]
-	ret
-hoge2 endp
-
 ;----------------------------------------
 ; SAL
 ;----------------------------------------
 masm_test_sal proc
+	
 	sal al, 1
 	sal al, 2
 	sal al, -1
@@ -867,6 +803,24 @@ masm_test_movs proc
 	rep movsb 
 	rep movsw 
 	rep movsd 
+	;movsq 
+	;rep movsq 
+	lodsb 
+	lodsw 
+	lodsd 
+	rep lodsb 
+	rep lodsw 
+	rep lodsd 
+	;lodsq 
+	;rep lodsq 
+	stosb 
+	stosw 
+	stosd 
+	rep stosb 
+	rep stosw 
+	rep stosd 
+	;stosq 
+	;rep stosq 
 masm_test_movs endp
 
 ;----------------------------------------
@@ -949,16 +903,345 @@ masm_test_fst proc
 masm_test_fst endp
 
 ;----------------------------------------
-; Simple Instructions
+; setcc
 ;----------------------------------------
-masm_test_simple proc
+masm_test_setcc proc
+	seta bl
+	seta byte ptr[esp]
+	setae bl
+	setae byte ptr[esp]
+	setb bl
+	setb byte ptr[esp]
+	setbe bl
+	setbe byte ptr[esp]
+	setc bl
+	setc byte ptr[esp]
+	sete bl
+	sete byte ptr[esp]
+	setg bl
+	setg byte ptr[esp]
+	setge bl
+	setge byte ptr[esp]
+	setl bl
+	setl byte ptr[esp]
+	setle bl
+	setle byte ptr[esp]
+	setna bl
+	setna byte ptr[esp]
+	setnae bl
+	setnae byte ptr[esp]
+	setnb bl
+	setnb byte ptr[esp]
+	setnbe bl
+	setnbe byte ptr[esp]
+	setnc bl
+	setnc byte ptr[esp]
+	setne bl
+	setne byte ptr[esp]
+	setng bl
+	setng byte ptr[esp]
+	setnge bl
+	setnge byte ptr[esp]
+	setnl bl
+	setnl byte ptr[esp]
+	setnle bl
+	setnle byte ptr[esp]
+	setno bl
+	setno byte ptr[esp]
+	setnp bl
+	setnp byte ptr[esp]
+	setns bl
+	setns byte ptr[esp]
+	setnz bl
+	setnz byte ptr[esp]
+	seto bl
+	seto byte ptr[esp]
+	setp bl
+	setp byte ptr[esp]
+	setpe bl
+	setpe byte ptr[esp]
+	setpo bl
+	setpo byte ptr[esp]
+	sets bl
+	sets byte ptr[esp]
+	setz bl
+	setz byte ptr[esp]
+masm_test_setcc endp
+
+;----------------------------------------
+; cmovcc
+;----------------------------------------
+masm_test_cmovcc proc
+	cmova bx, dx
+	cmova bx, word ptr[esp]
+	cmovae bx, dx
+	cmovae bx, word ptr[esp]
+	cmovb bx, dx
+	cmovb bx, word ptr[esp]
+	cmovbe bx, dx
+	cmovbe bx, word ptr[esp]
+	cmovc bx, dx
+	cmovc bx, word ptr[esp]
+	cmove bx, dx
+	cmove bx, word ptr[esp]
+	cmovg bx, dx
+	cmovg bx, word ptr[esp]
+	cmovge bx, dx
+	cmovge bx, word ptr[esp]
+	cmovl bx, dx
+	cmovl bx, word ptr[esp]
+	cmovle bx, dx
+	cmovle bx, word ptr[esp]
+	cmovna bx, dx
+	cmovna bx, word ptr[esp]
+	cmovnae bx, dx
+	cmovnae bx, word ptr[esp]
+	cmovnb bx, dx
+	cmovnb bx, word ptr[esp]
+	cmovnbe bx, dx
+	cmovnbe bx, word ptr[esp]
+	cmovnc bx, dx
+	cmovnc bx, word ptr[esp]
+	cmovne bx, dx
+	cmovne bx, word ptr[esp]
+	cmovng bx, dx
+	cmovng bx, word ptr[esp]
+	cmovnge bx, dx
+	cmovnge bx, word ptr[esp]
+	cmovnl bx, dx
+	cmovnl bx, word ptr[esp]
+	cmovnle bx, dx
+	cmovnle bx, word ptr[esp]
+	cmovno bx, dx
+	cmovno bx, word ptr[esp]
+	cmovnp bx, dx
+	cmovnp bx, word ptr[esp]
+	cmovns bx, dx
+	cmovns bx, word ptr[esp]
+	cmovnz bx, dx
+	cmovnz bx, word ptr[esp]
+	cmovo bx, dx
+	cmovo bx, word ptr[esp]
+	cmovp bx, dx
+	cmovp bx, word ptr[esp]
+	cmovpe bx, dx
+	cmovpe bx, word ptr[esp]
+	cmovpo bx, dx
+	cmovpo bx, word ptr[esp]
+	cmovs bx, dx
+	cmovs bx, word ptr[esp]
+	cmovz bx, dx
+	cmovz bx, word ptr[esp]
+	cmova ebx, edx
+	cmova ebx, dword ptr[esp]
+	cmovae ebx, edx
+	cmovae ebx, dword ptr[esp]
+	cmovb ebx, edx
+	cmovb ebx, dword ptr[esp]
+	cmovbe ebx, edx
+	cmovbe ebx, dword ptr[esp]
+	cmovc ebx, edx
+	cmovc ebx, dword ptr[esp]
+	cmove ebx, edx
+	cmove ebx, dword ptr[esp]
+	cmovg ebx, edx
+	cmovg ebx, dword ptr[esp]
+	cmovge ebx, edx
+	cmovge ebx, dword ptr[esp]
+	cmovl ebx, edx
+	cmovl ebx, dword ptr[esp]
+	cmovle ebx, edx
+	cmovle ebx, dword ptr[esp]
+	cmovna ebx, edx
+	cmovna ebx, dword ptr[esp]
+	cmovnae ebx, edx
+	cmovnae ebx, dword ptr[esp]
+	cmovnb ebx, edx
+	cmovnb ebx, dword ptr[esp]
+	cmovnbe ebx, edx
+	cmovnbe ebx, dword ptr[esp]
+	cmovnc ebx, edx
+	cmovnc ebx, dword ptr[esp]
+	cmovne ebx, edx
+	cmovne ebx, dword ptr[esp]
+	cmovng ebx, edx
+	cmovng ebx, dword ptr[esp]
+	cmovnge ebx, edx
+	cmovnge ebx, dword ptr[esp]
+	cmovnl ebx, edx
+	cmovnl ebx, dword ptr[esp]
+	cmovnle ebx, edx
+	cmovnle ebx, dword ptr[esp]
+	cmovno ebx, edx
+	cmovno ebx, dword ptr[esp]
+	cmovnp ebx, edx
+	cmovnp ebx, dword ptr[esp]
+	cmovns ebx, edx
+	cmovns ebx, dword ptr[esp]
+	cmovnz ebx, edx
+	cmovnz ebx, dword ptr[esp]
+	cmovo ebx, edx
+	cmovo ebx, dword ptr[esp]
+	cmovp ebx, edx
+	cmovp ebx, dword ptr[esp]
+	cmovpe ebx, edx
+	cmovpe ebx, dword ptr[esp]
+	cmovpo ebx, edx
+	cmovpo ebx, dword ptr[esp]
+	cmovs ebx, edx
+	cmovs ebx, dword ptr[esp]
+	cmovz ebx, edx
+	cmovz ebx, dword ptr[esp]
+masm_test_cmovcc endp
+
+;----------------------------------------
+; General-Purpose Instructions B~
+;----------------------------------------
+masm_test_gpi_b proc
+	bsf bx, dx
+	bsf bx, word ptr[esp]
+	bsf ebx, edx
+	bsf ebx, dword ptr[esp]
+	bsr bx, dx
+	bsr bx, word ptr[esp]
+	bsr ebx, edx
+	bsr ebx, dword ptr[esp]
+	bswap ebx
+	bt bx, dx
+	bt word ptr[eax], dx
+	bt ebx, edx
+	bt dword ptr[ecx], edx
+	bt bx, 55h
+	bt word ptr[eax], 55h
+	bt ebx, 55h
+	bt dword ptr[ecx], 55h
+	btc bx, dx
+	btc word ptr[eax], dx
+	btc ebx, edx
+	btc dword ptr[ecx], edx
+	btc bx, 55h
+	btc word ptr[eax], 55h
+	btc ebx, 55h
+	btc dword ptr[ecx], 55h
+	btr bx, dx
+	btr word ptr[eax], dx
+	btr ebx, edx
+	btr dword ptr[ecx], edx
+	btr bx, 55h
+	btr word ptr[eax], 55h
+	btr ebx, 55h
+	btr dword ptr[ecx], 55h
+	bts bx, dx
+	bts word ptr[eax], dx
+	bts ebx, edx
+	bts dword ptr[ecx], edx
+	bts bx, 55h
+	bts word ptr[eax], 55h
+	bts ebx, 55h
+	bts dword ptr[ecx], 55h
+	call bx
+	call ebx
+	cbw 
+	cwde 
+	clc 
+	cld 
+	cli 
+	cmc 
+	cmpxchg bl, dl
+	cmpxchg byte ptr[esp], dl
+	cmpxchg bx, dx
+	cmpxchg word ptr[eax], dx
+	cmpxchg ebx, edx
+	cmpxchg dword ptr[ecx], edx
+	cmpxchg8b qword ptr[ecx]
+	cpuid 
+	cwd 
+	cdq 
+masm_test_gpi_b endp
+
+;----------------------------------------
+; General-Purpose Instructions E~
+;----------------------------------------
+masm_test_gpi_e proc
+	enter 100h, 0
+	enter 100h, 1
+	enter 100h, 2
+	hlt
 	int 3
-	leave
+	invd
+	invlpg dword ptr[esp]
+	iret
+	iretd
+	;iretq
+	lar bx, dx
+	lar bx, word ptr[esp]
+	lar ebx, edx
+	lar ebx, word ptr[esp]
+	;lar rbx, rdx
+	;lar rbx, word ptr[esp]
+	leave 
+	;movbe bx, word ptr[esp]
+	;movbe ebx, dword ptr[esp]
+	;movbe word ptr[esp], bx
+	;movbe dword ptr[esp], ebx
+	;movbe rbx, qword ptr[esp]
+	;movbe qword ptr[esp], rbx
+	movsx bx, dl
+	movsx bx, byte ptr[esp]
+	movsx ebx, dl
+	movsx ebx, byte ptr[esp]
+	movsx ebx, dx
+	movsx ebx, word ptr[esp]
+	;movsx rbx, dl
+	;movsx rbx, byte ptr[esp]
+	;movsx rbx, dx
+	;movsx rbx, word ptr[esp]
+	;movsxd rbx, edx
+	;movsxd rbx, dword ptr[esp]
 	nop
+	rdtsc
 	ret
 	ret 1
 	ret -1
-masm_test_simple endp
+	shld bx, dx, 1
+	shld word ptr[esp], dx, 1
+	shld bx, dx, cl
+	shld word ptr[esp], dx, cl
+	shld ebx, edx, 1
+	shld dword ptr[esp], edx, 1
+	shld ebx, edx, cl
+	shld dword ptr[esp], edx, cl
+	;shld rbx, rdx, 1
+	;shld qword ptr[esp], rdx, 1
+	;shld rbx, rdx, cl
+	;shld qword ptr[esp], rdx, cl
+	shrd bx, dx, 1
+	shrd word ptr[esp], dx, 1
+	shrd bx, dx, cl
+	shrd word ptr[esp], dx, cl
+	shrd ebx, edx, 1
+	shrd dword ptr[esp], edx, 1
+	shrd ebx, edx, cl
+	shrd dword ptr[esp], edx, cl
+	;shrd rbx, rdx, 1
+	;shrd qword ptr[esp], rdx, 1
+	;shrd rbx, rdx, cl
+	;shrd qword ptr[esp], rdx, cl
+	stc 
+	std 
+	sti 
+	ud2 
+	wait 
+	fwait 
+	xadd bl, dl
+	xadd byte ptr[esp], dl
+	xadd bx, dx
+	xadd word ptr[esp], dx
+	xadd ebx, edx
+	xadd dword ptr[esp], edx
+	;xadd rbx, rdx
+	;xadd qword ptr[esp], rdx
+masm_test_gpi_e endp
 
 ;----------------------------------------
 ; MMX
