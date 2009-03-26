@@ -194,6 +194,7 @@ struct MmxReg : Opd64 { explicit MmxReg(RegID reg) : Opd64(reg) {} };
 struct XmmReg : Opd128 { explicit XmmReg(RegID reg) : Opd128(reg) {} };
 
 struct Reg8_al : Reg8 {Reg8_al() : Reg8(AL) {}};
+struct Reg8_cl : Reg8 {Reg8_cl() : Reg8(CL) {}};
 struct Reg16_ax : Reg16 {Reg16_ax() : Reg16(AX) {}};
 struct Reg32_eax : Reg32 {Reg32_eax() : Reg32(EAX) {}};
 #ifdef JITASM64
@@ -382,11 +383,12 @@ struct AddressingPtr
 /// Instruction ID
 enum InstrID
 {
-	I_ADC, I_ADD, I_AND, I_CALL, I_CMP, I_DEC, I_DIV, I_IDIV, I_IMUL, I_INC, I_INT3,
-	I_JMP, I_JCC, I_LEA, I_LEAVE,
-	I_MOV, I_MOVS_B, I_MOVS_W, I_MOVS_D, I_MOVS_Q, I_MOVZX,
-	I_MUL, I_NEG, I_NOP, I_NOT, I_OR, I_POP, I_PUSH, I_RET,
-	I_RCL, I_RCR, I_ROL, I_ROR, I_SAR, I_SHL, I_SHR, I_SBB, I_SUB, I_TEST, I_XCHG, I_XOR,
+	I_ADC, I_ADD, I_AND, I_BSF, I_BSR, I_BSWAP, I_BT, I_BTC, I_BTR, I_BTS, I_CALL, I_CBW, I_CLC, I_CLD, I_CLI, I_CLTS, I_CMC, I_CMOVCC, I_CMP,
+	I_CMPXCHG, I_CMPXCHG8B, I_CMPXCHG16B, I_CPUID, I_CWD, I_CDQ, I_CQO, I_DEC, I_DIV, I_ENTER, I_HLT, I_IDIV, I_IMUL, I_INC, I_INVD,
+	I_INVLPG, I_INT3, I_IRET, I_IRETD, I_IRETQ, I_LAR, I_JMP, I_JCC, I_LEA, I_LEAVE, I_LODS_B, I_LODS_W, I_LODS_D, I_LODS_Q,
+	I_MOV, I_MOVBE, I_MOVS_B, I_MOVS_W, I_MOVS_D, I_MOVS_Q, I_MOVZX, I_MOVSX, I_MOVSXD,	I_MUL, I_NEG, I_NOP, I_NOT,
+	I_OR, I_POP, I_PUSH, I_RDTSC, I_RET, I_RCL, I_RCR, I_ROL, I_ROR, I_SAR, I_SHL, I_SHR, I_SBB, I_SETCC, I_SHLD, I_SHRD, I_STC, I_STD, I_STI,
+	I_STOS_B, I_STOS_W, I_STOS_D, I_STOS_Q, I_SUB, I_TEST, I_UD2, I_FWAIT, I_XADD, I_XCHG, I_XOR,
 
 	I_FLD, I_FST, I_FSTP,
 
@@ -413,11 +415,8 @@ enum InstrID
 
 enum JumpCondition
 {
-	JCC_O, JCC_NO, JCC_B, JCC_AE, JCC_E,
-	JCC_NE, JCC_BE, JCC_A, JCC_S, JCC_NS,
-	JCC_P, JCC_NP, JCC_L, JCC_GE, JCC_LE,
-	JCC_G,
-
+	JCC_O, JCC_NO, JCC_B, JCC_AE, JCC_E, JCC_NE, JCC_BE, JCC_A, JCC_S, JCC_NS,
+	JCC_P, JCC_NP, JCC_L, JCC_GE, JCC_LE, JCC_G,
 	JCC_C, JCC_CXZ, JCC_ECXZ, JCC_RCXZ,
 };
 
@@ -679,7 +678,7 @@ struct Backend
 			EncodeOpcode(opcode);
 		}
 
-		if (opd1.IsImm() && opd2.IsNone())	EncodeImm(opd1);
+		if (opd1.IsImm() && !opd2.IsReg() && !opd2.IsMem())	EncodeImm(opd1);
 		if (opd2.IsImm())	EncodeImm(opd2);
 		if (opd3.IsImm())	EncodeImm(opd3);
 	}
@@ -704,16 +703,16 @@ struct Backend
 		if (instr.GetID() == I_JMP) {
 			Encode(Instr(instr.GetID(), imm.GetSize() == O_SIZE_8 ? 0xEB : 0xE9, instr.encoding_flag_, imm));
 		} else if (instr.GetID() == I_JCC) {
-			uint32 jcc = instr.opcode_;
-			if (jcc == JCC_C)			Encode(Instr(instr.GetID(), 0x70, instr.encoding_flag_, imm));
+			uint32 tttn = instr.opcode_;
+			if (tttn == JCC_C)			Encode(Instr(instr.GetID(), 0x70, instr.encoding_flag_, imm));
 #ifndef JITASM64
-			else if (jcc == JCC_CXZ)	Encode(Instr(instr.GetID(), 0x67E3, instr.encoding_flag_, imm));
-			else if (jcc == JCC_ECXZ)	Encode(Instr(instr.GetID(), 0xE3, instr.encoding_flag_, imm));
+			else if (tttn == JCC_CXZ)	Encode(Instr(instr.GetID(), 0x67E3, instr.encoding_flag_, imm));
+			else if (tttn == JCC_ECXZ)	Encode(Instr(instr.GetID(), 0xE3, instr.encoding_flag_, imm));
 #else
-			else if (jcc == JCC_ECXZ)	Encode(Instr(instr.GetID(), 0x67E3, instr.encoding_flag_, imm));
-			else if (jcc == JCC_RCXZ)	Encode(Instr(instr.GetID(), 0xE3, instr.encoding_flag_, imm));
+			else if (tttn == JCC_ECXZ)	Encode(Instr(instr.GetID(), 0x67E3, instr.encoding_flag_, imm));
+			else if (tttn == JCC_RCXZ)	Encode(Instr(instr.GetID(), 0xE3, instr.encoding_flag_, imm));
 #endif
-			else	Encode(Instr(instr.GetID(), (imm.GetSize() == O_SIZE_8 ? 0x70 : 0x0F80) | jcc, instr.encoding_flag_, imm));
+			else	Encode(Instr(instr.GetID(), (imm.GetSize() == O_SIZE_8 ? 0x70 : 0x0F80) | tttn, instr.encoding_flag_, imm));
 		} else {
 			ASSERT(0);
 		}
@@ -875,7 +874,8 @@ namespace detail
 struct Frontend
 {
 	Reg8_al		al;
-	Reg8		cl, dl, bl, ah, ch, dh, bh;
+	Reg8_cl		cl;
+	Reg8		dl, bl, ah, ch, dh, bh;
 	Reg16_ax	ax;
 	Reg16		cx, dx, bx, sp, bp, si, di;
 	Reg32_eax	eax;
@@ -913,7 +913,7 @@ struct Frontend
 #endif
 
 	Frontend()
-		: cl(CL), dl(DL), bl(BL), ah(AH), ch(CH), dh(DH), bh(BH),
+		: dl(DL), bl(BL), ah(AH), ch(CH), dh(DH), bh(BH),
 		cx(CX), dx(DX), bx(BX), sp(SP), bp(BP), si(SI), di(DI),
 		ecx(ECX), edx(EDX), ebx(EBX), esp(ESP), ebp(EBP), esi(ESI), edi(EDI),
 		mm0(MM0), mm1(MM1), mm2(MM2), mm3(MM3), mm4(MM4), mm5(MM5), mm6(MM6), mm7(MM7),
@@ -1224,7 +1224,7 @@ struct Frontend
 		PushBack(Instr(I_PSEUDO_ALIGN, Imm64(n)));
 	}
 
-	// ADC
+	// General-Purpose Instructions
 	void adc(const Reg8& dst, const Imm8& imm)		{PushBack(Instr(I_ADC, 0x80, E_SPECIAL, Imm8(2), dst, imm));}
 	void adc(const Mem8& dst, const Imm8& imm)		{PushBack(Instr(I_ADC, 0x80, 0, Imm8(2), dst, imm));}
 	void adc(const Reg16& dst, const Imm16& imm)	{PushBack(Instr(I_ADC, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_OPERAND_SIZE_PREFIX | E_SPECIAL, Imm8(2), dst, detail::ImmXor8(imm)));}
@@ -1247,7 +1247,6 @@ struct Frontend
 	void adc(const Mem64& dst, const Reg64& src)	{PushBack(Instr(I_ADC, 0x11, E_REXW_PREFIX, src, dst));}
 	void adc(const Reg64& dst, const Mem64& src)	{PushBack(Instr(I_ADC, 0x13, E_REXW_PREFIX, dst, src));}
 #endif
-
 	void add(const Reg8& dst, const Imm8& imm)		{PushBack(Instr(I_ADD, 0x80, E_SPECIAL, Imm8(0), dst, imm));}
 	void add(const Mem8& dst, const Imm8& imm)		{PushBack(Instr(I_ADD, 0x80, 0, Imm8(0), dst, imm));}
 	void add(const Reg16& dst, const Imm16& imm)	{PushBack(Instr(I_ADD, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_OPERAND_SIZE_PREFIX | E_SPECIAL, Imm8(0), dst, detail::ImmXor8(imm)));}
@@ -1270,8 +1269,6 @@ struct Frontend
 	void add(const Mem64& dst, const Reg64& src)	{PushBack(Instr(I_ADD, 0x01, E_REXW_PREFIX, src, dst));}
 	void add(const Reg64& dst, const Mem64& src)	{PushBack(Instr(I_ADD, 0x03, E_REXW_PREFIX, dst, src));}
 #endif
-
-	// AND
 	void and(const Reg8& dst, const Imm8& imm)		{PushBack(Instr(I_AND, 0x80, E_SPECIAL, Imm8(4), dst, imm));}
 	void and(const Mem8& dst, const Imm8& imm)		{PushBack(Instr(I_AND, 0x80, 0, Imm8(4), dst, imm));}
 	void and(const Reg16& dst, const Imm16& imm)	{PushBack(Instr(I_AND, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_OPERAND_SIZE_PREFIX | E_SPECIAL, Imm8(4), dst, detail::ImmXor8(imm)));}
@@ -1294,16 +1291,282 @@ struct Frontend
 	void and(const Mem64& dst, const Reg64& src)	{PushBack(Instr(I_AND, 0x21, E_REXW_PREFIX, src, dst));}
 	void and(const Reg64& dst, const Mem64& src)	{PushBack(Instr(I_AND, 0x23, E_REXW_PREFIX, dst, src));}
 #endif
-
-	// CALL
+	void bsf(const Reg16& dst, const Reg16& src)	{PushBack(Instr(I_BSF, 0x0FBC, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void bsf(const Reg16& dst, const Mem16& src)	{PushBack(Instr(I_BSF, 0x0FBC, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void bsf(const Reg32& dst, const Reg32& src)	{PushBack(Instr(I_BSF, 0x0FBC, 0, dst, src));}
+	void bsf(const Reg32& dst, const Mem32& src)	{PushBack(Instr(I_BSF, 0x0FBC, 0, dst, src));}
+#ifdef JITASM64
+	void bsf(const Reg64& dst, const Reg64& src)	{PushBack(Instr(I_BSF, 0x0FBC, E_REXW_PREFIX, dst, src));}
+	void bsf(const Reg64& dst, const Mem64& src)	{PushBack(Instr(I_BSF, 0x0FBC, E_REXW_PREFIX, dst, src));}
+#endif
+	void bsr(const Reg16& dst, const Reg16& src)	{PushBack(Instr(I_BSR, 0x0FBD, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void bsr(const Reg16& dst, const Mem16& src)	{PushBack(Instr(I_BSR, 0x0FBD, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void bsr(const Reg32& dst, const Reg32& src)	{PushBack(Instr(I_BSR, 0x0FBD, 0, dst, src));}
+	void bsr(const Reg32& dst, const Mem32& src)	{PushBack(Instr(I_BSR, 0x0FBD, 0, dst, src));}
+#ifdef JITASM64
+	void bsr(const Reg64& dst, const Reg64& src)	{PushBack(Instr(I_BSR, 0x0FBD, E_REXW_PREFIX, dst, src));}
+	void bsr(const Reg64& dst, const Mem64& src)	{PushBack(Instr(I_BSR, 0x0FBD, E_REXW_PREFIX, dst, src));}
+#endif
+	void bswap(const Reg32& dst)	{PushBack(Instr(I_BSWAP, 0x0FC8, 0, dst));}
+#ifdef JITASM64
+	void bswap(const Reg64& dst)	{PushBack(Instr(I_BSWAP, 0x0FC8, E_REXW_PREFIX, dst));}
+#endif
+	void bt(const Reg16& dst, const Reg16& src)	{PushBack(Instr(I_BT, 0x0FA3, E_OPERAND_SIZE_PREFIX, src, dst));}
+	void bt(const Mem16& dst, const Reg16& src)	{PushBack(Instr(I_BT, 0x0FA3, E_OPERAND_SIZE_PREFIX, src, dst));}
+	void bt(const Reg32& dst, const Reg32& src)	{PushBack(Instr(I_BT, 0x0FA3, 0, src, dst));}
+	void bt(const Mem32& dst, const Reg32& src)	{PushBack(Instr(I_BT, 0x0FA3, 0, src, dst));}
+	void bt(const Reg16& dst, const Imm8& imm)	{PushBack(Instr(I_BT, 0x0FBA, E_OPERAND_SIZE_PREFIX, Imm8(4), dst, imm));}
+	void bt(const Mem16& dst, const Imm8& imm)	{PushBack(Instr(I_BT, 0x0FBA, E_OPERAND_SIZE_PREFIX, Imm8(4), dst, imm));}
+	void bt(const Reg32& dst, const Imm8& imm)	{PushBack(Instr(I_BT, 0x0FBA, 0, Imm8(4), dst, imm));}
+	void bt(const Mem32& dst, const Imm8& imm)	{PushBack(Instr(I_BT, 0x0FBA, 0, Imm8(4), dst, imm));}
+#ifdef JITASM64
+	void bt(const Reg64& dst, const Reg64& src)	{PushBack(Instr(I_BT, 0x0FA3, E_REXW_PREFIX, src, dst));}
+	void bt(const Mem64& dst, const Reg64& src)	{PushBack(Instr(I_BT, 0x0FA3, E_REXW_PREFIX, src, dst));}
+	void bt(const Reg64& dst, const Imm8& imm)	{PushBack(Instr(I_BT, 0x0FBA, E_REXW_PREFIX, Imm8(4), dst, imm));}
+	void bt(const Mem64& dst, const Imm8& imm)	{PushBack(Instr(I_BT, 0x0FBA, E_REXW_PREFIX, Imm8(4), dst, imm));}
+#endif
+	void btc(const Reg16& dst, const Reg16& src)	{PushBack(Instr(I_BTC, 0x0FBB, E_OPERAND_SIZE_PREFIX, src, dst));}
+	void btc(const Mem16& dst, const Reg16& src)	{PushBack(Instr(I_BTC, 0x0FBB, E_OPERAND_SIZE_PREFIX, src, dst));}
+	void btc(const Reg32& dst, const Reg32& src)	{PushBack(Instr(I_BTC, 0x0FBB, 0, src, dst));}
+	void btc(const Mem32& dst, const Reg32& src)	{PushBack(Instr(I_BTC, 0x0FBB, 0, src, dst));}
+	void btc(const Reg16& dst, const Imm8& imm)		{PushBack(Instr(I_BTC, 0x0FBA, E_OPERAND_SIZE_PREFIX, Imm8(7), dst, imm));}
+	void btc(const Mem16& dst, const Imm8& imm)		{PushBack(Instr(I_BTC, 0x0FBA, E_OPERAND_SIZE_PREFIX, Imm8(7), dst, imm));}
+	void btc(const Reg32& dst, const Imm8& imm)		{PushBack(Instr(I_BTC, 0x0FBA, 0, Imm8(7), dst, imm));}
+	void btc(const Mem32& dst, const Imm8& imm)		{PushBack(Instr(I_BTC, 0x0FBA, 0, Imm8(7), dst, imm));}
+#ifdef JITASM64
+	void btc(const Reg64& dst, const Reg64& src)	{PushBack(Instr(I_BTC, 0x0FBB, E_REXW_PREFIX, src, dst));}
+	void btc(const Mem64& dst, const Reg64& src)	{PushBack(Instr(I_BTC, 0x0FBB, E_REXW_PREFIX, src, dst));}
+	void btc(const Reg64& dst, const Imm8& imm)		{PushBack(Instr(I_BTC, 0x0FBA, E_REXW_PREFIX, Imm8(7), dst, imm));}
+	void btc(const Mem64& dst, const Imm8& imm)		{PushBack(Instr(I_BTC, 0x0FBA, E_REXW_PREFIX, Imm8(7), dst, imm));}
+#endif
+	void btr(const Reg16& dst, const Reg16& src)	{PushBack(Instr(I_BTR, 0x0FB3, E_OPERAND_SIZE_PREFIX, src, dst));}
+	void btr(const Mem16& dst, const Reg16& src)	{PushBack(Instr(I_BTR, 0x0FB3, E_OPERAND_SIZE_PREFIX, src, dst));}
+	void btr(const Reg32& dst, const Reg32& src)	{PushBack(Instr(I_BTR, 0x0FB3, 0, src, dst));}
+	void btr(const Mem32& dst, const Reg32& src)	{PushBack(Instr(I_BTR, 0x0FB3, 0, src, dst));}
+	void btr(const Reg16& dst, const Imm8& imm)		{PushBack(Instr(I_BTR, 0x0FBA, E_OPERAND_SIZE_PREFIX, Imm8(6), dst, imm));}
+	void btr(const Mem16& dst, const Imm8& imm)		{PushBack(Instr(I_BTR, 0x0FBA, E_OPERAND_SIZE_PREFIX, Imm8(6), dst, imm));}
+	void btr(const Reg32& dst, const Imm8& imm)		{PushBack(Instr(I_BTR, 0x0FBA, 0, Imm8(6), dst, imm));}
+	void btr(const Mem32& dst, const Imm8& imm)		{PushBack(Instr(I_BTR, 0x0FBA, 0, Imm8(6), dst, imm));}
+#ifdef JITASM64
+	void btr(const Reg64& dst, const Reg64& src)	{PushBack(Instr(I_BTR, 0x0FB3, E_REXW_PREFIX, src, dst));}
+	void btr(const Mem64& dst, const Reg64& src)	{PushBack(Instr(I_BTR, 0x0FB3, E_REXW_PREFIX, src, dst));}
+	void btr(const Reg64& dst, const Imm8& imm)		{PushBack(Instr(I_BTR, 0x0FBA, E_REXW_PREFIX, Imm8(6), dst, imm));}
+	void btr(const Mem64& dst, const Imm8& imm)		{PushBack(Instr(I_BTR, 0x0FBA, E_REXW_PREFIX, Imm8(6), dst, imm));}
+#endif
+	void bts(const Reg16& dst, const Reg16& src)	{PushBack(Instr(I_BTS, 0x0FAB, E_OPERAND_SIZE_PREFIX, src, dst));}
+	void bts(const Mem16& dst, const Reg16& src)	{PushBack(Instr(I_BTS, 0x0FAB, E_OPERAND_SIZE_PREFIX, src, dst));}
+	void bts(const Reg32& dst, const Reg32& src)	{PushBack(Instr(I_BTS, 0x0FAB, 0, src, dst));}
+	void bts(const Mem32& dst, const Reg32& src)	{PushBack(Instr(I_BTS, 0x0FAB, 0, src, dst));}
+	void bts(const Reg16& dst, const Imm8& imm)		{PushBack(Instr(I_BTS, 0x0FBA, E_OPERAND_SIZE_PREFIX, Imm8(5), dst, imm));}
+	void bts(const Mem16& dst, const Imm8& imm)		{PushBack(Instr(I_BTS, 0x0FBA, E_OPERAND_SIZE_PREFIX, Imm8(5), dst, imm));}
+	void bts(const Reg32& dst, const Imm8& imm)		{PushBack(Instr(I_BTS, 0x0FBA, 0, Imm8(5), dst, imm));}
+	void bts(const Mem32& dst, const Imm8& imm)		{PushBack(Instr(I_BTS, 0x0FBA, 0, Imm8(5), dst, imm));}
+#ifdef JITASM64
+	void bts(const Reg64& dst, const Reg64& src)	{PushBack(Instr(I_BTS, 0x0FAB, E_REXW_PREFIX, src, dst));}
+	void bts(const Mem64& dst, const Reg64& src)	{PushBack(Instr(I_BTS, 0x0FAB, E_REXW_PREFIX, src, dst));}
+	void bts(const Reg64& dst, const Imm8& imm)		{PushBack(Instr(I_BTS, 0x0FBA, E_REXW_PREFIX, Imm8(5), dst, imm));}
+	void bts(const Mem64& dst, const Imm8& imm)		{PushBack(Instr(I_BTS, 0x0FBA, E_REXW_PREFIX, Imm8(5), dst, imm));}
+#endif
 #ifndef JITASM64
 	void call(const Reg16& dst)	{PushBack(Instr(I_CALL, 0xFF, E_OPERAND_SIZE_PREFIX, Imm8(2), dst));}
 	void call(const Reg32& dst)	{PushBack(Instr(I_CALL, 0xFF, 0, Imm8(2), dst));}
 #else
 	void call(const Reg64& dst)	{PushBack(Instr(I_CALL, 0xFF, 0, Imm8(2), dst));}
 #endif
-
-	// CMP
+	void cbw()	{PushBack(Instr(I_CBW,	0x98, E_OPERAND_SIZE_PREFIX));}
+	void cwde()	{PushBack(Instr(I_CBW,	0x98, 0));}
+#ifdef JITASM64
+	void cdqe()	{PushBack(Instr(I_CBW,	0x98, E_REXW_PREFIX));}
+#endif
+	void clc()	{PushBack(Instr(I_CLC,	0xF8, 0));}
+	void cld()	{PushBack(Instr(I_CLD,	0xFC, 0));}
+	void cli()	{PushBack(Instr(I_CLI,	0xFA, 0));}
+#ifdef JITASM64
+	void clts()	{PushBack(Instr(I_CLTS,	0x0F06, 0));}
+#endif
+	void cmc()	{PushBack(Instr(I_CMC,	0xF5, 0));}
+	void cmova(const Reg16& dst, const Reg16& src)		{PushBack(Instr(I_CMOVCC, 0x0F47, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void cmova(const Reg16& dst, const Mem16& src)		{PushBack(Instr(I_CMOVCC, 0x0F47, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void cmovae(const Reg16& dst, const Reg16& src)		{PushBack(Instr(I_CMOVCC, 0x0F43, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void cmovae(const Reg16& dst, const Mem16& src)		{PushBack(Instr(I_CMOVCC, 0x0F43, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void cmovb(const Reg16& dst, const Reg16& src)		{PushBack(Instr(I_CMOVCC, 0x0F42, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void cmovb(const Reg16& dst, const Mem16& src)		{PushBack(Instr(I_CMOVCC, 0x0F42, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void cmovbe(const Reg16& dst, const Reg16& src)		{PushBack(Instr(I_CMOVCC, 0x0F46, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void cmovbe(const Reg16& dst, const Mem16& src)		{PushBack(Instr(I_CMOVCC, 0x0F46, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void cmovc(const Reg16& dst, const Reg16& src)		{cmovb(dst, src);}
+	void cmovc(const Reg16& dst, const Mem16& src)		{cmovb(dst, src);}
+	void cmove(const Reg16& dst, const Reg16& src)		{PushBack(Instr(I_CMOVCC, 0x0F44, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void cmove(const Reg16& dst, const Mem16& src)		{PushBack(Instr(I_CMOVCC, 0x0F44, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void cmovg(const Reg16& dst, const Reg16& src)		{PushBack(Instr(I_CMOVCC, 0x0F4F, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void cmovg(const Reg16& dst, const Mem16& src)		{PushBack(Instr(I_CMOVCC, 0x0F4F, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void cmovge(const Reg16& dst, const Reg16& src)		{PushBack(Instr(I_CMOVCC, 0x0F4D, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void cmovge(const Reg16& dst, const Mem16& src)		{PushBack(Instr(I_CMOVCC, 0x0F4D, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void cmovl(const Reg16& dst, const Reg16& src)		{PushBack(Instr(I_CMOVCC, 0x0F4C, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void cmovl(const Reg16& dst, const Mem16& src)		{PushBack(Instr(I_CMOVCC, 0x0F4C, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void cmovle(const Reg16& dst, const Reg16& src)		{PushBack(Instr(I_CMOVCC, 0x0F4E, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void cmovle(const Reg16& dst, const Mem16& src)		{PushBack(Instr(I_CMOVCC, 0x0F4E, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void cmovna(const Reg16& dst, const Reg16& src)		{cmovbe(dst, src);}
+	void cmovna(const Reg16& dst, const Mem16& src)		{cmovbe(dst, src);}
+	void cmovnae(const Reg16& dst, const Reg16& src)	{cmovb(dst, src);}
+	void cmovnae(const Reg16& dst, const Mem16& src)	{cmovb(dst, src);}
+	void cmovnb(const Reg16& dst, const Reg16& src)		{cmovae(dst, src);}
+	void cmovnb(const Reg16& dst, const Mem16& src)		{cmovae(dst, src);}
+	void cmovnbe(const Reg16& dst, const Reg16& src)	{cmova(dst, src);}
+	void cmovnbe(const Reg16& dst, const Mem16& src)	{cmova(dst, src);}
+	void cmovnc(const Reg16& dst, const Reg16& src)		{cmovae(dst, src);}
+	void cmovnc(const Reg16& dst, const Mem16& src)		{cmovae(dst, src);}
+	void cmovne(const Reg16& dst, const Reg16& src)		{PushBack(Instr(I_CMOVCC, 0x0F45, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void cmovne(const Reg16& dst, const Mem16& src)		{PushBack(Instr(I_CMOVCC, 0x0F45, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void cmovng(const Reg16& dst, const Reg16& src)		{cmovle(dst, src);}
+	void cmovng(const Reg16& dst, const Mem16& src)		{cmovle(dst, src);}
+	void cmovnge(const Reg16& dst, const Reg16& src)	{cmovl(dst, src);}
+	void cmovnge(const Reg16& dst, const Mem16& src)	{cmovl(dst, src);}
+	void cmovnl(const Reg16& dst, const Reg16& src)		{cmovge(dst, src);}
+	void cmovnl(const Reg16& dst, const Mem16& src)		{cmovge(dst, src);}
+	void cmovnle(const Reg16& dst, const Reg16& src)	{cmovg(dst, src);}
+	void cmovnle(const Reg16& dst, const Mem16& src)	{cmovg(dst, src);}
+	void cmovno(const Reg16& dst, const Reg16& src)		{PushBack(Instr(I_CMOVCC, 0x0F41, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void cmovno(const Reg16& dst, const Mem16& src)		{PushBack(Instr(I_CMOVCC, 0x0F41, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void cmovnp(const Reg16& dst, const Reg16& src)		{PushBack(Instr(I_CMOVCC, 0x0F4B, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void cmovnp(const Reg16& dst, const Mem16& src)		{PushBack(Instr(I_CMOVCC, 0x0F4B, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void cmovns(const Reg16& dst, const Reg16& src)		{PushBack(Instr(I_CMOVCC, 0x0F49, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void cmovns(const Reg16& dst, const Mem16& src)		{PushBack(Instr(I_CMOVCC, 0x0F49, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void cmovnz(const Reg16& dst, const Reg16& src)		{cmovne(dst, src);}
+	void cmovnz(const Reg16& dst, const Mem16& src)		{cmovne(dst, src);}
+	void cmovo(const Reg16& dst, const Reg16& src)		{PushBack(Instr(I_CMOVCC, 0x0F40, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void cmovo(const Reg16& dst, const Mem16& src)		{PushBack(Instr(I_CMOVCC, 0x0F40, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void cmovp(const Reg16& dst, const Reg16& src)		{PushBack(Instr(I_CMOVCC, 0x0F4A, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void cmovp(const Reg16& dst, const Mem16& src)		{PushBack(Instr(I_CMOVCC, 0x0F4A, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void cmovpe(const Reg16& dst, const Reg16& src)		{cmovp(dst, src);}
+	void cmovpe(const Reg16& dst, const Mem16& src)		{cmovp(dst, src);}
+	void cmovpo(const Reg16& dst, const Reg16& src)		{cmovnp(dst, src);}
+	void cmovpo(const Reg16& dst, const Mem16& src)		{cmovnp(dst, src);}
+	void cmovs(const Reg16& dst, const Reg16& src)		{PushBack(Instr(I_CMOVCC, 0x0F48, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void cmovs(const Reg16& dst, const Mem16& src)		{PushBack(Instr(I_CMOVCC, 0x0F48, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void cmovz(const Reg16& dst, const Reg16& src)		{cmove(dst, src);}
+	void cmovz(const Reg16& dst, const Mem16& src)		{cmove(dst, src);}
+	void cmova(const Reg32& dst, const Reg32& src)		{PushBack(Instr(I_CMOVCC, 0x0F47, 0, dst, src));}
+	void cmova(const Reg32& dst, const Mem32& src)		{PushBack(Instr(I_CMOVCC, 0x0F47, 0, dst, src));}
+	void cmovae(const Reg32& dst, const Reg32& src)		{PushBack(Instr(I_CMOVCC, 0x0F43, 0, dst, src));}
+	void cmovae(const Reg32& dst, const Mem32& src)		{PushBack(Instr(I_CMOVCC, 0x0F43, 0, dst, src));}
+	void cmovb(const Reg32& dst, const Reg32& src)		{PushBack(Instr(I_CMOVCC, 0x0F42, 0, dst, src));}
+	void cmovb(const Reg32& dst, const Mem32& src)		{PushBack(Instr(I_CMOVCC, 0x0F42, 0, dst, src));}
+	void cmovbe(const Reg32& dst, const Reg32& src)		{PushBack(Instr(I_CMOVCC, 0x0F46, 0, dst, src));}
+	void cmovbe(const Reg32& dst, const Mem32& src)		{PushBack(Instr(I_CMOVCC, 0x0F46, 0, dst, src));}
+	void cmovc(const Reg32& dst, const Reg32& src)		{cmovb(dst, src);}
+	void cmovc(const Reg32& dst, const Mem32& src)		{cmovb(dst, src);}
+	void cmove(const Reg32& dst, const Reg32& src)		{PushBack(Instr(I_CMOVCC, 0x0F44, 0, dst, src));}
+	void cmove(const Reg32& dst, const Mem32& src)		{PushBack(Instr(I_CMOVCC, 0x0F44, 0, dst, src));}
+	void cmovg(const Reg32& dst, const Reg32& src)		{PushBack(Instr(I_CMOVCC, 0x0F4F, 0, dst, src));}
+	void cmovg(const Reg32& dst, const Mem32& src)		{PushBack(Instr(I_CMOVCC, 0x0F4F, 0, dst, src));}
+	void cmovge(const Reg32& dst, const Reg32& src)		{PushBack(Instr(I_CMOVCC, 0x0F4D, 0, dst, src));}
+	void cmovge(const Reg32& dst, const Mem32& src)		{PushBack(Instr(I_CMOVCC, 0x0F4D, 0, dst, src));}
+	void cmovl(const Reg32& dst, const Reg32& src)		{PushBack(Instr(I_CMOVCC, 0x0F4C, 0, dst, src));}
+	void cmovl(const Reg32& dst, const Mem32& src)		{PushBack(Instr(I_CMOVCC, 0x0F4C, 0, dst, src));}
+	void cmovle(const Reg32& dst, const Reg32& src)		{PushBack(Instr(I_CMOVCC, 0x0F4E, 0, dst, src));}
+	void cmovle(const Reg32& dst, const Mem32& src)		{PushBack(Instr(I_CMOVCC, 0x0F4E, 0, dst, src));}
+	void cmovna(const Reg32& dst, const Reg32& src)		{cmovbe(dst, src);}
+	void cmovna(const Reg32& dst, const Mem32& src)		{cmovbe(dst, src);}
+	void cmovnae(const Reg32& dst, const Reg32& src)	{cmovb(dst, src);}
+	void cmovnae(const Reg32& dst, const Mem32& src)	{cmovb(dst, src);}
+	void cmovnb(const Reg32& dst, const Reg32& src)		{cmovae(dst, src);}
+	void cmovnb(const Reg32& dst, const Mem32& src)		{cmovae(dst, src);}
+	void cmovnbe(const Reg32& dst, const Reg32& src)	{cmova(dst, src);}
+	void cmovnbe(const Reg32& dst, const Mem32& src)	{cmova(dst, src);}
+	void cmovnc(const Reg32& dst, const Reg32& src)		{cmovae(dst, src);}
+	void cmovnc(const Reg32& dst, const Mem32& src)		{cmovae(dst, src);}
+	void cmovne(const Reg32& dst, const Reg32& src)		{PushBack(Instr(I_CMOVCC, 0x0F45, 0, dst, src));}
+	void cmovne(const Reg32& dst, const Mem32& src)		{PushBack(Instr(I_CMOVCC, 0x0F45, 0, dst, src));}
+	void cmovng(const Reg32& dst, const Reg32& src)		{cmovle(dst, src);}
+	void cmovng(const Reg32& dst, const Mem32& src)		{cmovle(dst, src);}
+	void cmovnge(const Reg32& dst, const Reg32& src)	{cmovl(dst, src);}
+	void cmovnge(const Reg32& dst, const Mem32& src)	{cmovl(dst, src);}
+	void cmovnl(const Reg32& dst, const Reg32& src)		{cmovge(dst, src);}
+	void cmovnl(const Reg32& dst, const Mem32& src)		{cmovge(dst, src);}
+	void cmovnle(const Reg32& dst, const Reg32& src)	{cmovg(dst, src);}
+	void cmovnle(const Reg32& dst, const Mem32& src)	{cmovg(dst, src);}
+	void cmovno(const Reg32& dst, const Reg32& src)		{PushBack(Instr(I_CMOVCC, 0x0F41, 0, dst, src));}
+	void cmovno(const Reg32& dst, const Mem32& src)		{PushBack(Instr(I_CMOVCC, 0x0F41, 0, dst, src));}
+	void cmovnp(const Reg32& dst, const Reg32& src)		{PushBack(Instr(I_CMOVCC, 0x0F4B, 0, dst, src));}
+	void cmovnp(const Reg32& dst, const Mem32& src)		{PushBack(Instr(I_CMOVCC, 0x0F4B, 0, dst, src));}
+	void cmovns(const Reg32& dst, const Reg32& src)		{PushBack(Instr(I_CMOVCC, 0x0F49, 0, dst, src));}
+	void cmovns(const Reg32& dst, const Mem32& src)		{PushBack(Instr(I_CMOVCC, 0x0F49, 0, dst, src));}
+	void cmovnz(const Reg32& dst, const Reg32& src)		{cmovne(dst, src);}
+	void cmovnz(const Reg32& dst, const Mem32& src)		{cmovne(dst, src);}
+	void cmovo(const Reg32& dst, const Reg32& src)		{PushBack(Instr(I_CMOVCC, 0x0F40, 0, dst, src));}
+	void cmovo(const Reg32& dst, const Mem32& src)		{PushBack(Instr(I_CMOVCC, 0x0F40, 0, dst, src));}
+	void cmovp(const Reg32& dst, const Reg32& src)		{PushBack(Instr(I_CMOVCC, 0x0F4A, 0, dst, src));}
+	void cmovp(const Reg32& dst, const Mem32& src)		{PushBack(Instr(I_CMOVCC, 0x0F4A, 0, dst, src));}
+	void cmovpe(const Reg32& dst, const Reg32& src)		{cmovp(dst, src);}
+	void cmovpe(const Reg32& dst, const Mem32& src)		{cmovp(dst, src);}
+	void cmovpo(const Reg32& dst, const Reg32& src)		{cmovnp(dst, src);}
+	void cmovpo(const Reg32& dst, const Mem32& src)		{cmovnp(dst, src);}
+	void cmovs(const Reg32& dst, const Reg32& src)		{PushBack(Instr(I_CMOVCC, 0x0F48, 0, dst, src));}
+	void cmovs(const Reg32& dst, const Mem32& src)		{PushBack(Instr(I_CMOVCC, 0x0F48, 0, dst, src));}
+	void cmovz(const Reg32& dst, const Reg32& src)		{cmove(dst, src);}
+	void cmovz(const Reg32& dst, const Mem32& src)		{cmove(dst, src);}
+#ifdef JITASM64
+	void cmova(const Reg64& dst, const Reg64& src)		{PushBack(Instr(I_CMOVCC, 0x0F47, E_REXW_PREFIX, dst, src));}
+	void cmova(const Reg64& dst, const Mem64& src)		{PushBack(Instr(I_CMOVCC, 0x0F47, E_REXW_PREFIX, dst, src));}
+	void cmovae(const Reg64& dst, const Reg64& src)		{PushBack(Instr(I_CMOVCC, 0x0F43, E_REXW_PREFIX, dst, src));}
+	void cmovae(const Reg64& dst, const Mem64& src)		{PushBack(Instr(I_CMOVCC, 0x0F43, E_REXW_PREFIX, dst, src));}
+	void cmovb(const Reg64& dst, const Reg64& src)		{PushBack(Instr(I_CMOVCC, 0x0F42, E_REXW_PREFIX, dst, src));}
+	void cmovb(const Reg64& dst, const Mem64& src)		{PushBack(Instr(I_CMOVCC, 0x0F42, E_REXW_PREFIX, dst, src));}
+	void cmovbe(const Reg64& dst, const Reg64& src)		{PushBack(Instr(I_CMOVCC, 0x0F46, E_REXW_PREFIX, dst, src));}
+	void cmovbe(const Reg64& dst, const Mem64& src)		{PushBack(Instr(I_CMOVCC, 0x0F46, E_REXW_PREFIX, dst, src));}
+	void cmovc(const Reg64& dst, const Reg64& src)		{cmovb(dst, src);}
+	void cmovc(const Reg64& dst, const Mem64& src)		{cmovb(dst, src);}
+	void cmove(const Reg64& dst, const Reg64& src)		{PushBack(Instr(I_CMOVCC, 0x0F44, E_REXW_PREFIX, dst, src));}
+	void cmove(const Reg64& dst, const Mem64& src)		{PushBack(Instr(I_CMOVCC, 0x0F44, E_REXW_PREFIX, dst, src));}
+	void cmovg(const Reg64& dst, const Reg64& src)		{PushBack(Instr(I_CMOVCC, 0x0F4F, E_REXW_PREFIX, dst, src));}
+	void cmovg(const Reg64& dst, const Mem64& src)		{PushBack(Instr(I_CMOVCC, 0x0F4F, E_REXW_PREFIX, dst, src));}
+	void cmovge(const Reg64& dst, const Reg64& src)		{PushBack(Instr(I_CMOVCC, 0x0F4D, E_REXW_PREFIX, dst, src));}
+	void cmovge(const Reg64& dst, const Mem64& src)		{PushBack(Instr(I_CMOVCC, 0x0F4D, E_REXW_PREFIX, dst, src));}
+	void cmovl(const Reg64& dst, const Reg64& src)		{PushBack(Instr(I_CMOVCC, 0x0F4C, E_REXW_PREFIX, dst, src));}
+	void cmovl(const Reg64& dst, const Mem64& src)		{PushBack(Instr(I_CMOVCC, 0x0F4C, E_REXW_PREFIX, dst, src));}
+	void cmovle(const Reg64& dst, const Reg64& src)		{PushBack(Instr(I_CMOVCC, 0x0F4E, E_REXW_PREFIX, dst, src));}
+	void cmovle(const Reg64& dst, const Mem64& src)		{PushBack(Instr(I_CMOVCC, 0x0F4E, E_REXW_PREFIX, dst, src));}
+	void cmovna(const Reg64& dst, const Reg64& src)		{cmovbe(dst, src);}
+	void cmovna(const Reg64& dst, const Mem64& src)		{cmovbe(dst, src);}
+	void cmovnae(const Reg64& dst, const Reg64& src)	{cmovb(dst, src);}
+	void cmovnae(const Reg64& dst, const Mem64& src)	{cmovb(dst, src);}
+	void cmovnb(const Reg64& dst, const Reg64& src)		{cmovae(dst, src);}
+	void cmovnb(const Reg64& dst, const Mem64& src)		{cmovae(dst, src);}
+	void cmovnbe(const Reg64& dst, const Reg64& src)	{cmova(dst, src);}
+	void cmovnbe(const Reg64& dst, const Mem64& src)	{cmova(dst, src);}
+	void cmovnc(const Reg64& dst, const Reg64& src)		{cmovae(dst, src);}
+	void cmovnc(const Reg64& dst, const Mem64& src)		{cmovae(dst, src);}
+	void cmovne(const Reg64& dst, const Reg64& src)		{PushBack(Instr(I_CMOVCC, 0x0F45, E_REXW_PREFIX, dst, src));}
+	void cmovne(const Reg64& dst, const Mem64& src)		{PushBack(Instr(I_CMOVCC, 0x0F45, E_REXW_PREFIX, dst, src));}
+	void cmovng(const Reg64& dst, const Reg64& src)		{cmovle(dst, src);}
+	void cmovng(const Reg64& dst, const Mem64& src)		{cmovle(dst, src);}
+	void cmovnge(const Reg64& dst, const Reg64& src)	{cmovl(dst, src);}
+	void cmovnge(const Reg64& dst, const Mem64& src)	{cmovl(dst, src);}
+	void cmovnl(const Reg64& dst, const Reg64& src)		{cmovge(dst, src);}
+	void cmovnl(const Reg64& dst, const Mem64& src)		{cmovge(dst, src);}
+	void cmovnle(const Reg64& dst, const Reg64& src)	{cmovg(dst, src);}
+	void cmovnle(const Reg64& dst, const Mem64& src)	{cmovg(dst, src);}
+	void cmovno(const Reg64& dst, const Reg64& src)		{PushBack(Instr(I_CMOVCC, 0x0F41, E_REXW_PREFIX, dst, src));}
+	void cmovno(const Reg64& dst, const Mem64& src)		{PushBack(Instr(I_CMOVCC, 0x0F41, E_REXW_PREFIX, dst, src));}
+	void cmovnp(const Reg64& dst, const Reg64& src)		{PushBack(Instr(I_CMOVCC, 0x0F4B, E_REXW_PREFIX, dst, src));}
+	void cmovnp(const Reg64& dst, const Mem64& src)		{PushBack(Instr(I_CMOVCC, 0x0F4B, E_REXW_PREFIX, dst, src));}
+	void cmovns(const Reg64& dst, const Reg64& src)		{PushBack(Instr(I_CMOVCC, 0x0F49, E_REXW_PREFIX, dst, src));}
+	void cmovns(const Reg64& dst, const Mem64& src)		{PushBack(Instr(I_CMOVCC, 0x0F49, E_REXW_PREFIX, dst, src));}
+	void cmovnz(const Reg64& dst, const Reg64& src)		{cmovne(dst, src);}
+	void cmovnz(const Reg64& dst, const Mem64& src)		{cmovne(dst, src);}
+	void cmovo(const Reg64& dst, const Reg64& src)		{PushBack(Instr(I_CMOVCC, 0x0F40, E_REXW_PREFIX, dst, src));}
+	void cmovo(const Reg64& dst, const Mem64& src)		{PushBack(Instr(I_CMOVCC, 0x0F40, E_REXW_PREFIX, dst, src));}
+	void cmovp(const Reg64& dst, const Reg64& src)		{PushBack(Instr(I_CMOVCC, 0x0F4A, E_REXW_PREFIX, dst, src));}
+	void cmovp(const Reg64& dst, const Mem64& src)		{PushBack(Instr(I_CMOVCC, 0x0F4A, E_REXW_PREFIX, dst, src));}
+	void cmovpe(const Reg64& dst, const Reg64& src)		{cmovp(dst, src);}
+	void cmovpe(const Reg64& dst, const Mem64& src)		{cmovp(dst, src);}
+	void cmovpo(const Reg64& dst, const Reg64& src)		{cmovnp(dst, src);}
+	void cmovpo(const Reg64& dst, const Mem64& src)		{cmovnp(dst, src);}
+	void cmovs(const Reg64& dst, const Reg64& src)		{PushBack(Instr(I_CMOVCC, 0x0F48, E_REXW_PREFIX, dst, src));}
+	void cmovs(const Reg64& dst, const Mem64& src)		{PushBack(Instr(I_CMOVCC, 0x0F48, E_REXW_PREFIX, dst, src));}
+	void cmovz(const Reg64& dst, const Reg64& src)		{cmove(dst, src);}
+	void cmovz(const Reg64& dst, const Mem64& src)		{cmove(dst, src);}
+#endif
 	void cmp(const Reg8& dst, const Imm8& imm)		{PushBack(Instr(I_CMP, 0x80, E_SPECIAL, Imm8(7), dst, imm));}
 	void cmp(const Mem8& dst, const Imm8& imm)		{PushBack(Instr(I_CMP, 0x80, 0, Imm8(7), dst, imm));}
 	void cmp(const Reg16& dst, const Imm16& imm)	{PushBack(Instr(I_CMP, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_OPERAND_SIZE_PREFIX | E_SPECIAL, Imm8(7), dst, detail::ImmXor8(imm)));}
@@ -1326,8 +1589,26 @@ struct Frontend
 	void cmp(const Mem64& dst, const Reg64& src)	{PushBack(Instr(I_CMP, 0x39, E_REXW_PREFIX, src, dst));}
 	void cmp(const Reg64& dst, const Mem64& src)	{PushBack(Instr(I_CMP, 0x3B, E_REXW_PREFIX, dst, src));}
 #endif
-
-	// DEC
+	void cmpxchg(const Reg8& dst, const Reg8& src)		{PushBack(Instr(I_CMPXCHG, 0x0FB0, 0, src, dst));}
+	void cmpxchg(const Mem8& dst, const Reg8& src)		{PushBack(Instr(I_CMPXCHG, 0x0FB0, 0, src, dst));}
+	void cmpxchg(const Reg16& dst, const Reg16& src)	{PushBack(Instr(I_CMPXCHG, 0x0FB1, E_OPERAND_SIZE_PREFIX, src, dst));}
+	void cmpxchg(const Mem16& dst, const Reg16& src)	{PushBack(Instr(I_CMPXCHG, 0x0FB1, E_OPERAND_SIZE_PREFIX, src, dst));}
+	void cmpxchg(const Reg32& dst, const Reg32& src)	{PushBack(Instr(I_CMPXCHG, 0x0FB1, 0, src, dst));}
+	void cmpxchg(const Mem32& dst, const Reg32& src)	{PushBack(Instr(I_CMPXCHG, 0x0FB1, 0, src, dst));}
+#ifdef JITASM64
+	void cmpxchg(const Reg64& dst, const Reg64& src)	{PushBack(Instr(I_CMPXCHG, 0x0FB1, E_REXW_PREFIX, src, dst));}
+	void cmpxchg(const Mem64& dst, const Reg64& src)	{PushBack(Instr(I_CMPXCHG, 0x0FB1, E_REXW_PREFIX, src, dst));}
+#endif
+	void cmpxchg8b(const Mem64& dst)	{PushBack(Instr(I_CMPXCHG8B, 0x0FC7, 0, Imm8(1), dst));}
+#ifdef JITASM64
+	void cmpxchg16b(const Mem128& dst)	{PushBack(Instr(I_CMPXCHG16B, 0x0FC7, E_REXW_PREFIX, Imm8(1), dst));}
+#endif
+	void cpuid()	{PushBack(Instr(I_CPUID, 0x0FA2, 0));}
+	void cwd()		{PushBack(Instr(I_CWD, 0x99, E_OPERAND_SIZE_PREFIX));}
+	void cdq()		{PushBack(Instr(I_CDQ, 0x99, 0));}
+#ifdef JITASM64
+	void cqo()		{PushBack(Instr(I_CQO, 0x99, E_REXW_PREFIX));}
+#endif
 	void dec(const Reg8& dst)	{PushBack(Instr(I_DEC, 0xFE, 0, Imm8(1), dst));}
 	void dec(const Mem8& dst)	{PushBack(Instr(I_DEC, 0xFE, 0, Imm8(1), dst));}
 	void dec(const Mem16& dst)	{PushBack(Instr(I_DEC, 0xFF, E_OPERAND_SIZE_PREFIX, Imm8(1), dst));}
@@ -1341,8 +1622,6 @@ struct Frontend
 	void dec(const Reg64& dst)	{PushBack(Instr(I_DEC, 0xFF, E_REXW_PREFIX, Imm8(1), dst));}
 	void dec(const Mem64& dst)	{PushBack(Instr(I_DEC, 0xFF, E_REXW_PREFIX, Imm8(1), dst));}
 #endif
-
-	// DIV
 	void div(const Reg8& dst)	{PushBack(Instr(I_DIV, 0xF6, 0, Imm8(6), dst));}
 	void div(const Mem8& dst)	{PushBack(Instr(I_DIV, 0xF6, 0, Imm8(6), dst));}
 	void div(const Reg16& dst)	{PushBack(Instr(I_DIV, 0xF7, E_OPERAND_SIZE_PREFIX, Imm8(6), dst));}
@@ -1353,8 +1632,8 @@ struct Frontend
 	void div(const Reg64& dst)	{PushBack(Instr(I_DIV, 0xF7, E_REXW_PREFIX, Imm8(6), dst));}
 	void div(const Mem64& dst)	{PushBack(Instr(I_DIV, 0xF7, E_REXW_PREFIX, Imm8(6), dst));}
 #endif
-
-	// IDIV
+	void enter(const Imm16& imm16, const Imm8& imm8) {PushBack(Instr(I_ENTER, 0xC8, 0, imm16, imm8));}
+	void hlt()	{PushBack(Instr(I_HLT, 0xF4, 0));}
 	void idiv(const Reg8& dst)	{PushBack(Instr(I_IDIV, 0xF6, 0, Imm8(7), dst));}
 	void idiv(const Mem8& dst)	{PushBack(Instr(I_IDIV, 0xF6, 0, Imm8(7), dst));}
 	void idiv(const Reg16& dst)	{PushBack(Instr(I_IDIV, 0xF7, E_OPERAND_SIZE_PREFIX, Imm8(7), dst));}
@@ -1365,7 +1644,6 @@ struct Frontend
 	void idiv(const Reg64& dst)	{PushBack(Instr(I_IDIV, 0xF7, E_REXW_PREFIX, Imm8(7), dst));}
 	void idiv(const Mem64& dst)	{PushBack(Instr(I_IDIV, 0xF7, E_REXW_PREFIX, Imm8(7), dst));}
 #endif
-
 	void imul(const Reg8& dst)										{PushBack(Instr(I_IMUL, 0xF6, 0, Imm8(5), dst));}
 	void imul(const Mem8& dst)										{PushBack(Instr(I_IMUL, 0xF6, 0, Imm8(5), dst));}
 	void imul(const Reg16& dst)										{PushBack(Instr(I_IMUL, 0xF7, E_OPERAND_SIZE_PREFIX, Imm8(5), dst));}
@@ -1391,8 +1669,6 @@ struct Frontend
 	void imul(const Reg64& dst, const Mem64& src, const Imm32& imm)	{PushBack(Instr(I_IMUL, detail::IsInt8(imm.GetImm()) ? 0x6B : 0x69, E_REXW_PREFIX, dst, src, detail::ImmXor8(imm)));}
 	void imul(const Reg64& dst, const Imm32& imm)					{imul(dst, dst, imm);}
 #endif
-
-	// INC
 	void inc(const Reg8& dst)	{PushBack(Instr(I_INC, 0xFE, 0, Imm8(0), dst));}
 	void inc(const Mem8& dst)	{PushBack(Instr(I_INC, 0xFE, 0, Imm8(0), dst));}
 	void inc(const Mem16& dst)	{PushBack(Instr(I_INC, 0xFF, E_OPERAND_SIZE_PREFIX, Imm8(0), dst));}
@@ -1406,11 +1682,14 @@ struct Frontend
 	void inc(const Reg64& dst)	{PushBack(Instr(I_INC, 0xFF, E_REXW_PREFIX, Imm8(0), dst));}
 	void inc(const Mem64& dst)	{PushBack(Instr(I_INC, 0xFF, E_REXW_PREFIX, Imm8(0), dst));}
 #endif
-
-	// INT3
-	void debugbreak()	{PushBack(Instr(I_INT3, 0xCC, 0));}
-
-	// JMP
+	void int3()	{PushBack(Instr(I_INT3, 0xCC, 0));}
+	void invd()	{PushBack(Instr(I_INVD, 0x0F08, 0));}
+	template<class Ty> void invlpg(const MemT<Ty>& dst)	{PushBack(Instr(I_INVLPG, 0x0F01, 0, Imm8(7), dst));}
+	void iret()		{PushBack(Instr(I_IRET, 0xCF, E_OPERAND_SIZE_PREFIX));}
+	void iretd()	{PushBack(Instr(I_IRETD, 0xCF, 0));}
+#ifdef JITASM64
+	void iretq()	{PushBack(Instr(I_IRETQ, 0xCF, E_REXW_PREFIX));}
+#endif
 	void jmp(const std::string& label_name)		{PushBack(Instr(I_JMP, 0,			E_SPECIAL, Imm64(GetLabelId(label_name))));}
 	void ja(const std::string& label_name)		{PushBack(Instr(I_JCC, JCC_A,		E_SPECIAL, Imm64(GetLabelId(label_name))));}
 	void jae(const std::string& label_name)		{PushBack(Instr(I_JCC, JCC_AE,		E_SPECIAL, Imm64(GetLabelId(label_name))));}
@@ -1448,18 +1727,32 @@ struct Frontend
 	void jpo(const std::string& label_name)		{jnp(label_name);}
 	void js(const std::string& label_name)		{PushBack(Instr(I_JCC, JCC_S,		E_SPECIAL, Imm64(GetLabelId(label_name))));}
 	void jz(const std::string& label_name)		{je(label_name);}
-
-	// LEA
+	void lar(const Reg16& dst, const Reg16& src)	{PushBack(Instr(I_LAR, 0x0F02, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void lar(const Reg16& dst, const Mem16& src)	{PushBack(Instr(I_LAR, 0x0F02, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void lar(const Reg32& dst, const Reg32& src)	{PushBack(Instr(I_LAR, 0x0F02, 0, dst, src));}
+	void lar(const Reg32& dst, const Mem16& src)	{PushBack(Instr(I_LAR, 0x0F02, 0, dst, src));}
+#ifdef JITASM64
+	void lar(const Reg64& dst, const Reg64& src)	{PushBack(Instr(I_LAR, 0x0F02, E_REXW_PREFIX, dst, src));}
+	void lar(const Reg64& dst, const Mem16& src)	{PushBack(Instr(I_LAR, 0x0F02, E_REXW_PREFIX, dst, src));}
+#endif
 	template<class Ty> void lea(const Reg16& dst, const MemT<Ty>& src)	{PushBack(Instr(I_LEA, 0x8D, E_OPERAND_SIZE_PREFIX, dst, src));}
 	template<class Ty> void lea(const Reg32& dst, const MemT<Ty>& src)	{PushBack(Instr(I_LEA, 0x8D, 0, dst, src));}
 #ifdef JITASM64
 	template<class Ty> void lea(const Reg64& dst, const MemT<Ty>& src)	{PushBack(Instr(I_LEA, 0x8D, E_REXW_PREFIX, dst, src));}
 #endif
-
-	// LEAVE
 	void leave()	{PushBack(Instr(I_LEAVE, 0xC9, 0));}
-
-	// MOV
+	void lodsb()		{PushBack(Instr(I_LODS_B, 0xAC, 0));}
+	void lodsw()		{PushBack(Instr(I_LODS_W, 0xAD, E_OPERAND_SIZE_PREFIX));}
+	void lodsd()		{PushBack(Instr(I_LODS_D, 0xAD, 0));}
+#ifdef JITASM64
+	void lodsq()		{PushBack(Instr(I_LODS_Q, 0xAD, E_REXW_PREFIX));}
+#endif
+	void rep_lodsb()	{PushBack(Instr(I_LODS_B, 0xAC, E_REPEAT_PREFIX));}
+	void rep_lodsw()	{PushBack(Instr(I_LODS_W, 0xAD, E_REPEAT_PREFIX | E_OPERAND_SIZE_PREFIX));}
+	void rep_lodsd()	{PushBack(Instr(I_LODS_D, 0xAD, E_REPEAT_PREFIX));}
+#ifdef JITASM64
+	void rep_lodsq()	{PushBack(Instr(I_LODS_Q, 0xAD, E_REPEAT_PREFIX | E_REXW_PREFIX));}
+#endif
 	void mov(const Reg8& dst, const Reg8& src)		{PushBack(Instr(I_MOV, 0x8A, 0, dst, src));}
 	void mov(const Mem8& dst, const Reg8& src)		{PushBack(Instr(I_MOV, 0x88, E_SPECIAL, src, dst));}
 	void mov(const Reg16& dst, const Reg16& src)	{PushBack(Instr(I_MOV, 0x8B, E_OPERAND_SIZE_PREFIX, dst, src));}
@@ -1484,8 +1777,14 @@ struct Frontend
 	void mov(const Reg64_rax& dst, const MemOffset64& src)	{PushBack(Instr(I_MOV, 0xA1, E_REXW_PREFIX, Imm64(src.GetOffset())));}
 	void mov(const MemOffset64& dst, const Reg64_rax& src)	{PushBack(Instr(I_MOV, 0xA3, E_REXW_PREFIX, Imm64(dst.GetOffset())));}
 #endif
-
-	// MOVSB/MOVSW/MOVSD/MOVSQ
+	//void movbe(const Reg16& dst, const Mem16& src)	{PushBack(Instr(I_MOVBE, 0x0F38F0, E_OPERAND_SIZE_PREFIX, dst, src));}
+	//void movbe(const Reg32& dst, const Mem32& src)	{PushBack(Instr(I_MOVBE, 0x0F38F0, 0, dst, src));}
+	//void movbe(const Mem16& dst, const Reg16& src)	{PushBack(Instr(I_MOVBE, 0x0F38F1, E_OPERAND_SIZE_PREFIX, src, dst));}
+	//void movbe(const Mem32& dst, const Reg32& src)	{PushBack(Instr(I_MOVBE, 0x0F38F1, 0, src, dst));}
+#ifdef JITASM64
+	//void movbe(const Reg64& dst, const Mem64& src)	{PushBack(Instr(I_MOVBE, 0x0F38F0, E_REXW_PREFIX, dst, src));}
+	//void movbe(const Mem64& dst, const Reg64& src)	{PushBack(Instr(I_MOVBE, 0x0F38F1, E_REXW_PREFIX, src, dst));}
+#endif
 	void movsb()		{PushBack(Instr(I_MOVS_B, 0xA4, 0));}
 	void movsw()		{PushBack(Instr(I_MOVS_W, 0xA5, E_OPERAND_SIZE_PREFIX));}
 	void movsd()		{PushBack(Instr(I_MOVS_D, 0xA5, 0));}
@@ -1498,8 +1797,20 @@ struct Frontend
 #ifdef JITASM64
 	void rep_movsq()	{PushBack(Instr(I_MOVS_Q, 0xA5, E_REPEAT_PREFIX | E_REXW_PREFIX));}
 #endif
-
-	// MOVZX
+	void movsx(const Reg16& dst, const Reg8& src)	{PushBack(Instr(I_MOVSX, 0x0FBE, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void movsx(const Reg16& dst, const Mem8& src)	{PushBack(Instr(I_MOVSX, 0x0FBE, E_OPERAND_SIZE_PREFIX, dst, src));}
+	void movsx(const Reg32& dst, const Reg8& src)	{PushBack(Instr(I_MOVSX, 0x0FBE, 0, dst, src));}
+	void movsx(const Reg32& dst, const Mem8& src)	{PushBack(Instr(I_MOVSX, 0x0FBE, 0, dst, src));}
+	void movsx(const Reg32& dst, const Reg16& src)	{PushBack(Instr(I_MOVSX, 0x0FBF, 0, dst, src));}
+	void movsx(const Reg32& dst, const Mem16& src)	{PushBack(Instr(I_MOVSX, 0x0FBF, 0, dst, src));}
+#ifdef JITASM64
+	void movsx(const Reg64& dst, const Reg8& src)	{PushBack(Instr(I_MOVSX, 0x0FBE, E_REXW_PREFIX, dst, src));}
+	void movsx(const Reg64& dst, const Mem8& src)	{PushBack(Instr(I_MOVSX, 0x0FBE, E_REXW_PREFIX, dst, src));}
+	void movsx(const Reg64& dst, const Reg16& src)	{PushBack(Instr(I_MOVSX, 0x0FBF, E_REXW_PREFIX, dst, src));}
+	void movsx(const Reg64& dst, const Mem16& src)	{PushBack(Instr(I_MOVSX, 0x0FBF, E_REXW_PREFIX, dst, src));}
+	void movsxd(const Reg64& dst, const Reg32& src)	{PushBack(Instr(I_MOVSXD, 0x63, E_REXW_PREFIX, dst, src));}
+	void movsxd(const Reg64& dst, const Mem32& src)	{PushBack(Instr(I_MOVSXD, 0x63, E_REXW_PREFIX, dst, src));}
+#endif
 	void movzx(const Reg16& dst, const Reg8& src)	{PushBack(Instr(I_MOVZX, 0x0FB6, E_OPERAND_SIZE_PREFIX, dst, src));}
 	void movzx(const Reg16& dst, const Mem8& src)	{PushBack(Instr(I_MOVZX, 0x0FB6, E_OPERAND_SIZE_PREFIX, dst, src));}
 	void movzx(const Reg32& dst, const Reg8& src)	{PushBack(Instr(I_MOVZX, 0x0FB6, 0, dst, src));}
@@ -1512,8 +1823,6 @@ struct Frontend
 	void movzx(const Reg64& dst, const Reg16& src)	{PushBack(Instr(I_MOVZX, 0x0FB7, E_REXW_PREFIX, dst, src));}
 	void movzx(const Reg64& dst, const Mem16& src)	{PushBack(Instr(I_MOVZX, 0x0FB7, E_REXW_PREFIX, dst, src));}
 #endif
-
-	// MUL
 	void mul(const Reg8& dst)	{PushBack(Instr(I_MUL, 0xF6, 0, Imm8(4), dst));}
 	void mul(const Mem8& dst)	{PushBack(Instr(I_MUL, 0xF6, 0, Imm8(4), dst));}
 	void mul(const Reg16& dst)	{PushBack(Instr(I_MUL, 0xF7, E_OPERAND_SIZE_PREFIX, Imm8(4), dst));}
@@ -1524,8 +1833,6 @@ struct Frontend
 	void mul(const Reg64& dst)	{PushBack(Instr(I_MUL, 0xF7, E_REXW_PREFIX, Imm8(4), dst));}
 	void mul(const Mem64& dst)	{PushBack(Instr(I_MUL, 0xF7, E_REXW_PREFIX, Imm8(4), dst));}
 #endif
-
-	// NEG
 	void neg(const Reg8& dst)	{PushBack(Instr(I_NEG, 0xF6, 0, Imm8(3), dst));}
 	void neg(const Mem8& dst)	{PushBack(Instr(I_NEG, 0xF6, 0, Imm8(3), dst));}
 	void neg(const Reg16& dst)	{PushBack(Instr(I_NEG, 0xF7, E_OPERAND_SIZE_PREFIX, Imm8(3), dst));}
@@ -1536,11 +1843,7 @@ struct Frontend
 	void neg(const Reg64& dst)	{PushBack(Instr(I_NEG, 0xF7, E_REXW_PREFIX, Imm8(3), dst));}
 	void neg(const Mem64& dst)	{PushBack(Instr(I_NEG, 0xF7, E_REXW_PREFIX, Imm8(3), dst));}
 #endif
-
-	// NOP
 	void nop()	{PushBack(Instr(I_NOP, 0x90, 0));}
-
-	// NOT
 	void not(const Reg8& dst)	{PushBack(Instr(I_NOT, 0xF6, 0, Imm8(2), dst));}
 	void not(const Mem8& dst)	{PushBack(Instr(I_NOT, 0xF6, 0, Imm8(2), dst));}
 	void not(const Reg16& dst)	{PushBack(Instr(I_NOT, 0xF7, E_OPERAND_SIZE_PREFIX, Imm8(2), dst));}
@@ -1551,8 +1854,6 @@ struct Frontend
 	void not(const Reg64& dst)	{PushBack(Instr(I_NOT, 0xF7, E_REXW_PREFIX, Imm8(2), dst));}
 	void not(const Mem64& dst)	{PushBack(Instr(I_NOT, 0xF7, E_REXW_PREFIX, Imm8(2), dst));}
 #endif
-
-	// OR
 	void or(const Reg8& dst, const Imm8& imm)	{PushBack(Instr(I_OR, 0x80, E_SPECIAL, Imm8(1), dst, imm));}
 	void or(const Mem8& dst, const Imm8& imm)	{PushBack(Instr(I_OR, 0x80, 0, Imm8(1), dst, imm));}
 	void or(const Reg16& dst, const Imm16& imm)	{PushBack(Instr(I_OR, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_OPERAND_SIZE_PREFIX | E_SPECIAL, Imm8(1), dst, detail::ImmXor8(imm)));}
@@ -1575,8 +1876,6 @@ struct Frontend
 	void or(const Mem64& dst, const Reg64& src)	{PushBack(Instr(I_OR, 0x09, E_REXW_PREFIX, src, dst));}
 	void or(const Reg64& dst, const Mem64& src)	{PushBack(Instr(I_OR, 0x0B, E_REXW_PREFIX, dst, src));}
 #endif
-
-	// POP
 	void pop(const Reg16& dst)	{PushBack(Instr(I_POP, 0x58, E_OPERAND_SIZE_PREFIX, dst));}
 	void pop(const Mem16& dst)	{PushBack(Instr(I_POP, 0x8F, E_OPERAND_SIZE_PREFIX, Imm8(0), dst));}
 #ifndef JITASM64
@@ -1586,8 +1885,6 @@ struct Frontend
 	void pop(const Reg64& dst)	{PushBack(Instr(I_POP, 0x58, 0, dst));}
 	void pop(const Mem64& dst)	{PushBack(Instr(I_POP, 0x8F, 0, Imm8(0), dst));}
 #endif
-
-	// PUSH
 	void push(const Reg16& dst)	{PushBack(Instr(I_PUSH, 0x50, E_OPERAND_SIZE_PREFIX, dst));}
 	void push(const Mem16& dst)	{PushBack(Instr(I_PUSH, 0xFF, E_OPERAND_SIZE_PREFIX, Imm8(6), dst));}
 #ifndef JITASM64
@@ -1598,13 +1895,10 @@ struct Frontend
 	void push(const Mem64& dst)	{PushBack(Instr(I_PUSH, 0xFF, 0, Imm8(6), dst));}
 #endif
 	void push(const Imm32& imm)	{PushBack(Instr(I_PUSH, detail::IsInt8(imm.GetImm()) ? 0x6A : 0x68, 0, detail::ImmXor8(imm)));}
-
-	// RET
+	void rdtsc()	{PushBack(Instr(I_RDTSC, 0x0F31, 0));}
 	void ret()					{PushBack(Instr(I_RET, 0xC3, 0));}
 	void ret(const Imm16& imm)	{PushBack(Instr(I_RET, 0xC2, 0, imm));}
- 
-	// RCL/RCR/ROL/ROR
-	void rcl(const Reg8& dst, const Imm8& shift)	{PushBack(shift.GetImm() == 1 ? Instr(I_RCL, 0xD0, 0, Imm8(2), dst) : Instr(I_RCL, 0xC0, 0, Imm8(2), dst, shift));}
+ 	void rcl(const Reg8& dst, const Imm8& shift)	{PushBack(shift.GetImm() == 1 ? Instr(I_RCL, 0xD0, 0, Imm8(2), dst) : Instr(I_RCL, 0xC0, 0, Imm8(2), dst, shift));}
 	void rcl(const Mem8& dst, const Imm8& shift)	{PushBack(shift.GetImm() == 1 ? Instr(I_RCL, 0xD0, 0, Imm8(2), dst) : Instr(I_RCL, 0xC0, 0, Imm8(2), dst, shift));}
 	void rcr(const Reg8& dst, const Imm8& shift)	{PushBack(shift.GetImm() == 1 ? Instr(I_RCR, 0xD0, 0, Imm8(3), dst) : Instr(I_RCR, 0xC0, 0, Imm8(3), dst, shift));}
 	void rcr(const Mem8& dst, const Imm8& shift)	{PushBack(shift.GetImm() == 1 ? Instr(I_RCR, 0xD0, 0, Imm8(3), dst) : Instr(I_RCR, 0xC0, 0, Imm8(3), dst, shift));}
@@ -1638,8 +1932,6 @@ struct Frontend
 	void ror(const Reg64& dst, const Imm8& shift)	{PushBack(shift.GetImm() == 1 ? Instr(I_ROR, 0xD1, E_REXW_PREFIX, Imm8(1), dst) : Instr(I_ROR, 0xC1, E_REXW_PREFIX, Imm8(1), dst, shift));}
 	void ror(const Mem64& dst, const Imm8& shift)	{PushBack(shift.GetImm() == 1 ? Instr(I_ROR, 0xD1, E_REXW_PREFIX, Imm8(1), dst) : Instr(I_ROR, 0xC1, E_REXW_PREFIX, Imm8(1), dst, shift));}
 #endif
-
-	// SAL/SAR/SHL/SHR
 	void sal(const Reg8& dst, const Imm8& shift)	{shl(dst, shift);}
 	void sal(const Mem8& dst, const Imm8& shift)	{shl(dst, shift);}
 	void sar(const Reg8& dst, const Imm8& shift)	{PushBack(shift.GetImm() == 1 ? Instr(I_SAR, 0xD0, 0, Imm8(7), dst) : Instr(I_SAR, 0xC0, 0, Imm8(7), dst, shift));}
@@ -1674,8 +1966,6 @@ struct Frontend
 	void shr(const Reg64& dst, const Imm8& shift)	{PushBack(shift.GetImm() == 1 ? Instr(I_SHR, 0xD1, E_REXW_PREFIX, Imm8(5), dst) : Instr(I_SHR, 0xC1, E_REXW_PREFIX, Imm8(5), dst, shift));}
 	void shr(const Mem64& dst, const Imm8& shift)	{PushBack(shift.GetImm() == 1 ? Instr(I_SHR, 0xD1, E_REXW_PREFIX, Imm8(5), dst) : Instr(I_SHR, 0xC1, E_REXW_PREFIX, Imm8(5), dst, shift));}
 #endif
-
-	// SBB
 	void sbb(const Reg8& dst, const Imm8& imm)		{PushBack(Instr(I_SBB, 0x80, E_SPECIAL, Imm8(3), dst, imm));}
 	void sbb(const Mem8& dst, const Imm8& imm)		{PushBack(Instr(I_SBB, 0x80, 0, Imm8(3), dst, imm));}
 	void sbb(const Reg16& dst, const Imm16& imm)	{PushBack(Instr(I_SBB, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_OPERAND_SIZE_PREFIX | E_SPECIAL, Imm8(3), dst, detail::ImmXor8(imm)));}
@@ -1698,8 +1988,109 @@ struct Frontend
 	void sbb(const Mem64& dst, const Reg64& src)	{PushBack(Instr(I_SBB, 0x19, E_REXW_PREFIX, src, dst));}
 	void sbb(const Reg64& dst, const Mem64& src)	{PushBack(Instr(I_SBB, 0x1B, E_REXW_PREFIX, dst, src));}
 #endif
-
-	// SUB
+	void seta(const Reg8& dst)		{PushBack(Instr(I_SETCC, 0x0F97, 0, Imm8(0), dst));}
+	void seta(const Mem8& dst)		{PushBack(Instr(I_SETCC, 0x0F97, 0, Imm8(0), dst));}
+	void setae(const Reg8& dst)		{PushBack(Instr(I_SETCC, 0x0F93, 0, Imm8(0), dst));}
+	void setae(const Mem8& dst)		{PushBack(Instr(I_SETCC, 0x0F93, 0, Imm8(0), dst));}
+	void setb(const Reg8& dst)		{PushBack(Instr(I_SETCC, 0x0F92, 0, Imm8(0), dst));}
+	void setb(const Mem8& dst)		{PushBack(Instr(I_SETCC, 0x0F92, 0, Imm8(0), dst));}
+	void setbe(const Reg8& dst)		{PushBack(Instr(I_SETCC, 0x0F96, 0, Imm8(0), dst));}
+	void setbe(const Mem8& dst)		{PushBack(Instr(I_SETCC, 0x0F96, 0, Imm8(0), dst));}
+	void setc(const Reg8& dst)		{setb(dst);}
+	void setc(const Mem8& dst)		{setb(dst);}
+	void sete(const Reg8& dst)		{PushBack(Instr(I_SETCC, 0x0F94, 0, Imm8(0), dst));}
+	void sete(const Mem8& dst)		{PushBack(Instr(I_SETCC, 0x0F94, 0, Imm8(0), dst));}
+	void setg(const Reg8& dst)		{PushBack(Instr(I_SETCC, 0x0F9F, 0, Imm8(0), dst));}
+	void setg(const Mem8& dst)		{PushBack(Instr(I_SETCC, 0x0F9F, 0, Imm8(0), dst));}
+	void setge(const Reg8& dst)		{PushBack(Instr(I_SETCC, 0x0F9D, 0, Imm8(0), dst));}
+	void setge(const Mem8& dst)		{PushBack(Instr(I_SETCC, 0x0F9D, 0, Imm8(0), dst));}
+	void setl(const Reg8& dst)		{PushBack(Instr(I_SETCC, 0x0F9C, 0, Imm8(0), dst));}
+	void setl(const Mem8& dst)		{PushBack(Instr(I_SETCC, 0x0F9C, 0, Imm8(0), dst));}
+	void setle(const Reg8& dst)		{PushBack(Instr(I_SETCC, 0x0F9E, 0, Imm8(0), dst));}
+	void setle(const Mem8& dst)		{PushBack(Instr(I_SETCC, 0x0F9E, 0, Imm8(0), dst));}
+	void setna(const Reg8& dst)		{setbe(dst);}
+	void setna(const Mem8& dst)		{setbe(dst);}
+	void setnae(const Reg8& dst)	{setb(dst);}
+	void setnae(const Mem8& dst)	{setb(dst);}
+	void setnb(const Reg8& dst)		{setae(dst);}
+	void setnb(const Mem8& dst)		{setae(dst);}
+	void setnbe(const Reg8& dst)	{seta(dst);}
+	void setnbe(const Mem8& dst)	{seta(dst);}
+	void setnc(const Reg8& dst)		{setae(dst);}
+	void setnc(const Mem8& dst)		{setae(dst);}
+	void setne(const Reg8& dst)		{PushBack(Instr(I_SETCC, 0x0F95, 0, Imm8(0), dst));}
+	void setne(const Mem8& dst)		{PushBack(Instr(I_SETCC, 0x0F95, 0, Imm8(0), dst));}
+	void setng(const Reg8& dst)		{setle(dst);}
+	void setng(const Mem8& dst)		{setle(dst);}
+	void setnge(const Reg8& dst)	{setl(dst);}
+	void setnge(const Mem8& dst)	{setl(dst);}
+	void setnl(const Reg8& dst)		{setge(dst);}
+	void setnl(const Mem8& dst)		{setge(dst);}
+	void setnle(const Reg8& dst)	{setg(dst);}
+	void setnle(const Mem8& dst)	{setg(dst);}
+	void setno(const Reg8& dst)		{PushBack(Instr(I_SETCC, 0x0F91, 0, Imm8(0), dst));}
+	void setno(const Mem8& dst)		{PushBack(Instr(I_SETCC, 0x0F91, 0, Imm8(0), dst));}
+	void setnp(const Reg8& dst)		{PushBack(Instr(I_SETCC, 0x0F9B, 0, Imm8(0), dst));}
+	void setnp(const Mem8& dst)		{PushBack(Instr(I_SETCC, 0x0F9B, 0, Imm8(0), dst));}
+	void setns(const Reg8& dst)		{PushBack(Instr(I_SETCC, 0x0F99, 0, Imm8(0), dst));}
+	void setns(const Mem8& dst)		{PushBack(Instr(I_SETCC, 0x0F99, 0, Imm8(0), dst));}
+	void setnz(const Reg8& dst)		{setne(dst);}
+	void setnz(const Mem8& dst)		{setne(dst);}
+	void seto(const Reg8& dst)		{PushBack(Instr(I_SETCC, 0x0F90, 0, Imm8(0), dst));}
+	void seto(const Mem8& dst)		{PushBack(Instr(I_SETCC, 0x0F90, 0, Imm8(0), dst));}
+	void setp(const Reg8& dst)		{PushBack(Instr(I_SETCC, 0x0F9A, 0, Imm8(0), dst));}
+	void setp(const Mem8& dst)		{PushBack(Instr(I_SETCC, 0x0F9A, 0, Imm8(0), dst));}
+	void setpe(const Reg8& dst)		{setp(dst);}
+	void setpe(const Mem8& dst)		{setp(dst);}
+	void setpo(const Reg8& dst)		{setnp(dst);}
+	void setpo(const Mem8& dst)		{setnp(dst);}
+	void sets(const Reg8& dst)		{PushBack(Instr(I_SETCC, 0x0F98, 0, Imm8(0), dst));}
+	void sets(const Mem8& dst)		{PushBack(Instr(I_SETCC, 0x0F98, 0, Imm8(0), dst));}
+	void setz(const Reg8& dst)		{sete(dst);}
+	void setz(const Mem8& dst)		{sete(dst);}
+	void shld(const Reg16& dst, const Reg16& src, const Imm8& place)	{PushBack(Instr(I_SHLD, 0x0FA4, E_OPERAND_SIZE_PREFIX, src, dst, place));}
+	void shld(const Mem16& dst, const Reg16& src, const Imm8& place)	{PushBack(Instr(I_SHLD, 0x0FA4, E_OPERAND_SIZE_PREFIX, src, dst, place));}
+	void shld(const Reg16& dst, const Reg16& src, const Reg8_cl& place)	{PushBack(Instr(I_SHLD, 0x0FA5, E_OPERAND_SIZE_PREFIX, src, dst));}
+	void shld(const Mem16& dst, const Reg16& src, const Reg8_cl& place)	{PushBack(Instr(I_SHLD, 0x0FA5, E_OPERAND_SIZE_PREFIX, src, dst));}
+	void shld(const Reg32& dst, const Reg32& src, const Imm8& place)	{PushBack(Instr(I_SHLD, 0x0FA4, 0, src, dst, place));}
+	void shld(const Mem32& dst, const Reg32& src, const Imm8& place)	{PushBack(Instr(I_SHLD, 0x0FA4, 0, src, dst, place));}
+	void shld(const Reg32& dst, const Reg32& src, const Reg8_cl& place)	{PushBack(Instr(I_SHLD, 0x0FA5, 0, src, dst));}
+	void shld(const Mem32& dst, const Reg32& src, const Reg8_cl& place)	{PushBack(Instr(I_SHLD, 0x0FA5, 0, src, dst));}
+#ifdef JITASM64
+	void shld(const Reg64& dst, const Reg64& src, const Imm8& place)	{PushBack(Instr(I_SHLD, 0x0FA4, E_REXW_PREFIX, src, dst, place));}
+	void shld(const Mem64& dst, const Reg64& src, const Imm8& place)	{PushBack(Instr(I_SHLD, 0x0FA4, E_REXW_PREFIX, src, dst, place));}
+	void shld(const Reg64& dst, const Reg64& src, const Reg8_cl& place)	{PushBack(Instr(I_SHLD, 0x0FA5, E_REXW_PREFIX, src, dst));}
+	void shld(const Mem64& dst, const Reg64& src, const Reg8_cl& place)	{PushBack(Instr(I_SHLD, 0x0FA5, E_REXW_PREFIX, src, dst));}
+#endif
+	void shrd(const Reg16& dst, const Reg16& src, const Imm8& place)	{PushBack(Instr(I_SHRD, 0x0FAC, E_OPERAND_SIZE_PREFIX, src, dst, place));}
+	void shrd(const Mem16& dst, const Reg16& src, const Imm8& place)	{PushBack(Instr(I_SHRD, 0x0FAC, E_OPERAND_SIZE_PREFIX, src, dst, place));}
+	void shrd(const Reg16& dst, const Reg16& src, const Reg8_cl& place)	{PushBack(Instr(I_SHRD, 0x0FAD, E_OPERAND_SIZE_PREFIX, src, dst));}
+	void shrd(const Mem16& dst, const Reg16& src, const Reg8_cl& place)	{PushBack(Instr(I_SHRD, 0x0FAD, E_OPERAND_SIZE_PREFIX, src, dst));}
+	void shrd(const Reg32& dst, const Reg32& src, const Imm8& place)	{PushBack(Instr(I_SHRD, 0x0FAC, 0, src, dst, place));}
+	void shrd(const Mem32& dst, const Reg32& src, const Imm8& place)	{PushBack(Instr(I_SHRD, 0x0FAC, 0, src, dst, place));}
+	void shrd(const Reg32& dst, const Reg32& src, const Reg8_cl& place)	{PushBack(Instr(I_SHRD, 0x0FAD, 0, src, dst));}
+	void shrd(const Mem32& dst, const Reg32& src, const Reg8_cl& place)	{PushBack(Instr(I_SHRD, 0x0FAD, 0, src, dst));}
+#ifdef JITASM64
+	void shrd(const Reg64& dst, const Reg64& src, const Imm8& place)	{PushBack(Instr(I_SHRD, 0x0FAC, E_REXW_PREFIX, src, dst, place));}
+	void shrd(const Mem64& dst, const Reg64& src, const Imm8& place)	{PushBack(Instr(I_SHRD, 0x0FAC, E_REXW_PREFIX, src, dst, place));}
+	void shrd(const Reg64& dst, const Reg64& src, const Reg8_cl& place)	{PushBack(Instr(I_SHRD, 0x0FAD, E_REXW_PREFIX, src, dst));}
+	void shrd(const Mem64& dst, const Reg64& src, const Reg8_cl& place)	{PushBack(Instr(I_SHRD, 0x0FAD, E_REXW_PREFIX, src, dst));}
+#endif
+	void stc()	{PushBack(Instr(I_STC, 0xF9, 0));}
+	void std()	{PushBack(Instr(I_STD, 0xFD, 0));}
+	void sti()	{PushBack(Instr(I_STI, 0xFB, 0));}
+	void stosb()		{PushBack(Instr(I_STOS_B, 0xAA, 0));}
+	void stosw()		{PushBack(Instr(I_STOS_W, 0xAB, E_OPERAND_SIZE_PREFIX));}
+	void stosd()		{PushBack(Instr(I_STOS_D, 0xAB, 0));}
+#ifdef JITASM64
+	void stosq()		{PushBack(Instr(I_STOS_Q, 0xAB, E_REXW_PREFIX));}
+#endif
+	void rep_stosb()	{PushBack(Instr(I_STOS_B, 0xAA, E_REPEAT_PREFIX));}
+	void rep_stosw()	{PushBack(Instr(I_STOS_W, 0xAB, E_REPEAT_PREFIX | E_OPERAND_SIZE_PREFIX));}
+	void rep_stosd()	{PushBack(Instr(I_STOS_D, 0xAB, E_REPEAT_PREFIX));}
+#ifdef JITASM64
+	void rep_stosq()	{PushBack(Instr(I_STOS_Q, 0xAB, E_REPEAT_PREFIX | E_REXW_PREFIX));}
+#endif
 	void sub(const Reg8& dst, const Imm8& imm)		{PushBack(Instr(I_SUB, 0x80, E_SPECIAL, Imm8(5), dst, imm));}
 	void sub(const Mem8& dst, const Imm8& imm)		{PushBack(Instr(I_SUB, 0x80, 0, Imm8(5), dst, imm));}
 	void sub(const Reg16& dst, const Imm16& imm)	{PushBack(Instr(I_SUB, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_OPERAND_SIZE_PREFIX | E_SPECIAL, Imm8(5), dst, detail::ImmXor8(imm)));}
@@ -1722,8 +2113,6 @@ struct Frontend
 	void sub(const Mem64& dst, const Reg64& src)	{PushBack(Instr(I_SUB, 0x29, E_REXW_PREFIX, src, dst));}
 	void sub(const Reg64& dst, const Mem64& src)	{PushBack(Instr(I_SUB, 0x2B, E_REXW_PREFIX, dst, src));}
 #endif
-
-	// TEST
 	void test(const Reg8& dst, const Imm8& imm)		{PushBack(Instr(I_TEST, 0xF6, E_SPECIAL, Imm8(0), dst, imm));}
 	void test(const Mem8& dst, const Imm8& imm)		{PushBack(Instr(I_TEST, 0xF6, 0, Imm8(0), dst, imm));}
 	void test(const Reg16& dst, const Imm16& imm)	{PushBack(Instr(I_TEST, 0xF7, E_OPERAND_SIZE_PREFIX | E_SPECIAL, Imm8(0), dst, imm));}
@@ -1742,8 +2131,19 @@ struct Frontend
 	void test(const Reg64& dst, const Reg64& src)	{PushBack(Instr(I_TEST, 0x85, E_REXW_PREFIX, dst, src));}
 	void test(const Mem64& dst, const Reg64& src)	{PushBack(Instr(I_TEST, 0x85, E_REXW_PREFIX, src, dst));}
 #endif
-
-	// XCHG
+	void ud2()		{PushBack(Instr(I_UD2, 0x0F0B, 0));}
+	void wait()		{fwait();}
+	void fwait()	{PushBack(Instr(I_FWAIT, 0x9B, 0));}
+	void xadd(const Reg8& dst, const Reg8& src)		{PushBack(Instr(I_XADD, 0x0FC0, 0, src, dst));}
+	void xadd(const Mem8& dst, const Reg8& src)		{PushBack(Instr(I_XADD, 0x0FC0, 0, src, dst));}
+	void xadd(const Reg16& dst, const Reg16& src)	{PushBack(Instr(I_XADD, 0x0FC1, E_OPERAND_SIZE_PREFIX, src, dst));}
+	void xadd(const Mem16& dst, const Reg16& src)	{PushBack(Instr(I_XADD, 0x0FC1, E_OPERAND_SIZE_PREFIX, src, dst));}
+	void xadd(const Reg32& dst, const Reg32& src)	{PushBack(Instr(I_XADD, 0x0FC1, 0, src, dst));}
+	void xadd(const Mem32& dst, const Reg32& src)	{PushBack(Instr(I_XADD, 0x0FC1, 0, src, dst));}
+#ifdef JITASM64
+	void xadd(const Reg64& dst, const Reg64& src)	{PushBack(Instr(I_XADD, 0x0FC1, E_REXW_PREFIX, src, dst));}
+	void xadd(const Mem64& dst, const Reg64& src)	{PushBack(Instr(I_XADD, 0x0FC1, E_REXW_PREFIX, src, dst));}
+#endif
 	void xchg(const Reg8& dst, const Reg8& src)		{PushBack(Instr(I_XCHG, 0x86, 0, dst, src));}
 	void xchg(const Mem8& dst, const Reg8& src)		{PushBack(Instr(I_XCHG, 0x86, 0, src, dst));}
 	void xchg(const Reg8& dst, const Mem8& src)		{PushBack(Instr(I_XCHG, 0x86, 0, dst, src));}
@@ -1758,8 +2158,6 @@ struct Frontend
 	void xchg(const Mem64& dst, const Reg64& src)	{PushBack(Instr(I_XCHG, 0x87, E_REXW_PREFIX, src, dst));}
 	void xchg(const Reg64& dst, const Mem64& src)	{PushBack(Instr(I_XCHG, 0x87, E_REXW_PREFIX, dst, src));}
 #endif
-
-	// XOR
 	void xor(const Reg8& dst, const Imm8& imm)		{PushBack(Instr(I_XOR, 0x80, E_SPECIAL, Imm8(6), dst, imm));}
 	void xor(const Mem8& dst, const Imm8& imm)		{PushBack(Instr(I_XOR, 0x80, 0, Imm8(6), dst, imm));}
 	void xor(const Reg16& dst, const Imm16& imm)	{PushBack(Instr(I_XOR, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_OPERAND_SIZE_PREFIX | E_SPECIAL, Imm8(6), dst, detail::ImmXor8(imm)));}
@@ -1783,13 +2181,11 @@ struct Frontend
 	void xor(const Reg64& dst, const Mem64& src)	{PushBack(Instr(I_XOR, 0x33, E_REXW_PREFIX, dst, src));}
 #endif
 
-	// FLD
+	// x87 Floating-Point Instructions
 	void fld(const Mem32& src)	{PushBack(Instr(I_FLD, 0xD9, 0, Imm8(0), src));}
 	void fld(const Mem64& src)	{PushBack(Instr(I_FLD, 0xDD, 0, Imm8(0), src));}
 	void fld(const Mem80& src)	{PushBack(Instr(I_FLD, 0xDB, 0, Imm8(5), src));}
 	void fld(const FpuReg& src)	{PushBack(Instr(I_FLD, 0xD9C0, 0, src));}
-
-	// FST/FSTP
 	void fst(const Mem32& dst)		{PushBack(Instr(I_FST,	0xD9, 0, Imm8(2), dst));}
 	void fst(const Mem64& dst)		{PushBack(Instr(I_FST,	0xDD, 0, Imm8(2), dst));}
 	void fst(const FpuReg& dst)		{PushBack(Instr(I_FST,	0xDDD0, 0, dst));}
