@@ -7,41 +7,41 @@
 #define TEST_M(func_name) {test_impl(TOSTR(func_name), func_name ## (), masm_ ## func_name);}
 #define TEST_N(func_name) {test_impl(TOSTR(func_name), func_name ## (), nasm_ ## func_name);}
 
+size_t	g_test_succeeded = 0;
+size_t	g_test_failed = 0;
+
 template<class Fn1, class Fn2>
 void test_impl(const char* func_name, Fn1 fn1, Fn2 fn2)
 {
-	printf("TEST_M(%s) ... ", func_name);
-
 	fn1.Assemble();
 	size_t size = fn1.GetCodeSize();
 
 	unsigned char* p1 = (unsigned char*) fn1.GetCode();
 	unsigned char* p2 = (unsigned char*) fn2;
 	if (*p2 == 0xE9) p2 = (unsigned char*) (p2 + (unsigned long&) *(p2 + 1) + 5);
-	
+
 	for (size_t i = 0; i < size; i++) {
 		if (p1[i] != p2[i]) {
-			printf("FAILED\n");
-
 			size_t min = (size_t) max((int) i - 10, 0);
-			size_t max = min(i + 10, size);
+			size_t max = min(min + 20, size);
 
-			printf("    J[%d] ", min);
-			for (size_t j = min; j < max; j++) printf("%02X,", p1[j]);
-			printf("\n");
+			printf("<%s> ... failed (dump %d-%d)\n", func_name, min, max);
 
-			printf("    M[%d] ", min);
+			printf("    expected -> ");
 			for (size_t j = min; j < max; j++) printf("%02X,", p2[j]);
 			printf("\n");
 
-			if (::IsDebuggerPresent()) {
-				::DebugBreak();
-			}
+			printf("      actual -> ");
+			for (size_t j = min; j < max; j++) printf("%02X,", p1[j]);
+			printf("\n");
+
+			printf("               %*c^^\n", (i - min) * 3 + 1, ' ');
+
+			g_test_failed++;
 			return;
 		}
 	}
-
-	printf("OK\n");
+	g_test_succeeded++;
 }
 
 struct test_mmx_sse2 : jitasm::function0<void>
@@ -1457,9 +1457,17 @@ struct test_mov_disp : jitasm::function0<void>
 		mov(cx, word_ptr[1]);
 		mov(eax, dword_ptr[1]);
 		mov(ecx, dword_ptr[1]);
+		mov(byte_ptr[1], al);
+		mov(byte_ptr[1], cl);
+		mov(word_ptr[1], ax);
+		mov(word_ptr[1], cx);
+		mov(dword_ptr[1], eax);
+		mov(dword_ptr[1], ecx);
 #ifdef JITASM64
 		mov(rax, qword_ptr[1]);
+		mov(qword_ptr[1], rax);
 		mov(rax, qword_ptr[0x100000000]);
+		mov(qword_ptr[0x100000000], rax);
 #endif
 	}
 };
@@ -1605,6 +1613,502 @@ struct test_fst : jitasm::function0<void>
 	}
 };
 
+//----------------------------------------
+// Simple Instructions
+//----------------------------------------
+extern "C" void masm_test_simple();
+struct test_simple : jitasm::function0<void>
+{
+	virtual void naked_main()
+	{
+		debugbreak();
+		leave();
+		nop();
+		ret();
+		ret(1);
+		ret(-1);
+	}
+};
+
+//----------------------------------------
+// MMX
+//----------------------------------------
+extern "C" void masm_test_mmx();
+struct test_mmx : jitasm::function0<void>
+{
+	virtual void naked_main()
+	{
+		emms();
+		packsswb(mm1, mm2);
+		packsswb(mm1, qword_ptr[ebp]);
+		packssdw(mm1, mm2);
+		packssdw(mm1, qword_ptr[ebp]);
+		packuswb(mm1, mm2);
+		packuswb(mm1, qword_ptr[ebp]);
+		paddb(mm1, mm2);
+		paddb(mm1, qword_ptr[ebp]);
+		paddw(mm1, mm2);
+		paddw(mm1, qword_ptr[ebp]);
+		paddd(mm1, mm2);
+		paddd(mm1, qword_ptr[ebp]);
+		paddsb(mm1, mm2);
+		paddsb(mm1, qword_ptr[ebp]);
+		paddsw(mm1, mm2);
+		paddsw(mm1, qword_ptr[ebp]);
+		paddusb(mm1, mm2);
+		paddusb(mm1, qword_ptr[ebp]);
+		paddusw(mm1, mm2);
+		paddusw(mm1, qword_ptr[ebp]);
+		pand(mm1, mm2);
+		pand(mm1, qword_ptr[ebp]);
+		pandn(mm1, mm2);
+		pandn(mm1, qword_ptr[ebp]);
+		pcmpeqb(mm1, mm2);
+		pcmpeqb(mm1, qword_ptr[ebp]);
+		pcmpeqw(mm1, mm2);
+		pcmpeqw(mm1, qword_ptr[ebp]);
+		pcmpeqd(mm1, mm2);
+		pcmpeqd(mm1, qword_ptr[ebp]);
+		pcmpgtb(mm1, mm2);
+		pcmpgtb(mm1, qword_ptr[ebp]);
+		pcmpgtw(mm1, mm2);
+		pcmpgtw(mm1, qword_ptr[ebp]);
+		pcmpgtd(mm1, mm2);
+		pcmpgtd(mm1, qword_ptr[ebp]);
+		pmaddwd(mm1, mm2);
+		pmaddwd(mm1, qword_ptr[ebp]);
+		pmulhw(mm1, mm2);
+		pmulhw(mm1, qword_ptr[ebp]);
+		pmullw(mm1, mm2);
+		pmullw(mm1, qword_ptr[ebp]);
+		por(mm1, mm2);
+		por(mm1, qword_ptr[ebp]);
+		psllw(mm1, mm3);
+		psllw(mm1, qword_ptr[ebp + ecx]);
+		psllw(mm1, 2);
+		pslld(mm1, mm3);
+		pslld(mm1, qword_ptr[ebp + ecx]);
+		pslld(mm1, 2);
+		psllq(mm1, mm3);
+		psllq(mm1, qword_ptr[ebp + ecx]);
+		psllq(mm1, 2);
+		psraw(mm1, mm3);
+		psraw(mm1, qword_ptr[ebp + ecx]);
+		psraw(mm1, 2);
+		psrad(mm1, mm3);
+		psrad(mm1, qword_ptr[ebp + ecx]);
+		psrad(mm1, 2);
+		psrlw(mm1, mm3);
+		psrlw(mm1, qword_ptr[ebp + ecx]);
+		psrlw(mm1, 2);
+		psrld(mm1, mm3);
+		psrld(mm1, qword_ptr[ebp + ecx]);
+		psrld(mm1, 2);
+		psrlq(mm1, mm3);
+		psrlq(mm1, qword_ptr[ebp + ecx]);
+		psrlq(mm1, 2);
+		psubb(mm1, mm2);
+		psubb(mm1, qword_ptr[ebp]);
+		psubw(mm1, mm2);
+		psubw(mm1, qword_ptr[ebp]);
+		psubd(mm1, mm2);
+		psubd(mm1, qword_ptr[ebp]);
+		psubsb(mm1, mm2);
+		psubsb(mm1, qword_ptr[ebp]);
+		psubsw(mm1, mm2);
+		psubsw(mm1, qword_ptr[ebp]);
+		psubusb(mm1, mm2);
+		psubusb(mm1, qword_ptr[ebp]);
+		psubusw(mm1, mm2);
+		psubusw(mm1, qword_ptr[ebp]);
+		punpckhbw(mm2, mm3);
+		punpckhbw(mm2, qword_ptr[esp]);
+		punpckhwd(mm2, mm3);
+		punpckhwd(mm2, qword_ptr[esp]);
+		punpckhdq(mm2, mm3);
+		punpckhdq(mm2, qword_ptr[esp]);
+		punpcklbw(mm2, mm3);
+		punpcklbw(mm2, dword_ptr[esp]);
+		punpcklwd(mm2, mm3);
+		punpcklwd(mm2, dword_ptr[esp]);
+		punpckldq(mm2, mm3);
+		punpckldq(mm2, dword_ptr[esp]);
+		pxor(mm2, mm3);
+		pxor(mm2, qword_ptr[esp]);
+#ifdef JITASM64
+		packsswb(mm1, qword_ptr[r8]);
+		packssdw(mm1, qword_ptr[r8]);
+		packuswb(mm1, qword_ptr[r8]);
+		paddb(mm1, qword_ptr[r8]);
+		paddw(mm1, qword_ptr[r8]);
+		paddd(mm1, qword_ptr[r8]);
+		paddsb(mm1, qword_ptr[r8]);
+		paddsw(mm1, qword_ptr[r8]);
+		paddusb(mm1, qword_ptr[r8]);
+		paddusw(mm1, qword_ptr[r8]);
+		pand(mm1, qword_ptr[r8]);
+		pandn(mm1, qword_ptr[r8]);
+		pcmpeqb(mm1, qword_ptr[r8]);
+		pcmpeqw(mm1, qword_ptr[r8]);
+		pcmpeqd(mm1, qword_ptr[r8]);
+		pcmpgtb(mm1, qword_ptr[r8]);
+		pcmpgtw(mm1, qword_ptr[r8]);
+		pcmpgtd(mm1, qword_ptr[r8]);
+		pmaddwd(mm1, qword_ptr[r8]);
+		pmulhw(mm1, qword_ptr[r8]);
+		pmullw(mm1, qword_ptr[r8]);
+		por(mm1, qword_ptr[r8]);
+		psllw(mm1, qword_ptr[r8 + rcx]);
+		pslld(mm1, qword_ptr[r8 + rcx]);
+		psllq(mm1, qword_ptr[r8 + rcx]);
+		psraw(mm1, qword_ptr[r8 + rcx]);
+		psrad(mm1, qword_ptr[r8 + rcx]);
+		psrlw(mm1, qword_ptr[r8 + rcx]);
+		psrld(mm1, qword_ptr[r8 + rcx]);
+		psrlq(mm1, qword_ptr[r8 + rcx]);
+		psubb(mm1, qword_ptr[r8]);
+		psubw(mm1, qword_ptr[r8]);
+		psubd(mm1, qword_ptr[r8]);
+		psubsb(mm1, qword_ptr[r8]);
+		psubsw(mm1, qword_ptr[r8]);
+		psubusb(mm1, qword_ptr[r8]);
+		psubusw(mm1, qword_ptr[r8]);
+		punpckhbw(mm2, qword_ptr[rsp]);
+		punpckhwd(mm2, qword_ptr[rsp]);
+		punpckhdq(mm2, qword_ptr[rsp]);
+		punpcklbw(mm2, dword_ptr[rsp]);
+		punpcklwd(mm2, dword_ptr[rsp]);
+		punpckldq(mm2, dword_ptr[rsp]);
+		pxor(mm2, qword_ptr[rsp]);
+#endif
+	}
+};
+
+//----------------------------------------
+// MMX2
+//----------------------------------------
+extern "C" void masm_test_mmx2();
+struct test_mmx2 : jitasm::function0<void>
+{
+	virtual void naked_main()
+	{
+		pavgb(mm1, mm2);
+		pavgb(mm1, qword_ptr[ebp]);
+		pavgw(mm1, mm2);
+		pavgw(mm1, qword_ptr[ebp]);
+		pextrw(ecx, mm2, 1);
+		pinsrw(mm1, ecx, 2);
+		pinsrw(mm1, word_ptr[esp], 1);
+		pmaxsw(mm1, mm2);
+		pmaxsw(mm1, qword_ptr[ebp]);
+		pmaxub(mm1, mm2);
+		pmaxub(mm1, qword_ptr[ebp]);
+		pminsw(mm1, mm2);
+		pminsw(mm1, qword_ptr[ebp]);
+		pminub(mm1, mm2);
+		pminub(mm1, qword_ptr[ebp]);
+		pmovmskb(eax, mm2);
+		pmulhuw(mm1, mm2);
+		pmulhuw(mm1, qword_ptr[ebp]);
+		psadbw(mm1, mm2);
+		psadbw(mm1, qword_ptr[ebp]);
+		pshufw(mm1, mm2, 0x10);
+		pshufw(mm1, qword_ptr[ebp], 1);
+#ifdef JITASM64
+		pavgb(mm1, qword_ptr[rbp]);
+		pavgw(mm1, qword_ptr[rbp]);
+		pextrw(rax, mm2, 2);
+		pextrw(r9, mm2, 3);
+		pextrw(r10d, mm2, 0);
+		pinsrw(mm1, rcx, 3);
+		pinsrw(mm1, r9, 0);
+		pinsrw(mm1, r10d, 1);
+		pmaxsw(mm1, qword_ptr[rbp]);
+		pmaxub(mm1, qword_ptr[rbp]);
+		pminsw(mm1, qword_ptr[rbp]);
+		pminub(mm1, qword_ptr[rbp]);
+		pmovmskb(rcx, mm2);
+		pmovmskb(r9, mm2);
+		pmulhuw(mm1, qword_ptr[rbp]);
+		psadbw(mm1, qword_ptr[rbp]);
+		pshufw(mm1, qword_ptr[r9], 1);
+#endif
+	}
+};
+
+//----------------------------------------
+// SSE
+//----------------------------------------
+extern "C" void masm_test_sse();
+struct test_sse : jitasm::function0<void>
+{
+	virtual void naked_main()
+	{
+		addps(xmm1, xmm2);
+		addps(xmm1, xmmword_ptr[ebp]);
+		addss(xmm1, xmm2);
+		addss(xmm1, dword_ptr[esi]);
+		andps(xmm1, xmm2);
+		andps(xmm1, xmmword_ptr[ebp]);
+		andnps(xmm1, xmm2);
+		andnps(xmm1, xmmword_ptr[ebp]);
+		cmpeqps(xmm1, xmm2);
+		cmpeqps(xmm1, xmmword_ptr[ebp]);
+		cmpltps(xmm1, xmm2);
+		cmpltps(xmm1, xmmword_ptr[ebp]);
+		cmpleps(xmm1, xmm2);
+		cmpleps(xmm1, xmmword_ptr[ebp]);
+		cmpunordps(xmm1, xmm2);
+		cmpunordps(xmm1, xmmword_ptr[ebp]);
+		cmpneqps(xmm1, xmm2);
+		cmpneqps(xmm1, xmmword_ptr[ebp]);
+		cmpnltps(xmm1, xmm2);
+		cmpnltps(xmm1, xmmword_ptr[ebp]);
+		cmpnleps(xmm1, xmm2);
+		cmpnleps(xmm1, xmmword_ptr[ebp]);
+		cmpordps(xmm1, xmm2);
+		cmpordps(xmm1, xmmword_ptr[ebp]);
+		cmpeqss(xmm1, xmm2);
+		cmpeqss(xmm1, dword_ptr[esi]);
+		cmpltss(xmm1, xmm2);
+		cmpltss(xmm1, dword_ptr[esi]);
+		cmpless(xmm1, xmm2);
+		cmpless(xmm1, dword_ptr[esi]);
+		cmpunordss(xmm1, xmm2);
+		cmpunordss(xmm1, dword_ptr[esi]);
+		cmpneqss(xmm1, xmm2);
+		cmpneqss(xmm1, dword_ptr[esi]);
+		cmpnltss(xmm1, xmm2);
+		cmpnltss(xmm1, dword_ptr[esi]);
+		cmpnless(xmm1, xmm2);
+		cmpnless(xmm1, dword_ptr[esi]);
+		cmpordss(xmm1, xmm2);
+		cmpordss(xmm1, dword_ptr[esi]);
+		comiss(xmm1, xmm2);
+		comiss(xmm1, dword_ptr[esi]);
+		cvtpi2ps(xmm1, mm3);
+		cvtpi2ps(xmm1, qword_ptr[esi]);
+		cvtps2pi(mm1, xmm2);
+		cvtps2pi(mm1, qword_ptr[esi]);
+		cvtsi2ss(xmm1, ecx);
+		cvtsi2ss(xmm1, dword_ptr[esi]);
+		cvtss2si(eax, xmm2);
+		cvtss2si(ecx, dword_ptr[esi]);
+		cvttps2pi(mm1, xmm2);
+		cvttps2pi(mm1, qword_ptr[esi]);
+		cvttss2si(eax, xmm2);
+		cvttss2si(ecx, dword_ptr[esi]);
+		divps(xmm1, xmm2);
+		divps(xmm1, xmmword_ptr[ebp]);
+		divss(xmm1, xmm2);
+		divss(xmm1, dword_ptr[esi]);
+		ldmxcsr(dword_ptr[esi]);
+		maskmovq(mm1, mm2);
+		maxps(xmm1, xmm2);
+		maxps(xmm1, xmmword_ptr[ebp]);
+		maxss(xmm1, xmm2);
+		maxss(xmm1, dword_ptr[esi]);
+		minps(xmm1, xmm2);
+		minps(xmm1, xmmword_ptr[ebp]);
+		minss(xmm1, xmm2);
+		minss(xmm1, dword_ptr[esi]);
+		movaps(xmm1, xmm2);
+		movaps(xmm1, xmmword_ptr[ebp]);
+		movaps(xmmword_ptr[esp], xmm2);
+		movhlps(xmm1, xmm2);
+		movhps(xmm1, qword_ptr[esi]);
+		movhps(qword_ptr[edi], xmm2);
+		movlhps(xmm1, xmm2);
+		movlps(xmm1, qword_ptr[esi]);
+		movlps(qword_ptr[edi], xmm2);
+		movmskps(eax, xmm2);
+		movntps(xmmword_ptr[esp], xmm2);
+		movntq(qword_ptr[edi], mm2);
+		movss(xmm1, xmm2);
+		movss(xmm1, dword_ptr[esi]);
+		movss(dword_ptr[ebp], xmm2);
+		movups(xmm1, xmm2);
+		movups(xmm1, xmmword_ptr[ebp]);
+		movups(xmmword_ptr[esp], xmm2);
+		mulps(xmm1, xmm2);
+		mulps(xmm1, xmmword_ptr[ebp]);
+		mulss(xmm1, xmm2);
+		mulss(xmm1, dword_ptr[esi]);
+		orps(xmm1, xmm2);
+		orps(xmm1, xmmword_ptr[ebp]);
+		prefetcht0(byte_ptr[ebp]);
+		prefetcht1(byte_ptr[ebp]);
+		prefetcht2(byte_ptr[ebp]);
+		prefetchnta(byte_ptr[ebp]);
+		rcpps(xmm1, xmm2);
+		rcpps(xmm1, xmmword_ptr[ebp]);
+		rcpss(xmm1, xmm2);
+		rcpss(xmm1, dword_ptr[esi]);
+		rsqrtps(xmm1, xmm2);
+		rsqrtps(xmm1, xmmword_ptr[ebp]);
+		rsqrtss(xmm1, xmm2);
+		rsqrtss(xmm1, dword_ptr[esi]);
+		sfence();
+		shufps(xmm1, xmm2, 0x10);
+		shufps(xmm1, xmmword_ptr[ebp], 0x20);
+		sqrtps(xmm1, xmm2);
+		sqrtps(xmm1, xmmword_ptr[ebp]);
+		sqrtss(xmm1, xmm2);
+		sqrtss(xmm1, dword_ptr[esi]);
+		stmxcsr(dword_ptr[esi]);
+		subps(xmm1, xmm2);
+		subps(xmm1, xmmword_ptr[ebp]);
+		subss(xmm1, xmm2);
+		subss(xmm1, dword_ptr[esi]);
+		ucomiss(xmm1, xmm2);
+		ucomiss(xmm1, dword_ptr[esi]);
+		unpckhps(xmm1, xmm2);
+		unpckhps(xmm1, xmmword_ptr[ebp]);
+		unpcklps(xmm1, xmm2);
+		unpcklps(xmm1, xmmword_ptr[ebp]);
+		xorps(xmm1, xmm2);
+		xorps(xmm1, xmmword_ptr[ebp]);
+
+#ifdef JITASM64
+		addps(xmm8, xmm9);
+		addps(xmm8, xmmword_ptr[rbp]);
+		addss(xmm8, xmm9);
+		addss(xmm8, dword_ptr[r9]);
+		andps(xmm8, xmm9);
+		andps(xmm8, xmmword_ptr[rbp]);
+		andnps(xmm8, xmm9);
+		andnps(xmm8, xmmword_ptr[rbp]);
+		cmpeqps(xmm8, xmm9);
+		cmpeqps(xmm8, xmmword_ptr[rbp]);
+		cmpltps(xmm8, xmm9);
+		cmpltps(xmm8, xmmword_ptr[rbp]);
+		cmpleps(xmm8, xmm9);
+		cmpleps(xmm8, xmmword_ptr[rbp]);
+		cmpunordps(xmm8, xmm9);
+		cmpunordps(xmm8, xmmword_ptr[rbp]);
+		cmpneqps(xmm8, xmm9);
+		cmpneqps(xmm8, xmmword_ptr[rbp]);
+		cmpnltps(xmm8, xmm9);
+		cmpnltps(xmm8, xmmword_ptr[rbp]);
+		cmpnleps(xmm8, xmm9);
+		cmpnleps(xmm8, xmmword_ptr[rbp]);
+		cmpordps(xmm8, xmm9);
+		cmpordps(xmm8, xmmword_ptr[rbp]);
+		cmpeqss(xmm8, xmm9);
+		cmpeqss(xmm8, dword_ptr[r9]);
+		cmpltss(xmm8, xmm9);
+		cmpltss(xmm8, dword_ptr[r9]);
+		cmpless(xmm8, xmm9);
+		cmpless(xmm8, dword_ptr[r9]);
+		cmpunordss(xmm8, xmm9);
+		cmpunordss(xmm8, dword_ptr[r9]);
+		cmpneqss(xmm8, xmm9);
+		cmpneqss(xmm8, dword_ptr[r9]);
+		cmpnltss(xmm8, xmm9);
+		cmpnltss(xmm8, dword_ptr[r9]);
+		cmpnless(xmm8, xmm9);
+		cmpnless(xmm8, dword_ptr[r9]);
+		cmpordss(xmm8, xmm9);
+		cmpordss(xmm8, dword_ptr[r9]);
+		comiss(xmm8, xmm9);
+		comiss(xmm8, dword_ptr[r9]);
+		cvtpi2ps(xmm8, mm3);
+		cvtpi2ps(xmm8, qword_ptr[r9]);
+		cvtps2pi(mm1, xmm9);
+		cvtps2pi(mm1, qword_ptr[r9]);
+		cvtsi2ss(xmm8, ecx);
+		cvtsi2ss(xmm8, dword_ptr[r9]);
+		cvtss2si(eax, xmm9);
+		cvtss2si(ecx, dword_ptr[r9]);
+		cvttps2pi(mm1, xmm9);
+		cvttps2pi(mm1, qword_ptr[r9]);
+		cvttss2si(eax, xmm9);
+		cvttss2si(ecx, dword_ptr[r9]);
+		cvtsi2ss(xmm8, rax);
+		cvtsi2ss(xmm8, r9);
+		cvtsi2ss(xmm8, qword_ptr[r9]);
+		cvtss2si(r9d, xmm9);
+		cvtss2si(rcx, xmm9);
+		cvtss2si(r8, xmm9);
+		cvtss2si(rax, dword_ptr[r9]);
+		cvttss2si(r9, xmm9);
+		cvttss2si(r10, dword_ptr[r9]);
+		divps(xmm8, xmm9);
+		divps(xmm8, xmmword_ptr[rbp]);
+		divss(xmm8, xmm9);
+		divss(xmm8, dword_ptr[r9]);
+		ldmxcsr(dword_ptr[r9]);
+		maskmovq(mm1, mm2);
+		maxps(xmm8, xmm9);
+		maxps(xmm8, xmmword_ptr[rbp]);
+		maxss(xmm8, xmm9);
+		maxss(xmm8, dword_ptr[r9]);
+		minps(xmm8, xmm9);
+		minps(xmm8, xmmword_ptr[rbp]);
+		minss(xmm8, xmm9);
+		minss(xmm8, dword_ptr[r9]);
+		movaps(xmm8, xmm9);
+		movaps(xmm8, xmmword_ptr[rbp]);
+		movaps(xmmword_ptr[rsp], xmm9);
+		movhlps(xmm8, xmm9);
+		movhps(xmm8, qword_ptr[r9]);
+		movhps(qword_ptr[rdi], xmm9);
+		movlhps(xmm8, xmm9);
+		movlps(xmm8, qword_ptr[r9]);
+		movlps(qword_ptr[rdi], xmm9);
+		movmskps(eax, xmm9);
+		movmskps(r9d, xmm9);
+		movmskps(rax, xmm9);
+		movmskps(r9, xmm3);
+		movntps(xmmword_ptr[rsp], xmm9);
+		movntq(qword_ptr[rdi], mm7);
+		movss(xmm8, xmm9);
+		movss(xmm8, dword_ptr[r9]);
+		movss(dword_ptr[rbp], xmm9);
+		movups(xmm8, xmm9);
+		movups(xmm8, xmmword_ptr[rbp]);
+		movups(xmmword_ptr[rsp], xmm9);
+		mulps(xmm8, xmm9);
+		mulps(xmm8, xmmword_ptr[rbp]);
+		mulss(xmm8, xmm9);
+		mulss(xmm8, dword_ptr[r9]);
+		orps(xmm8, xmm9);
+		orps(xmm8, xmmword_ptr[rbp]);
+		prefetcht0(byte_ptr[rbp]);
+		prefetcht1(byte_ptr[rbp]);
+		prefetcht2(byte_ptr[rbp]);
+		prefetchnta(byte_ptr[rbp]);
+		rcpps(xmm8, xmm9);
+		rcpps(xmm8, xmmword_ptr[rbp]);
+		rcpss(xmm8, xmm9);
+		rcpss(xmm8, dword_ptr[r9]);
+		rsqrtps(xmm8, xmm9);
+		rsqrtps(xmm8, xmmword_ptr[rbp]);
+		rsqrtss(xmm8, xmm9);
+		rsqrtss(xmm8, dword_ptr[r9]);
+		sfence();
+		shufps(xmm8, xmm9, 0x10);
+		shufps(xmm8, xmmword_ptr[rbp], 0x20);
+		sqrtps(xmm8, xmm9);
+		sqrtps(xmm8, xmmword_ptr[rbp]);
+		sqrtss(xmm8, xmm9);
+		sqrtss(xmm8, dword_ptr[r9]);
+		stmxcsr(dword_ptr[r9]);
+		subps(xmm8, xmm9);
+		subps(xmm8, xmmword_ptr[rbp]);
+		subss(xmm8, xmm9);
+		subss(xmm8, dword_ptr[r9]);
+		ucomiss(xmm8, xmm9);
+		ucomiss(xmm8, dword_ptr[r9]);
+		unpckhps(xmm8, xmm9);
+		unpckhps(xmm8, xmmword_ptr[rbp]);
+		unpcklps(xmm8, xmm9);
+		unpcklps(xmm8, xmmword_ptr[rbp]);
+		xorps(xmm8, xmm9);
+		xorps(xmm8, xmmword_ptr[rbp]);
+#endif
+	}
+};
 
 //----------------------------------------
 // SSE2 A~
@@ -1734,6 +2238,8 @@ struct test_sse2_a : jitasm::function0<void>
 		cvtdq2ps(xmm0, xmmword_ptr[esp]);
 		cvtps2pd(xmm0, xmm1);
 		cvtps2pd(xmm0, qword_ptr[esp]);
+		cvtsd2si(eax, xmm1);
+		cvtsd2si(ecx, qword_ptr[esp]);
 		cvtsd2ss(xmm0, xmm1);
 		cvtsd2ss(xmm0, qword_ptr[esp]);
 		cvtsi2sd(xmm0, eax);
@@ -1765,6 +2271,10 @@ struct test_sse2_a : jitasm::function0<void>
 		cvtdq2ps(xmm8, xmmword_ptr[r8]);
 		cvtps2pd(xmm8, xmm9);
 		cvtps2pd(xmm8, qword_ptr[r8]);
+		cvtsd2si(r8d, xmm9);
+		cvtsd2si(r9d, qword_ptr[r8]);
+		cvtsd2si(r8, xmm9);
+		cvtsd2si(r9, qword_ptr[r8]);
 		cvtsd2ss(xmm8, xmm9);
 		cvtsd2ss(xmm8, qword_ptr[r8]);
 		cvtsi2sd(xmm8, r8);
@@ -1797,11 +2307,13 @@ struct test_sse2_d : jitasm::function0<void>
 		divpd(xmm0, xmmword_ptr[esp]);
 		divsd(xmm0, xmm1);
 		divsd(xmm0, qword_ptr[esp]);
+		lfence();
 		maskmovdqu(xmm0, xmm1);
 		maxpd(xmm0, xmm1);
 		maxpd(xmm0, xmmword_ptr[esp]);
 		maxsd(xmm0, xmm1);
 		maxsd(xmm0, qword_ptr[esp]);
+		mfence();
 		minpd(xmm0, xmm1);
 		minpd(xmm0, xmmword_ptr[esp]);
 		minsd(xmm0, xmm1);
@@ -1938,7 +2450,7 @@ struct test_sse2_p : jitasm::function0<void>
 		pcmpgtw(xmm0, xmmword_ptr[esp]);
 		pcmpgtd(xmm0, xmm1);
 		pcmpgtd(xmm0, xmmword_ptr[esp]);
-		//pextrw(eax, xmm1, 1);
+		pextrw(eax, xmm1, 1);
 		pinsrw(xmm0, ecx, 3);
 		pinsrw(xmm0, word_ptr[esp], 4);
 		pmaddwd(xmm0, xmm1);
@@ -1972,32 +2484,32 @@ struct test_sse2_p : jitasm::function0<void>
 		pshufhw(xmm0, xmmword_ptr[esp], 0x18);
 		pshuflw(xmm0, xmm1, 0x14);
 		pshuflw(xmm0, xmmword_ptr[esp], 0x12);
-		//psllw(xmm0, xmm1);
-		//psllw(xmm0, xmmword_ptr[ebp]);
-		//psllw(xmm0, 2);
-		//pslld(xmm0, xmm1);
-		//pslld(xmm0, xmmword_ptr[ebp]);
-		//pslld(xmm0, 2);
-		//psllq(xmm0, xmm1);
-		//psllq(xmm0, xmmword_ptr[ebp]);
-		//psllq(xmm0, 2);
-		//pslldq(xmm0, 2);
-		//psraw(xmm0, xmm1);
-		//psraw(xmm0, xmmword_ptr[ebp]);
-		//psraw(xmm0, 2);
-		//psrad(xmm0, xmm1);
-		//psrad(xmm0, xmmword_ptr[ebp]);
-		//psrad(xmm0, 2);
-		//psrlw(xmm0, xmm1);
-		//psrlw(xmm0, xmmword_ptr[ebp]);
-		//psrlw(xmm0, 2);
-		//psrld(xmm0, xmm1);
-		//psrld(xmm0, xmmword_ptr[ebp]);
-		//psrld(xmm0, 2);
-		//psrlq(xmm0, xmm1);
-		//psrlq(xmm0, xmmword_ptr[ebp]);
-		//psrlq(xmm0, 2);
-		//psrldq(xmm0, 2);
+		psllw(xmm0, xmm1);
+		psllw(xmm0, xmmword_ptr[ebp]);
+		psllw(xmm0, 2);
+		pslld(xmm0, xmm1);
+		pslld(xmm0, xmmword_ptr[ebp]);
+		pslld(xmm0, 2);
+		psllq(xmm0, xmm1);
+		psllq(xmm0, xmmword_ptr[ebp]);
+		psllq(xmm0, 2);
+		pslldq(xmm0, 2);
+		psraw(xmm0, xmm1);
+		psraw(xmm0, xmmword_ptr[ebp]);
+		psraw(xmm0, 2);
+		psrad(xmm0, xmm1);
+		psrad(xmm0, xmmword_ptr[ebp]);
+		psrad(xmm0, 2);
+		psrlw(xmm0, xmm1);
+		psrlw(xmm0, xmmword_ptr[ebp]);
+		psrlw(xmm0, 2);
+		psrld(xmm0, xmm1);
+		psrld(xmm0, xmmword_ptr[ebp]);
+		psrld(xmm0, 2);
+		psrlq(xmm0, xmm1);
+		psrlq(xmm0, xmmword_ptr[ebp]);
+		psrlq(xmm0, 2);
+		psrldq(xmm0, 2);
 		psubb(xmm0, xmm1);
 		psubb(xmm0, xmmword_ptr[esp]);
 		psubw(xmm0, xmm1);
@@ -2080,9 +2592,9 @@ struct test_sse2_p : jitasm::function0<void>
 		pcmpgtw(xmm8, xmmword_ptr[r8]);
 		pcmpgtd(xmm8, xmm9);
 		pcmpgtd(xmm8, xmmword_ptr[r8]);
-		//pextrw(eax, xmm9, 1);
-		//pextrw(rax, xmm9, 2);
-		//pextrw(r8, xmm9, 2);
+		pextrw(eax, xmm9, 1);
+		pextrw(rax, xmm9, 2);
+		pextrw(r8, xmm9, 2);
 		pinsrw(xmm8, ecx, 3);
 		pinsrw(xmm8, word_ptr[r8], 4);
 		pinsrw(xmm8, rcx, 1);
@@ -2120,32 +2632,32 @@ struct test_sse2_p : jitasm::function0<void>
 		pshufhw(xmm8, xmmword_ptr[r8], 0x18);
 		pshuflw(xmm8, xmm9, 0x14);
 		pshuflw(xmm8, xmmword_ptr[r8], 0x12);
-		//psllw(xmm8, xmm9);
-		//psllw(xmm8, xmmword_ptr[rbp]);
-		//psllw(xmm8, 2);
-		//pslld(xmm8, xmm9);
-		//pslld(xmm8, xmmword_ptr[rbp]);
-		//pslld(xmm8, 2);
-		//psllq(xmm8, xmm9);
-		//psllq(xmm8, xmmword_ptr[rbp]);
-		//psllq(xmm8, 2);
-		//pslldq(xmm8, 2);
-		//psraw(xmm8, xmm9);
-		//psraw(xmm8, xmmword_ptr[rbp]);
-		//psraw(xmm8, 2);
-		//psrad(xmm8, xmm9);
-		//psrad(xmm8, xmmword_ptr[rbp]);
-		//psrad(xmm8, 2);
-		//psrlw(xmm8, xmm9);
-		//psrlw(xmm8, xmmword_ptr[rbp]);
-		//psrlw(xmm8, 2);
-		//psrld(xmm8, xmm9);
-		//psrld(xmm8, xmmword_ptr[rbp]);
-		//psrld(xmm8, 2);
-		//psrlq(xmm8, xmm9);
-		//psrlq(xmm8, xmmword_ptr[rbp]);
-		//psrlq(xmm8, 2);
-		//psrldq(xmm8, 2);
+		psllw(xmm8, xmm9);
+		psllw(xmm8, xmmword_ptr[rbp]);
+		psllw(xmm8, 2);
+		pslld(xmm8, xmm9);
+		pslld(xmm8, xmmword_ptr[rbp]);
+		pslld(xmm8, 2);
+		psllq(xmm8, xmm9);
+		psllq(xmm8, xmmword_ptr[rbp]);
+		psllq(xmm8, 2);
+		pslldq(xmm8, 2);
+		psraw(xmm8, xmm9);
+		psraw(xmm8, xmmword_ptr[rbp]);
+		psraw(xmm8, 2);
+		psrad(xmm8, xmm9);
+		psrad(xmm8, xmmword_ptr[rbp]);
+		psrad(xmm8, 2);
+		psrlw(xmm8, xmm9);
+		psrlw(xmm8, xmmword_ptr[rbp]);
+		psrlw(xmm8, 2);
+		psrld(xmm8, xmm9);
+		psrld(xmm8, xmmword_ptr[rbp]);
+		psrld(xmm8, 2);
+		psrlq(xmm8, xmm9);
+		psrlq(xmm8, xmmword_ptr[rbp]);
+		psrlq(xmm8, 2);
+		psrldq(xmm8, 2);
 		psubb(xmm8, xmm9);
 		psubb(xmm8, xmmword_ptr[r8]);
 		psubw(xmm8, xmm9);
@@ -2666,6 +3178,10 @@ int wmain()
 	TEST_M(test_div_idiv_mul);
 	TEST_M(test_imul);
 	TEST_M(test_fst);
+	TEST_M(test_simple);
+	TEST_M(test_mmx);
+	TEST_M(test_mmx2);
+	TEST_M(test_sse);
 	TEST_M(test_sse2_a);
 	TEST_M(test_sse2_d);
 	TEST_M(test_sse2_p);
@@ -2693,4 +3209,7 @@ int wmain()
 	TEST_M(test_function_return_m128d_ptr);
 	TEST_M(test_function_return_m128i_xmm1);
 	TEST_M(test_function_return_m128i_ptr);
+
+	printf("TEST RESULT - %d passed, %d failed\n", g_test_succeeded, g_test_failed);
+	getchar();
 }

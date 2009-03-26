@@ -31,6 +31,8 @@
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
+				Description=""
+				CommandLine=""
 			/>
 			<Tool
 				Name="VCXMLDataGeneratorTool"
@@ -51,7 +53,7 @@
 				RuntimeLibrary="3"
 				BufferSecurityCheck="false"
 				UsePrecompiledHeader="0"
-				WarningLevel="4"
+				WarningLevel="3"
 				DebugInformationFormat="4"
 			/>
 			<Tool
@@ -92,6 +94,8 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
+				Description="Testing..."
+				CommandLine="&quot;$(OutDir)\$(ProjectName).exe&quot;"
 			/>
 		</Configuration>
 		<Configuration
@@ -127,7 +131,7 @@
 				RuntimeLibrary="3"
 				BufferSecurityCheck="false"
 				UsePrecompiledHeader="0"
-				WarningLevel="4"
+				WarningLevel="3"
 				DebugInformationFormat="3"
 			/>
 			<Tool
@@ -168,6 +172,8 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
+				Description="Testing..."
+				CommandLine="&quot;$(OutDir)\$(ProjectName).exe&quot;"
 			/>
 		</Configuration>
 		<Configuration
@@ -247,6 +253,8 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
+				Description="Testing..."
+				CommandLine="&quot;$(OutDir)\$(ProjectName).exe&quot;"
 			/>
 		</Configuration>
 		<Configuration
@@ -327,6 +335,8 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
+				Description="Testing..."
+				CommandLine="&quot;$(OutDir)\$(ProjectName).exe&quot;"
 			/>
 		</Configuration>
 	</Configurations>
