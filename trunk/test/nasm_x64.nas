@@ -9,6 +9,14 @@ nasm_test_mov_disp:
 	mov cx, [1]
 	mov eax, [1]
 	mov ecx, [1]
+	mov [1], al
+	mov [1], cl
+	mov [1], ax
+	mov [1], cx
+	mov [1], eax
+	mov [1], ecx
 
 	mov rax, [1]
+	mov [1], rax
 	mov rax, [qword 100000000h]
+	mov [qword 100000000h], rax

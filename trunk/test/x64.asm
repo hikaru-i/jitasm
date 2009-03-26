@@ -1334,6 +1334,479 @@ masm_test_fst proc
 masm_test_fst endp
 
 ;----------------------------------------
+; Simple Instructions
+;----------------------------------------
+masm_test_simple proc
+	int 3
+	leave
+	nop
+	ret
+	ret 1
+	ret -1
+masm_test_simple endp
+
+;----------------------------------------
+; MMX
+;----------------------------------------
+masm_test_mmx proc
+	emms
+	packsswb mm1, mm2
+	packsswb mm1, qword ptr[ebp]
+	packssdw mm1, mm2
+	packssdw mm1, qword ptr[ebp]
+	packuswb mm1, mm2
+	packuswb mm1, qword ptr[ebp]
+	paddb mm1, mm2
+	paddb mm1, qword ptr[ebp]
+	paddw mm1, mm2
+	paddw mm1, qword ptr[ebp]
+	paddd mm1, mm2
+	paddd mm1, qword ptr[ebp]
+	paddsb mm1, mm2
+	paddsb mm1, qword ptr[ebp]
+	paddsw mm1, mm2
+	paddsw mm1, qword ptr[ebp]
+	paddusb mm1, mm2
+	paddusb mm1, qword ptr[ebp]
+	paddusw mm1, mm2
+	paddusw mm1, qword ptr[ebp]
+	pand mm1, mm2
+	pand mm1, qword ptr[ebp]
+	pandn mm1, mm2
+	pandn mm1, qword ptr[ebp]
+	pcmpeqb mm1, mm2
+	pcmpeqb mm1, qword ptr[ebp]
+	pcmpeqw mm1, mm2
+	pcmpeqw mm1, qword ptr[ebp]
+	pcmpeqd mm1, mm2
+	pcmpeqd mm1, qword ptr[ebp]
+	pcmpgtb mm1, mm2
+	pcmpgtb mm1, qword ptr[ebp]
+	pcmpgtw mm1, mm2
+	pcmpgtw mm1, qword ptr[ebp]
+	pcmpgtd mm1, mm2
+	pcmpgtd mm1, qword ptr[ebp]
+	pmaddwd mm1, mm2
+	pmaddwd mm1, qword ptr[ebp]
+	pmulhw mm1, mm2
+	pmulhw mm1, qword ptr[ebp]
+	pmullw mm1, mm2
+	pmullw mm1, qword ptr[ebp]
+	por mm1, mm2
+	por mm1, qword ptr[ebp]
+	psllw mm1, mm3
+	psllw mm1, qword ptr[ebp + ecx]
+	psllw mm1, 2
+	pslld mm1, mm3
+	pslld mm1, qword ptr[ebp + ecx]
+	pslld mm1, 2
+	psllq mm1, mm3
+	psllq mm1, qword ptr[ebp + ecx]
+	psllq mm1, 2
+	psraw mm1, mm3
+	psraw mm1, qword ptr[ebp + ecx]
+	psraw mm1, 2
+	psrad mm1, mm3
+	psrad mm1, qword ptr[ebp + ecx]
+	psrad mm1, 2
+	psrlw mm1, mm3
+	psrlw mm1, qword ptr[ebp + ecx]
+	psrlw mm1, 2
+	psrld mm1, mm3
+	psrld mm1, qword ptr[ebp + ecx]
+	psrld mm1, 2
+	psrlq mm1, mm3
+	psrlq mm1, qword ptr[ebp + ecx]
+	psrlq mm1, 2
+	psubb mm1, mm2
+	psubb mm1, qword ptr[ebp]
+	psubw mm1, mm2
+	psubw mm1, qword ptr[ebp]
+	psubd mm1, mm2
+	psubd mm1, qword ptr[ebp]
+	psubsb mm1, mm2
+	psubsb mm1, qword ptr[ebp]
+	psubsw mm1, mm2
+	psubsw mm1, qword ptr[ebp]
+	psubusb mm1, mm2
+	psubusb mm1, qword ptr[ebp]
+	psubusw mm1, mm2
+	psubusw mm1, qword ptr[ebp]
+	punpckhbw mm2, mm3
+	punpckhbw mm2, qword ptr[esp]
+	punpckhwd mm2, mm3
+	punpckhwd mm2, qword ptr[esp]
+	punpckhdq mm2, mm3
+	punpckhdq mm2, qword ptr[esp]
+	punpcklbw mm2, mm3
+	punpcklbw mm2, dword ptr[esp]
+	punpcklwd mm2, mm3
+	punpcklwd mm2, dword ptr[esp]
+	punpckldq mm2, mm3
+	punpckldq mm2, dword ptr[esp]
+	pxor mm2, mm3
+	pxor mm2, qword ptr[esp]
+
+	packsswb mm1, qword ptr[r8]
+	packssdw mm1, qword ptr[r8]
+	packuswb mm1, qword ptr[r8]
+	paddb mm1, qword ptr[r8]
+	paddw mm1, qword ptr[r8]
+	paddd mm1, qword ptr[r8]
+	paddsb mm1, qword ptr[r8]
+	paddsw mm1, qword ptr[r8]
+	paddusb mm1, qword ptr[r8]
+	paddusw mm1, qword ptr[r8]
+	pand mm1, qword ptr[r8]
+	pandn mm1, qword ptr[r8]
+	pcmpeqb mm1, qword ptr[r8]
+	pcmpeqw mm1, qword ptr[r8]
+	pcmpeqd mm1, qword ptr[r8]
+	pcmpgtb mm1, qword ptr[r8]
+	pcmpgtw mm1, qword ptr[r8]
+	pcmpgtd mm1, qword ptr[r8]
+	pmaddwd mm1, qword ptr[r8]
+	pmulhw mm1, qword ptr[r8]
+	pmullw mm1, qword ptr[r8]
+	por mm1, qword ptr[r8]
+	psllw mm1, qword ptr[r8 + rcx]
+	pslld mm1, qword ptr[r8 + rcx]
+	psllq mm1, qword ptr[r8 + rcx]
+	psraw mm1, qword ptr[r8 + rcx]
+	psrad mm1, qword ptr[r8 + rcx]
+	psrlw mm1, qword ptr[r8 + rcx]
+	psrld mm1, qword ptr[r8 + rcx]
+	psrlq mm1, qword ptr[r8 + rcx]
+	psubb mm1, qword ptr[r8]
+	psubw mm1, qword ptr[r8]
+	psubd mm1, qword ptr[r8]
+	psubsb mm1, qword ptr[r8]
+	psubsw mm1, qword ptr[r8]
+	psubusb mm1, qword ptr[r8]
+	psubusw mm1, qword ptr[r8]
+	punpckhbw mm2, qword ptr[rsp]
+	punpckhwd mm2, qword ptr[rsp]
+	punpckhdq mm2, qword ptr[rsp]
+	punpcklbw mm2, dword ptr[rsp]
+	punpcklwd mm2, dword ptr[rsp]
+	punpckldq mm2, dword ptr[rsp]
+	pxor mm2, qword ptr[rsp]
+masm_test_mmx endp
+
+;----------------------------------------
+; MMX2
+;----------------------------------------
+masm_test_mmx2 proc
+	pavgb mm1, mm2
+	pavgb mm1, qword ptr[ebp]
+	pavgw mm1, mm2
+	pavgw mm1, qword ptr[ebp]
+	pextrw ecx, mm2, 1
+	pinsrw mm1, ecx, 2
+	pinsrw mm1, word ptr[esp], 1
+	pmaxsw mm1, mm2
+	pmaxsw mm1, qword ptr[ebp]
+	pmaxub mm1, mm2
+	pmaxub mm1, qword ptr[ebp]
+	pminsw mm1, mm2
+	pminsw mm1, qword ptr[ebp]
+	pminub mm1, mm2
+	pminub mm1, qword ptr[ebp]
+	pmovmskb eax, mm2
+	pmulhuw mm1, mm2
+	pmulhuw mm1, qword ptr[ebp]
+	psadbw mm1, mm2
+	psadbw mm1, qword ptr[ebp]
+	pshufw mm1, mm2, 10h
+	pshufw mm1, qword ptr[ebp], 1
+
+	pavgb mm1, qword ptr[rbp]
+	pavgw mm1, qword ptr[rbp]
+	pextrw rax, mm2, 2
+	pextrw r9, mm2, 3
+	pextrw r10d, mm2, 0
+	pinsrw mm1, rcx, 3
+	pinsrw mm1, r9, 0
+	pinsrw mm1, r10d, 1
+	pmaxsw mm1, qword ptr[rbp]
+	pmaxub mm1, qword ptr[rbp]
+	pminsw mm1, qword ptr[rbp]
+	pminub mm1, qword ptr[rbp]
+	pmovmskb rcx, mm2
+	pmovmskb r9, mm2
+	pmulhuw mm1, qword ptr[rbp]
+	psadbw mm1, qword ptr[rbp]
+	pshufw mm1, qword ptr[r9], 1
+masm_test_mmx2 endp
+
+;----------------------------------------
+; SSE
+;----------------------------------------
+masm_test_sse proc
+	addps xmm1, xmm2
+	addps xmm1, xmmword ptr[ebp]
+	addss xmm1, xmm2
+	addss xmm1, dword ptr[esi]
+	andps xmm1, xmm2
+	andps xmm1, xmmword ptr[ebp]
+	andnps xmm1, xmm2
+	andnps xmm1, xmmword ptr[ebp]
+	cmpeqps xmm1, xmm2
+	cmpeqps xmm1, xmmword ptr[ebp]
+	cmpltps xmm1, xmm2
+	cmpltps xmm1, xmmword ptr[ebp]
+	cmpleps xmm1, xmm2
+	cmpleps xmm1, xmmword ptr[ebp]
+	cmpunordps xmm1, xmm2
+	cmpunordps xmm1, xmmword ptr[ebp]
+	cmpneqps xmm1, xmm2
+	cmpneqps xmm1, xmmword ptr[ebp]
+	cmpnltps xmm1, xmm2
+	cmpnltps xmm1, xmmword ptr[ebp]
+	cmpnleps xmm1, xmm2
+	cmpnleps xmm1, xmmword ptr[ebp]
+	cmpordps xmm1, xmm2
+	cmpordps xmm1, xmmword ptr[ebp]
+	cmpeqss xmm1, xmm2
+	cmpeqss xmm1, dword ptr[esi]
+	cmpltss xmm1, xmm2
+	cmpltss xmm1, dword ptr[esi]
+	cmpless xmm1, xmm2
+	cmpless xmm1, dword ptr[esi]
+	cmpunordss xmm1, xmm2
+	cmpunordss xmm1, dword ptr[esi]
+	cmpneqss xmm1, xmm2
+	cmpneqss xmm1, dword ptr[esi]
+	cmpnltss xmm1, xmm2
+	cmpnltss xmm1, dword ptr[esi]
+	cmpnless xmm1, xmm2
+	cmpnless xmm1, dword ptr[esi]
+	cmpordss xmm1, xmm2
+	cmpordss xmm1, dword ptr[esi]
+	comiss xmm1, xmm2
+	comiss xmm1, dword ptr[esi]
+	cvtpi2ps xmm1, mm3
+	cvtpi2ps xmm1, qword ptr[esi]
+	cvtps2pi mm1, xmm2
+	cvtps2pi mm1, qword ptr[esi]
+	cvtsi2ss xmm1, ecx
+	cvtsi2ss xmm1, dword ptr[esi]
+	cvtss2si eax, xmm2
+	cvtss2si ecx, dword ptr[esi]
+	cvttps2pi mm1, xmm2
+	cvttps2pi mm1, qword ptr[esi]
+	cvttss2si eax, xmm2
+	cvttss2si ecx, dword ptr[esi]
+	divps xmm1, xmm2
+	divps xmm1, xmmword ptr[ebp]
+	divss xmm1, xmm2
+	divss xmm1, dword ptr[esi]
+	ldmxcsr dword ptr[esi]
+	maskmovq mm1, mm2
+	maxps xmm1, xmm2
+	maxps xmm1, xmmword ptr[ebp]
+	maxss xmm1, xmm2
+	maxss xmm1, dword ptr[esi]
+	minps xmm1, xmm2
+	minps xmm1, xmmword ptr[ebp]
+	minss xmm1, xmm2
+	minss xmm1, dword ptr[esi]
+	movaps xmm1, xmm2
+	movaps xmm1, xmmword ptr[ebp]
+	movaps xmmword ptr[esp], xmm2
+	movhlps xmm1, xmm2
+	movhps xmm1, qword ptr[esi]
+	movhps qword ptr[edi], xmm2
+	movlhps xmm1, xmm2
+	movlps xmm1, qword ptr[esi]
+	movlps qword ptr[edi], xmm2
+	movmskps eax, xmm2
+	movntps xmmword ptr[esp], xmm2
+	movntq qword ptr[edi], mm2
+	movss xmm1, xmm2
+	movss xmm1, dword ptr[esi]
+	movss dword ptr[ebp], xmm2
+	movups xmm1, xmm2
+	movups xmm1, xmmword ptr[ebp]
+	movups xmmword ptr[esp], xmm2
+	mulps xmm1, xmm2
+	mulps xmm1, xmmword ptr[ebp]
+	mulss xmm1, xmm2
+	mulss xmm1, dword ptr[esi]
+	orps xmm1, xmm2
+	orps xmm1, xmmword ptr[ebp]
+	prefetcht0 byte ptr[ebp]
+	prefetcht1 byte ptr[ebp]
+	prefetcht2 byte ptr[ebp]
+	prefetchnta byte ptr[ebp]
+	rcpps xmm1, xmm2
+	rcpps xmm1, xmmword ptr[ebp]
+	rcpss xmm1, xmm2
+	rcpss xmm1, dword ptr[esi]
+	rsqrtps xmm1, xmm2
+	rsqrtps xmm1, xmmword ptr[ebp]
+	rsqrtss xmm1, xmm2
+	rsqrtss xmm1, dword ptr[esi]
+	sfence 
+	shufps xmm1, xmm2, 10h
+	shufps xmm1, xmmword ptr[ebp], 20h
+	sqrtps xmm1, xmm2
+	sqrtps xmm1, xmmword ptr[ebp]
+	sqrtss xmm1, xmm2
+	sqrtss xmm1, dword ptr[esi]
+	stmxcsr dword ptr[esi]
+	subps xmm1, xmm2
+	subps xmm1, xmmword ptr[ebp]
+	subss xmm1, xmm2
+	subss xmm1, dword ptr[esi]
+	ucomiss xmm1, xmm2
+	ucomiss xmm1, dword ptr[esi]
+	unpckhps xmm1, xmm2
+	unpckhps xmm1, xmmword ptr[ebp]
+	unpcklps xmm1, xmm2
+	unpcklps xmm1, xmmword ptr[ebp]
+	xorps xmm1, xmm2
+	xorps xmm1, xmmword ptr[ebp]
+
+	addps xmm8, xmm9
+	addps xmm8, xmmword ptr[rbp]
+	addss xmm8, xmm9
+	addss xmm8, dword ptr[r9]
+	andps xmm8, xmm9
+	andps xmm8, xmmword ptr[rbp]
+	andnps xmm8, xmm9
+	andnps xmm8, xmmword ptr[rbp]
+	cmpeqps xmm8, xmm9
+	cmpeqps xmm8, xmmword ptr[rbp]
+	cmpltps xmm8, xmm9
+	cmpltps xmm8, xmmword ptr[rbp]
+	cmpleps xmm8, xmm9
+	cmpleps xmm8, xmmword ptr[rbp]
+	cmpunordps xmm8, xmm9
+	cmpunordps xmm8, xmmword ptr[rbp]
+	cmpneqps xmm8, xmm9
+	cmpneqps xmm8, xmmword ptr[rbp]
+	cmpnltps xmm8, xmm9
+	cmpnltps xmm8, xmmword ptr[rbp]
+	cmpnleps xmm8, xmm9
+	cmpnleps xmm8, xmmword ptr[rbp]
+	cmpordps xmm8, xmm9
+	cmpordps xmm8, xmmword ptr[rbp]
+	cmpeqss xmm8, xmm9
+	cmpeqss xmm8, dword ptr[r9]
+	cmpltss xmm8, xmm9
+	cmpltss xmm8, dword ptr[r9]
+	cmpless xmm8, xmm9
+	cmpless xmm8, dword ptr[r9]
+	cmpunordss xmm8, xmm9
+	cmpunordss xmm8, dword ptr[r9]
+	cmpneqss xmm8, xmm9
+	cmpneqss xmm8, dword ptr[r9]
+	cmpnltss xmm8, xmm9
+	cmpnltss xmm8, dword ptr[r9]
+	cmpnless xmm8, xmm9
+	cmpnless xmm8, dword ptr[r9]
+	cmpordss xmm8, xmm9
+	cmpordss xmm8, dword ptr[r9]
+	comiss xmm8, xmm9
+	comiss xmm8, dword ptr[r9]
+	cvtpi2ps xmm8, mm3
+	cvtpi2ps xmm8, qword ptr[r9]
+	cvtps2pi mm1, xmm9
+	cvtps2pi mm1, qword ptr[r9]
+	cvtsi2ss xmm8, ecx
+	cvtsi2ss xmm8, dword ptr[r9]
+	cvtss2si eax, xmm9
+	cvtss2si ecx, dword ptr[r9]
+	cvttps2pi mm1, xmm9
+	cvttps2pi mm1, qword ptr[r9]
+	cvttss2si eax, xmm9
+	cvttss2si ecx, dword ptr[r9]
+	cvtsi2ss xmm8, rax
+	cvtsi2ss xmm8, r9
+	cvtsi2ss xmm8, qword ptr[r9]
+	cvtss2si r9d, xmm9
+	cvtss2si rcx, xmm9
+	cvtss2si r8, xmm9
+	cvtss2si rax, dword ptr[r9]
+	cvttss2si r9, xmm9
+	cvttss2si r10, dword ptr[r9]
+	divps xmm8, xmm9
+	divps xmm8, xmmword ptr[rbp]
+	divss xmm8, xmm9
+	divss xmm8, dword ptr[r9]
+	ldmxcsr dword ptr[r9]
+	maskmovq mm1, mm2
+	maxps xmm8, xmm9
+	maxps xmm8, xmmword ptr[rbp]
+	maxss xmm8, xmm9
+	maxss xmm8, dword ptr[r9]
+	minps xmm8, xmm9
+	minps xmm8, xmmword ptr[rbp]
+	minss xmm8, xmm9
+	minss xmm8, dword ptr[r9]
+	movaps xmm8, xmm9
+	movaps xmm8, xmmword ptr[rbp]
+	movaps xmmword ptr[rsp], xmm9
+	movhlps xmm8, xmm9
+	movhps xmm8, qword ptr[r9]
+	movhps qword ptr[rdi], xmm9
+	movlhps xmm8, xmm9
+	movlps xmm8, qword ptr[r9]
+	movlps qword ptr[rdi], xmm9
+	movmskps eax, xmm9
+	movmskps r9d, xmm9
+	movmskps rax, xmm9
+	movmskps r9, xmm3
+	movntps xmmword ptr[rsp], xmm9
+	movntq qword ptr[rdi], mm7
+	movss xmm8, xmm9
+	movss xmm8, dword ptr[r9]
+	movss dword ptr[rbp], xmm9
+	movups xmm8, xmm9
+	movups xmm8, xmmword ptr[rbp]
+	movups xmmword ptr[rsp], xmm9
+	mulps xmm8, xmm9
+	mulps xmm8, xmmword ptr[rbp]
+	mulss xmm8, xmm9
+	mulss xmm8, dword ptr[r9]
+	orps xmm8, xmm9
+	orps xmm8, xmmword ptr[rbp]
+	prefetcht0 byte ptr[rbp]
+	prefetcht1 byte ptr[rbp]
+	prefetcht2 byte ptr[rbp]
+	prefetchnta byte ptr[rbp]
+	rcpps xmm8, xmm9
+	rcpps xmm8, xmmword ptr[rbp]
+	rcpss xmm8, xmm9
+	rcpss xmm8, dword ptr[r9]
+	rsqrtps xmm8, xmm9
+	rsqrtps xmm8, xmmword ptr[rbp]
+	rsqrtss xmm8, xmm9
+	rsqrtss xmm8, dword ptr[r9]
+	sfence 
+	shufps xmm8, xmm9, 10h
+	shufps xmm8, xmmword ptr[rbp], 20h
+	sqrtps xmm8, xmm9
+	sqrtps xmm8, xmmword ptr[rbp]
+	sqrtss xmm8, xmm9
+	sqrtss xmm8, dword ptr[r9]
+	stmxcsr dword ptr[r9]
+	subps xmm8, xmm9
+	subps xmm8, xmmword ptr[rbp]
+	subss xmm8, xmm9
+	subss xmm8, dword ptr[r9]
+	ucomiss xmm8, xmm9
+	ucomiss xmm8, dword ptr[r9]
+	unpckhps xmm8, xmm9
+	unpckhps xmm8, xmmword ptr[rbp]
+	unpcklps xmm8, xmm9
+	unpcklps xmm8, xmmword ptr[rbp]
+	xorps xmm8, xmm9
+	xorps xmm8, xmmword ptr[rbp]
+masm_test_sse endp
+
+;----------------------------------------
 ; SSE2 A~
 ;----------------------------------------
 masm_test_sse2_a proc
@@ -1451,6 +1924,8 @@ masm_test_sse2_a proc
 	cvtdq2ps xmm0, xmmword ptr[esp]
 	cvtps2pd xmm0, xmm1
 	cvtps2pd xmm0, qword ptr[esp]
+	cvtsd2si eax, xmm1
+	cvtsd2si ecx, qword ptr[esp]
 	cvtsd2ss xmm0, xmm1
 	cvtsd2ss xmm0, qword ptr[esp]
 	cvtsi2sd xmm0, eax;
@@ -1482,6 +1957,10 @@ masm_test_sse2_a proc
 	cvtdq2ps xmm8, xmmword ptr[r8]
 	cvtps2pd xmm8, xmm9
 	cvtps2pd xmm8, qword ptr[r8]
+	cvtsd2si r8d, xmm9
+	cvtsd2si r9d, qword ptr[r8]
+	cvtsd2si r8, xmm9
+	cvtsd2si r9, qword ptr[r8]
 	cvtsd2ss xmm8, xmm9
 	cvtsd2ss xmm8, qword ptr[r8]
 	cvtsi2sd xmm8, r8;
@@ -1508,11 +1987,13 @@ masm_test_sse2_d proc
 	divpd xmm0, xmmword ptr[esp]
 	divsd xmm0, xmm1
 	divsd xmm0, qword ptr[esp]
+	lfence
 	maskmovdqu xmm0, xmm1
 	maxpd xmm0, xmm1
 	maxpd xmm0, xmmword ptr[esp]
 	maxsd xmm0, xmm1
 	maxsd xmm0, qword ptr[esp]
+	mfence
 	minpd xmm0, xmm1
 	minpd xmm0, xmmword ptr[esp]
 	minsd xmm0, xmm1
@@ -1641,7 +2122,7 @@ masm_test_sse2_p proc
 	pcmpgtw xmm0, xmmword ptr[esp]
 	pcmpgtd xmm0, xmm1
 	pcmpgtd xmm0, xmmword ptr[esp]
-;	pextrw eax, xmm1, 1
+	pextrw eax, xmm1, 1
 	pinsrw xmm0, ecx, 3
 	pinsrw xmm0, word ptr[esp], 4
 	pmaddwd xmm0, xmm1
@@ -1675,32 +2156,32 @@ masm_test_sse2_p proc
 	pshufhw xmm0, xmmword ptr[esp], 18h
 	pshuflw xmm0, xmm1, 14h
 	pshuflw xmm0, xmmword ptr[esp], 12h
-;	psllw xmm0, xmm1
-;	psllw xmm0, xmmword ptr[ebp]
-;	psllw xmm0, 2
-;	pslld xmm0, xmm1
-;	pslld xmm0, xmmword ptr[ebp]
-;	pslld xmm0, 2
-;	psllq xmm0, xmm1
-;	psllq xmm0, xmmword ptr[ebp]
-;	psllq xmm0, 2
-;	pslldq xmm0, 2
-;	psraw xmm0, xmm1
-;	psraw xmm0, xmmword ptr[ebp]
-;	psraw xmm0, 2
-;	psrad xmm0, xmm1
-;	psrad xmm0, xmmword ptr[ebp]
-;	psrad xmm0, 2
-;	psrlw xmm0, xmm1
-;	psrlw xmm0, xmmword ptr[ebp]
-;	psrlw xmm0, 2
-;	psrld xmm0, xmm1
-;	psrld xmm0, xmmword ptr[ebp]
-;	psrld xmm0, 2
-;	psrlq xmm0, xmm1
-;	psrlq xmm0, xmmword ptr[ebp]
-;	psrlq xmm0, 2
-;	psrldq xmm0, 2
+	psllw xmm0, xmm1
+	psllw xmm0, xmmword ptr[ebp]
+	psllw xmm0, 2
+	pslld xmm0, xmm1
+	pslld xmm0, xmmword ptr[ebp]
+	pslld xmm0, 2
+	psllq xmm0, xmm1
+	psllq xmm0, xmmword ptr[ebp]
+	psllq xmm0, 2
+	pslldq xmm0, 2
+	psraw xmm0, xmm1
+	psraw xmm0, xmmword ptr[ebp]
+	psraw xmm0, 2
+	psrad xmm0, xmm1
+	psrad xmm0, xmmword ptr[ebp]
+	psrad xmm0, 2
+	psrlw xmm0, xmm1
+	psrlw xmm0, xmmword ptr[ebp]
+	psrlw xmm0, 2
+	psrld xmm0, xmm1
+	psrld xmm0, xmmword ptr[ebp]
+	psrld xmm0, 2
+	psrlq xmm0, xmm1
+	psrlq xmm0, xmmword ptr[ebp]
+	psrlq xmm0, 2
+	psrldq xmm0, 2
 	psubb xmm0, xmm1
 	psubb xmm0, xmmword ptr[esp]
 	psubw xmm0, xmm1
@@ -1783,9 +2264,9 @@ masm_test_sse2_p proc
 	pcmpgtw xmm8, xmmword ptr[r8]
 	pcmpgtd xmm8, xmm9
 	pcmpgtd xmm8, xmmword ptr[r8]
-;	pextrw eax, xmm9, 1
-;	pextrw rax, xmm9, 2
-;	pextrw r8, xmm9, 2
+	pextrw eax, xmm9, 1
+	pextrw rax, xmm9, 2
+	pextrw r8, xmm9, 2
 	pinsrw xmm8, ecx, 3
 	pinsrw xmm8, word ptr[r8], 4
 	pinsrw xmm8, rcx, 1
@@ -1823,32 +2304,32 @@ masm_test_sse2_p proc
 	pshufhw xmm8, xmmword ptr[r8], 18h
 	pshuflw xmm8, xmm9, 14h
 	pshuflw xmm8, xmmword ptr[r8], 12h
-;	psllw xmm8, xmm9
-;	psllw xmm8, xmmword ptr[rbp]
-;	psllw xmm8, 2
-;	pslld xmm8, xmm9
-;	pslld xmm8, xmmword ptr[rbp]
-;	pslld xmm8, 2
-;	psllq xmm8, xmm9
-;	psllq xmm8, xmmword ptr[rbp]
-;	psllq xmm8, 2
-;	pslldq xmm8, 2
-;	psraw xmm8, xmm9
-;	psraw xmm8, xmmword ptr[rbp]
-;	psraw xmm8, 2
-;	psrad xmm8, xmm9
-;	psrad xmm8, xmmword ptr[rbp]
-;	psrad xmm8, 2
-;	psrlw xmm8, xmm9
-;	psrlw xmm8, xmmword ptr[rbp]
-;	psrlw xmm8, 2
-;	psrld xmm8, xmm9
-;	psrld xmm8, xmmword ptr[rbp]
-;	psrld xmm8, 2
-;	psrlq xmm8, xmm9
-;	psrlq xmm8, xmmword ptr[rbp]
-;	psrlq xmm8, 2
-;	psrldq xmm8, 2
+	psllw xmm8, xmm9
+	psllw xmm8, xmmword ptr[rbp]
+	psllw xmm8, 2
+	pslld xmm8, xmm9
+	pslld xmm8, xmmword ptr[rbp]
+	pslld xmm8, 2
+	psllq xmm8, xmm9
+	psllq xmm8, xmmword ptr[rbp]
+	psllq xmm8, 2
+	pslldq xmm8, 2
+	psraw xmm8, xmm9
+	psraw xmm8, xmmword ptr[rbp]
+	psraw xmm8, 2
+	psrad xmm8, xmm9
+	psrad xmm8, xmmword ptr[rbp]
+	psrad xmm8, 2
+	psrlw xmm8, xmm9
+	psrlw xmm8, xmmword ptr[rbp]
+	psrlw xmm8, 2
+	psrld xmm8, xmm9
+	psrld xmm8, xmmword ptr[rbp]
+	psrld xmm8, 2
+	psrlq xmm8, xmm9
+	psrlq xmm8, xmmword ptr[rbp]
+	psrlq xmm8, 2
+	psrldq xmm8, 2
 	psubb xmm8, xmm9
 	psubb xmm8, xmmword ptr[r8]
 	psubw xmm8, xmm9
