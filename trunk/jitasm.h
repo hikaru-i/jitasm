@@ -390,16 +390,16 @@ enum InstrID
 	I_OR, I_POP, I_PUSH, I_RDTSC, I_RET, I_RCL, I_RCR, I_ROL, I_ROR, I_SAR, I_SHL, I_SHR, I_SBB, I_SETCC, I_SHLD, I_SHRD, I_STC, I_STD, I_STI,
 	I_STOS_B, I_STOS_W, I_STOS_D, I_STOS_Q, I_SUB, I_TEST, I_UD2, I_FWAIT, I_XADD, I_XCHG, I_XOR,
 
-	I_FLD, I_FST, I_FSTP,
+	I_FISTTP, I_FLD, I_FST, I_FSTP,
 
-	I_ADDPS, I_ADDSS, I_ADDPD, I_ADDSD, I_ANDPS, I_ANDPD, I_ANDNPS, I_ANDNPD, I_CLFLUSH, I_CMPPS, I_CMPSS, I_CMPPD, I_CMPSD, I_COMISS, I_COMISD,
+	I_ADDPS, I_ADDSS, I_ADDPD, I_ADDSD, I_ADDSUBPS, I_ADDSUBPD, I_ANDPS, I_ANDPD, I_ANDNPS, I_ANDNPD, I_CLFLUSH, I_CMPPS, I_CMPSS, I_CMPPD, I_CMPSD, I_COMISS, I_COMISD,
 	I_CVTDQ2PD, I_CVTDQ2PS, I_CVTPD2DQ, I_CVTPD2PI, I_CVTPD2PS, I_CVTPI2PD, I_CVTPI2PS, I_CVTPS2DQ, I_CVTPS2PD, I_CVTPS2PI, I_CVTSD2SI,
 	I_CVTSD2SS, I_CVTSI2SD, I_CVTSI2SS, I_CVTSS2SD, I_CVTSS2SI, I_CVTTPD2DQ, I_CVTTPD2PI, I_CVTTPS2DQ, I_CVTTPS2PI, I_CVTTSD2SI, I_CVTTSS2SI,
-	I_DIVPS, I_DIVSS, I_DIVPD, I_DIVSD, I_EMMS, I_LDMXCSR, I_LFENCE,
-	I_MASKMOVDQU, I_MASKMOVQ, I_MAXPS, I_MAXSS, I_MAXPD, I_MAXSD, I_MFENCE, I_MINPS, I_MINSS, I_MINPD, I_MINSD,
-	I_MOVAPD, I_MOVAPS, I_MOVD, I_MOVDQA, I_MOVDQU, I_MOVDQ2Q, I_MOVHLPS, I_MOVLHPS, I_MOVHPS, I_MOVHPD, I_MOVLPS, I_MOVLPD,
-	I_MOVMSKPS, I_MOVMSKPD, I_MOVNTDQ, I_MOVNTI, I_MOVNTPD, I_MOVNTPS, I_MOVNTQ, I_MOVQ, I_MOVQ2DQ, I_MOVSD, I_MOVSS, I_MOVUPS, I_MOVUPD,
-	I_MULPS, I_MULSS, I_MULPD, I_MULSD, I_ORPS, I_ORPD, I_PABSB, I_PABSD, I_PABSW, I_PACKSSDW, I_PACKSSWB, I_PACKUSDW, I_PACKUSWB,
+	I_DIVPS, I_DIVSS, I_DIVPD, I_DIVSD, I_EMMS, I_HADDPS, I_HADDPD, I_HSUBPS, I_HSUBPD, I_LDDQU, I_LDMXCSR, I_LFENCE,
+	I_MASKMOVDQU, I_MASKMOVQ, I_MAXPS, I_MAXSS, I_MAXPD, I_MAXSD, I_MFENCE, I_MINPS, I_MINSS, I_MINPD, I_MINSD, I_MONITOR,
+	I_MOVAPD, I_MOVAPS, I_MOVD, I_MOVDDUP, I_MOVDQA, I_MOVDQU, I_MOVDQ2Q, I_MOVHLPS, I_MOVLHPS, I_MOVHPS, I_MOVHPD, I_MOVLPS, I_MOVLPD,
+	I_MOVMSKPS, I_MOVMSKPD, I_MOVNTDQ, I_MOVNTI, I_MOVNTPD, I_MOVNTPS, I_MOVNTQ, I_MOVQ, I_MOVQ2DQ, I_MOVSD, I_MOVSS, I_MOVSHDUP, I_MOVSLDUP, I_MOVUPS, I_MOVUPD,
+	I_MULPS, I_MULSS, I_MULPD, I_MULSD, I_MWAIT, I_ORPS, I_ORPD, I_PABSB, I_PABSD, I_PABSW, I_PACKSSDW, I_PACKSSWB, I_PACKUSDW, I_PACKUSWB,
 	I_PADDB, I_PADDD, I_PADDQ, I_PADDSB, I_PADDSW, I_PADDUSB, I_PADDUSW, I_PADDW, I_PALIGNR,
 	I_PAND, I_PANDN, I_PAUSE, I_PAVGB, I_PAVGW, I_PCMPEQB, I_PCMPEQW, I_PCMPEQD, I_PCMPEQQ,
 	I_PCMPGTB, I_PCMPGTW, I_PCMPGTD, I_PCMPGTQ, I_PEXTRB, I_PEXTRW, I_PEXTRD, I_PEXTRQ, I_PINSRB, I_PINSRW, I_PINSRD, I_PINSRQ, I_PMADDWD,
@@ -2809,6 +2809,32 @@ struct Frontend
 	void unpcklpd(const XmmReg& dst, const Mem128& src)		{PushBack(Instr(I_UNPCKLPD, 0x0F14, E_MANDATORY_PREFIX_66, dst, src));}
 	void xorpd(const XmmReg& dst, const XmmReg& src)		{PushBack(Instr(I_XORPD,	0x0F57, E_MANDATORY_PREFIX_66, dst, src));}
 	void xorpd(const XmmReg& dst, const Mem128& src)		{PushBack(Instr(I_XORPD,	0x0F57, E_MANDATORY_PREFIX_66, dst, src));}
+
+	// SSE3
+	void addsubps(const XmmReg& dst, const XmmReg& src)		{PushBack(Instr(I_ADDSUBPS,	0x0FD0, E_MANDATORY_PREFIX_F2, dst, src));}
+	void addsubps(const XmmReg& dst, const Mem128& src)		{PushBack(Instr(I_ADDSUBPS,	0x0FD0, E_MANDATORY_PREFIX_F2, dst, src));}
+	void addsubpd(const XmmReg& dst, const XmmReg& src)		{PushBack(Instr(I_ADDSUBPD,	0x0FD0, E_MANDATORY_PREFIX_66, dst, src));}
+	void addsubpd(const XmmReg& dst, const Mem128& src)		{PushBack(Instr(I_ADDSUBPD,	0x0FD0, E_MANDATORY_PREFIX_66, dst, src));}
+	void fisttp(const Mem16& dst)							{PushBack(Instr(I_FISTTP,	0xDF, 0, Imm8(1), dst));}
+	void fisttp(const Mem32& dst)							{PushBack(Instr(I_FISTTP,	0xDB, 0, Imm8(1), dst));}
+	void fisttp(const Mem64& dst)							{PushBack(Instr(I_FISTTP,	0xDD, 0, Imm8(1), dst));}
+	void haddps(const XmmReg& dst, const XmmReg& src)		{PushBack(Instr(I_HADDPS,	0x0F7C, E_MANDATORY_PREFIX_F2, dst, src));}
+	void haddps(const XmmReg& dst, const Mem128& src)		{PushBack(Instr(I_HADDPS,	0x0F7C, E_MANDATORY_PREFIX_F2, dst, src));}
+	void haddpd(const XmmReg& dst, const XmmReg& src)		{PushBack(Instr(I_HADDPD,	0x0F7C, E_MANDATORY_PREFIX_66, dst, src));}
+	void haddpd(const XmmReg& dst, const Mem128& src)		{PushBack(Instr(I_HADDPD,	0x0F7C, E_MANDATORY_PREFIX_66, dst, src));}
+	void hsubps(const XmmReg& dst, const XmmReg& src)		{PushBack(Instr(I_HSUBPS,	0x0F7D, E_MANDATORY_PREFIX_F2, dst, src));}
+	void hsubps(const XmmReg& dst, const Mem128& src)		{PushBack(Instr(I_HSUBPS,	0x0F7D, E_MANDATORY_PREFIX_F2, dst, src));}
+	void hsubpd(const XmmReg& dst, const XmmReg& src)		{PushBack(Instr(I_HSUBPD,	0x0F7D, E_MANDATORY_PREFIX_66, dst, src));}
+	void hsubpd(const XmmReg& dst, const Mem128& src)		{PushBack(Instr(I_HSUBPD,	0x0F7D, E_MANDATORY_PREFIX_66, dst, src));}
+	void lddqu(const XmmReg& dst, const Mem128& src)		{PushBack(Instr(I_LDDQU,	0x0FF0, E_MANDATORY_PREFIX_F2, dst, src));}
+	void monitor()											{PushBack(Instr(I_MONITOR,	0x0F01C8, 0));}
+	void movddup(const XmmReg& dst, const XmmReg& src)		{PushBack(Instr(I_MOVDDUP,	0x0F12, E_MANDATORY_PREFIX_F2, dst, src));}
+	void movddup(const XmmReg& dst, const Mem64& src)		{PushBack(Instr(I_MOVDDUP,	0x0F12, E_MANDATORY_PREFIX_F2, dst, src));}
+	void movshdup(const XmmReg& dst, const XmmReg& src)		{PushBack(Instr(I_MOVSHDUP,	0x0F16, E_MANDATORY_PREFIX_F3, dst, src));}
+	void movshdup(const XmmReg& dst, const Mem128& src)		{PushBack(Instr(I_MOVSHDUP,	0x0F16, E_MANDATORY_PREFIX_F3, dst, src));}
+	void movsldup(const XmmReg& dst, const XmmReg& src)		{PushBack(Instr(I_MOVSLDUP,	0x0F12, E_MANDATORY_PREFIX_F3, dst, src));}
+	void movsldup(const XmmReg& dst, const Mem128& src)		{PushBack(Instr(I_MOVSLDUP,	0x0F12, E_MANDATORY_PREFIX_F3, dst, src));}
+	void mwait()											{PushBack(Instr(I_MWAIT,	0x0F01C9, 0));}
 
 	// SSSE3
 	void pabsb(const MmxReg& dst, const MmxReg& src)	{PushBack(Instr(I_PABSB, 0x0F381C, 0, dst, src));}

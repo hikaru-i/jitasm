@@ -2863,6 +2863,59 @@ masm_test_movsd_movss proc
 masm_test_movsd_movss endp
 
 ;----------------------------------------
+; SSE3
+;----------------------------------------
+masm_test_sse3 proc
+	addsubps xmm0, xmm1
+	addsubps xmm0, mmword ptr[ebp]		; it must be xmmword...
+	addsubpd xmm0, xmm1
+	addsubpd xmm0, xmmword ptr[ebp]
+	fisttp word ptr[ebp]
+	fisttp dword ptr[ebp]
+	fisttp qword ptr[ebp]
+	haddps xmm0, xmm1
+	haddps xmm0, xmmword ptr[ebp]
+	haddpd xmm0, xmm1
+	haddpd xmm0, xmmword ptr[ebp]
+	hsubps xmm0, xmm1
+	hsubps xmm0, xmmword ptr[ebp]
+	hsubpd xmm0, xmm1
+	hsubpd xmm0, xmmword ptr[ebp]
+	lddqu xmm0, xmmword ptr[ebp]
+	movddup xmm0, xmm1
+	movddup xmm0, qword ptr[ebp]
+	movshdup xmm0, xmm1
+	movshdup xmm0, xmmword ptr[ebp]
+	movsldup xmm0, xmm1
+	movsldup xmm0, xmmword ptr[ebp]
+	monitor rax,rcx,rdx
+	mwait rax,rcx
+
+	addsubps xmm9, xmm10
+	addsubps xmm9, mmword ptr[r9]		; it must be xmmword...
+	addsubpd xmm9, xmm10
+	addsubpd xmm9, xmmword ptr[r9]
+	fisttp word ptr[r9]
+	fisttp dword ptr[r9]
+	fisttp qword ptr[r9]
+	haddps xmm9, xmm10
+	haddps xmm9, xmmword ptr[r9]
+	haddpd xmm9, xmm10
+	haddpd xmm9, xmmword ptr[r9]
+	hsubps xmm9, xmm10
+	hsubps xmm9, xmmword ptr[r9]
+	hsubpd xmm9, xmm10
+	hsubpd xmm9, xmmword ptr[r9]
+	lddqu xmm9, xmmword ptr[r9]
+	movddup xmm9, xmm10
+	movddup xmm9, qword ptr[rbp]
+	movshdup xmm9, xmm10
+	movshdup xmm9, xmmword ptr[r9]
+	movsldup xmm9, xmm10
+	movsldup xmm9, xmmword ptr[r9]
+masm_test_sse3 endp
+
+;----------------------------------------
 ; function0_cdecl<char>
 ;----------------------------------------
 masm_test_function_return_char proc

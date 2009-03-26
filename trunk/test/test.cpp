@@ -3346,6 +3346,65 @@ struct test_movsd_movss : jitasm::function0<void>
 };
 
 //----------------------------------------
+// SSE3
+//----------------------------------------
+extern "C" void masm_test_sse3();
+struct test_sse3 : jitasm::function0<void>
+{
+	virtual void naked_main()
+	{
+		addsubps(xmm0, xmm1);
+		addsubps(xmm0, xmmword_ptr[ebp]);
+		addsubpd(xmm0, xmm1);
+		addsubpd(xmm0, xmmword_ptr[ebp]);
+		fisttp(word_ptr[ebp]);
+		fisttp(dword_ptr[ebp]);
+		fisttp(qword_ptr[ebp]);
+		haddps(xmm0, xmm1);
+		haddps(xmm0, xmmword_ptr[ebp]);
+		haddpd(xmm0, xmm1);
+		haddpd(xmm0, xmmword_ptr[ebp]);
+		hsubps(xmm0, xmm1);
+		hsubps(xmm0, xmmword_ptr[ebp]);
+		hsubpd(xmm0, xmm1);
+		hsubpd(xmm0, xmmword_ptr[ebp]);
+		lddqu(xmm0, xmmword_ptr[ebp]);
+		movddup(xmm0, xmm1);
+		movddup(xmm0, qword_ptr[ebp]);
+		movshdup(xmm0, xmm1);
+		movshdup(xmm0, xmmword_ptr[ebp]);
+		movsldup(xmm0, xmm1);
+		movsldup(xmm0, xmmword_ptr[ebp]);
+		monitor();
+		mwait();
+#ifdef JITASM64
+		addsubps(xmm9, xmm10);
+		addsubps(xmm9, xmmword_ptr[r9]);
+		addsubpd(xmm9, xmm10);
+		addsubpd(xmm9, xmmword_ptr[r9]);
+		fisttp(word_ptr[r9]);
+		fisttp(dword_ptr[r9]);
+		fisttp(qword_ptr[r9]);
+		haddps(xmm9, xmm10);
+		haddps(xmm9, xmmword_ptr[r9]);
+		haddpd(xmm9, xmm10);
+		haddpd(xmm9, xmmword_ptr[r9]);
+		hsubps(xmm9, xmm10);
+		hsubps(xmm9, xmmword_ptr[r9]);
+		hsubpd(xmm9, xmm10);
+		hsubpd(xmm9, xmmword_ptr[r9]);
+		lddqu(xmm9, xmmword_ptr[r9]);
+		movddup(xmm9, xmm10);
+		movddup(xmm9, qword_ptr[rbp]);
+		movshdup(xmm9, xmm10);
+		movshdup(xmm9, xmmword_ptr[r9]);
+		movsldup(xmm9, xmm10);
+		movsldup(xmm9, xmmword_ptr[r9]);
+#endif
+	}
+};
+
+//----------------------------------------
 // function0_cdecl<char>
 //----------------------------------------
 extern "C" void masm_test_function_return_char();
@@ -3686,6 +3745,7 @@ int wmain()
 	TEST_M(test_sse2_s);
 	TEST_M(test_movd_movq);
 	TEST_M(test_movsd_movss);
+	TEST_M(test_sse3);
 
 	TEST_M(test_function_return_char);
 	TEST_M(test_function_return_short);

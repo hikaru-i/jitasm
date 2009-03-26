@@ -1847,6 +1847,36 @@ masm_test_movsd_movss proc
 masm_test_movsd_movss endp
 
 ;----------------------------------------
+; SSE3
+;----------------------------------------
+masm_test_sse3 proc
+	addsubps xmm0, xmm1
+	addsubps xmm0, mmword ptr[ebp]		; it must be xmmword...
+	addsubpd xmm0, xmm1
+	addsubpd xmm0, xmmword ptr[ebp]
+	fisttp word ptr[ebp]
+	fisttp dword ptr[ebp]
+	fisttp qword ptr[ebp]
+	haddps xmm0, xmm1
+	haddps xmm0, xmmword ptr[ebp]
+	haddpd xmm0, xmm1
+	haddpd xmm0, xmmword ptr[ebp]
+	hsubps xmm0, xmm1
+	hsubps xmm0, xmmword ptr[ebp]
+	hsubpd xmm0, xmm1
+	hsubpd xmm0, xmmword ptr[ebp]
+	lddqu xmm0, xmmword ptr[ebp]
+	movddup xmm0, xmm1
+	movddup xmm0, qword ptr[ebp]
+	movshdup xmm0, xmm1
+	movshdup xmm0, xmmword ptr[ebp]
+	movsldup xmm0, xmm1
+	movsldup xmm0, xmmword ptr[ebp]
+	monitor eax,ecx,edx
+	mwait eax,ecx
+masm_test_sse3 endp
+
+;----------------------------------------
 ; function0_cdecl<char>
 ;----------------------------------------
 masm_test_function_return_char proc
