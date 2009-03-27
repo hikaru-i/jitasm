@@ -173,7 +173,7 @@
 			<Tool
 				Name="VCPostBuildEventTool"
 				Description="Testing..."
-				CommandLine="&quot;$(OutDir)\$(ProjectName).exe&quot;"
+				CommandLine="%windir%\Sysnative\cmd.exe /V:ON /C if !PROCESSOR_ARCHITECTURE! == AMD64 &quot;$(OutDir)\$(ProjectName).exe&quot;"
 			/>
 		</Configuration>
 		<Configuration
@@ -336,7 +336,7 @@
 			<Tool
 				Name="VCPostBuildEventTool"
 				Description="Testing..."
-				CommandLine="&quot;$(OutDir)\$(ProjectName).exe&quot;"
+				CommandLine="%windir%\Sysnative\cmd.exe /V:ON /C if !PROCESSOR_ARCHITECTURE! == AMD64 &quot;$(OutDir)\$(ProjectName).exe&quot;"
 			/>
 		</Configuration>
 	</Configurations>

@@ -1949,6 +1949,106 @@ masm_test_ssse3 proc
 masm_test_ssse3 endp
 
 ;----------------------------------------
+; SSE4.1
+;----------------------------------------
+masm_test_sse4_1 proc
+	blendps xmm1, xmm2, 1
+	blendps xmm1, xmmword ptr[esp], 2
+	blendpd xmm1, xmm2, 3
+	blendpd xmm1, xmmword ptr[esp], 4
+	blendvps xmm1, xmm2, xmm0
+	blendvps xmm1, xmmword ptr[esp], xmm0
+	blendvpd xmm1, xmm2, xmm0
+	blendvpd xmm1, xmmword ptr[esp], xmm0
+	dpps xmm1, xmm2, 1
+	dpps xmm1, xmmword ptr[esp], 2
+	dppd xmm1, xmm2, 0
+	dppd xmm1, xmmword ptr[esp], 1
+	extractps eax, xmm2, 1
+	extractps dword ptr[esp], xmm2, 0
+	insertps xmm1, xmm2, 68h
+	insertps xmm1, dword ptr[esp], 0
+	movntdqa xmm1, xmmword ptr[esp]
+	mpsadbw xmm1, xmm2, 1
+	mpsadbw xmm1, xmmword ptr[esp], 4
+	packusdw xmm1, xmm2
+	packusdw xmm1, xmmword ptr[esp]
+	pblendvb xmm1, xmm2, xmm0
+	pblendvb xmm1, xmmword ptr[esp], xmm0
+	pblendw xmm1, xmm2, 1
+	pblendw xmm1, xmmword ptr[esp], 2
+	pcmpeqq xmm1, xmm2
+	pcmpeqq xmm1, xmmword ptr[esp]
+	pextrb eax, xmm2, 1
+	pextrb byte ptr[esp], xmm2, 2
+	pextrw word ptr[esp], xmm2, 1
+	pextrd eax, xmm2, 3
+	pextrd dword ptr[esp], xmm2, 2
+	pinsrb xmm1, eax, 0
+	pinsrb xmm1, byte ptr[esp], 2
+	pinsrd xmm1, eax, 1
+	pinsrd xmm1, dword ptr[esp], 0
+	pmaxsb xmm1, xmm2
+	pmaxsb xmm1, xmmword ptr[esp]
+	pmaxsd xmm1, xmm2
+	pmaxsd xmm1, xmmword ptr[esp]
+	pmaxuw xmm1, xmm2
+	pmaxuw xmm1, xmmword ptr[esp]
+	pmaxud xmm1, xmm2
+	pmaxud xmm1, xmmword ptr[esp]
+	pminsb xmm1, xmm2
+	pminsb xmm1, xmmword ptr[esp]
+	pminsd xmm1, xmm2
+	pminsd xmm1, xmmword ptr[esp]
+	pminuw xmm1, xmm2
+	pminuw xmm1, xmmword ptr[esp]
+	pminud xmm1, xmm2
+	pminud xmm1, xmmword ptr[esp]
+
+	; ML 9.00 generates wrong opcode for pmovsx/pmovsz
+	; http://connect.microsoft.com/VisualStudio/feedback/ViewFeedback.aspx?FeedbackID=377701
+	pmovsxbd xmm1, xmm2				; pmovsxbw
+	pmovsxbd xmm1, qword ptr[esp]	; pmovsxbw
+	pmovsxbq xmm1, xmm2				; pmovsxbd
+	pmovsxbq xmm1, dword ptr[esp]	; pmovsxbd
+	pmovsxbw xmm1, xmm2				; pmovsxbq
+	pmovsxbw xmm1, word ptr[esp]	; pmovsxbq
+	pmovsxdq xmm1, xmm2				; pmovsxwd
+	pmovsxdq xmm1, qword ptr[esp]	; pmovsxwd
+	pmovsxwd xmm1, xmm2				; pmovsxwq
+	pmovsxwd xmm1, dword ptr[esp]	; pmovsxwq
+	pmovsxwq xmm1, xmm2				; pmovsxdq
+	pmovsxwq xmm1, qword ptr[esp]	; pmovsxdq
+	pmovzxbd xmm1, xmm2				; pmovzxbw
+	pmovzxbd xmm1, qword ptr[esp]	; pmovzxbw
+	pmovzxbq xmm1, xmm2				; pmovzxbd
+	pmovzxbq xmm1, dword ptr[esp]	; pmovzxbd
+	pmovzxbw xmm1, xmm2				; pmovzxbq
+	pmovzxbw xmm1, word ptr[esp]	; pmovzxbq
+	pmovzxdq xmm1, xmm2				; pmovzxwd
+	pmovzxdq xmm1, qword ptr[esp]	; pmovzxwd
+	pmovzxwd xmm1, xmm2				; pmovzxwq
+	pmovzxwd xmm1, dword ptr[esp]	; pmovzxwq
+	pmovzxwq xmm1, xmm2				; pmovzxdq
+	pmovzxwq xmm1, qword ptr[esp]	; pmovzxdq
+
+	pmuldq xmm1, xmm2
+	pmuldq xmm1, xmmword ptr[esp]
+	pmulld xmm1, xmm2
+	pmulld xmm1, xmmword ptr[esp]
+	ptest xmm1, xmm2
+	ptest xmm1, xmmword ptr[esp]
+	roundps xmm1, xmm2, 0
+	roundps xmm1, xmmword ptr[esp], 1
+	roundpd xmm1, xmm2, 2
+	roundpd xmm1, xmmword ptr[esp], 3
+	roundss xmm1, xmm2, 0
+	roundss xmm1, dword ptr[esp], 1
+	roundsd xmm1, xmm2, 2
+	roundsd xmm1, qword ptr[esp], 3
+masm_test_sse4_1 endp
+
+;----------------------------------------
 ; function0_cdecl<char>
 ;----------------------------------------
 masm_test_function_return_char proc
