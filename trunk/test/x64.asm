@@ -2918,6 +2918,76 @@ masm_test_sse3 proc
 masm_test_sse3 endp
 
 ;----------------------------------------
+; SSSE3
+;----------------------------------------
+masm_test_ssse3 proc
+	pabsb mm0, mm1
+	pabsb mm0, qword ptr[esp]
+	pabsb xmm0, xmm1
+	pabsb xmm0, xmmword ptr[esp]
+	pabsw mm0, mm1
+	pabsw mm0, qword ptr[esp]
+	pabsw xmm0, xmm1
+	pabsw xmm0, xmmword ptr[esp]
+	pabsd mm0, mm1
+	pabsd mm0, qword ptr[esp]
+	pabsd xmm0, xmm1
+	pabsd xmm0, xmmword ptr[esp]
+	palignr mm0, mm1, 2
+	palignr mm0, qword ptr[esp], 3
+	palignr xmm0, xmm1, 4
+	palignr xmm0, xmmword ptr[esp], 5
+	phaddw mm0, mm1
+	phaddw mm0, qword ptr[esp]
+	phaddw xmm0, xmm1
+	phaddw xmm0, xmmword ptr[esp]
+	phaddd mm0, mm1
+	phaddd mm0, qword ptr[esp]
+	phaddd xmm0, xmm1
+	phaddd xmm0, xmmword ptr[esp]
+	phaddsw mm0, mm1
+	phaddsw mm0, qword ptr[esp]
+	phaddsw xmm0, xmm1
+	phaddsw xmm0, xmmword ptr[esp]
+	phsubw mm0, mm1
+	phsubw mm0, qword ptr[esp]
+	phsubw xmm0, xmm1
+	phsubw xmm0, xmmword ptr[esp]
+	phsubd mm0, mm1
+	phsubd mm0, qword ptr[esp]
+	phsubd xmm0, xmm1
+	phsubd xmm0, xmmword ptr[esp]
+	phsubsw mm0, mm1
+	phsubsw mm0, qword ptr[esp]
+	phsubsw xmm0, xmm1
+	phsubsw xmm0, xmmword ptr[esp]
+	pmaddubsw mm0, mm1
+	pmaddubsw mm0, qword ptr[esp]
+	pmaddubsw xmm0, xmm1
+	pmaddubsw xmm0, xmmword ptr[esp]
+	pmulhrsw mm0, mm1
+	pmulhrsw mm0, qword ptr[esp]
+	pmulhrsw xmm0, xmm1
+	pmulhrsw xmm0, xmmword ptr[esp]
+	pshufb mm0, mm1
+	pshufb mm0, qword ptr[esp]
+	pshufb xmm0, xmm1
+	pshufb xmm0, xmmword ptr[esp]
+	psignb mm0, mm1
+	psignb mm0, qword ptr[esp]
+	psignb xmm0, xmm1
+	psignb xmm0, xmmword ptr[esp]
+	psignw mm0, mm1
+	psignw mm0, qword ptr[esp]
+	psignw xmm0, xmm1
+	psignw xmm0, xmmword ptr[esp]
+	psignd mm0, mm1
+	psignd mm0, qword ptr[esp]
+	psignd xmm0, xmm1
+	psignd xmm0, xmmword ptr[esp]
+masm_test_ssse3 endp
+
+;----------------------------------------
 ; function0_cdecl<char>
 ;----------------------------------------
 masm_test_function_return_char proc
