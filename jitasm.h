@@ -402,9 +402,10 @@ enum InstrID
 	I_MULPS, I_MULSS, I_MULPD, I_MULSD, I_MWAIT, I_ORPS, I_ORPD, I_PABSB, I_PABSD, I_PABSW, I_PACKSSDW, I_PACKSSWB, I_PACKUSDW, I_PACKUSWB,
 	I_PADDB, I_PADDD, I_PADDQ, I_PADDSB, I_PADDSW, I_PADDUSB, I_PADDUSW, I_PADDW, I_PALIGNR,
 	I_PAND, I_PANDN, I_PAUSE, I_PAVGB, I_PAVGW, I_PCMPEQB, I_PCMPEQW, I_PCMPEQD, I_PCMPEQQ,
-	I_PCMPGTB, I_PCMPGTW, I_PCMPGTD, I_PCMPGTQ, I_PEXTRB, I_PEXTRW, I_PEXTRD, I_PEXTRQ, I_PINSRB, I_PINSRW, I_PINSRD, I_PINSRQ, I_PMADDWD,
-	I_PMAXSW, I_PMAXUB, I_PMINSW, I_PMINUB, I_PMOVMSKB, I_PMULHUW, I_PMULHW, I_PMULLW, I_PMULUDQ,
-	I_POR, I_PREFETCH, I_PSADBW, I_PSHUFD, I_PSHUFHW, I_PSHUFLW, I_PSHUFW, I_PSLLW, I_PSLLD, I_PSLLQ, I_PSLLDQ, I_PSRAW,
+	I_PCMPGTB, I_PCMPGTW, I_PCMPGTD, I_PCMPGTQ, I_PEXTRB, I_PEXTRW, I_PEXTRD, I_PEXTRQ, I_PHADDW, I_PHADDD, I_PHADDSW, I_PHSUBW, I_PHSUBD, I_PHSUBSW, 
+	I_PINSRB, I_PINSRW, I_PINSRD, I_PINSRQ, I_PMADDUBSW, I_PMADDWD,
+	I_PMAXSW, I_PMAXUB, I_PMINSW, I_PMINUB, I_PMOVMSKB, I_PMULHRSW, I_PMULHUW, I_PMULHW, I_PMULLW, I_PMULUDQ,
+	I_POR, I_PREFETCH, I_PSADBW, I_PSHUFB, I_PSHUFD, I_PSHUFHW, I_PSHUFLW, I_PSHUFW, I_PSIGNB, I_PSIGNW, I_PSIGND, I_PSLLW, I_PSLLD, I_PSLLQ, I_PSLLDQ, I_PSRAW,
 	I_PSRAD, I_PSRLW, I_PSRLD, I_PSRLQ, I_PSRLDQ, I_PSUBB, I_PSUBW, I_PSUBD, I_PSUBQ, I_PSUBSB, I_PSUBSW,
 	I_PSUBUSB, I_PSUBUSW, I_PUNPCKHBW, I_PUNPCKHWD, I_PUNPCKHDQ, I_PUNPCKHQDQ, I_PUNPCKLBW, I_PUNPCKLWD, I_PUNPCKLDQ, I_PUNPCKLQDQ,
 	I_PXOR, I_RCPPS, I_RCPSS, I_RSQRTPS, I_RSQRTSS, I_SFENCE, I_SHUFPS, I_SHUFPD, I_SQRTPS, I_SQRTSS, I_SQRTPD, I_SQRTSD, I_STMXCSR, 
@@ -2850,22 +2851,70 @@ struct Frontend
 	void mwait()											{PushBack(Instr(I_MWAIT,	0x0F01C9, 0));}
 
 	// SSSE3
-	void pabsb(const MmxReg& dst, const MmxReg& src)	{PushBack(Instr(I_PABSB, 0x0F381C, 0, dst, src));}
-	void pabsb(const MmxReg& dst, const Mem64& src)		{PushBack(Instr(I_PABSB, 0x0F381C, 0, dst, src));}
-	void pabsb(const XmmReg& dst, const XmmReg& src)	{PushBack(Instr(I_PABSB, 0x0F381C, E_MANDATORY_PREFIX_66, dst, src));}
-	void pabsb(const XmmReg& dst, const Mem128& src)	{PushBack(Instr(I_PABSB, 0x0F381C, E_MANDATORY_PREFIX_66, dst, src));}
-	void pabsw(const MmxReg& dst, const MmxReg& src)	{PushBack(Instr(I_PABSW, 0x0F381D, 0, dst, src));}
-	void pabsw(const MmxReg& dst, const Mem64& src)		{PushBack(Instr(I_PABSW, 0x0F381D, 0, dst, src));}
-	void pabsw(const XmmReg& dst, const XmmReg& src)	{PushBack(Instr(I_PABSW, 0x0F381D, E_MANDATORY_PREFIX_66, dst, src));}
-	void pabsw(const XmmReg& dst, const Mem128& src)	{PushBack(Instr(I_PABSW, 0x0F381D, E_MANDATORY_PREFIX_66, dst, src));}
-	void pabsd(const MmxReg& dst, const MmxReg& src)	{PushBack(Instr(I_PABSD, 0x0F381E, 0, dst, src));}
-	void pabsd(const MmxReg& dst, const Mem64& src)		{PushBack(Instr(I_PABSD, 0x0F381E, 0, dst, src));}
-	void pabsd(const XmmReg& dst, const XmmReg& src)	{PushBack(Instr(I_PABSD, 0x0F381E, E_MANDATORY_PREFIX_66, dst, src));}
-	void pabsd(const XmmReg& dst, const Mem128& src)	{PushBack(Instr(I_PABSD, 0x0F381E, E_MANDATORY_PREFIX_66, dst, src));}
+	void pabsb(const MmxReg& dst, const MmxReg& src)		{PushBack(Instr(I_PABSB,	0x0F381C, 0, dst, src));}
+	void pabsb(const MmxReg& dst, const Mem64& src)			{PushBack(Instr(I_PABSB,	0x0F381C, 0, dst, src));}
+	void pabsb(const XmmReg& dst, const XmmReg& src)		{PushBack(Instr(I_PABSB,	0x0F381C, E_MANDATORY_PREFIX_66, dst, src));}
+	void pabsb(const XmmReg& dst, const Mem128& src)		{PushBack(Instr(I_PABSB,	0x0F381C, E_MANDATORY_PREFIX_66, dst, src));}
+	void pabsw(const MmxReg& dst, const MmxReg& src)		{PushBack(Instr(I_PABSW,	0x0F381D, 0, dst, src));}
+	void pabsw(const MmxReg& dst, const Mem64& src)			{PushBack(Instr(I_PABSW,	0x0F381D, 0, dst, src));}
+	void pabsw(const XmmReg& dst, const XmmReg& src)		{PushBack(Instr(I_PABSW,	0x0F381D, E_MANDATORY_PREFIX_66, dst, src));}
+	void pabsw(const XmmReg& dst, const Mem128& src)		{PushBack(Instr(I_PABSW,	0x0F381D, E_MANDATORY_PREFIX_66, dst, src));}
+	void pabsd(const MmxReg& dst, const MmxReg& src)		{PushBack(Instr(I_PABSD,	0x0F381E, 0, dst, src));}
+	void pabsd(const MmxReg& dst, const Mem64& src)			{PushBack(Instr(I_PABSD,	0x0F381E, 0, dst, src));}
+	void pabsd(const XmmReg& dst, const XmmReg& src)		{PushBack(Instr(I_PABSD,	0x0F381E, E_MANDATORY_PREFIX_66, dst, src));}
+	void pabsd(const XmmReg& dst, const Mem128& src)		{PushBack(Instr(I_PABSD,	0x0F381E, E_MANDATORY_PREFIX_66, dst, src));}
 	void palignr(const MmxReg& dst, const MmxReg& src, const Imm8& n)	{PushBack(Instr(I_PALIGNR, 0x0F3A0F, 0, dst, src, n));}
 	void palignr(const MmxReg& dst, const Mem64& src, const Imm8& n)	{PushBack(Instr(I_PALIGNR, 0x0F3A0F, 0, dst, src, n));}
 	void palignr(const XmmReg& dst, const XmmReg& src, const Imm8& n)	{PushBack(Instr(I_PALIGNR, 0x0F3A0F, E_MANDATORY_PREFIX_66, dst, src, n));}
 	void palignr(const XmmReg& dst, const Mem128& src, const Imm8& n)	{PushBack(Instr(I_PALIGNR, 0x0F3A0F, E_MANDATORY_PREFIX_66, dst, src, n));}
+	void phaddw(const MmxReg& dst, const MmxReg& src)		{PushBack(Instr(I_PHADDW,	0x0F3801, 0, dst, src));}
+	void phaddw(const MmxReg& dst, const Mem64& src)		{PushBack(Instr(I_PHADDW,	0x0F3801, 0, dst, src));}
+	void phaddw(const XmmReg& dst, const XmmReg& src)		{PushBack(Instr(I_PHADDW,	0x0F3801, E_MANDATORY_PREFIX_66, dst, src));}
+	void phaddw(const XmmReg& dst, const Mem128& src)		{PushBack(Instr(I_PHADDW,	0x0F3801, E_MANDATORY_PREFIX_66, dst, src));}
+	void phaddd(const MmxReg& dst, const MmxReg& src)		{PushBack(Instr(I_PHADDD,	0x0F3802, 0, dst, src));}
+	void phaddd(const MmxReg& dst, const Mem64& src)		{PushBack(Instr(I_PHADDD,	0x0F3802, 0, dst, src));}
+	void phaddd(const XmmReg& dst, const XmmReg& src)		{PushBack(Instr(I_PHADDD,	0x0F3802, E_MANDATORY_PREFIX_66, dst, src));}
+	void phaddd(const XmmReg& dst, const Mem128& src)		{PushBack(Instr(I_PHADDD,	0x0F3802, E_MANDATORY_PREFIX_66, dst, src));}
+	void phaddsw(const MmxReg& dst, const MmxReg& src)		{PushBack(Instr(I_PHADDSW,	0x0F3803, 0, dst, src));}
+	void phaddsw(const MmxReg& dst, const Mem64& src)		{PushBack(Instr(I_PHADDSW,	0x0F3803, 0, dst, src));}
+	void phaddsw(const XmmReg& dst, const XmmReg& src)		{PushBack(Instr(I_PHADDSW,	0x0F3803, E_MANDATORY_PREFIX_66, dst, src));}
+	void phaddsw(const XmmReg& dst, const Mem128& src)		{PushBack(Instr(I_PHADDSW,	0x0F3803, E_MANDATORY_PREFIX_66, dst, src));}
+	void phsubw(const MmxReg& dst, const MmxReg& src)		{PushBack(Instr(I_PHSUBW,	0x0F3805, 0, dst, src));}
+	void phsubw(const MmxReg& dst, const Mem64& src)		{PushBack(Instr(I_PHSUBW,	0x0F3805, 0, dst, src));}
+	void phsubw(const XmmReg& dst, const XmmReg& src)		{PushBack(Instr(I_PHSUBW,	0x0F3805, E_MANDATORY_PREFIX_66, dst, src));}
+	void phsubw(const XmmReg& dst, const Mem128& src)		{PushBack(Instr(I_PHSUBW,	0x0F3805, E_MANDATORY_PREFIX_66, dst, src));}
+	void phsubd(const MmxReg& dst, const MmxReg& src)		{PushBack(Instr(I_PHSUBD,	0x0F3806, 0, dst, src));}
+	void phsubd(const MmxReg& dst, const Mem64& src)		{PushBack(Instr(I_PHSUBD,	0x0F3806, 0, dst, src));}
+	void phsubd(const XmmReg& dst, const XmmReg& src)		{PushBack(Instr(I_PHSUBD,	0x0F3806, E_MANDATORY_PREFIX_66, dst, src));}
+	void phsubd(const XmmReg& dst, const Mem128& src)		{PushBack(Instr(I_PHSUBD,	0x0F3806, E_MANDATORY_PREFIX_66, dst, src));}
+	void phsubsw(const MmxReg& dst, const MmxReg& src)		{PushBack(Instr(I_PHSUBSW,	0x0F3807, 0, dst, src));}
+	void phsubsw(const MmxReg& dst, const Mem64& src)		{PushBack(Instr(I_PHSUBSW,	0x0F3807, 0, dst, src));}
+	void phsubsw(const XmmReg& dst, const XmmReg& src)		{PushBack(Instr(I_PHSUBSW,	0x0F3807, E_MANDATORY_PREFIX_66, dst, src));}
+	void phsubsw(const XmmReg& dst, const Mem128& src)		{PushBack(Instr(I_PHSUBSW,	0x0F3807, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmaddubsw(const MmxReg& dst, const MmxReg& src)	{PushBack(Instr(I_PMADDUBSW,0x0F3804, 0, dst, src));}
+	void pmaddubsw(const MmxReg& dst, const Mem64& src)		{PushBack(Instr(I_PMADDUBSW,0x0F3804, 0, dst, src));}
+	void pmaddubsw(const XmmReg& dst, const XmmReg& src)	{PushBack(Instr(I_PMADDUBSW,0x0F3804, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmaddubsw(const XmmReg& dst, const Mem128& src)	{PushBack(Instr(I_PMADDUBSW,0x0F3804, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmulhrsw(const MmxReg& dst, const MmxReg& src)		{PushBack(Instr(I_PMULHRSW,	0x0F380B, 0, dst, src));}
+	void pmulhrsw(const MmxReg& dst, const Mem64& src)		{PushBack(Instr(I_PMULHRSW,	0x0F380B, 0, dst, src));}
+	void pmulhrsw(const XmmReg& dst, const XmmReg& src)		{PushBack(Instr(I_PMULHRSW,	0x0F380B, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmulhrsw(const XmmReg& dst, const Mem128& src)		{PushBack(Instr(I_PMULHRSW,	0x0F380B, E_MANDATORY_PREFIX_66, dst, src));}
+	void pshufb(const MmxReg& dst, const MmxReg& src)		{PushBack(Instr(I_PSHUFB,	0x0F3800, 0, dst, src));}
+	void pshufb(const MmxReg& dst, const Mem64& src)		{PushBack(Instr(I_PSHUFB,	0x0F3800, 0, dst, src));}
+	void pshufb(const XmmReg& dst, const XmmReg& src)		{PushBack(Instr(I_PSHUFB,	0x0F3800, E_MANDATORY_PREFIX_66, dst, src));}
+	void pshufb(const XmmReg& dst, const Mem128& src)		{PushBack(Instr(I_PSHUFB,	0x0F3800, E_MANDATORY_PREFIX_66, dst, src));}
+	void psignb(const MmxReg& dst, const MmxReg& src)		{PushBack(Instr(I_PSIGNB,	0x0F3808, 0, dst, src));}
+	void psignb(const MmxReg& dst, const Mem64& src)		{PushBack(Instr(I_PSIGNB,	0x0F3808, 0, dst, src));}
+	void psignb(const XmmReg& dst, const XmmReg& src)		{PushBack(Instr(I_PSIGNB,	0x0F3808, E_MANDATORY_PREFIX_66, dst, src));}
+	void psignb(const XmmReg& dst, const Mem128& src)		{PushBack(Instr(I_PSIGNB,	0x0F3808, E_MANDATORY_PREFIX_66, dst, src));}
+	void psignw(const MmxReg& dst, const MmxReg& src)		{PushBack(Instr(I_PSIGNW,	0x0F3809, 0, dst, src));}
+	void psignw(const MmxReg& dst, const Mem64& src)		{PushBack(Instr(I_PSIGNW,	0x0F3809, 0, dst, src));}
+	void psignw(const XmmReg& dst, const XmmReg& src)		{PushBack(Instr(I_PSIGNW,	0x0F3809, E_MANDATORY_PREFIX_66, dst, src));}
+	void psignw(const XmmReg& dst, const Mem128& src)		{PushBack(Instr(I_PSIGNW,	0x0F3809, E_MANDATORY_PREFIX_66, dst, src));}
+	void psignd(const MmxReg& dst, const MmxReg& src)		{PushBack(Instr(I_PSIGND,	0x0F380A, 0, dst, src));}
+	void psignd(const MmxReg& dst, const Mem64& src)		{PushBack(Instr(I_PSIGND,	0x0F380A, 0, dst, src));}
+	void psignd(const XmmReg& dst, const XmmReg& src)		{PushBack(Instr(I_PSIGND,	0x0F380A, E_MANDATORY_PREFIX_66, dst, src));}
+	void psignd(const XmmReg& dst, const Mem128& src)		{PushBack(Instr(I_PSIGND,	0x0F380A, E_MANDATORY_PREFIX_66, dst, src));}
 
 	// SSE4.1
 	void packusdw(const XmmReg& dst, const XmmReg& src)				{PushBack(Instr(I_PACKUSDW, 0x0F382B, E_MANDATORY_PREFIX_66, dst, src));}
