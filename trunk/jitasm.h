@@ -200,6 +200,7 @@ struct Reg32_eax : Reg32 {Reg32_eax() : Reg32(EAX) {}};
 #ifdef JITASM64
 struct Reg64_rax : Reg64 {Reg64_rax() : Reg64(RAX) {}};
 #endif
+struct XmmReg_xmm0 : XmmReg {XmmReg_xmm0() : XmmReg(XMM0) {}};
 
 template<class OpdN>
 struct MemT : OpdN
@@ -236,9 +237,9 @@ namespace detail
 	inline bool IsInt8(sint64 n) {return (sint8) n == n;}
 	inline bool IsInt16(sint64 n) {return (sint16) n == n;}
 	inline bool IsInt32(sint64 n) {return (sint32) n == n;}
-	inline Opd ImmXor8(const Imm16& imm)	{return IsInt8(imm.GetImm()) ? (Opd) Imm8((sint8) imm.GetImm()) : imm;}
-	inline Opd ImmXor8(const Imm32& imm)	{return IsInt8(imm.GetImm()) ? (Opd) Imm8((sint8) imm.GetImm()) : imm;}
-	inline Opd ImmXor8(const Imm64& imm)	{return IsInt8(imm.GetImm()) ? (Opd) Imm8((sint8) imm.GetImm()) : imm;}
+	inline Opd ImmXor8(const Imm16& imm)	{return IsInt8(imm.GetImm()) ? (Opd) Imm8((sint8) imm.GetImm()) : (Opd) imm;}
+	inline Opd ImmXor8(const Imm32& imm)	{return IsInt8(imm.GetImm()) ? (Opd) Imm8((sint8) imm.GetImm()) : (Opd) imm;}
+	inline Opd ImmXor8(const Imm64& imm)	{return IsInt8(imm.GetImm()) ? (Opd) Imm8((sint8) imm.GetImm()) : (Opd) imm;}
 }	// namespace detail
 
 struct Reg32Expr
@@ -392,23 +393,25 @@ enum InstrID
 
 	I_FISTTP, I_FLD, I_FST, I_FSTP,
 
-	I_ADDPS, I_ADDSS, I_ADDPD, I_ADDSD, I_ADDSUBPS, I_ADDSUBPD, I_ANDPS, I_ANDPD, I_ANDNPS, I_ANDNPD, I_CLFLUSH, I_CMPPS, I_CMPSS, I_CMPPD, I_CMPSD, I_COMISS, I_COMISD,
+	I_ADDPS, I_ADDSS, I_ADDPD, I_ADDSD, I_ADDSUBPS, I_ADDSUBPD, I_ANDPS, I_ANDPD, I_ANDNPS, I_ANDNPD, I_BLENDPS, I_BLENDPD, I_BLENDVPS, I_BLENDVPD, I_CLFLUSH, I_CMPPS, I_CMPSS, I_CMPPD, I_CMPSD, I_COMISS, I_COMISD,
 	I_CVTDQ2PD, I_CVTDQ2PS, I_CVTPD2DQ, I_CVTPD2PI, I_CVTPD2PS, I_CVTPI2PD, I_CVTPI2PS, I_CVTPS2DQ, I_CVTPS2PD, I_CVTPS2PI, I_CVTSD2SI,
 	I_CVTSD2SS, I_CVTSI2SD, I_CVTSI2SS, I_CVTSS2SD, I_CVTSS2SI, I_CVTTPD2DQ, I_CVTTPD2PI, I_CVTTPS2DQ, I_CVTTPS2PI, I_CVTTSD2SI, I_CVTTSS2SI,
-	I_DIVPS, I_DIVSS, I_DIVPD, I_DIVSD, I_EMMS, I_HADDPS, I_HADDPD, I_HSUBPS, I_HSUBPD, I_LDDQU, I_LDMXCSR, I_LFENCE,
+	I_DIVPS, I_DIVSS, I_DIVPD, I_DIVSD, I_DPPS, I_DPPD, I_EMMS, I_EXTRACTPS, I_HADDPS, I_HADDPD, I_HSUBPS, I_HSUBPD, I_INSERTPS, I_LDDQU, I_LDMXCSR, I_LFENCE,
 	I_MASKMOVDQU, I_MASKMOVQ, I_MAXPS, I_MAXSS, I_MAXPD, I_MAXSD, I_MFENCE, I_MINPS, I_MINSS, I_MINPD, I_MINSD, I_MONITOR,
 	I_MOVAPD, I_MOVAPS, I_MOVD, I_MOVDDUP, I_MOVDQA, I_MOVDQU, I_MOVDQ2Q, I_MOVHLPS, I_MOVLHPS, I_MOVHPS, I_MOVHPD, I_MOVLPS, I_MOVLPD,
-	I_MOVMSKPS, I_MOVMSKPD, I_MOVNTDQ, I_MOVNTI, I_MOVNTPD, I_MOVNTPS, I_MOVNTQ, I_MOVQ, I_MOVQ2DQ, I_MOVSD, I_MOVSS, I_MOVSHDUP, I_MOVSLDUP, I_MOVUPS, I_MOVUPD,
-	I_MULPS, I_MULSS, I_MULPD, I_MULSD, I_MWAIT, I_ORPS, I_ORPD, I_PABSB, I_PABSD, I_PABSW, I_PACKSSDW, I_PACKSSWB, I_PACKUSDW, I_PACKUSWB,
+	I_MOVMSKPS, I_MOVMSKPD, I_MOVNTDQ, I_MOVNTDQA, I_MOVNTI, I_MOVNTPD, I_MOVNTPS, I_MOVNTQ, I_MOVQ, I_MOVQ2DQ, I_MOVSD, I_MOVSS, I_MOVSHDUP, I_MOVSLDUP, I_MOVUPS, I_MOVUPD,
+	I_MPSADBW, I_MULPS, I_MULSS, I_MULPD, I_MULSD, I_MWAIT, I_ORPS, I_ORPD, I_PABSB, I_PABSD, I_PABSW, I_PACKSSDW, I_PACKSSWB, I_PACKUSDW, I_PACKUSWB,
 	I_PADDB, I_PADDD, I_PADDQ, I_PADDSB, I_PADDSW, I_PADDUSB, I_PADDUSW, I_PADDW, I_PALIGNR,
-	I_PAND, I_PANDN, I_PAUSE, I_PAVGB, I_PAVGW, I_PCMPEQB, I_PCMPEQW, I_PCMPEQD, I_PCMPEQQ,
+	I_PAND, I_PANDN, I_PAUSE, I_PAVGB, I_PAVGW, I_PBLENDVB, I_PBLENDW, I_PCMPEQB, I_PCMPEQW, I_PCMPEQD, I_PCMPEQQ,
 	I_PCMPGTB, I_PCMPGTW, I_PCMPGTD, I_PCMPGTQ, I_PEXTRB, I_PEXTRW, I_PEXTRD, I_PEXTRQ, I_PHADDW, I_PHADDD, I_PHADDSW, I_PHSUBW, I_PHSUBD, I_PHSUBSW, 
 	I_PINSRB, I_PINSRW, I_PINSRD, I_PINSRQ, I_PMADDUBSW, I_PMADDWD,
-	I_PMAXSW, I_PMAXUB, I_PMINSW, I_PMINUB, I_PMOVMSKB, I_PMULHRSW, I_PMULHUW, I_PMULHW, I_PMULLW, I_PMULUDQ,
+	I_PMAXSB, I_PMAXSW, I_PMAXSD, I_PMAXUB, I_PMAXUW, I_PMAXUD, I_PMINSB, I_PMINSW, I_PMINSD, I_PMINUB, I_PMINUW, I_PMINUD, I_PMOVMSKB,
+	I_PMOVSXBW, I_PMOVSXBD, I_PMOVSXBQ, I_PMOVSXWD, I_PMOVSXWQ, I_PMOVSXDQ, I_PMOVZXBW, I_PMOVZXBD, I_PMOVZXBQ, I_PMOVZXWD, I_PMOVZXWQ, I_PMOVZXDQ, 
+	I_PMULDQ, I_PMULHRSW, I_PMULHUW, I_PMULHW, I_PMULLW, I_PMULLD, I_PMULUDQ,
 	I_POR, I_PREFETCH, I_PSADBW, I_PSHUFB, I_PSHUFD, I_PSHUFHW, I_PSHUFLW, I_PSHUFW, I_PSIGNB, I_PSIGNW, I_PSIGND, I_PSLLW, I_PSLLD, I_PSLLQ, I_PSLLDQ, I_PSRAW,
 	I_PSRAD, I_PSRLW, I_PSRLD, I_PSRLQ, I_PSRLDQ, I_PSUBB, I_PSUBW, I_PSUBD, I_PSUBQ, I_PSUBSB, I_PSUBSW,
-	I_PSUBUSB, I_PSUBUSW, I_PUNPCKHBW, I_PUNPCKHWD, I_PUNPCKHDQ, I_PUNPCKHQDQ, I_PUNPCKLBW, I_PUNPCKLWD, I_PUNPCKLDQ, I_PUNPCKLQDQ,
-	I_PXOR, I_RCPPS, I_RCPSS, I_RSQRTPS, I_RSQRTSS, I_SFENCE, I_SHUFPS, I_SHUFPD, I_SQRTPS, I_SQRTSS, I_SQRTPD, I_SQRTSD, I_STMXCSR, 
+	I_PSUBUSB, I_PSUBUSW, I_PTEST, I_PUNPCKHBW, I_PUNPCKHWD, I_PUNPCKHDQ, I_PUNPCKHQDQ, I_PUNPCKLBW, I_PUNPCKLWD, I_PUNPCKLDQ, I_PUNPCKLQDQ,
+	I_PXOR, I_RCPPS, I_RCPSS, I_ROUNDPS, I_ROUNDPD, I_ROUNDSS, I_ROUNDSD, I_RSQRTPS, I_RSQRTSS, I_SFENCE, I_SHUFPS, I_SHUFPD, I_SQRTPS, I_SQRTSS, I_SQRTPD, I_SQRTSD, I_STMXCSR, 
 	I_SUBPS, I_SUBSS, I_SUBPD, I_SUBSD, I_UCOMISS, I_UCOMISD, I_UNPCKHPS, I_UNPCKHPD, I_UNPCKLPS, I_UNPCKLPD, I_XORPS, I_XORPD,
 
 	I_PSEUDO_ALIGN,
@@ -886,7 +889,8 @@ struct Frontend
 	Reg32_eax	eax;
 	Reg32		ecx, edx, ebx, esp, ebp, esi, edi;
 	MmxReg		mm0, mm1, mm2, mm3, mm4, mm5, mm6, mm7;
-	XmmReg		xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7;
+	XmmReg_xmm0 xmm0;
+	XmmReg		xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7;
 #ifdef JITASM64
 	Reg8		r8b, r9b, r10b, r11b, r12b, r13b, r14b, r15b;
 	Reg16		r8w, r9w, r10w, r11w, r12w, r13w, r14w, r15w;
@@ -922,7 +926,7 @@ struct Frontend
 		cx(CX), dx(DX), bx(BX), sp(SP), bp(BP), si(SI), di(DI),
 		ecx(ECX), edx(EDX), ebx(EBX), esp(ESP), ebp(EBP), esi(ESI), edi(EDI),
 		mm0(MM0), mm1(MM1), mm2(MM2), mm3(MM3), mm4(MM4), mm5(MM5), mm6(MM6), mm7(MM7),
-		xmm0(XMM0), xmm1(XMM1), xmm2(XMM2), xmm3(XMM3), xmm4(XMM4), xmm5(XMM5), xmm6(XMM6), xmm7(XMM7),
+		xmm1(XMM1), xmm2(XMM2), xmm3(XMM3), xmm4(XMM4), xmm5(XMM5), xmm6(XMM6), xmm7(XMM7),
 #ifdef JITASM64
 		r8b(R8B), r9b(R9B), r10b(R10B), r11b(R11B), r12b(R12B), r13b(R13B), r14b(R14B), r15b(R15B),
 		r8w(R8W), r9w(R9W), r10w(R10W), r11w(R11W), r12w(R12W), r13w(R13W), r14w(R14W), r15w(R15W),
@@ -2917,31 +2921,109 @@ struct Frontend
 	void psignd(const XmmReg& dst, const Mem128& src)		{PushBack(Instr(I_PSIGND,	0x0F380A, E_MANDATORY_PREFIX_66, dst, src));}
 
 	// SSE4.1
-	void packusdw(const XmmReg& dst, const XmmReg& src)				{PushBack(Instr(I_PACKUSDW, 0x0F382B, E_MANDATORY_PREFIX_66, dst, src));}
-	void packusdw(const XmmReg& dst, const Mem128& src)				{PushBack(Instr(I_PACKUSDW, 0x0F382B, E_MANDATORY_PREFIX_66, dst, src));}
-	void pcmpeqq(const XmmReg& dst, const XmmReg& src)				{PushBack(Instr(I_PCMPEQQ,	0x0F3829, E_MANDATORY_PREFIX_66, dst, src));}
-	void pcmpeqq(const XmmReg& dst, const Mem128& src)				{PushBack(Instr(I_PCMPEQQ,	0x0F3829, E_MANDATORY_PREFIX_66, dst, src));}
-	void pextrb(const Reg32& dst, const XmmReg& src, const Imm8& i)	{PushBack(Instr(I_PEXTRB,	0x0F3A14, E_MANDATORY_PREFIX_66, dst, src, i));}
-	void pextrb(const Mem8& dst, const XmmReg& src, const Imm8& i)	{PushBack(Instr(I_PEXTRB,	0x0F3A14, E_MANDATORY_PREFIX_66, src, dst, i));}
-	void pextrw(const Mem16& dst, const XmmReg& src, const Imm8& i)	{PushBack(Instr(I_PEXTRW,	0x0F3A15, E_MANDATORY_PREFIX_66, src, dst, i));}
-	void pextrd(const Reg32& dst, const XmmReg& src, const Imm8& i)	{PushBack(Instr(I_PEXTRD,	0x0F3A16, E_MANDATORY_PREFIX_66, dst, src, i));}
-	void pextrd(const Mem32& dst, const XmmReg& src, const Imm8& i)	{PushBack(Instr(I_PEXTRD,	0x0F3A16, E_MANDATORY_PREFIX_66, src, dst, i));}
+	void blendps(const XmmReg& dst, const XmmReg& src, const Imm8& mask)	{PushBack(Instr(I_BLENDPS,	0x0F3A0C, E_MANDATORY_PREFIX_66, dst, src, mask));}
+	void blendps(const XmmReg& dst, const Mem128& src, const Imm8& mask)	{PushBack(Instr(I_BLENDPS,	0x0F3A0C, E_MANDATORY_PREFIX_66, dst, src, mask));}
+	void blendpd(const XmmReg& dst, const XmmReg& src, const Imm8& mask)	{PushBack(Instr(I_BLENDPD,	0x0F3A0D, E_MANDATORY_PREFIX_66, dst, src, mask));}
+	void blendpd(const XmmReg& dst, const Mem128& src, const Imm8& mask)	{PushBack(Instr(I_BLENDPD,	0x0F3A0D, E_MANDATORY_PREFIX_66, dst, src, mask));}
+	void blendvps(const XmmReg& dst, const XmmReg& src, const XmmReg_xmm0& mask)	{PushBack(Instr(I_BLENDVPS,	0x0F3814, E_MANDATORY_PREFIX_66, dst, src));}
+	void blendvps(const XmmReg& dst, const Mem128& src, const XmmReg_xmm0& mask)	{PushBack(Instr(I_BLENDVPS,	0x0F3814, E_MANDATORY_PREFIX_66, dst, src));}
+	void blendvpd(const XmmReg& dst, const XmmReg& src, const XmmReg_xmm0& mask)	{PushBack(Instr(I_BLENDVPD,	0x0F3815, E_MANDATORY_PREFIX_66, dst, src));}
+	void blendvpd(const XmmReg& dst, const Mem128& src, const XmmReg_xmm0& mask)	{PushBack(Instr(I_BLENDVPD,	0x0F3815, E_MANDATORY_PREFIX_66, dst, src));}
+	void dpps(const XmmReg& dst, const XmmReg& src, const Imm8& mask)		{PushBack(Instr(I_DPPS,		0x0F3A40, E_MANDATORY_PREFIX_66, dst, src, mask));}
+	void dpps(const XmmReg& dst, const Mem128& src, const Imm8& mask)		{PushBack(Instr(I_DPPS,		0x0F3A40, E_MANDATORY_PREFIX_66, dst, src, mask));}
+	void dppd(const XmmReg& dst, const XmmReg& src, const Imm8& mask)		{PushBack(Instr(I_DPPD,		0x0F3A41, E_MANDATORY_PREFIX_66, dst, src, mask));}
+	void dppd(const XmmReg& dst, const Mem128& src, const Imm8& mask)		{PushBack(Instr(I_DPPD,		0x0F3A41, E_MANDATORY_PREFIX_66, dst, src, mask));}
+	void extractps(const Reg32& dst, const XmmReg& src, const Imm8& i)		{PushBack(Instr(I_EXTRACTPS,0x0F3A17, E_MANDATORY_PREFIX_66, src, dst, i));}
+	void extractps(const Mem32& dst, const XmmReg& src, const Imm8& i)		{PushBack(Instr(I_EXTRACTPS,0x0F3A17, E_MANDATORY_PREFIX_66, src, dst, i));}
 #ifdef JITASM64
-	void pextrb(const Reg64& dst, const XmmReg& src, const Imm8& i)	{PushBack(Instr(I_PEXTRB,	0x0F3A14, E_MANDATORY_PREFIX_66, dst, src, i));}
-	void pextrd(const Reg64& dst, const XmmReg& src, const Imm8& i)	{PushBack(Instr(I_PEXTRD,	0x0F3A16, E_MANDATORY_PREFIX_66, dst, src, i));}
-	void pextrq(const Reg64& dst, const XmmReg& src, const Imm8& i)	{PushBack(Instr(I_PEXTRQ,	0x0F3A16, E_MANDATORY_PREFIX_66 | E_REXW_PREFIX, dst, src, i));}
-	void pextrq(const Mem64& dst, const XmmReg& src, const Imm8& i)	{PushBack(Instr(I_PEXTRQ,	0x0F3A16, E_MANDATORY_PREFIX_66 | E_REXW_PREFIX, src, dst, i));}
+	void extractps(const Reg64& dst, const XmmReg& src, const Imm8& i)		{PushBack(Instr(I_EXTRACTPS,0x0F3A17, E_MANDATORY_PREFIX_66 | E_REXW_PREFIX, src, dst, i));}
 #endif
-	void pinsrb(const XmmReg& dst, const Reg32& src, const Imm8& i)	{PushBack(Instr(I_PINSRB, 0x0F3A20, E_MANDATORY_PREFIX_66, dst, src, i));}
-	void pinsrb(const XmmReg& dst, const Mem8& src, const Imm8& i)	{PushBack(Instr(I_PINSRB, 0x0F3A20, E_MANDATORY_PREFIX_66, dst, src, i));}
-	void pinsrd(const XmmReg& dst, const Reg32& src, const Imm8& i)	{PushBack(Instr(I_PINSRD, 0x0F3A22, E_MANDATORY_PREFIX_66, dst, src, i));}
-	void pinsrd(const XmmReg& dst, const Mem32& src, const Imm8& i)	{PushBack(Instr(I_PINSRD, 0x0F3A22, E_MANDATORY_PREFIX_66, dst, src, i));}
+	void insertps(const XmmReg& dst, const XmmReg& src, const Imm8& i)		{PushBack(Instr(I_INSERTPS,	0x0F3A21, E_MANDATORY_PREFIX_66, dst, src, i));}
+	void insertps(const XmmReg& dst, const Mem32& src, const Imm8& i)		{PushBack(Instr(I_INSERTPS,	0x0F3A21, E_MANDATORY_PREFIX_66, dst, src, i));}
+	void movntdqa(const XmmReg& dst, const Mem128& src)						{PushBack(Instr(I_MOVNTDQA,	0x0F382A, E_MANDATORY_PREFIX_66, dst, src));}
+	void mpsadbw(const XmmReg& dst, const XmmReg& src, const Imm8& offsets)	{PushBack(Instr(I_MPSADBW,	0x0F3A42, E_MANDATORY_PREFIX_66, dst, src, offsets));}
+	void mpsadbw(const XmmReg& dst, const Mem128& src, const Imm8& offsets)	{PushBack(Instr(I_MPSADBW,	0x0F3A42, E_MANDATORY_PREFIX_66, dst, src, offsets));}
+	void packusdw(const XmmReg& dst, const XmmReg& src)						{PushBack(Instr(I_PACKUSDW, 0x0F382B, E_MANDATORY_PREFIX_66, dst, src));}
+	void packusdw(const XmmReg& dst, const Mem128& src)						{PushBack(Instr(I_PACKUSDW, 0x0F382B, E_MANDATORY_PREFIX_66, dst, src));}
+	void pblendvb(const XmmReg& dst, const XmmReg& src, const XmmReg_xmm0& mask)	{PushBack(Instr(I_PBLENDVB, 0x0F3810, E_MANDATORY_PREFIX_66, dst, src));}
+	void pblendvb(const XmmReg& dst, const Mem128& src, const XmmReg_xmm0& mask)	{PushBack(Instr(I_PBLENDVB, 0x0F3810, E_MANDATORY_PREFIX_66, dst, src));}
+	void pblendw(const XmmReg& dst, const XmmReg& src, const Imm8& mask)	{PushBack(Instr(I_PBLENDW,	0x0F3A0E, E_MANDATORY_PREFIX_66, dst, src, mask));}
+	void pblendw(const XmmReg& dst, const Mem128& src, const Imm8& mask)	{PushBack(Instr(I_PBLENDW,	0x0F3A0E, E_MANDATORY_PREFIX_66, dst, src, mask));}
+	void pcmpeqq(const XmmReg& dst, const XmmReg& src)						{PushBack(Instr(I_PCMPEQQ,	0x0F3829, E_MANDATORY_PREFIX_66, dst, src));}
+	void pcmpeqq(const XmmReg& dst, const Mem128& src)						{PushBack(Instr(I_PCMPEQQ,	0x0F3829, E_MANDATORY_PREFIX_66, dst, src));}
+	void pextrb(const Reg32& dst, const XmmReg& src, const Imm8& i)			{PushBack(Instr(I_PEXTRB,	0x0F3A14, E_MANDATORY_PREFIX_66, src, dst, i));}
+	void pextrb(const Mem8& dst, const XmmReg& src, const Imm8& i)			{PushBack(Instr(I_PEXTRB,	0x0F3A14, E_MANDATORY_PREFIX_66, src, dst, i));}
+	void pextrw(const Mem16& dst, const XmmReg& src, const Imm8& i)			{PushBack(Instr(I_PEXTRW,	0x0F3A15, E_MANDATORY_PREFIX_66, src, dst, i));}
+	void pextrd(const Reg32& dst, const XmmReg& src, const Imm8& i)			{PushBack(Instr(I_PEXTRD,	0x0F3A16, E_MANDATORY_PREFIX_66, src, dst, i));}
+	void pextrd(const Mem32& dst, const XmmReg& src, const Imm8& i)			{PushBack(Instr(I_PEXTRD,	0x0F3A16, E_MANDATORY_PREFIX_66, src, dst, i));}
 #ifdef JITASM64
-	void pinsrb(const XmmReg& dst, const Reg64& src, const Imm8& i)	{PushBack(Instr(I_PINSRB, 0x0F3A20, E_MANDATORY_PREFIX_66, dst, src, i));}
-	void pinsrd(const XmmReg& dst, const Reg64& src, const Imm8& i)	{PushBack(Instr(I_PINSRD, 0x0F3A22, E_MANDATORY_PREFIX_66, dst, src, i));}
-	void pinsrq(const XmmReg& dst, const Reg64& src, const Imm8& i)	{PushBack(Instr(I_PINSRQ, 0x0F3A22, E_MANDATORY_PREFIX_66 | E_REXW_PREFIX, dst, src, i));}
-	void pinsrq(const XmmReg& dst, const Mem64& src, const Imm8& i)	{PushBack(Instr(I_PINSRQ, 0x0F3A22, E_MANDATORY_PREFIX_66 | E_REXW_PREFIX, dst, src, i));}
+	void pextrb(const Reg64& dst, const XmmReg& src, const Imm8& i)			{PushBack(Instr(I_PEXTRB,	0x0F3A14, E_MANDATORY_PREFIX_66 | E_REXW_PREFIX, src, dst, i));}
+	void pextrq(const Reg64& dst, const XmmReg& src, const Imm8& i)			{PushBack(Instr(I_PEXTRQ,	0x0F3A16, E_MANDATORY_PREFIX_66 | E_REXW_PREFIX, src, dst, i));}
+	void pextrq(const Mem64& dst, const XmmReg& src, const Imm8& i)			{PushBack(Instr(I_PEXTRQ,	0x0F3A16, E_MANDATORY_PREFIX_66 | E_REXW_PREFIX, src, dst, i));}
 #endif
+	void pinsrb(const XmmReg& dst, const Reg32& src, const Imm8& i)			{PushBack(Instr(I_PINSRB, 0x0F3A20, E_MANDATORY_PREFIX_66, dst, src, i));}
+	void pinsrb(const XmmReg& dst, const Mem8& src, const Imm8& i)			{PushBack(Instr(I_PINSRB, 0x0F3A20, E_MANDATORY_PREFIX_66, dst, src, i));}
+	void pinsrd(const XmmReg& dst, const Reg32& src, const Imm8& i)			{PushBack(Instr(I_PINSRD, 0x0F3A22, E_MANDATORY_PREFIX_66, dst, src, i));}
+	void pinsrd(const XmmReg& dst, const Mem32& src, const Imm8& i)			{PushBack(Instr(I_PINSRD, 0x0F3A22, E_MANDATORY_PREFIX_66, dst, src, i));}
+#ifdef JITASM64
+	void pinsrb(const XmmReg& dst, const Reg64& src, const Imm8& i)			{PushBack(Instr(I_PINSRB, 0x0F3A20, E_MANDATORY_PREFIX_66, dst, src, i));}
+	void pinsrq(const XmmReg& dst, const Reg64& src, const Imm8& i)			{PushBack(Instr(I_PINSRQ, 0x0F3A22, E_MANDATORY_PREFIX_66 | E_REXW_PREFIX, dst, src, i));}
+	void pinsrq(const XmmReg& dst, const Mem64& src, const Imm8& i)			{PushBack(Instr(I_PINSRQ, 0x0F3A22, E_MANDATORY_PREFIX_66 | E_REXW_PREFIX, dst, src, i));}
+#endif
+	void pmaxsb(const XmmReg& dst, const XmmReg& src)						{PushBack(Instr(I_PMAXSB, 0x0F383C, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmaxsb(const XmmReg& dst, const Mem128& src)						{PushBack(Instr(I_PMAXSB, 0x0F383C, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmaxsd(const XmmReg& dst, const XmmReg& src)						{PushBack(Instr(I_PMAXSD, 0x0F383D, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmaxsd(const XmmReg& dst, const Mem128& src)						{PushBack(Instr(I_PMAXSD, 0x0F383D, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmaxuw(const XmmReg& dst, const XmmReg& src)						{PushBack(Instr(I_PMAXUW, 0x0F383E, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmaxuw(const XmmReg& dst, const Mem128& src)						{PushBack(Instr(I_PMAXUW, 0x0F383E, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmaxud(const XmmReg& dst, const XmmReg& src)						{PushBack(Instr(I_PMAXUD, 0x0F383F, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmaxud(const XmmReg& dst, const Mem128& src)						{PushBack(Instr(I_PMAXUD, 0x0F383F, E_MANDATORY_PREFIX_66, dst, src));}
+	void pminsb(const XmmReg& dst, const XmmReg& src)						{PushBack(Instr(I_PMINSB, 0x0F3838, E_MANDATORY_PREFIX_66, dst, src));}
+	void pminsb(const XmmReg& dst, const Mem128& src)						{PushBack(Instr(I_PMINSB, 0x0F3838, E_MANDATORY_PREFIX_66, dst, src));}
+	void pminsd(const XmmReg& dst, const XmmReg& src)						{PushBack(Instr(I_PMINSD, 0x0F3839, E_MANDATORY_PREFIX_66, dst, src));}
+	void pminsd(const XmmReg& dst, const Mem128& src)						{PushBack(Instr(I_PMINSD, 0x0F3839, E_MANDATORY_PREFIX_66, dst, src));}
+	void pminuw(const XmmReg& dst, const XmmReg& src)						{PushBack(Instr(I_PMINUW, 0x0F383A, E_MANDATORY_PREFIX_66, dst, src));}
+	void pminuw(const XmmReg& dst, const Mem128& src)						{PushBack(Instr(I_PMINUW, 0x0F383A, E_MANDATORY_PREFIX_66, dst, src));}
+	void pminud(const XmmReg& dst, const XmmReg& src)						{PushBack(Instr(I_PMINUD, 0x0F383B, E_MANDATORY_PREFIX_66, dst, src));}
+	void pminud(const XmmReg& dst, const Mem128& src)						{PushBack(Instr(I_PMINUD, 0x0F383B, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmovsxbw(const XmmReg& dst, const XmmReg& src)						{PushBack(Instr(I_PMOVSXBW, 0x0F3820, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmovsxbw(const XmmReg& dst, const Mem64& src)						{PushBack(Instr(I_PMOVSXBW, 0x0F3820, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmovsxbd(const XmmReg& dst, const XmmReg& src)						{PushBack(Instr(I_PMOVSXBD, 0x0F3821, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmovsxbd(const XmmReg& dst, const Mem32& src)						{PushBack(Instr(I_PMOVSXBD, 0x0F3821, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmovsxbq(const XmmReg& dst, const XmmReg& src)						{PushBack(Instr(I_PMOVSXBQ, 0x0F3822, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmovsxbq(const XmmReg& dst, const Mem16& src)						{PushBack(Instr(I_PMOVSXBQ, 0x0F3822, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmovsxwd(const XmmReg& dst, const XmmReg& src)						{PushBack(Instr(I_PMOVSXWD, 0x0F3823, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmovsxwd(const XmmReg& dst, const Mem64& src)						{PushBack(Instr(I_PMOVSXWD, 0x0F3823, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmovsxwq(const XmmReg& dst, const XmmReg& src)						{PushBack(Instr(I_PMOVSXWQ, 0x0F3824, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmovsxwq(const XmmReg& dst, const Mem32& src)						{PushBack(Instr(I_PMOVSXWQ, 0x0F3824, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmovsxdq(const XmmReg& dst, const XmmReg& src)						{PushBack(Instr(I_PMOVSXDQ, 0x0F3825, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmovsxdq(const XmmReg& dst, const Mem64& src)						{PushBack(Instr(I_PMOVSXDQ, 0x0F3825, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmovzxbw(const XmmReg& dst, const XmmReg& src)						{PushBack(Instr(I_PMOVZXBW, 0x0F3830, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmovzxbw(const XmmReg& dst, const Mem64& src)						{PushBack(Instr(I_PMOVZXBW, 0x0F3830, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmovzxbd(const XmmReg& dst, const XmmReg& src)						{PushBack(Instr(I_PMOVZXBD, 0x0F3831, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmovzxbd(const XmmReg& dst, const Mem32& src)						{PushBack(Instr(I_PMOVZXBD, 0x0F3831, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmovzxbq(const XmmReg& dst, const XmmReg& src)						{PushBack(Instr(I_PMOVZXBQ, 0x0F3832, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmovzxbq(const XmmReg& dst, const Mem16& src)						{PushBack(Instr(I_PMOVZXBQ, 0x0F3832, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmovzxwd(const XmmReg& dst, const XmmReg& src)						{PushBack(Instr(I_PMOVZXWD, 0x0F3833, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmovzxwd(const XmmReg& dst, const Mem64& src)						{PushBack(Instr(I_PMOVZXWD, 0x0F3833, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmovzxwq(const XmmReg& dst, const XmmReg& src)						{PushBack(Instr(I_PMOVZXWQ, 0x0F3834, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmovzxwq(const XmmReg& dst, const Mem32& src)						{PushBack(Instr(I_PMOVZXWQ, 0x0F3834, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmovzxdq(const XmmReg& dst, const XmmReg& src)						{PushBack(Instr(I_PMOVZXDQ, 0x0F3835, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmovzxdq(const XmmReg& dst, const Mem64& src)						{PushBack(Instr(I_PMOVZXDQ, 0x0F3835, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmuldq(const XmmReg& dst, const XmmReg& src)						{PushBack(Instr(I_PMULDQ,	0x0F3828, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmuldq(const XmmReg& dst, const Mem128& src)						{PushBack(Instr(I_PMULDQ,	0x0F3828, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmulld(const XmmReg& dst, const XmmReg& src)						{PushBack(Instr(I_PMULLD,	0x0F3840, E_MANDATORY_PREFIX_66, dst, src));}
+	void pmulld(const XmmReg& dst, const Mem128& src)						{PushBack(Instr(I_PMULLD,	0x0F3840, E_MANDATORY_PREFIX_66, dst, src));}
+	void ptest(const XmmReg& dst, const XmmReg& src)						{PushBack(Instr(I_PTEST,	0x0F3817, E_MANDATORY_PREFIX_66, dst, src));}
+	void ptest(const XmmReg& dst, const Mem128& src)						{PushBack(Instr(I_PTEST,	0x0F3817, E_MANDATORY_PREFIX_66, dst, src));}
+	void roundps(const XmmReg& dst, const XmmReg& src, const Imm8& mode)	{PushBack(Instr(I_ROUNDPS,	0x0F3A08, E_MANDATORY_PREFIX_66, dst, src, mode));}
+	void roundps(const XmmReg& dst, const Mem128& src, const Imm8& mode)	{PushBack(Instr(I_ROUNDPS,	0x0F3A08, E_MANDATORY_PREFIX_66, dst, src, mode));}
+	void roundpd(const XmmReg& dst, const XmmReg& src, const Imm8& mode)	{PushBack(Instr(I_ROUNDPD,	0x0F3A09, E_MANDATORY_PREFIX_66, dst, src, mode));}
+	void roundpd(const XmmReg& dst, const Mem128& src, const Imm8& mode)	{PushBack(Instr(I_ROUNDPD,	0x0F3A09, E_MANDATORY_PREFIX_66, dst, src, mode));}
+	void roundss(const XmmReg& dst, const XmmReg& src, const Imm8& mode)	{PushBack(Instr(I_ROUNDSS,	0x0F3A0A, E_MANDATORY_PREFIX_66, dst, src, mode));}
+	void roundss(const XmmReg& dst, const Mem32& src, const Imm8& mode)		{PushBack(Instr(I_ROUNDSS,	0x0F3A0A, E_MANDATORY_PREFIX_66, dst, src, mode));}
+	void roundsd(const XmmReg& dst, const XmmReg& src, const Imm8& mode)	{PushBack(Instr(I_ROUNDSD,	0x0F3A0B, E_MANDATORY_PREFIX_66, dst, src, mode));}
+	void roundsd(const XmmReg& dst, const Mem64& src, const Imm8& mode)		{PushBack(Instr(I_ROUNDSD,	0x0F3A0B, E_MANDATORY_PREFIX_66, dst, src, mode));}
 
 	// SSE4.2
 	void pcmpgtq(const XmmReg& dst, const XmmReg& src)	{PushBack(Instr(I_PCMPGTQ, 0x0F3837, E_MANDATORY_PREFIX_66, dst, src));}
@@ -3728,7 +3810,7 @@ struct function2_cdecl : detail::Function_cdecl
 	virtual Result main(Arg /*a1*/, Arg /*a2*/) { return Result(); }
 	void naked_main() {
 		DumpRegArg2<R, A1, A2>();
-		main(Arg1<R>(), Arg2<R, A1>()).Store(*this);
+		main(Arg1<R>(), Arg2<R,A1>()).Store(*this);
 		MakePrologAndEpilog();
 	}
 };
@@ -3742,14 +3824,279 @@ struct function2_cdecl<void, A1, A2> : detail::Function_cdecl
 	virtual void main(Arg /*a1*/, Arg /*a2*/) {}
 	void naked_main() {
 		DumpRegArg2<void, A1, A2>();
-		main(Arg1<void>(), Arg2<void, A1>());
+		main(Arg1<void>(), Arg2<void,A1>());
 		MakePrologAndEpilog();
 	}
 };
 
+/// cdecl function which has 3 arguments
+template<class R, class A1, class A2, class A3>
+struct function3_cdecl : detail::Function_cdecl
+{
+	typedef R (__cdecl *FuncPtr)(A1, A2, A3);
+	typedef detail::ResultT<R> Result;	///< main function result type
+	typename detail::ResultTraits<R>::ResultPtr result_ptr;
+
+	function3_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	virtual Result main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/) { return Result(); }
+	void naked_main() {
+		DumpRegArg3<R, A1, A2, A3>();
+		main(Arg1<R>(), Arg2<R,A1>(), Arg3<R,A1,A2>()).Store(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+template<class A1, class A2, class A3>
+struct function3_cdecl<void, A1, A2, A3> : detail::Function_cdecl
+{
+	typedef void (__cdecl *FuncPtr)(A1, A2, A3);
+	function3_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	virtual void main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/) {}
+	void naked_main() {
+		DumpRegArg3<void, A1, A2, A3>();
+		main(Arg1<void>(), Arg2<void,A1>(), Arg3<void,A1,A2>());
+		MakePrologAndEpilog();
+	}
+};
+
+/// cdecl function which has 4 arguments
+template<class R, class A1, class A2, class A3, class A4>
+struct function4_cdecl : detail::Function_cdecl
+{
+	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4);
+	typedef detail::ResultT<R> Result;	///< main function result type
+	typename detail::ResultTraits<R>::ResultPtr result_ptr;
+
+	function4_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	virtual Result main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/) { return Result(); }
+	void naked_main() {
+		DumpRegArg4<R, A1, A2, A3, A4>();
+		main(Arg1<R>(), Arg2<R,A1>(), Arg3<R,A1,A2>(), Arg4<R,A1,A2,A4>()).Store(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+template<class A1, class A2, class A3, class A4>
+struct function4_cdecl<void, A1, A2, A3, A4> : detail::Function_cdecl
+{
+	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4);
+	function4_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	virtual void main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/) {}
+	void naked_main() {
+		DumpRegArg4<void, A1, A2, A3, A4>();
+		main(Arg1<void>(), Arg2<void,A1>(), Arg3<void,A1,A2>(), Arg4<void,A1,A2,A4>());
+		MakePrologAndEpilog();
+	}
+};
+
+/// cdecl function which has 5 arguments
+template<class R, class A1, class A2, class A3, class A4, class A5>
+struct function5_cdecl : detail::Function_cdecl
+{
+	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4, A5);
+	typedef detail::ResultT<R> Result;	///< main function result type
+	typename detail::ResultTraits<R>::ResultPtr result_ptr;
+
+	function5_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	virtual Result main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/) { return Result(); }
+	void naked_main() {
+		DumpRegArg4<R, A1, A2, A3, A4>();
+		main(Arg1<R>(), Arg2<R,A1>(), Arg3<R,A1,A2>(), Arg4<R,A1,A2,A4>(), Arg5<R,A1,A2,A4,A5>()).Store(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+template<class A1, class A2, class A3, class A4, class A5>
+struct function5_cdecl<void, A1, A2, A3, A4, A5> : detail::Function_cdecl
+{
+	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4, A5);
+	function5_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	virtual void main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/) {}
+	void naked_main() {
+		DumpRegArg4<void, A1, A2, A3, A4>();
+		main(Arg1<void>(), Arg2<void,A1>(), Arg3<void,A1,A2>(), Arg4<void,A1,A2,A4>(), Arg5<void,A1,A2,A4,A5>());
+		MakePrologAndEpilog();
+	}
+};
+
+/// cdecl function which has 6 arguments
+template<class R, class A1, class A2, class A3, class A4, class A5, class A6>
+struct function6_cdecl : detail::Function_cdecl
+{
+	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6);
+	typedef detail::ResultT<R> Result;	///< main function result type
+	typename detail::ResultTraits<R>::ResultPtr result_ptr;
+
+	function6_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	virtual Result main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/) { return Result(); }
+	void naked_main() {
+		DumpRegArg4<R, A1, A2, A3, A4>();
+		main(Arg1<R>(), Arg2<R,A1>(), Arg3<R,A1,A2>(), Arg4<R,A1,A2,A4>(), Arg5<R,A1,A2,A4,A5>(), Arg6<R,A1,A2,A4,A5,A6>()).Store(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+template<class A1, class A2, class A3, class A4, class A5, class A6>
+struct function6_cdecl<void, A1, A2, A3, A4, A5, A6> : detail::Function_cdecl
+{
+	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6);
+	function6_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	virtual void main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/) {}
+	void naked_main() {
+		DumpRegArg4<void, A1, A2, A3, A4>();
+		main(Arg1<void>(), Arg2<void,A1>(), Arg3<void,A1,A2>(), Arg4<void,A1,A2,A4>(), Arg5<void,A1,A2,A4,A5>(), Arg6<void,A1,A2,A4,A5,A6>());
+		MakePrologAndEpilog();
+	}
+};
+
+/// cdecl function which has 7 arguments
+template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7>
+struct function7_cdecl : detail::Function_cdecl
+{
+	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7);
+	typedef detail::ResultT<R> Result;	///< main function result type
+	typename detail::ResultTraits<R>::ResultPtr result_ptr;
+
+	function7_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	virtual Result main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/, Arg /*a7*/) { return Result(); }
+	void naked_main() {
+		DumpRegArg4<R, A1, A2, A3, A4>();
+		main(Arg1<R>(), Arg2<R,A1>(), Arg3<R,A1,A2>(), Arg4<R,A1,A2,A4>(), Arg5<R,A1,A2,A4,A5>(), Arg6<R,A1,A2,A4,A5,A6>(), Arg7<R,A1,A2,A4,A5,A6,A7>()).Store(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+template<class A1, class A2, class A3, class A4, class A5, class A6, class A7>
+struct function7_cdecl<void, A1, A2, A3, A4, A5, A6, A7> : detail::Function_cdecl
+{
+	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7);
+	function7_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	virtual void main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/, Arg /*a7*/) {}
+	void naked_main() {
+		DumpRegArg4<void, A1, A2, A3, A4>();
+		main(Arg1<void>(), Arg2<void,A1>(), Arg3<void,A1,A2>(), Arg4<void,A1,A2,A4>(), Arg5<void,A1,A2,A4,A5>(), Arg6<void,A1,A2,A4,A5,A6>(), Arg7<void,A1,A2,A4,A5,A6,A7>());
+		MakePrologAndEpilog();
+	}
+};
+
+/// cdecl function which has 8 arguments
+template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8>
+struct function8_cdecl : detail::Function_cdecl
+{
+	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8);
+	typedef detail::ResultT<R> Result;	///< main function result type
+	typename detail::ResultTraits<R>::ResultPtr result_ptr;
+
+	function8_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	virtual Result main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/, Arg /*a7*/, Arg /*a8*/) { return Result(); }
+	void naked_main() {
+		DumpRegArg4<R, A1, A2, A3, A4>();
+		main(Arg1<R>(), Arg2<R,A1>(), Arg3<R,A1,A2>(), Arg4<R,A1,A2,A4>(), Arg5<R,A1,A2,A4,A5>(), Arg6<R,A1,A2,A4,A5,A6>(), Arg7<R,A1,A2,A4,A5,A6,A7>(), Arg8<R,A1,A2,A4,A5,A6,A7,A8>()).Store(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+template<class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8>
+struct function8_cdecl<void, A1, A2, A3, A4, A5, A6, A7, A8> : detail::Function_cdecl
+{
+	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8);
+	function8_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	virtual void main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/, Arg /*a7*/, Arg /*a8*/) {}
+	void naked_main() {
+		DumpRegArg4<void, A1, A2, A3, A4>();
+		main(Arg1<void>(), Arg2<void,A1>(), Arg3<void,A1,A2>(), Arg4<void,A1,A2,A4>(), Arg5<void,A1,A2,A4,A5>(), Arg6<void,A1,A2,A4,A5,A6>(), Arg7<void,A1,A2,A4,A5,A6,A7>(), Arg8<void,A1,A2,A4,A5,A6,A7,A8>());
+		MakePrologAndEpilog();
+	}
+};
+
+/// cdecl function which has 9 arguments
+template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9>
+struct function9_cdecl : detail::Function_cdecl
+{
+	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8, A9);
+	typedef detail::ResultT<R> Result;	///< main function result type
+	typename detail::ResultTraits<R>::ResultPtr result_ptr;
+
+	function9_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	virtual Result main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/, Arg /*a7*/, Arg /*a8*/, Arg /*a9*/) { return Result(); }
+	void naked_main() {
+		DumpRegArg4<R, A1, A2, A3, A4>();
+		main(Arg1<R>(), Arg2<R,A1>(), Arg3<R,A1,A2>(), Arg4<R,A1,A2,A4>(), Arg5<R,A1,A2,A4,A5>(), Arg6<R,A1,A2,A4,A5,A6>(), Arg7<R,A1,A2,A4,A5,A6,A7>(), Arg8<R,A1,A2,A4,A5,A6,A7,A8>(), Arg9<R,A1,A2,A4,A5,A6,A7,A8,A9>()).Store(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+template<class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9>
+struct function9_cdecl<void, A1, A2, A3, A4, A5, A6, A7, A8, A9> : detail::Function_cdecl
+{
+	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8, A9);
+	function9_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	virtual void main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/, Arg /*a7*/, Arg /*a8*/, Arg /*a9*/) {}
+	void naked_main() {
+		DumpRegArg4<void, A1, A2, A3, A4>();
+		main(Arg1<void>(), Arg2<void,A1>(), Arg3<void,A1,A2>(), Arg4<void,A1,A2,A4>(), Arg5<void,A1,A2,A4,A5>(), Arg6<void,A1,A2,A4,A5,A6>(), Arg7<void,A1,A2,A4,A5,A6,A7>(), Arg8<void,A1,A2,A4,A5,A6,A7,A8>(), Arg9<void,A1,A2,A4,A5,A6,A7,A8,A9>());
+		MakePrologAndEpilog();
+	}
+};
+
+/// cdecl function which has 10 arguments
+template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9, class A10>
+struct function10_cdecl : detail::Function_cdecl
+{
+	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10);
+	typedef detail::ResultT<R> Result;	///< main function result type
+	typename detail::ResultTraits<R>::ResultPtr result_ptr;
+
+	function10_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	virtual Result main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/, Arg /*a7*/, Arg /*a8*/, Arg /*a9*/, Arg /*a10*/) { return Result(); }
+	void naked_main() {
+		DumpRegArg4<R, A1, A2, A3, A4>();
+		main(Arg1<R>(), Arg2<R,A1>(), Arg3<R,A1,A2>(), Arg4<R,A1,A2,A4>(), Arg5<R,A1,A2,A4,A5>(), Arg6<R,A1,A2,A4,A5,A6>(), Arg7<R,A1,A2,A4,A5,A6,A7>(), Arg8<R,A1,A2,A4,A5,A6,A7,A8>(), Arg9<R,A1,A2,A4,A5,A6,A7,A8,A9>(), Arg10<R,A1,A2,A4,A5,A6,A7,A8,A9,A10>()).Store(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+template<class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9, class A10>
+struct function10_cdecl<void, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10> : detail::Function_cdecl
+{
+	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10);
+	function10_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	virtual void main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/, Arg /*a7*/, Arg /*a8*/, Arg /*a9*/, Arg /*a10*/) {}
+	void naked_main() {
+		DumpRegArg4<void, A1, A2, A3, A4>();
+		main(Arg1<void>(), Arg2<void,A1>(), Arg3<void,A1,A2>(), Arg4<void,A1,A2,A4>(), Arg5<void,A1,A2,A4,A5>(), Arg6<void,A1,A2,A4,A5,A6>(), Arg7<void,A1,A2,A4,A5,A6,A7>(), Arg8<void,A1,A2,A4,A5,A6,A7,A8>(), Arg9<void,A1,A2,A4,A5,A6,A7,A8,A9>(), Arg10<void,A1,A2,A4,A5,A6,A7,A8,A9,A10>());
+		MakePrologAndEpilog();
+	}
+};
+
+
 template<class R> struct function0 : function0_cdecl<R> {};
 template<class R, class A1> struct function1 : function1_cdecl<R, A1> {};
 template<class R, class A1, class A2> struct function2 : function2_cdecl<R, A1, A2> {};
+template<class R, class A1, class A2, class A3> struct function3 : function3_cdecl<R, A1, A2, A3> {};
+template<class R, class A1, class A2, class A3, class A4> struct function4 : function4_cdecl<R, A1, A2, A3, A4> {};
+template<class R, class A1, class A2, class A3, class A4, class A5> struct function5 : function5_cdecl<R, A1, A2, A3, A4, A5> {};
+template<class R, class A1, class A2, class A3, class A4, class A5, class A6> struct function6 : function6_cdecl<R, A1, A2, A3, A4, A5, A6> {};
+template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7> struct function7 : function7_cdecl<R, A1, A2, A3, A4, A5, A6, A7> {};
+template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8> struct function8 : function8_cdecl<R, A1, A2, A3, A4, A5, A6, A7, A8> {};
+template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9> struct function9 : function9_cdecl<R, A1, A2, A3, A4, A5, A6, A7, A8, A9> {};
+template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9, class A10> struct function10 : function10_cdecl<R, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10> {};
 
 }	// namespace jitasm
 
