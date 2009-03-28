@@ -931,7 +931,7 @@ struct Frontend
 		main_instr.swap(instrs_);	// Put main instructions aside for prolog
 		push(zbp);
 		mov(zbp, zsp);
-		size_t count = 0;
+		uint32 count = 0;
 		if (gpreg & (1 << (EBX - EAX))) { push(zbx); ++count; }
 		if (gpreg & (1 << (EDI - EAX))) { push(zdi); ++count; }
 		if (gpreg & (1 << (ESI - EAX))) { push(zsi); ++count; }
