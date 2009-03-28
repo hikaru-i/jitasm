@@ -3076,7 +3076,7 @@ namespace detail {
 	template<class T> struct ArgumentTraits_win64<2, T, 8> : ArgumentTraits_win64_reg<R8, ARG_TYPE_VALUE> {};
 	template<class T> struct ArgumentTraits_win64<3, T, 8> : ArgumentTraits_win64_reg<R9, ARG_TYPE_VALUE> {};
 
-#ifdef __INTRIN_H_
+#ifdef _MMINTRIN_H_INCLUDED
 	// specialization for __m64
 	template<> struct ArgumentTraits_win64<0, __m64, 8> : ArgumentTraits_win64_reg<RCX, ARG_TYPE_VALUE> {};
 	template<> struct ArgumentTraits_win64<1, __m64, 8> : ArgumentTraits_win64_reg<RDX, ARG_TYPE_VALUE> {};
@@ -3376,30 +3376,9 @@ namespace detail {
 		}
 	};
 
-#ifdef __INTRIN_H_
-#ifndef JITASM64
-	// specialization for __m64
-	template<>
-	struct ResultT<__m64, 8> {
-		enum { ArgR = 0 };
-		Opd64 val_;
-		ResultT() : val_(INVALID) {}
-		ResultT(const MmxReg& mm) : val_(mm) {}
-		ResultT(const Mem64& mem) : val_(mem) {}
-		void Store(Frontend& f)
-		{
-			if (detail::IsMmxReg(val_)) {
-				if (val_.GetReg() != MM0)
-					f.movq(f.mm0, static_cast<const MmxReg&>(val_));
-			}
-			else if (val_.IsMem()) {
-				f.movq(f.mm0, static_cast<const Mem64&>(val_));
-			}
-		}
-	};
-#endif	// JITASM64
-
 #ifdef JITASM64
+
+#ifdef _INCLUDED_MM2
 	// specialization for __m128
 	template<>
 	struct ResultT<__m128, 16> {
@@ -3420,7 +3399,9 @@ namespace detail {
 			}
 		}
 	};
+#endif	// _INCLUDED_MM2
 
+#ifdef _INCLUDED_EMM
 	// specialization for __m128d
 	template<>
 	struct ResultT<__m128d, 16> {
@@ -3462,7 +3443,33 @@ namespace detail {
 			}
 		}
 	};
+#endif	// _INCLUDED_EMM
+
 #else	// JITASM64
+
+#ifdef _MMINTRIN_H_INCLUDED
+	// specialization for __m64
+	template<>
+	struct ResultT<__m64, 8> {
+		enum { ArgR = 0 };
+		Opd64 val_;
+		ResultT() : val_(INVALID) {}
+		ResultT(const MmxReg& mm) : val_(mm) {}
+		ResultT(const Mem64& mem) : val_(mem) {}
+		void Store(Frontend& f)
+		{
+			if (detail::IsMmxReg(val_)) {
+				if (val_.GetReg() != MM0)
+					f.movq(f.mm0, static_cast<const MmxReg&>(val_));
+			}
+			else if (val_.IsMem()) {
+				f.movq(f.mm0, static_cast<const Mem64&>(val_));
+			}
+		}
+	};
+#endif	// _MMINTRIN_H_INCLUDED
+
+#ifdef _INCLUDED_MM2
 	// specialization for __m128
 	template<>
 	struct ResultT<__m128, 16> {
@@ -3482,7 +3489,9 @@ namespace detail {
 			}
 		}
 	};
+#endif	// _INCLUDED_MM2
 
+#ifdef _INCLUDED_EMM
 	// specialization for __m128d
 	template<>
 	struct ResultT<__m128d, 16> {
@@ -3522,8 +3531,9 @@ namespace detail {
 			}
 		}
 	};
+#endif	// _INCLUDED_EMM
+
 #endif	// JITASM64
-#endif	// __INTRIN_H_
 
 
 	/// cdecl function base class
