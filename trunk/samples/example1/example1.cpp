@@ -1,7 +1,7 @@
 #include "stdio.h"
 #include "jitasm.h"
 
-class example1 : public jitasm::function1<int, int>
+class example1 : public jitasm::function<int, int>
 {
 private:
 	int val_;

@@ -44,7 +44,7 @@ void test_impl(const char* func_name, Fn1 fn1, Fn2 fn2)
 	g_test_succeeded++;
 }
 
-struct test_mmx_sse2 : jitasm::function0<void>
+struct test_mmx_sse2 : jitasm::function<void>
 {
 	virtual void main()
 	{
@@ -142,7 +142,7 @@ struct test_mmx_sse2 : jitasm::function0<void>
 // SAL
 //----------------------------------------
 extern "C" void masm_test_sal();
-struct test_sal : jitasm::function0<void>
+struct test_sal : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -178,7 +178,7 @@ struct test_sal : jitasm::function0<void>
 // SAR
 //----------------------------------------
 extern "C" void masm_test_sar();
-struct test_sar : jitasm::function0<void>
+struct test_sar : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -214,7 +214,7 @@ struct test_sar : jitasm::function0<void>
 // SHL
 //----------------------------------------
 extern "C" void masm_test_shl();
-struct test_shl : jitasm::function0<void>
+struct test_shl : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -250,7 +250,7 @@ struct test_shl : jitasm::function0<void>
 // SHR
 //----------------------------------------
 extern "C" void masm_test_shr();
-struct test_shr : jitasm::function0<void>
+struct test_shr : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -286,7 +286,7 @@ struct test_shr : jitasm::function0<void>
 // RCL
 //----------------------------------------
 extern "C" void masm_test_rcl();
-struct test_rcl : jitasm::function0<void>
+struct test_rcl : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -322,7 +322,7 @@ struct test_rcl : jitasm::function0<void>
 // RCR
 //----------------------------------------
 extern "C" void masm_test_rcr();
-struct test_rcr : jitasm::function0<void>
+struct test_rcr : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -358,7 +358,7 @@ struct test_rcr : jitasm::function0<void>
 // ROL
 //----------------------------------------
 extern "C" void masm_test_rol();
-struct test_rol : jitasm::function0<void>
+struct test_rol : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -394,7 +394,7 @@ struct test_rol : jitasm::function0<void>
 // ROR
 //----------------------------------------
 extern "C" void masm_test_ror();
-struct test_ror : jitasm::function0<void>
+struct test_ror : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -430,7 +430,7 @@ struct test_ror : jitasm::function0<void>
 // INC/DEC
 //----------------------------------------
 extern "C" void masm_test_inc_dec();
-struct test_inc_dec : jitasm::function0<void>
+struct test_inc_dec : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -467,7 +467,7 @@ struct test_inc_dec : jitasm::function0<void>
 // PUSH/POP
 //----------------------------------------
 extern "C" void masm_test_push_pop();
-struct test_push_pop : jitasm::function0<void>
+struct test_push_pop : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -503,7 +503,7 @@ struct test_push_pop : jitasm::function0<void>
 // ADD
 //----------------------------------------
 extern "C" void masm_test_add();
-struct test_add : jitasm::function0<void>
+struct test_add : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -564,7 +564,7 @@ struct test_add : jitasm::function0<void>
 // OR
 //----------------------------------------
 extern "C" void masm_test_or();
-struct test_or : jitasm::function0<void>
+struct test_or : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -625,7 +625,7 @@ struct test_or : jitasm::function0<void>
 // ADC
 //----------------------------------------
 extern "C" void masm_test_adc();
-struct test_adc : jitasm::function0<void>
+struct test_adc : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -686,7 +686,7 @@ struct test_adc : jitasm::function0<void>
 // SBB
 //----------------------------------------
 extern "C" void masm_test_sbb();
-struct test_sbb : jitasm::function0<void>
+struct test_sbb : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -747,7 +747,7 @@ struct test_sbb : jitasm::function0<void>
 // AND
 //----------------------------------------
 extern "C" void masm_test_and();
-struct test_and : jitasm::function0<void>
+struct test_and : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -808,7 +808,7 @@ struct test_and : jitasm::function0<void>
 // SUB
 //----------------------------------------
 extern "C" void masm_test_sub();
-struct test_sub : jitasm::function0<void>
+struct test_sub : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -869,7 +869,7 @@ struct test_sub : jitasm::function0<void>
 // XOR
 //----------------------------------------
 extern "C" void masm_test_xor();
-struct test_xor : jitasm::function0<void>
+struct test_xor : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -930,7 +930,7 @@ struct test_xor : jitasm::function0<void>
 // CMP
 //----------------------------------------
 extern "C" void masm_test_cmp();
-struct test_cmp : jitasm::function0<void>
+struct test_cmp : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -991,7 +991,7 @@ struct test_cmp : jitasm::function0<void>
 // XCHG
 //----------------------------------------
 extern "C" void masm_test_xchg();
-struct test_xchg : jitasm::function0<void>
+struct test_xchg : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -1030,7 +1030,7 @@ struct test_xchg : jitasm::function0<void>
 // test
 //----------------------------------------
 extern "C" void masm_test_test();
-struct test_test : jitasm::function0<void>
+struct test_test : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -1075,7 +1075,7 @@ struct test_test : jitasm::function0<void>
 // MOV/MOVZX
 //----------------------------------------
 extern "C" void masm_test_mov();
-struct test_mov : jitasm::function0<void>
+struct test_mov : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -1122,7 +1122,7 @@ struct test_mov : jitasm::function0<void>
 // LEA
 //----------------------------------------
 extern "C" void masm_test_lea();
-struct test_lea : jitasm::function0<void>
+struct test_lea : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -1296,7 +1296,7 @@ struct test_lea : jitasm::function0<void>
 // FLD
 //----------------------------------------
 extern "C" void masm_test_fld();
-struct test_fld : jitasm::function0<void>
+struct test_fld : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -1317,7 +1317,7 @@ struct test_fld : jitasm::function0<void>
 // JMP
 //----------------------------------------
 extern "C" void masm_test_jmp();
-struct test_jmp : jitasm::function0<void>
+struct test_jmp : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -1428,7 +1428,7 @@ struct test_jmp : jitasm::function0<void>
 // MOVSB/MOVSW/MOVSD/MOVSQ
 //----------------------------------------
 extern "C" void masm_test_movs();
-struct test_movs : jitasm::function0<void>
+struct test_movs : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -1469,7 +1469,7 @@ struct test_movs : jitasm::function0<void>
 // mov with disp
 //----------------------------------------
 extern "C" void nasm_test_mov_disp();
-struct test_mov_disp : jitasm::function0<void>
+struct test_mov_disp : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -1498,7 +1498,7 @@ struct test_mov_disp : jitasm::function0<void>
 // NEG/NOT
 //----------------------------------------
 extern "C" void masm_test_neg_not();
-struct test_neg_not : jitasm::function0<void>
+struct test_neg_not : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -1531,7 +1531,7 @@ struct test_neg_not : jitasm::function0<void>
 // DIV/IDIV/MUL
 //----------------------------------------
 extern "C" void masm_test_div_idiv_mul();
-struct test_div_idiv_mul : jitasm::function0<void>
+struct test_div_idiv_mul : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -1574,7 +1574,7 @@ struct test_div_idiv_mul : jitasm::function0<void>
 // IMUL
 //----------------------------------------
 extern "C" void masm_test_imul();
-struct test_imul : jitasm::function0<void>
+struct test_imul : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -1612,7 +1612,7 @@ struct test_imul : jitasm::function0<void>
 // FST/FSTP
 //----------------------------------------
 extern "C" void masm_test_fst();
-struct test_fst : jitasm::function0<void>
+struct test_fst : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -1639,7 +1639,7 @@ struct test_fst : jitasm::function0<void>
 // setcc
 //----------------------------------------
 extern "C" void masm_test_setcc();
-struct test_setcc : jitasm::function0<void>
+struct test_setcc : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -1710,7 +1710,7 @@ struct test_setcc : jitasm::function0<void>
 // cmovcc
 //----------------------------------------
 extern "C" void masm_test_cmovcc();
-struct test_cmovcc : jitasm::function0<void>
+struct test_cmovcc : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -1903,7 +1903,7 @@ struct test_cmovcc : jitasm::function0<void>
 // General-Purpose Instructions B~
 //----------------------------------------
 extern "C" void masm_test_gpi_b();
-struct test_gpi_b : jitasm::function0<void>
+struct test_gpi_b : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -2028,7 +2028,7 @@ struct test_gpi_b : jitasm::function0<void>
 // General-Purpose Instructions E~
 //----------------------------------------
 extern "C" void masm_test_gpi_e();
-struct test_gpi_e : jitasm::function0<void>
+struct test_gpi_e : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -2131,7 +2131,7 @@ struct test_gpi_e : jitasm::function0<void>
 // MMX
 //----------------------------------------
 extern "C" void masm_test_mmx();
-struct test_mmx : jitasm::function0<void>
+struct test_mmx : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -2285,7 +2285,7 @@ struct test_mmx : jitasm::function0<void>
 // MMX2
 //----------------------------------------
 extern "C" void masm_test_mmx2();
-struct test_mmx2 : jitasm::function0<void>
+struct test_mmx2 : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -2337,7 +2337,7 @@ struct test_mmx2 : jitasm::function0<void>
 // SSE
 //----------------------------------------
 extern "C" void masm_test_sse();
-struct test_sse : jitasm::function0<void>
+struct test_sse : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -2611,7 +2611,7 @@ struct test_sse : jitasm::function0<void>
 // SSE2 A~
 //----------------------------------------
 extern "C" void masm_test_sse2_a();
-struct test_sse2_a : jitasm::function0<void>
+struct test_sse2_a : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -2796,7 +2796,7 @@ struct test_sse2_a : jitasm::function0<void>
 // SSE2 D~
 //----------------------------------------
 extern "C" void masm_test_sse2_d();
-struct test_sse2_d : jitasm::function0<void>
+struct test_sse2_d : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -2898,7 +2898,7 @@ struct test_sse2_d : jitasm::function0<void>
 // SSE2 P~
 //----------------------------------------
 extern "C" void masm_test_sse2_p();
-struct test_sse2_p : jitasm::function0<void>
+struct test_sse2_p : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -3199,7 +3199,7 @@ struct test_sse2_p : jitasm::function0<void>
 // SSE2 S~
 //----------------------------------------
 extern "C" void masm_test_sse2_s();
-struct test_sse2_s : jitasm::function0<void>
+struct test_sse2_s : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -3248,7 +3248,7 @@ struct test_sse2_s : jitasm::function0<void>
 // MOVD/MOVQ
 //----------------------------------------
 extern "C" void masm_test_movd_movq();
-struct test_movd_movq : jitasm::function0<void>
+struct test_movd_movq : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -3326,7 +3326,7 @@ struct test_movd_movq : jitasm::function0<void>
 // MOVSD/MOVSS
 //----------------------------------------
 extern "C" void masm_test_movsd_movss();
-struct test_movsd_movss : jitasm::function0<void>
+struct test_movsd_movss : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -3351,7 +3351,7 @@ struct test_movsd_movss : jitasm::function0<void>
 // SSE3
 //----------------------------------------
 extern "C" void masm_test_sse3();
-struct test_sse3 : jitasm::function0<void>
+struct test_sse3 : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -3410,7 +3410,7 @@ struct test_sse3 : jitasm::function0<void>
 // SSSE3
 //----------------------------------------
 extern "C" void masm_test_ssse3();
-struct test_ssse3 : jitasm::function0<void>
+struct test_ssse3 : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -3485,7 +3485,7 @@ struct test_ssse3 : jitasm::function0<void>
 // SSE4.1
 //----------------------------------------
 extern "C" void masm_test_sse4_1();
-struct test_sse4_1 : jitasm::function0<void>
+struct test_sse4_1 : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
@@ -3683,10 +3683,10 @@ struct test_sse4_1 : jitasm::function0<void>
 };
 
 //----------------------------------------
-// function0_cdecl<char>
+// function_cdecl<char>
 //----------------------------------------
 extern "C" void masm_test_function_return_char();
-struct test_function_return_char : jitasm::function0_cdecl<char>
+struct test_function_return_char : jitasm::function_cdecl<char>
 {
 	Result main()
 	{
@@ -3696,10 +3696,10 @@ struct test_function_return_char : jitasm::function0_cdecl<char>
 };
 
 //----------------------------------------
-// function0_cdecl<short>
+// function_cdecl<short>
 //----------------------------------------
 extern "C" void masm_test_function_return_short();
-struct test_function_return_short : jitasm::function0_cdecl<short>
+struct test_function_return_short : jitasm::function_cdecl<short>
 {
 	Result main()
 	{
@@ -3708,10 +3708,10 @@ struct test_function_return_short : jitasm::function0_cdecl<short>
 };
 
 //----------------------------------------
-// function0_cdecl<int> (return immediate)
+// function_cdecl<int> (return immediate)
 //----------------------------------------
 extern "C" void masm_test_function_return_int_imm();
-struct test_function_return_int_imm : jitasm::function0_cdecl<int>
+struct test_function_return_int_imm : jitasm::function_cdecl<int>
 {
 	Result main()
 	{
@@ -3720,10 +3720,10 @@ struct test_function_return_int_imm : jitasm::function0_cdecl<int>
 };
 
 //----------------------------------------
-// function0_cdecl<int> (return eax)
+// function_cdecl<int> (return eax)
 //----------------------------------------
 extern "C" void masm_test_function_return_int_eax();
-struct test_function_return_int_eax : jitasm::function0_cdecl<int>
+struct test_function_return_int_eax : jitasm::function_cdecl<int>
 {
 	Result main()
 	{
@@ -3732,10 +3732,10 @@ struct test_function_return_int_eax : jitasm::function0_cdecl<int>
 };
 
 //----------------------------------------
-// function0_cdecl<float> (return immediate)
+// function_cdecl<float> (return immediate)
 //----------------------------------------
 extern "C" void masm_test_function_return_float_imm();
-struct test_function_return_float_imm : jitasm::function0_cdecl<float>
+struct test_function_return_float_imm : jitasm::function_cdecl<float>
 {
 	Result main()
 	{
@@ -3744,10 +3744,10 @@ struct test_function_return_float_imm : jitasm::function0_cdecl<float>
 };
 
 //----------------------------------------
-// function0_cdecl<float> (return xmm)
+// function_cdecl<float> (return xmm)
 //----------------------------------------
 extern "C" void masm_test_function_return_float_xmm();
-struct test_function_return_float_xmm : jitasm::function0_cdecl<float>
+struct test_function_return_float_xmm : jitasm::function_cdecl<float>
 {
 	Result main()
 	{
@@ -3757,10 +3757,10 @@ struct test_function_return_float_xmm : jitasm::function0_cdecl<float>
 };
 
 //----------------------------------------
-// function1_cdecl<float, float> (return ptr)
+// function_cdecl<float, float> (return ptr)
 //----------------------------------------
 extern "C" void masm_test_function_return_float_ptr();
-struct test_function_return_float_ptr : jitasm::function1_cdecl<float, float>
+struct test_function_return_float_ptr : jitasm::function_cdecl<float, float>
 {
 	Result main(Arg a1)
 	{
@@ -3769,10 +3769,10 @@ struct test_function_return_float_ptr : jitasm::function1_cdecl<float, float>
 };
 
 //----------------------------------------
-// function1_cdecl<float, float> (return st(0))
+// function_cdecl<float, float> (return st(0))
 //----------------------------------------
 extern "C" void masm_test_function_return_float_st0();
-struct test_function_return_float_st0 : jitasm::function1_cdecl<float, float>
+struct test_function_return_float_st0 : jitasm::function_cdecl<float, float>
 {
 	Result main(Arg a1)
 	{
@@ -3782,10 +3782,10 @@ struct test_function_return_float_st0 : jitasm::function1_cdecl<float, float>
 };
 
 //----------------------------------------
-// function0_cdecl<double> (return immediate)
+// function_cdecl<double> (return immediate)
 //----------------------------------------
 extern "C" void masm_test_function_return_double_imm();
-struct test_function_return_double_imm : jitasm::function0_cdecl<double>
+struct test_function_return_double_imm : jitasm::function_cdecl<double>
 {
 	Result main()
 	{
@@ -3794,10 +3794,10 @@ struct test_function_return_double_imm : jitasm::function0_cdecl<double>
 };
 
 //----------------------------------------
-// function0_cdecl<double> (return xmm)
+// function_cdecl<double> (return xmm)
 //----------------------------------------
 extern "C" void masm_test_function_return_double_xmm();
-struct test_function_return_double_xmm : jitasm::function0_cdecl<double>
+struct test_function_return_double_xmm : jitasm::function_cdecl<double>
 {
 	Result main()
 	{
@@ -3807,10 +3807,10 @@ struct test_function_return_double_xmm : jitasm::function0_cdecl<double>
 };
 
 //----------------------------------------
-// function1_cdecl<double, double> (return ptr)
+// function_cdecl<double, double> (return ptr)
 //----------------------------------------
 extern "C" void masm_test_function_return_double_ptr();
-struct test_function_return_double_ptr : jitasm::function1_cdecl<double, double>
+struct test_function_return_double_ptr : jitasm::function_cdecl<double, double>
 {
 	Result main(Arg a1)
 	{
@@ -3819,10 +3819,10 @@ struct test_function_return_double_ptr : jitasm::function1_cdecl<double, double>
 };
 
 //----------------------------------------
-// function1_cdecl<double, double> (return st(0))
+// function_cdecl<double, double> (return st(0))
 //----------------------------------------
 extern "C" void masm_test_function_return_double_st0();
-struct test_function_return_double_st0 : jitasm::function1_cdecl<double, double>
+struct test_function_return_double_st0 : jitasm::function_cdecl<double, double>
 {
 	Result main(Arg a1)
 	{
@@ -3832,10 +3832,10 @@ struct test_function_return_double_st0 : jitasm::function1_cdecl<double, double>
 };
 
 //----------------------------------------
-// function1_cdecl<__m64, int> (return mm1)
+// function_cdecl<__m64, int> (return mm1)
 //----------------------------------------
 extern "C" void masm_test_function_return_m64_mm1();
-struct test_function_return_m64_mm1 : jitasm::function1_cdecl<__m64, int>
+struct test_function_return_m64_mm1 : jitasm::function_cdecl<__m64, int>
 {
 	Result main(Arg a1)
 	{
@@ -3847,10 +3847,10 @@ struct test_function_return_m64_mm1 : jitasm::function1_cdecl<__m64, int>
 };
 
 //----------------------------------------
-// function0_cdecl<__m64> (return ptr)
+// function_cdecl<__m64> (return ptr)
 //----------------------------------------
 extern "C" void masm_test_function_return_m64_ptr();
-struct test_function_return_m64_ptr : jitasm::function0_cdecl<__m64>
+struct test_function_return_m64_ptr : jitasm::function_cdecl<__m64>
 {
 	Result main()
 	{
@@ -3859,10 +3859,10 @@ struct test_function_return_m64_ptr : jitasm::function0_cdecl<__m64>
 };
 
 //----------------------------------------
-// function0_cdecl<__m128> (return xmm1)
+// function_cdecl<__m128> (return xmm1)
 //----------------------------------------
 extern "C" void masm_test_function_return_m128_xmm1();
-struct test_function_return_m128_xmm1 : jitasm::function0_cdecl<__m128>
+struct test_function_return_m128_xmm1 : jitasm::function_cdecl<__m128>
 {
 	Result main()
 	{
@@ -3872,10 +3872,10 @@ struct test_function_return_m128_xmm1 : jitasm::function0_cdecl<__m128>
 };
 
 //----------------------------------------
-// function0_cdecl<__m128> (return ptr)
+// function_cdecl<__m128> (return ptr)
 //----------------------------------------
 extern "C" void masm_test_function_return_m128_ptr();
-struct test_function_return_m128_ptr : jitasm::function0_cdecl<__m128>
+struct test_function_return_m128_ptr : jitasm::function_cdecl<__m128>
 {
 	Result main()
 	{
@@ -3884,10 +3884,10 @@ struct test_function_return_m128_ptr : jitasm::function0_cdecl<__m128>
 };
 
 //----------------------------------------
-// function0_cdecl<__m128d> (return xmm1)
+// function_cdecl<__m128d> (return xmm1)
 //----------------------------------------
 extern "C" void masm_test_function_return_m128d_xmm1();
-struct test_function_return_m128d_xmm1 : jitasm::function0_cdecl<__m128d>
+struct test_function_return_m128d_xmm1 : jitasm::function_cdecl<__m128d>
 {
 	Result main()
 	{
@@ -3897,10 +3897,10 @@ struct test_function_return_m128d_xmm1 : jitasm::function0_cdecl<__m128d>
 };
 
 //----------------------------------------
-// function0_cdecl<__m128d> (return ptr)
+// function_cdecl<__m128d> (return ptr)
 //----------------------------------------
 extern "C" void masm_test_function_return_m128d_ptr();
-struct test_function_return_m128d_ptr : jitasm::function0_cdecl<__m128d>
+struct test_function_return_m128d_ptr : jitasm::function_cdecl<__m128d>
 {
 	Result main()
 	{
@@ -3909,10 +3909,10 @@ struct test_function_return_m128d_ptr : jitasm::function0_cdecl<__m128d>
 };
 
 //----------------------------------------
-// function0_cdecl<__m128i> (return xmm1)
+// function_cdecl<__m128i> (return xmm1)
 //----------------------------------------
 extern "C" void masm_test_function_return_m128i_xmm1();
-struct test_function_return_m128i_xmm1 : jitasm::function0_cdecl<__m128i>
+struct test_function_return_m128i_xmm1 : jitasm::function_cdecl<__m128i>
 {
 	Result main()
 	{
@@ -3922,10 +3922,10 @@ struct test_function_return_m128i_xmm1 : jitasm::function0_cdecl<__m128i>
 };
 
 //----------------------------------------
-// function0_cdecl<__m128i> (return ptr)
+// function_cdecl<__m128i> (return ptr)
 //----------------------------------------
 extern "C" void masm_test_function_return_m128i_ptr();
-struct test_function_return_m128i_ptr : jitasm::function0_cdecl<__m128i>
+struct test_function_return_m128i_ptr : jitasm::function_cdecl<__m128i>
 {
 	Result main()
 	{
@@ -3933,30 +3933,7 @@ struct test_function_return_m128i_ptr : jitasm::function0_cdecl<__m128i>
 	}
 };
 
-struct Foo {
-	char c[5];
-};
-
-struct hoge : jitasm::function2_cdecl<__m64, short, int>
-{
-//	hoge() : jitasm::function2_cdecl<__int64, short, int>(false) {}
-
-	virtual Result main(Arg a1, Arg a2)
-	{
-		movzx(eax, word_ptr[a1]);
-		mov(ecx, dword_ptr[a2]);
-		mov(esi, ecx);
-
-		mov(byte_ptr[esp - 8], al);
-		mov(byte_ptr[esp - 7], cl);
-		mov(byte_ptr[esp - 6], 0xAA);
-		//return result_ptr[esp - 8];
-		return mm0;
-		//return 0xFFFFFFFF;
-	}
-};
-
-struct test_func : jitasm::function0<void>
+struct test_func : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
