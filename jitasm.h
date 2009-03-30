@@ -3108,6 +3108,9 @@ namespace detail {
 	template<> struct ArgumentTraits_win64<3, double, 8> : ArgumentTraits_win64_xmm<XMM3, ARG_IN_XMM_DP> {};
 
 
+	/// Special argument type
+	struct ArgNone {};
+
 	/// Result type traits
 	template<class T>
 	struct ResultTraits {
@@ -3649,334 +3652,26 @@ namespace detail {
 
 }	// namespace detail
 
-/// cdecl function which has no argument
-template<class R>
-struct function0_cdecl : detail::Function_cdecl
-{
-	typedef R (__cdecl *FuncPtr)();
-	typedef detail::ResultT<R> Result;	///< main function result type
-	typename detail::ResultTraits<R>::ResultPtr result_ptr;
-
-	function0_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual Result main() { return Result(); }
-	void naked_main() {
-		DumpRegArg0<R>();
-		main().Store(*this);
-		MakePrologAndEpilog();
-	}
-};
-
-template<>
-struct function0_cdecl<void> : detail::Function_cdecl
-{
-	typedef void (__cdecl *FuncPtr)();
-	function0_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual void main() {}
-	void naked_main()	{
-		main();
-		MakePrologAndEpilog();
-	}
-};
-
-/// cdecl function which has 1 argument
-template<class R, class A1>
-struct function1_cdecl : detail::Function_cdecl
-{
-	typedef R (__cdecl *FuncPtr)(A1);
-	typedef detail::ResultT<R> Result;	///< main function result type
-	typename detail::ResultTraits<R>::ResultPtr result_ptr;
-
-	function1_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual Result main(Arg /*a1*/) { return Result(); }
-	void naked_main() {
-		DumpRegArg1<R, A1>();
-		main(Arg1<R>()).Store(*this);
-		MakePrologAndEpilog();
-	}
-};
-
-template<class A1>
-struct function1_cdecl<void, A1> : detail::Function_cdecl
-{
-	typedef void (__cdecl *FuncPtr)(A1);
-	function1_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual void main(Arg /*a1*/) {}
-	void naked_main() {
-		DumpRegArg1<void, A1>();
-		main(Arg1<void>());
-		MakePrologAndEpilog();
-	}
-};
-
-/// cdecl function which has 2 arguments
-template<class R, class A1, class A2>
-struct function2_cdecl : detail::Function_cdecl
-{
-	typedef R (__cdecl *FuncPtr)(A1, A2);
-	typedef detail::ResultT<R> Result;	///< main function result type
-	typename detail::ResultTraits<R>::ResultPtr result_ptr;
-
-	function2_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual Result main(Arg /*a1*/, Arg /*a2*/) { return Result(); }
-	void naked_main() {
-		DumpRegArg2<R, A1, A2>();
-		main(Arg1<R>(), Arg2<R,A1>()).Store(*this);
-		MakePrologAndEpilog();
-	}
-};
-
-template<class A1, class A2>
-struct function2_cdecl<void, A1, A2> : detail::Function_cdecl
-{
-	typedef void (__cdecl *FuncPtr)(A1, A2);
-	function2_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual void main(Arg /*a1*/, Arg /*a2*/) {}
-	void naked_main() {
-		DumpRegArg2<void, A1, A2>();
-		main(Arg1<void>(), Arg2<void,A1>());
-		MakePrologAndEpilog();
-	}
-};
-
-/// cdecl function which has 3 arguments
-template<class R, class A1, class A2, class A3>
-struct function3_cdecl : detail::Function_cdecl
-{
-	typedef R (__cdecl *FuncPtr)(A1, A2, A3);
-	typedef detail::ResultT<R> Result;	///< main function result type
-	typename detail::ResultTraits<R>::ResultPtr result_ptr;
-
-	function3_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual Result main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/) { return Result(); }
-	void naked_main() {
-		DumpRegArg3<R, A1, A2, A3>();
-		main(Arg1<R>(), Arg2<R,A1>(), Arg3<R,A1,A2>()).Store(*this);
-		MakePrologAndEpilog();
-	}
-};
-
-template<class A1, class A2, class A3>
-struct function3_cdecl<void, A1, A2, A3> : detail::Function_cdecl
-{
-	typedef void (__cdecl *FuncPtr)(A1, A2, A3);
-	function3_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual void main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/) {}
-	void naked_main() {
-		DumpRegArg3<void, A1, A2, A3>();
-		main(Arg1<void>(), Arg2<void,A1>(), Arg3<void,A1,A2>());
-		MakePrologAndEpilog();
-	}
-};
-
-/// cdecl function which has 4 arguments
-template<class R, class A1, class A2, class A3, class A4>
-struct function4_cdecl : detail::Function_cdecl
-{
-	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4);
-	typedef detail::ResultT<R> Result;	///< main function result type
-	typename detail::ResultTraits<R>::ResultPtr result_ptr;
-
-	function4_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual Result main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/) { return Result(); }
-	void naked_main() {
-		DumpRegArg4<R, A1, A2, A3, A4>();
-		main(Arg1<R>(), Arg2<R,A1>(), Arg3<R,A1,A2>(), Arg4<R,A1,A2,A4>()).Store(*this);
-		MakePrologAndEpilog();
-	}
-};
-
-template<class A1, class A2, class A3, class A4>
-struct function4_cdecl<void, A1, A2, A3, A4> : detail::Function_cdecl
-{
-	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4);
-	function4_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual void main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/) {}
-	void naked_main() {
-		DumpRegArg4<void, A1, A2, A3, A4>();
-		main(Arg1<void>(), Arg2<void,A1>(), Arg3<void,A1,A2>(), Arg4<void,A1,A2,A4>());
-		MakePrologAndEpilog();
-	}
-};
-
-/// cdecl function which has 5 arguments
-template<class R, class A1, class A2, class A3, class A4, class A5>
-struct function5_cdecl : detail::Function_cdecl
-{
-	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4, A5);
-	typedef detail::ResultT<R> Result;	///< main function result type
-	typename detail::ResultTraits<R>::ResultPtr result_ptr;
-
-	function5_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual Result main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/) { return Result(); }
-	void naked_main() {
-		DumpRegArg4<R, A1, A2, A3, A4>();
-		main(Arg1<R>(), Arg2<R,A1>(), Arg3<R,A1,A2>(), Arg4<R,A1,A2,A4>(), Arg5<R,A1,A2,A4,A5>()).Store(*this);
-		MakePrologAndEpilog();
-	}
-};
-
-template<class A1, class A2, class A3, class A4, class A5>
-struct function5_cdecl<void, A1, A2, A3, A4, A5> : detail::Function_cdecl
-{
-	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4, A5);
-	function5_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual void main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/) {}
-	void naked_main() {
-		DumpRegArg4<void, A1, A2, A3, A4>();
-		main(Arg1<void>(), Arg2<void,A1>(), Arg3<void,A1,A2>(), Arg4<void,A1,A2,A4>(), Arg5<void,A1,A2,A4,A5>());
-		MakePrologAndEpilog();
-	}
-};
-
-/// cdecl function which has 6 arguments
-template<class R, class A1, class A2, class A3, class A4, class A5, class A6>
-struct function6_cdecl : detail::Function_cdecl
-{
-	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6);
-	typedef detail::ResultT<R> Result;	///< main function result type
-	typename detail::ResultTraits<R>::ResultPtr result_ptr;
-
-	function6_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual Result main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/) { return Result(); }
-	void naked_main() {
-		DumpRegArg4<R, A1, A2, A3, A4>();
-		main(Arg1<R>(), Arg2<R,A1>(), Arg3<R,A1,A2>(), Arg4<R,A1,A2,A4>(), Arg5<R,A1,A2,A4,A5>(), Arg6<R,A1,A2,A4,A5,A6>()).Store(*this);
-		MakePrologAndEpilog();
-	}
-};
-
-template<class A1, class A2, class A3, class A4, class A5, class A6>
-struct function6_cdecl<void, A1, A2, A3, A4, A5, A6> : detail::Function_cdecl
-{
-	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6);
-	function6_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual void main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/) {}
-	void naked_main() {
-		DumpRegArg4<void, A1, A2, A3, A4>();
-		main(Arg1<void>(), Arg2<void,A1>(), Arg3<void,A1,A2>(), Arg4<void,A1,A2,A4>(), Arg5<void,A1,A2,A4,A5>(), Arg6<void,A1,A2,A4,A5,A6>());
-		MakePrologAndEpilog();
-	}
-};
-
-/// cdecl function which has 7 arguments
-template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7>
-struct function7_cdecl : detail::Function_cdecl
-{
-	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7);
-	typedef detail::ResultT<R> Result;	///< main function result type
-	typename detail::ResultTraits<R>::ResultPtr result_ptr;
-
-	function7_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual Result main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/, Arg /*a7*/) { return Result(); }
-	void naked_main() {
-		DumpRegArg4<R, A1, A2, A3, A4>();
-		main(Arg1<R>(), Arg2<R,A1>(), Arg3<R,A1,A2>(), Arg4<R,A1,A2,A4>(), Arg5<R,A1,A2,A4,A5>(), Arg6<R,A1,A2,A4,A5,A6>(), Arg7<R,A1,A2,A4,A5,A6,A7>()).Store(*this);
-		MakePrologAndEpilog();
-	}
-};
-
-template<class A1, class A2, class A3, class A4, class A5, class A6, class A7>
-struct function7_cdecl<void, A1, A2, A3, A4, A5, A6, A7> : detail::Function_cdecl
-{
-	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7);
-	function7_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual void main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/, Arg /*a7*/) {}
-	void naked_main() {
-		DumpRegArg4<void, A1, A2, A3, A4>();
-		main(Arg1<void>(), Arg2<void,A1>(), Arg3<void,A1,A2>(), Arg4<void,A1,A2,A4>(), Arg5<void,A1,A2,A4,A5>(), Arg6<void,A1,A2,A4,A5,A6>(), Arg7<void,A1,A2,A4,A5,A6,A7>());
-		MakePrologAndEpilog();
-	}
-};
-
-/// cdecl function which has 8 arguments
-template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8>
-struct function8_cdecl : detail::Function_cdecl
-{
-	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8);
-	typedef detail::ResultT<R> Result;	///< main function result type
-	typename detail::ResultTraits<R>::ResultPtr result_ptr;
-
-	function8_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual Result main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/, Arg /*a7*/, Arg /*a8*/) { return Result(); }
-	void naked_main() {
-		DumpRegArg4<R, A1, A2, A3, A4>();
-		main(Arg1<R>(), Arg2<R,A1>(), Arg3<R,A1,A2>(), Arg4<R,A1,A2,A4>(), Arg5<R,A1,A2,A4,A5>(), Arg6<R,A1,A2,A4,A5,A6>(), Arg7<R,A1,A2,A4,A5,A6,A7>(), Arg8<R,A1,A2,A4,A5,A6,A7,A8>()).Store(*this);
-		MakePrologAndEpilog();
-	}
-};
-
-template<class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8>
-struct function8_cdecl<void, A1, A2, A3, A4, A5, A6, A7, A8> : detail::Function_cdecl
-{
-	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8);
-	function8_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual void main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/, Arg /*a7*/, Arg /*a8*/) {}
-	void naked_main() {
-		DumpRegArg4<void, A1, A2, A3, A4>();
-		main(Arg1<void>(), Arg2<void,A1>(), Arg3<void,A1,A2>(), Arg4<void,A1,A2,A4>(), Arg5<void,A1,A2,A4,A5>(), Arg6<void,A1,A2,A4,A5,A6>(), Arg7<void,A1,A2,A4,A5,A6,A7>(), Arg8<void,A1,A2,A4,A5,A6,A7,A8>());
-		MakePrologAndEpilog();
-	}
-};
-
-/// cdecl function which has 9 arguments
-template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9>
-struct function9_cdecl : detail::Function_cdecl
-{
-	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8, A9);
-	typedef detail::ResultT<R> Result;	///< main function result type
-	typename detail::ResultTraits<R>::ResultPtr result_ptr;
-
-	function9_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual Result main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/, Arg /*a7*/, Arg /*a8*/, Arg /*a9*/) { return Result(); }
-	void naked_main() {
-		DumpRegArg4<R, A1, A2, A3, A4>();
-		main(Arg1<R>(), Arg2<R,A1>(), Arg3<R,A1,A2>(), Arg4<R,A1,A2,A4>(), Arg5<R,A1,A2,A4,A5>(), Arg6<R,A1,A2,A4,A5,A6>(), Arg7<R,A1,A2,A4,A5,A6,A7>(), Arg8<R,A1,A2,A4,A5,A6,A7,A8>(), Arg9<R,A1,A2,A4,A5,A6,A7,A8,A9>()).Store(*this);
-		MakePrologAndEpilog();
-	}
-};
-
-template<class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9>
-struct function9_cdecl<void, A1, A2, A3, A4, A5, A6, A7, A8, A9> : detail::Function_cdecl
-{
-	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8, A9);
-	function9_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual void main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/, Arg /*a7*/, Arg /*a8*/, Arg /*a9*/) {}
-	void naked_main() {
-		DumpRegArg4<void, A1, A2, A3, A4>();
-		main(Arg1<void>(), Arg2<void,A1>(), Arg3<void,A1,A2>(), Arg4<void,A1,A2,A4>(), Arg5<void,A1,A2,A4,A5>(), Arg6<void,A1,A2,A4,A5,A6>(), Arg7<void,A1,A2,A4,A5,A6,A7>(), Arg8<void,A1,A2,A4,A5,A6,A7,A8>(), Arg9<void,A1,A2,A4,A5,A6,A7,A8,A9>());
-		MakePrologAndEpilog();
-	}
-};
-
-/// cdecl function which has 10 arguments
-template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9, class A10>
-struct function10_cdecl : detail::Function_cdecl
+/// cdecl function
+template<
+	class R,
+	class A1 = detail::ArgNone,
+	class A2 = detail::ArgNone,
+	class A3 = detail::ArgNone,
+	class A4 = detail::ArgNone,
+	class A5 = detail::ArgNone,
+	class A6 = detail::ArgNone,
+	class A7 = detail::ArgNone,
+	class A8 = detail::ArgNone,
+	class A9 = detail::ArgNone,
+	class A10 = detail::ArgNone>
+struct function_cdecl : detail::Function_cdecl
 {
 	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10);
 	typedef detail::ResultT<R> Result;	///< main function result type
 	typename detail::ResultTraits<R>::ResultPtr result_ptr;
 
-	function10_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
 	virtual Result main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/, Arg /*a7*/, Arg /*a8*/, Arg /*a9*/, Arg /*a10*/) { return Result(); }
 	void naked_main() {
@@ -3986,11 +3681,12 @@ struct function10_cdecl : detail::Function_cdecl
 	}
 };
 
+// specialization for 10 arguments and no result
 template<class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9, class A10>
-struct function10_cdecl<void, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10> : detail::Function_cdecl
+struct function_cdecl<void, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10> : detail::Function_cdecl
 {
 	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10);
-	function10_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
 	virtual void main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/, Arg /*a7*/, Arg /*a8*/, Arg /*a9*/, Arg /*a10*/) {}
 	void naked_main() {
@@ -4000,18 +3696,350 @@ struct function10_cdecl<void, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10> : detail:
 	}
 };
 
+// specialization for 9 arguments
+template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9>
+struct function_cdecl<R, A1, A2, A3, A4, A5, A6, A7, A8, A9, detail::ArgNone> : detail::Function_cdecl
+{
+	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8, A9);
+	typedef detail::ResultT<R> Result;	///< main function result type
+	typename detail::ResultTraits<R>::ResultPtr result_ptr;
 
-template<class R> struct function0 : function0_cdecl<R> {};
-template<class R, class A1> struct function1 : function1_cdecl<R, A1> {};
-template<class R, class A1, class A2> struct function2 : function2_cdecl<R, A1, A2> {};
-template<class R, class A1, class A2, class A3> struct function3 : function3_cdecl<R, A1, A2, A3> {};
-template<class R, class A1, class A2, class A3, class A4> struct function4 : function4_cdecl<R, A1, A2, A3, A4> {};
-template<class R, class A1, class A2, class A3, class A4, class A5> struct function5 : function5_cdecl<R, A1, A2, A3, A4, A5> {};
-template<class R, class A1, class A2, class A3, class A4, class A5, class A6> struct function6 : function6_cdecl<R, A1, A2, A3, A4, A5, A6> {};
-template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7> struct function7 : function7_cdecl<R, A1, A2, A3, A4, A5, A6, A7> {};
-template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8> struct function8 : function8_cdecl<R, A1, A2, A3, A4, A5, A6, A7, A8> {};
-template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9> struct function9 : function9_cdecl<R, A1, A2, A3, A4, A5, A6, A7, A8, A9> {};
-template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9, class A10> struct function10 : function10_cdecl<R, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10> {};
+	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	virtual Result main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/, Arg /*a7*/, Arg /*a8*/, Arg /*a9*/) { return Result(); }
+	void naked_main() {
+		DumpRegArg4<R, A1, A2, A3, A4>();
+		main(Arg1<R>(), Arg2<R,A1>(), Arg3<R,A1,A2>(), Arg4<R,A1,A2,A4>(), Arg5<R,A1,A2,A4,A5>(), Arg6<R,A1,A2,A4,A5,A6>(), Arg7<R,A1,A2,A4,A5,A6,A7>(), Arg8<R,A1,A2,A4,A5,A6,A7,A8>(), Arg9<R,A1,A2,A4,A5,A6,A7,A8,A9>()).Store(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for 9 arguments and no result
+template<class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9>
+struct function_cdecl<void, A1, A2, A3, A4, A5, A6, A7, A8, A9, detail::ArgNone> : detail::Function_cdecl
+{
+	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8, A9);
+	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	virtual void main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/, Arg /*a7*/, Arg /*a8*/, Arg /*a9*/) {}
+	void naked_main() {
+		DumpRegArg4<void, A1, A2, A3, A4>();
+		main(Arg1<void>(), Arg2<void,A1>(), Arg3<void,A1,A2>(), Arg4<void,A1,A2,A4>(), Arg5<void,A1,A2,A4,A5>(), Arg6<void,A1,A2,A4,A5,A6>(), Arg7<void,A1,A2,A4,A5,A6,A7>(), Arg8<void,A1,A2,A4,A5,A6,A7,A8>(), Arg9<void,A1,A2,A4,A5,A6,A7,A8,A9>());
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for 8 arguments
+template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8>
+struct function_cdecl<R, A1, A2, A3, A4, A5, A6, A7, A8, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
+{
+	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8);
+	typedef detail::ResultT<R> Result;	///< main function result type
+	typename detail::ResultTraits<R>::ResultPtr result_ptr;
+
+	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	virtual Result main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/, Arg /*a7*/, Arg /*a8*/) { return Result(); }
+	void naked_main() {
+		DumpRegArg4<R, A1, A2, A3, A4>();
+		main(Arg1<R>(), Arg2<R,A1>(), Arg3<R,A1,A2>(), Arg4<R,A1,A2,A4>(), Arg5<R,A1,A2,A4,A5>(), Arg6<R,A1,A2,A4,A5,A6>(), Arg7<R,A1,A2,A4,A5,A6,A7>(), Arg8<R,A1,A2,A4,A5,A6,A7,A8>()).Store(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for 8 arguments and no result
+template<class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8>
+struct function_cdecl<void, A1, A2, A3, A4, A5, A6, A7, A8, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
+{
+	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8);
+	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	virtual void main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/, Arg /*a7*/, Arg /*a8*/) {}
+	void naked_main() {
+		DumpRegArg4<void, A1, A2, A3, A4>();
+		main(Arg1<void>(), Arg2<void,A1>(), Arg3<void,A1,A2>(), Arg4<void,A1,A2,A4>(), Arg5<void,A1,A2,A4,A5>(), Arg6<void,A1,A2,A4,A5,A6>(), Arg7<void,A1,A2,A4,A5,A6,A7>(), Arg8<void,A1,A2,A4,A5,A6,A7,A8>());
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for 7 arguments
+template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7>
+struct function_cdecl<R, A1, A2, A3, A4, A5, A6, A7, detail::ArgNone, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
+{
+	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7);
+	typedef detail::ResultT<R> Result;	///< main function result type
+	typename detail::ResultTraits<R>::ResultPtr result_ptr;
+
+	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	virtual Result main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/, Arg /*a7*/) { return Result(); }
+	void naked_main() {
+		DumpRegArg4<R, A1, A2, A3, A4>();
+		main(Arg1<R>(), Arg2<R,A1>(), Arg3<R,A1,A2>(), Arg4<R,A1,A2,A4>(), Arg5<R,A1,A2,A4,A5>(), Arg6<R,A1,A2,A4,A5,A6>(), Arg7<R,A1,A2,A4,A5,A6,A7>()).Store(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for 7 arguments and no result
+template<class A1, class A2, class A3, class A4, class A5, class A6, class A7>
+struct function_cdecl<void, A1, A2, A3, A4, A5, A6, A7, detail::ArgNone, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
+{
+	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7);
+	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	virtual void main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/, Arg /*a7*/) {}
+	void naked_main() {
+		DumpRegArg4<void, A1, A2, A3, A4>();
+		main(Arg1<void>(), Arg2<void,A1>(), Arg3<void,A1,A2>(), Arg4<void,A1,A2,A4>(), Arg5<void,A1,A2,A4,A5>(), Arg6<void,A1,A2,A4,A5,A6>(), Arg7<void,A1,A2,A4,A5,A6,A7>());
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for 6 arguments
+template<class R, class A1, class A2, class A3, class A4, class A5, class A6>
+struct function_cdecl<R, A1, A2, A3, A4, A5, A6, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
+{
+	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6);
+	typedef detail::ResultT<R> Result;	///< main function result type
+	typename detail::ResultTraits<R>::ResultPtr result_ptr;
+
+	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	virtual Result main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/) { return Result(); }
+	void naked_main() {
+		DumpRegArg4<R, A1, A2, A3, A4>();
+		main(Arg1<R>(), Arg2<R,A1>(), Arg3<R,A1,A2>(), Arg4<R,A1,A2,A4>(), Arg5<R,A1,A2,A4,A5>(), Arg6<R,A1,A2,A4,A5,A6>()).Store(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for 6 arguments and no result
+template<class A1, class A2, class A3, class A4, class A5, class A6>
+struct function_cdecl<void, A1, A2, A3, A4, A5, A6, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
+{
+	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6);
+	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	virtual void main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/) {}
+	void naked_main() {
+		DumpRegArg4<void, A1, A2, A3, A4>();
+		main(Arg1<void>(), Arg2<void,A1>(), Arg3<void,A1,A2>(), Arg4<void,A1,A2,A4>(), Arg5<void,A1,A2,A4,A5>(), Arg6<void,A1,A2,A4,A5,A6>());
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for 5 arguments
+template<class R, class A1, class A2, class A3, class A4, class A5>
+struct function_cdecl<R, A1, A2, A3, A4, A5, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
+{
+	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4, A5);
+	typedef detail::ResultT<R> Result;	///< main function result type
+	typename detail::ResultTraits<R>::ResultPtr result_ptr;
+
+	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	virtual Result main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/) { return Result(); }
+	void naked_main() {
+		DumpRegArg4<R, A1, A2, A3, A4>();
+		main(Arg1<R>(), Arg2<R,A1>(), Arg3<R,A1,A2>(), Arg4<R,A1,A2,A4>(), Arg5<R,A1,A2,A4,A5>()).Store(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for 5 arguments and no result
+template<class A1, class A2, class A3, class A4, class A5>
+struct function_cdecl<void, A1, A2, A3, A4, A5, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
+{
+	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4, A5);
+	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	virtual void main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/) {}
+	void naked_main() {
+		DumpRegArg4<void, A1, A2, A3, A4>();
+		main(Arg1<void>(), Arg2<void,A1>(), Arg3<void,A1,A2>(), Arg4<void,A1,A2,A4>(), Arg5<void,A1,A2,A4,A5>());
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for 4 arguments
+template<class R, class A1, class A2, class A3, class A4>
+struct function_cdecl<R, A1, A2, A3, A4, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
+{
+	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4);
+	typedef detail::ResultT<R> Result;	///< main function result type
+	typename detail::ResultTraits<R>::ResultPtr result_ptr;
+
+	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	virtual Result main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/) { return Result(); }
+	void naked_main() {
+		DumpRegArg4<R, A1, A2, A3, A4>();
+		main(Arg1<R>(), Arg2<R,A1>(), Arg3<R,A1,A2>(), Arg4<R,A1,A2,A4>()).Store(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for 4 arguments and no result
+template<class A1, class A2, class A3, class A4>
+struct function_cdecl<void, A1, A2, A3, A4, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
+{
+	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4);
+	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	virtual void main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/) {}
+	void naked_main() {
+		DumpRegArg4<void, A1, A2, A3, A4>();
+		main(Arg1<void>(), Arg2<void,A1>(), Arg3<void,A1,A2>(), Arg4<void,A1,A2,A4>());
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for 3 arguments
+template<class R, class A1, class A2, class A3>
+struct function_cdecl<R, A1, A2, A3, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
+{
+	typedef R (__cdecl *FuncPtr)(A1, A2, A3);
+	typedef detail::ResultT<R> Result;	///< main function result type
+	typename detail::ResultTraits<R>::ResultPtr result_ptr;
+
+	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	virtual Result main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/) { return Result(); }
+	void naked_main() {
+		DumpRegArg3<R, A1, A2, A3>();
+		main(Arg1<R>(), Arg2<R,A1>(), Arg3<R,A1,A2>()).Store(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for 3 arguments and no result
+template<class A1, class A2, class A3>
+struct function_cdecl<void, A1, A2, A3, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
+{
+	typedef void (__cdecl *FuncPtr)(A1, A2, A3);
+	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	virtual void main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/) {}
+	void naked_main() {
+		DumpRegArg3<void, A1, A2, A3>();
+		main(Arg1<void>(), Arg2<void,A1>(), Arg3<void,A1,A2>());
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for 2 arguments
+template<class R, class A1, class A2>
+struct function_cdecl<R, A1, A2, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
+{
+	typedef R (__cdecl *FuncPtr)(A1, A2);
+	typedef detail::ResultT<R> Result;	///< main function result type
+	typename detail::ResultTraits<R>::ResultPtr result_ptr;
+
+	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	virtual Result main(Arg /*a1*/, Arg /*a2*/) { return Result(); }
+	void naked_main() {
+		DumpRegArg2<R, A1, A2>();
+		main(Arg1<R>(), Arg2<R,A1>()).Store(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for 2 arguments and no result
+template<class A1, class A2>
+struct function_cdecl<void, A1, A2, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
+{
+	typedef void (__cdecl *FuncPtr)(A1, A2);
+	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	virtual void main(Arg /*a1*/, Arg /*a2*/) {}
+	void naked_main() {
+		DumpRegArg2<void, A1, A2>();
+		main(Arg1<void>(), Arg2<void,A1>());
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for 1 arguments
+template<class R, class A1>
+struct function_cdecl<R, A1, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
+{
+	typedef R (__cdecl *FuncPtr)(A1);
+	typedef detail::ResultT<R> Result;	///< main function result type
+	typename detail::ResultTraits<R>::ResultPtr result_ptr;
+
+	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	virtual Result main(Arg /*a1*/) { return Result(); }
+	void naked_main() {
+		DumpRegArg1<R, A1>();
+		main(Arg1<R>()).Store(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for 1 arguments and no result
+template<class A1>
+struct function_cdecl<void, A1, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
+{
+	typedef void (__cdecl *FuncPtr)(A1);
+	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	virtual void main(Arg /*a1*/) {}
+	void naked_main() {
+		DumpRegArg1<void, A1>();
+		main(Arg1<void>());
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for no arguments
+template<class R>
+struct function_cdecl<R, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
+{
+	typedef R (__cdecl *FuncPtr)();
+	typedef detail::ResultT<R> Result;	///< main function result type
+	typename detail::ResultTraits<R>::ResultPtr result_ptr;
+
+	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	virtual Result main() { return Result(); }
+	void naked_main() {
+		DumpRegArg0<R>();
+		main().Store(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for no arguments and no result
+template<>
+struct function_cdecl<void, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
+{
+	typedef void (__cdecl *FuncPtr)();
+	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	virtual void main() {}
+	void naked_main() {
+		main();
+		MakePrologAndEpilog();
+	}
+};
+
+
+/// function
+template<
+	class R,
+	class A1 = detail::ArgNone,
+	class A2 = detail::ArgNone,
+	class A3 = detail::ArgNone,
+	class A4 = detail::ArgNone,
+	class A5 = detail::ArgNone,
+	class A6 = detail::ArgNone,
+	class A7 = detail::ArgNone,
+	class A8 = detail::ArgNone,
+	class A9 = detail::ArgNone,
+	class A10 = detail::ArgNone>
+struct function : function_cdecl<R, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10> {};
 
 }	// namespace jitasm
 
