@@ -3016,7 +3016,7 @@ namespace detail {
 	};
 
 	/// cdecl argument type traits
-	template<int N, class T, int Size = sizeof(T)>
+	template<int N, class T, int Size>
 	struct ArgumentTraits_cdecl {
 		enum {
 			stack_size = (Size + 4 - 1) / 4 * 4,
@@ -3026,7 +3026,7 @@ namespace detail {
 	};
 
 	/// Microsoft x64 fastcall argument type traits
-	template<int N, class T, int Size = sizeof(T)>
+	template<int N, class T, int Size>
 	struct ArgumentTraits_win64 {
 		enum {
 			stack_size = 8,
@@ -3545,11 +3545,11 @@ namespace detail {
 	public:
 #ifdef JITASM64
 		typedef Reg64Expr Arg;		///< main function argument type
-		template<int N, class T> struct ArgTraits : ArgumentTraits_win64<N, T> {};
+		template<int N, class T, int Size = sizeof(T)> struct ArgTraits : ArgumentTraits_win64<N, T, Size> {};
 		bool dump_regarg_x64_;
 #else
 		typedef Reg32Expr Arg;		///< main function argument type
-		template<int N, class T> struct ArgTraits : ArgumentTraits_cdecl<N, T> {};
+		template<int N, class T, int Size = sizeof(T)> struct ArgTraits : ArgumentTraits_cdecl<N, T, Size> {};
 #endif
 
 		/**
@@ -3594,6 +3594,12 @@ namespace detail {
 				addr = addr + ArgTraits<0, R>::stack_size;
 			}
 			return addr;
+		}
+
+		template<>
+		Arg DumpRegArg0<void>()
+		{
+			return Arg(zbp + sizeof(void *) * 2);
 		}
 
 		template<class R, class A1>
