@@ -1104,6 +1104,8 @@ struct test_mov : jitasm::function<void>
 		movzx(eax, byte_ptr[ecx]);
 		movzx(eax, word_ptr[ecx]);
 #ifdef JITASM64
+		mov(r8b, bl);
+		mov(r8w, bx);
 		mov(rax, r8);
 		mov(qword_ptr[rax], r8);
 		mov(rax, qword_ptr[r8]);
@@ -3683,6 +3685,58 @@ struct test_sse4_1 : jitasm::function<void>
 };
 
 //----------------------------------------
+// SSE4.2
+//----------------------------------------
+extern "C" void masm_test_sse4_2();
+struct test_sse4_2 : jitasm::function<void>
+{
+	virtual void naked_main()
+	{
+		crc32(eax, bh);
+		crc32(eax, byte_ptr[esi]);
+		crc32(eax, bx);
+		crc32(eax, word_ptr[esi]);
+		crc32(eax, ecx);
+		crc32(eax, dword_ptr[esi]);
+		pcmpestri(xmm2, xmm1, 0);
+		pcmpestrm(xmm2, xmm1, 1);
+		pcmpistri(xmm2, xmm1, 0);
+		pcmpistrm(xmm2, xmm1, 1);
+		pcmpgtq(xmm0, xmm1);
+		pcmpgtq(xmm0, xmm1);
+		popcnt(ax, cx);
+		popcnt(bx, word_ptr[esi]);
+		popcnt(eax, ecx);
+		popcnt(eax, dword_ptr[esi]);
+
+#ifdef JITASM64
+		crc32(eax, r9b);
+		crc32(r8d, byte_ptr[rsi]);
+		crc32(eax, r9w);
+		crc32(r8d, word_ptr[esp]);
+		crc32(eax, r9d);
+		crc32(r8d, dword_ptr[rsi]);
+		crc32(rax, bl);
+		crc32(r8, byte_ptr[rsi]);
+		crc32(r9, r10);
+		crc32(r9, qword_ptr[rsi]);
+		pcmpestri(xmm10, xmm9, 0);
+		pcmpestrm(xmm10, xmm9, 1);
+		pcmpistri(xmm10, xmm9, 0);
+		pcmpistrm(xmm10, xmm9, 1);
+		pcmpgtq(xmm8, xmm9);
+		pcmpgtq(xmm8, xmm9);
+		popcnt(r8w, cx);
+		popcnt(r9w, word_ptr[esp]);
+		popcnt(r8d, r9d);
+		popcnt(r8d, dword_ptr[rsi]);
+		popcnt(r9, rax);
+		popcnt(r9, qword_ptr[rsi]);
+#endif
+	}
+};
+
+//----------------------------------------
 // function_cdecl<char>
 //----------------------------------------
 extern "C" void masm_test_function_return_char();
@@ -4003,6 +4057,7 @@ int wmain()
 	TEST_M(test_sse3);
 	TEST_M(test_ssse3);
 	TEST_M(test_sse4_1);
+	TEST_M(test_sse4_2);
 
 	TEST_M(test_function_return_char);
 	TEST_M(test_function_return_short);

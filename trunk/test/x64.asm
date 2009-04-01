@@ -835,6 +835,8 @@ masm_test_mov proc
 	movzx eax, byte ptr[ecx]
 	movzx eax, word ptr[ecx]
 
+	mov r8b, bl
+	mov r8w, bx
 	mov rax, r8
 	mov qword ptr[rax], r8
 	mov rax, qword ptr[r8]
@@ -3188,6 +3190,51 @@ masm_test_sse4_1 proc
 	roundsd xmm8, xmm9, 2
 	roundsd xmm8, qword ptr[r8], 3
 masm_test_sse4_1 endp
+
+;----------------------------------------
+; SSE4.2
+;----------------------------------------
+masm_test_sse4_2 proc
+	crc32 eax, bh
+	crc32 eax, byte ptr[esi]
+	crc32 eax, bx
+	crc32 eax, word ptr[esi]
+	crc32 eax, ecx
+	crc32 eax, dword ptr[esi]
+	pcmpestri xmm2, xmm1, 0
+	pcmpestrm xmm2, xmm1, 1
+	pcmpistri xmm2, xmm1, 0
+	pcmpistrm xmm2, xmm1, 1
+	pcmpgtq xmm0, xmm1
+	pcmpgtq xmm0, xmm1
+	popcnt ax, cx
+	popcnt bx, word ptr[esi]
+	popcnt eax, ecx
+	popcnt eax, dword ptr[esi]
+
+	crc32 eax, r9b
+	crc32 r8d, byte ptr[rsi]
+	crc32 eax, r9w
+	crc32 r8d, word ptr[esp]
+	crc32 eax, r9d
+	crc32 r8d, dword ptr[rsi]
+	crc32 rax, bl
+	crc32 r8, byte ptr[rsi]
+	crc32 r9, r10
+	crc32 r9, qword ptr[rsi]
+	pcmpestri xmm10, xmm9, 0
+	pcmpestrm xmm10, xmm9, 1
+	pcmpistri xmm10, xmm9, 0
+	pcmpistrm xmm10, xmm9, 1
+	pcmpgtq xmm8, xmm9
+	pcmpgtq xmm8, xmm9
+	popcnt r8w, cx
+	popcnt r9w, word ptr[esp]
+	popcnt r8d, r9d
+	popcnt r8d, dword ptr[rsi]
+	popcnt r9, rax
+	popcnt r9, qword ptr[rsi]
+masm_test_sse4_2 endp
 
 ;----------------------------------------
 ; function0_cdecl<char>
