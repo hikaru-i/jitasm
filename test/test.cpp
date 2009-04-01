@@ -3991,21 +3991,6 @@ struct test_func : jitasm::function<void>
 {
 	virtual void naked_main()
 	{
-		//xor(eax, eax);
-		//mov(ecx, 100);
-		//REPEAT();
-		//	add(eax, ecx);
-		//	dec(ecx);
-		//UNTIL(ecx > jitasm::Imm32(0));
-		//ret();
-
-		xor(eax, eax);
-		mov(ecx, 100);
-		WHILE(ecx > 0);
-			add(eax, ecx);
-			dec(ecx);
-		ENDW();
-		ret();
 	}
 };
 
