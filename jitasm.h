@@ -2970,30 +2970,26 @@ struct Frontend
 
 	struct ControlState
 	{
-		size_t beg;
-		size_t end;
+		size_t label1;
+		size_t label2;
 	};
 	ControlState ctrl_state_;
 	std::deque<ControlState> ctrl_state_stack_;
 
-	ControlState NewControlState()
-	{
-		ControlState state = {NewLabelID(""), NewLabelID(""),};
-		return state;
-	}
-
 	void Repeat()
 	{
 		ctrl_state_stack_.push_back(ctrl_state_);
-		ctrl_state_ = NewControlState();
+		ctrl_state_.label1 = NewLabelID("");	// begin
+		ctrl_state_.label2 = -1;
 
-		L(ctrl_state_.beg);
+		L(ctrl_state_.label1);
 	}
 	template<class Ty>
 	void Until(const Ty& expr)
 	{
-		expr(*this, ctrl_state_.beg, ctrl_state_.end);
-		L(ctrl_state_.end);
+		size_t label = NewLabelID("");
+		expr(*this, ctrl_state_.label1, label);
+		L(label);
 
 		ctrl_state_ = *ctrl_state_stack_.rbegin();
 		ctrl_state_stack_.pop_back();
@@ -3003,17 +2999,18 @@ struct Frontend
 	void While(const Ty& expr)
 	{
 		ctrl_state_stack_.push_back(ctrl_state_);
-		ctrl_state_ = NewControlState();
-		size_t label = NewLabelID("");
+		ctrl_state_.label1 = NewLabelID("");	// begin
+		ctrl_state_.label2 = NewLabelID("");	// end
 
-		L(ctrl_state_.beg);
-		expr(*this, label, ctrl_state_.end);
+		size_t label = NewLabelID("");
+		L(ctrl_state_.label1);
+		expr(*this, label, ctrl_state_.label2);
 		L(label);
 	}
 	void EndW()
 	{
-		AppendJmp(ctrl_state_.beg);
-		L(ctrl_state_.end);
+		AppendJmp(ctrl_state_.label1);
+		L(ctrl_state_.label2);
 
 		ctrl_state_ = *ctrl_state_stack_.rbegin();
 		ctrl_state_stack_.pop_back();
@@ -3023,14 +3020,33 @@ struct Frontend
 	void If(const Ty& expr)
 	{
 		ctrl_state_stack_.push_back(ctrl_state_);
-		ctrl_state_ = NewControlState();
+		ctrl_state_.label1 = NewLabelID("");	// else
+		ctrl_state_.label2 = NewLabelID("");	// end
 
-		expr(*this, ctrl_state_.beg, ctrl_state_.end);
-		L(ctrl_state_.beg);
+		size_t label = NewLabelID("");
+		expr(*this, label, ctrl_state_.label1);
+		L(label);
+	}
+	template<class Ty>
+	void ElseIf(const Ty& expr)
+	{
+		Else();
+
+		size_t label = NewLabelID("");
+		expr(*this, label, ctrl_state_.label1);
+		L(label);
+	}
+	void Else()
+	{
+		AppendJmp(ctrl_state_.label2);
+		L(ctrl_state_.label1);
+		ctrl_state_.label1 = NewLabelID("");
 	}
 	void EndIf()
 	{
-		L(ctrl_state_.end);
+		L(ctrl_state_.label1);
+		L(ctrl_state_.label2);
+
 		ctrl_state_ = *ctrl_state_stack_.rbegin();
 		ctrl_state_stack_.pop_back();
 	}

@@ -3987,13 +3987,6 @@ struct test_function_return_m128i_ptr : jitasm::function_cdecl<__m128i>
 	}
 };
 
-struct test_func : jitasm::function<void>
-{
-	virtual void naked_main()
-	{
-	}
-};
-
 int wmain()
 {
 	TEST_M(test_sal);
