@@ -2049,6 +2049,28 @@ masm_test_sse4_1 proc
 masm_test_sse4_1 endp
 
 ;----------------------------------------
+; SSE4.2
+;----------------------------------------
+masm_test_sse4_2 proc
+	crc32 eax, bh
+	crc32 eax, byte ptr[esi]
+	crc32 eax, bx
+	crc32 eax, word ptr[esi]
+	crc32 eax, ecx
+	crc32 eax, dword ptr[esi]
+	pcmpestri xmm2, xmm1, 0
+	pcmpestrm xmm2, xmm1, 1
+	pcmpistri xmm2, xmm1, 0
+	pcmpistrm xmm2, xmm1, 1
+	pcmpgtq xmm0, xmm1
+	pcmpgtq xmm0, xmm1
+	popcnt ax, cx
+	popcnt bx, word ptr[esi]
+	popcnt eax, ecx
+	popcnt eax, dword ptr[esi]
+masm_test_sse4_2 endp
+
+;----------------------------------------
 ; function0_cdecl<char>
 ;----------------------------------------
 masm_test_function_return_char proc

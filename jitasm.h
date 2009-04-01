@@ -393,7 +393,7 @@ enum InstrID
 
 	I_FISTTP, I_FLD, I_FST, I_FSTP,
 
-	I_ADDPS, I_ADDSS, I_ADDPD, I_ADDSD, I_ADDSUBPS, I_ADDSUBPD, I_ANDPS, I_ANDPD, I_ANDNPS, I_ANDNPD, I_BLENDPS, I_BLENDPD, I_BLENDVPS, I_BLENDVPD, I_CLFLUSH, I_CMPPS, I_CMPSS, I_CMPPD, I_CMPSD, I_COMISS, I_COMISD,
+	I_CRC32, I_ADDPS, I_ADDSS, I_ADDPD, I_ADDSD, I_ADDSUBPS, I_ADDSUBPD, I_ANDPS, I_ANDPD, I_ANDNPS, I_ANDNPD, I_BLENDPS, I_BLENDPD, I_BLENDVPS, I_BLENDVPD, I_CLFLUSH, I_CMPPS, I_CMPSS, I_CMPPD, I_CMPSD, I_COMISS, I_COMISD,
 	I_CVTDQ2PD, I_CVTDQ2PS, I_CVTPD2DQ, I_CVTPD2PI, I_CVTPD2PS, I_CVTPI2PD, I_CVTPI2PS, I_CVTPS2DQ, I_CVTPS2PD, I_CVTPS2PI, I_CVTSD2SI,
 	I_CVTSD2SS, I_CVTSI2SD, I_CVTSI2SS, I_CVTSS2SD, I_CVTSS2SI, I_CVTTPD2DQ, I_CVTTPD2PI, I_CVTTPS2DQ, I_CVTTPS2PI, I_CVTTSD2SI, I_CVTTSS2SI,
 	I_DIVPS, I_DIVSS, I_DIVPD, I_DIVSD, I_DPPS, I_DPPD, I_EMMS, I_EXTRACTPS, I_HADDPS, I_HADDPD, I_HSUBPS, I_HSUBPD, I_INSERTPS, I_LDDQU, I_LDMXCSR, I_LFENCE,
@@ -402,12 +402,12 @@ enum InstrID
 	I_MOVMSKPS, I_MOVMSKPD, I_MOVNTDQ, I_MOVNTDQA, I_MOVNTI, I_MOVNTPD, I_MOVNTPS, I_MOVNTQ, I_MOVQ, I_MOVQ2DQ, I_MOVSD, I_MOVSS, I_MOVSHDUP, I_MOVSLDUP, I_MOVUPS, I_MOVUPD,
 	I_MPSADBW, I_MULPS, I_MULSS, I_MULPD, I_MULSD, I_MWAIT, I_ORPS, I_ORPD, I_PABSB, I_PABSD, I_PABSW, I_PACKSSDW, I_PACKSSWB, I_PACKUSDW, I_PACKUSWB,
 	I_PADDB, I_PADDD, I_PADDQ, I_PADDSB, I_PADDSW, I_PADDUSB, I_PADDUSW, I_PADDW, I_PALIGNR,
-	I_PAND, I_PANDN, I_PAUSE, I_PAVGB, I_PAVGW, I_PBLENDVB, I_PBLENDW, I_PCMPEQB, I_PCMPEQW, I_PCMPEQD, I_PCMPEQQ,
+	I_PAND, I_PANDN, I_PAUSE, I_PAVGB, I_PAVGW, I_PBLENDVB, I_PBLENDW, I_PCMPEQB, I_PCMPEQW, I_PCMPEQD, I_PCMPEQQ, I_PCMPESTRI, I_PCMPESTRM, I_PCMPISTRI, I_PCMPISTRM,
 	I_PCMPGTB, I_PCMPGTW, I_PCMPGTD, I_PCMPGTQ, I_PEXTRB, I_PEXTRW, I_PEXTRD, I_PEXTRQ, I_PHADDW, I_PHADDD, I_PHADDSW, I_PHSUBW, I_PHSUBD, I_PHSUBSW, 
 	I_PINSRB, I_PINSRW, I_PINSRD, I_PINSRQ, I_PMADDUBSW, I_PMADDWD,
 	I_PMAXSB, I_PMAXSW, I_PMAXSD, I_PMAXUB, I_PMAXUW, I_PMAXUD, I_PMINSB, I_PMINSW, I_PMINSD, I_PMINUB, I_PMINUW, I_PMINUD, I_PMOVMSKB,
 	I_PMOVSXBW, I_PMOVSXBD, I_PMOVSXBQ, I_PMOVSXWD, I_PMOVSXWQ, I_PMOVSXDQ, I_PMOVZXBW, I_PMOVZXBD, I_PMOVZXBQ, I_PMOVZXWD, I_PMOVZXWQ, I_PMOVZXDQ, 
-	I_PMULDQ, I_PMULHRSW, I_PMULHUW, I_PMULHW, I_PMULLW, I_PMULLD, I_PMULUDQ,
+	I_PMULDQ, I_PMULHRSW, I_PMULHUW, I_PMULHW, I_PMULLW, I_PMULLD, I_PMULUDQ, I_POPCNT,
 	I_POR, I_PREFETCH, I_PSADBW, I_PSHUFB, I_PSHUFD, I_PSHUFHW, I_PSHUFLW, I_PSHUFW, I_PSIGNB, I_PSIGNW, I_PSIGND, I_PSLLW, I_PSLLD, I_PSLLQ, I_PSLLDQ, I_PSRAW,
 	I_PSRAD, I_PSRLW, I_PSRLD, I_PSRLQ, I_PSRLDQ, I_PSUBB, I_PSUBW, I_PSUBD, I_PSUBQ, I_PSUBSB, I_PSUBSW,
 	I_PSUBUSB, I_PSUBUSW, I_PTEST, I_PUNPCKHBW, I_PUNPCKHWD, I_PUNPCKHDQ, I_PUNPCKHQDQ, I_PUNPCKLBW, I_PUNPCKLWD, I_PUNPCKLDQ, I_PUNPCKLQDQ,
@@ -2931,8 +2931,32 @@ struct Frontend
 	void roundsd(const XmmReg& dst, const Mem64& src, const Imm8& mode)		{AppendInstr(I_ROUNDSD,	0x0F3A0B, E_MANDATORY_PREFIX_66, dst, src, mode);}
 
 	// SSE4.2
-	void pcmpgtq(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_PCMPGTQ, 0x0F3837, E_MANDATORY_PREFIX_66, dst, src);}
-	void pcmpgtq(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_PCMPGTQ, 0x0F3837, E_MANDATORY_PREFIX_66, dst, src);}
+	void crc32(const Reg32& dst, const Reg8& src)							{AppendInstr(I_CRC32,		0x0F38F0, E_MANDATORY_PREFIX_F2, dst, src);}
+	void crc32(const Reg32& dst, const Mem8& src)							{AppendInstr(I_CRC32,		0x0F38F0, E_MANDATORY_PREFIX_F2, dst, src);}
+	void crc32(const Reg32& dst, const Reg16& src)							{AppendInstr(I_CRC32,		0x0F38F1, E_MANDATORY_PREFIX_F2 | E_OPERAND_SIZE_PREFIX, dst, src);}
+	void crc32(const Reg32& dst, const Mem16& src)							{AppendInstr(I_CRC32,		0x0F38F1, E_MANDATORY_PREFIX_F2 | E_OPERAND_SIZE_PREFIX, dst, src);}
+	void crc32(const Reg32& dst, const Reg32& src)							{AppendInstr(I_CRC32,		0x0F38F1, E_MANDATORY_PREFIX_F2, dst, src);}
+	void crc32(const Reg32& dst, const Mem32& src)							{AppendInstr(I_CRC32,		0x0F38F1, E_MANDATORY_PREFIX_F2, dst, src);}
+#ifdef JITASM64
+	void crc32(const Reg64& dst, const Reg8& src)							{AppendInstr(I_CRC32,		0x0F38F0, E_MANDATORY_PREFIX_F2 | E_REXW_PREFIX, dst, src);}
+	void crc32(const Reg64& dst, const Mem8& src)							{AppendInstr(I_CRC32,		0x0F38F0, E_MANDATORY_PREFIX_F2 | E_REXW_PREFIX, dst, src);}
+	void crc32(const Reg64& dst, const Reg64& src)							{AppendInstr(I_CRC32,		0x0F38F1, E_MANDATORY_PREFIX_F2 | E_REXW_PREFIX, dst, src);}
+	void crc32(const Reg64& dst, const Mem64& src)							{AppendInstr(I_CRC32,		0x0F38F1, E_MANDATORY_PREFIX_F2 | E_REXW_PREFIX, dst, src);}
+#endif
+	void pcmpestri(const XmmReg& src1, const XmmReg& src2, const Imm8& mode){AppendInstr(I_PCMPESTRI,	0x0F3A61, E_MANDATORY_PREFIX_66, src1, src2, mode);}
+	void pcmpestrm(const XmmReg& src1, const XmmReg& src2, const Imm8& mode){AppendInstr(I_PCMPESTRM,	0x0F3A60, E_MANDATORY_PREFIX_66, src1, src2, mode);}
+	void pcmpistri(const XmmReg& src1, const XmmReg& src2, const Imm8& mode){AppendInstr(I_PCMPISTRI,	0x0F3A63, E_MANDATORY_PREFIX_66, src1, src2, mode);}
+	void pcmpistrm(const XmmReg& src1, const XmmReg& src2, const Imm8& mode){AppendInstr(I_PCMPISTRM,	0x0F3A62, E_MANDATORY_PREFIX_66, src1, src2, mode);}
+	void pcmpgtq(const XmmReg& dst, const XmmReg& src)						{AppendInstr(I_PCMPGTQ,		0x0F3837, E_MANDATORY_PREFIX_66, dst, src);}
+	void pcmpgtq(const XmmReg& dst, const Mem128& src)						{AppendInstr(I_PCMPGTQ,		0x0F3837, E_MANDATORY_PREFIX_66, dst, src);}
+	void popcnt(const Reg16& dst, const Reg16& src)							{AppendInstr(I_POPCNT,		0x0FB8, E_MANDATORY_PREFIX_F3 | E_OPERAND_SIZE_PREFIX, dst, src);}
+	void popcnt(const Reg16& dst, const Mem16& src)							{AppendInstr(I_POPCNT,		0x0FB8, E_MANDATORY_PREFIX_F3 | E_OPERAND_SIZE_PREFIX, dst, src);}
+	void popcnt(const Reg32& dst, const Reg32& src)							{AppendInstr(I_POPCNT,		0x0FB8, E_MANDATORY_PREFIX_F3, dst, src);}
+	void popcnt(const Reg32& dst, const Mem32& src)							{AppendInstr(I_POPCNT,		0x0FB8, E_MANDATORY_PREFIX_F3, dst, src);}
+#ifdef JITASM64
+	void popcnt(const Reg64& dst, const Reg64& src)							{AppendInstr(I_POPCNT, 0x0FB8, E_MANDATORY_PREFIX_F3 | E_REXW_PREFIX, dst, src);}
+	void popcnt(const Reg64& dst, const Mem64& src)							{AppendInstr(I_POPCNT, 0x0FB8, E_MANDATORY_PREFIX_F3 | E_REXW_PREFIX, dst, src);}
+#endif
 
 	std::deque<detail::ControlStructureState> control_structure_states_;
 
