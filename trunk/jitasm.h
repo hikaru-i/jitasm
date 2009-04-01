@@ -136,19 +136,19 @@ protected:
 	explicit Opd(OpdSize opdsize, sint64 imm) : opdtype_(O_TYPE_IMM), opdsize_(opdsize), imm_(imm) {}
 
 public:
-	bool	IsNone() const {return opdtype_ == O_TYPE_NONE;}
-	bool	IsReg() const {return opdtype_ == O_TYPE_REG;}
-	bool	IsMem() const {return opdtype_ == O_TYPE_MEM;}
-	bool	IsImm() const {return opdtype_ == O_TYPE_IMM;}
-	OpdSize	GetSize() const {return opdsize_;}
-	OpdSize	GetAddressSize() const {return addrsize_;}
+	bool	IsNone() const	{return opdtype_ == O_TYPE_NONE;}
+	bool	IsReg() const	{return opdtype_ == O_TYPE_REG;}
+	bool	IsMem() const	{return opdtype_ == O_TYPE_MEM;}
+	bool	IsImm() const	{return opdtype_ == O_TYPE_IMM;}
 
-	RegID	GetReg() const {return reg_;}
-	RegID	GetBase() const {return base_;}
-	RegID	GetIndex() const {return index_;}
-	sint64	GetScale() const {return scale_;}
-	sint64	GetDisp() const {return disp_;}
-	sint64	GetImm() const {return imm_;}
+	OpdSize	GetSize() const		{return opdsize_;}
+	OpdSize	GetAddressSize() const	{return addrsize_;}
+	RegID	GetReg() const		{return reg_;}
+	RegID	GetBase() const		{return base_;}
+	RegID	GetIndex() const	{return index_;}
+	sint64	GetScale() const	{return scale_;}
+	sint64	GetDisp() const		{return disp_;}
+	sint64	GetImm() const		{return imm_;}
 };
 
 namespace detail
@@ -217,7 +217,6 @@ typedef MemT<Opd128>	Mem128;
 struct MemOffset64
 {
 	sint64 offset_;
-
 	explicit MemOffset64(sint64 offset) : offset_(offset) {}
 	sint64 GetOffset() const {return offset_;}
 };
@@ -413,8 +412,6 @@ enum InstrID
 	I_PSUBUSB, I_PSUBUSW, I_PTEST, I_PUNPCKHBW, I_PUNPCKHWD, I_PUNPCKHDQ, I_PUNPCKHQDQ, I_PUNPCKLBW, I_PUNPCKLWD, I_PUNPCKLDQ, I_PUNPCKLQDQ,
 	I_PXOR, I_RCPPS, I_RCPSS, I_ROUNDPS, I_ROUNDPD, I_ROUNDSS, I_ROUNDSD, I_RSQRTPS, I_RSQRTSS, I_SFENCE, I_SHUFPS, I_SHUFPD, I_SQRTPS, I_SQRTSS, I_SQRTPD, I_SQRTSD, I_STMXCSR, 
 	I_SUBPS, I_SUBSS, I_SUBPD, I_SUBSD, I_UCOMISS, I_UCOMISD, I_UNPCKHPS, I_UNPCKHPD, I_UNPCKLPS, I_UNPCKLPD, I_XORPS, I_XORPD,
-
-	I_PSEUDO_ALIGN,
 };
 
 enum JumpCondition
@@ -426,13 +423,13 @@ enum JumpCondition
 
 enum EncodingFlags
 {
-	E_SPECIAL				= 0x00000001,
-	E_OPERAND_SIZE_PREFIX	= 0x00000002,
-	E_REPEAT_PREFIX			= 0x00000004,
-	E_MANDATORY_PREFIX_66	= 0x00000010,
-	E_MANDATORY_PREFIX_F2	= 0x00000020,
-	E_MANDATORY_PREFIX_F3	= 0x00000040,
-	E_REXW_PREFIX			= 0x00000080,
+	E_SPECIAL					= 0x00000001,
+	E_OPERAND_SIZE_PREFIX		= 0x00000002,
+	E_REPEAT_PREFIX				= 0x00000004,
+	E_REXW_PREFIX				= 0x00000008,
+	E_MANDATORY_PREFIX_66		= 0x00000010,
+	E_MANDATORY_PREFIX_F2		= 0x00000020,
+	E_MANDATORY_PREFIX_F3		= 0x00000040,
 };
 
 /// Instruction
@@ -485,12 +482,7 @@ struct Backend
 	void dd(uint64 d) {put_bytes(&d, 4);}
 	void dq(uint64 q) {put_bytes(&q, 8);}
 
-	void EncodeAddressSizePrefix() {db(0x67);}
-	void EncodeOperandSizePrefix() {db(0x66);}
-	void EncodeRepeatPrefix() {db(0xF3);}
-
-	void EncodeRexPrefix(int w, const Opd& r_m) {EncodeRexPrefix(w, Opd(), r_m);}
-	void EncodeRexPrefix(int w, const Opd& reg, const Opd& r_m)
+	uint8 GetRexPrefix(int w, const Opd& reg, const Opd& r_m)
 	{
 		uint8 wrxb = w ? 8 : 0;
 		if (reg.IsReg()) {
@@ -503,7 +495,38 @@ struct Backend
 			if (r_m.GetIndex() != INVALID && r_m.GetIndex() & 0x10) wrxb |= 2;
 			if (r_m.GetBase() != INVALID && r_m.GetBase() & 0x10) wrxb |= 1;
 		}
-		if (wrxb) db(0x40 | wrxb);
+		return wrxb;
+	}
+
+	void EncodePrefixes(uint32 encoding_flag, const Opd& reg, const Opd& r_m)
+	{
+		uint8 rex_wrxb = GetRexPrefix(encoding_flag & E_REXW_PREFIX, reg, r_m);
+		if (rex_wrxb) {
+			ASSERT(!reg.IsReg() || reg.GetSize() != O_SIZE_8 || reg.GetReg() < AH || reg.GetReg() >= R8B);	// AH, BH, CH, or DH may not be used with REX.
+			ASSERT(!r_m.IsReg() || r_m.GetSize() != O_SIZE_8 || r_m.GetReg() < AH || r_m.GetReg() >= R8B);	// AH, BH, CH, or DH may not be used with REX.
+
+			if (encoding_flag & E_REPEAT_PREFIX) db(0xF3);
+#ifdef JITASM64
+			if (r_m.IsMem() && r_m.GetAddressSize() != O_SIZE_64) db(0x67);
+#endif
+			if (encoding_flag & E_OPERAND_SIZE_PREFIX) db(0x66);
+
+			if (encoding_flag & E_MANDATORY_PREFIX_66) db(0x66);
+			else if (encoding_flag & E_MANDATORY_PREFIX_F2) db(0xF2);
+			else if (encoding_flag & E_MANDATORY_PREFIX_F3) db(0xF3);
+
+			db(0x40 | rex_wrxb);
+		} else {
+			if (encoding_flag & E_MANDATORY_PREFIX_66) db(0x66);
+			else if (encoding_flag & E_MANDATORY_PREFIX_F2) db(0xF2);
+			else if (encoding_flag & E_MANDATORY_PREFIX_F3) db(0xF3);
+
+			if (encoding_flag & E_REPEAT_PREFIX) db(0xF3);
+#ifdef JITASM64
+			if (r_m.IsMem() && r_m.GetAddressSize() != O_SIZE_64) db(0x67);
+#endif
+			if (encoding_flag & E_OPERAND_SIZE_PREFIX) db(0x66);
+		}
 	}
 
 	void EncodeModRM(const Opd& reg, const Opd& r_m) {EncodeModRM((uint8) reg.GetReg(), r_m);}
@@ -593,12 +616,6 @@ struct Backend
 	void Encode(const Instr& instr)
 	{
 		uint32 opcode = instr.opcode_;
-		const uint32 flg = instr.encoding_flag_;
-		if (flg & E_MANDATORY_PREFIX_66)		db(0x66);
-		else if (flg & E_MANDATORY_PREFIX_F2)	db(0xF2);
-		else if (flg & E_MANDATORY_PREFIX_F3)	db(0xF3);
-
-		if (flg & E_REPEAT_PREFIX) EncodeRepeatPrefix();
 
 		const Opd& opd1 = instr.GetOpd(0);
 		const Opd& opd2 = instr.GetOpd(1);
@@ -612,13 +629,8 @@ struct Backend
 		if ((opd1.IsImm() || opd1.IsReg()) && (opd2.IsReg() || opd2.IsMem())) {	// ModR/M
 			const Opd& reg = opd1;
 			const Opd& r_m = opd2;
-#ifdef JITASM64
-			if (r_m.IsMem() && r_m.GetAddressSize() != O_SIZE_64) EncodeAddressSizePrefix();
-			if (flg & E_OPERAND_SIZE_PREFIX) EncodeOperandSizePrefix();
-			EncodeRexPrefix(flg & E_REXW_PREFIX, reg, r_m);
-#else
-			if (flg & E_OPERAND_SIZE_PREFIX) EncodeOperandSizePrefix();
-#endif
+
+			EncodePrefixes(instr.encoding_flag_, reg, r_m);
 			EncodeOpcode(opcode);
 
 			if (reg.IsImm())
@@ -626,10 +638,10 @@ struct Backend
 			else
 				EncodeModRM(reg, r_m);
 		} else {
-			if (flg & E_OPERAND_SIZE_PREFIX) EncodeOperandSizePrefix();
-#ifdef JITASM64
-			EncodeRexPrefix(flg & E_REXW_PREFIX, opd1.IsReg() ? opd1 : Opd());
-#endif
+			const Opd& reg = Opd();
+			const Opd& r_m = opd1.IsReg() ? opd1 : Opd();
+
+			EncodePrefixes(instr.encoding_flag_, reg, r_m);
 			EncodeOpcode(opcode);
 		}
 
@@ -821,13 +833,6 @@ namespace detail
 		ScopedLock(Ty& lock) : lock_(lock) {lock.Lock();}
 		~ScopedLock() {lock_.Unlock();}
 	};
-
-	struct ControlStructureState
-	{
-		size_t	beg_label;
-		size_t	else_label;
-		size_t	end_label;
-	};
 }	// namespace detail
 
 struct Frontend
@@ -901,8 +906,9 @@ struct Frontend
 
 	struct Label
 	{
-		std::string label_name;
-		size_t	instr_number;
+		std::string	name;
+		size_t		instr_number;
+		explicit Label(const std::string& name_) : name(name_), instr_number(0) {}
 	};
 	typedef std::deque<Label> LabelList;
 	LabelList	labels_;
@@ -1020,7 +1026,7 @@ struct Frontend
 				Instr& instr = instrs_[i];
 				if (IsJump(instr.GetID())) {
 					size_t d = (size_t) instr.GetOpd(1).GetImm();
-					int rel = offsets[d] - offsets[i] - (int) Backend::GetInstrCodeSize(instr);
+					int rel = (int) offsets[d] - offsets[i + 1];
 					OpdSize size = instr.GetOpd(0).GetSize();
 					if (size == O_SIZE_8) {
 						if (!detail::IsInt8(rel)) {
@@ -1045,7 +1051,7 @@ struct Frontend
 			Instr& instr = instrs_[i];
 			if (IsJump(instr.GetID())) {
 				size_t d = (size_t) instr.GetOpd(1).GetImm();
-				int rel = offsets[d] - offsets[i] - (int) Backend::GetInstrCodeSize(Instr(instr.GetID(), instr.opcode_, instr.encoding_flag_, instr.GetOpd(0)));
+				int rel = (int) offsets[d] - offsets[i + 1];
 				OpdSize size = instr.GetOpd(0).GetSize();
 				if (size == O_SIZE_8) {
 					ASSERT(detail::IsInt8(rel));
@@ -1058,6 +1064,7 @@ struct Frontend
 		}
 	}
 
+	/// Assemble
 	void Assemble()
 	{
 		detail::ScopedLock<detail::SpinLock> lock(codelock_);
@@ -1067,7 +1074,7 @@ struct Frontend
 		labels_.clear();
 		naked_main();
 
-		// Resolve jmp/jcc instructions
+		// Resolve jump instructions
 		if (!labels_.empty()) {
 			ResolveJump();
 		}
@@ -1098,6 +1105,7 @@ struct Frontend
 		return codebuff_.GetPointer();
 	}
 
+	/// Get total size of machine code
 	size_t GetCodeSize() const
 	{
 		return codebuff_.GetCodeSize();
@@ -1108,39 +1116,41 @@ struct Frontend
 		instrs_.push_back(Instr(id, opcode, encoding_flag, opd1, opd2, opd3));
 	}
 
-	void AppendJcc(JumpCondition jcc, size_t label_id)
+	void AppendJmp(size_t label_id)
 	{
-		AppendInstr(I_JCC, jcc,	E_SPECIAL, Imm64(label_id));
+		AppendInstr(I_JMP, 0, E_SPECIAL, Imm64(label_id));
 	}
 
-	size_t GetLabelId(const std::string& label_name)
+	void AppendJcc(JumpCondition jcc, size_t label_id)
+	{
+		AppendInstr(I_JCC, jcc, E_SPECIAL, Imm64(label_id));
+	}
+
+	size_t NewLabelID(const std::string& label_name)
+	{
+		labels_.push_back(Label(label_name));
+		return labels_.size() - 1;
+	}
+
+	size_t GetLabelID(const std::string& label_name)
 	{
 		for (size_t i = 0; i < labels_.size(); i++) {
-			if (labels_[i].label_name.compare(label_name) == 0) {
+			if (labels_[i].name == label_name) {
 				return i;
 			}
 		}
-		Label label = {label_name};
-		labels_.push_back(label);
-		return labels_.size() - 1;
+		return NewLabelID(label_name);
 	}
 
-	size_t NewUnnamedLabel()
+	void L(size_t label_id)
 	{
-		Label label = {""};
-		labels_.push_back(label);
-		return labels_.size() - 1;
+		labels_[label_id].instr_number = instrs_.size();	// Label current instruction
 	}
 
-	void SetLabel(size_t index)
-	{
-		labels_[index].instr_number = instrs_.size();	// Label current instruction
-	}
-
-	// LABEL
+	// Label
 	void L(const std::string& label_name)
 	{
-		SetLabel(GetLabelId(label_name));
+		L(GetLabelID(label_name));
 	}
 
 	// General-Purpose Instructions
@@ -1150,19 +1160,19 @@ struct Frontend
 	void adc(const Mem16& dst, const Imm16& imm)	{AppendInstr(I_ADC, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_OPERAND_SIZE_PREFIX, Imm8(2), dst, detail::ImmXor8(imm));}
 	void adc(const Reg32& dst, const Imm32& imm)	{AppendInstr(I_ADC, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_SPECIAL, Imm8(2), dst, detail::ImmXor8(imm));}
 	void adc(const Mem32& dst, const Imm32& imm)	{AppendInstr(I_ADC, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, 0, Imm8(2), dst, detail::ImmXor8(imm));}
-	void adc(const Reg8& dst, const Reg8& src)		{AppendInstr(I_ADC, 0x10, 0, dst, src);}
+	void adc(const Reg8& dst, const Reg8& src)		{AppendInstr(I_ADC, 0x10, 0, src, dst);}
 	void adc(const Mem8& dst, const Reg8& src)		{AppendInstr(I_ADC, 0x10, 0, src, dst);}
 	void adc(const Reg8& dst, const Mem8& src)		{AppendInstr(I_ADC, 0x12, 0, dst, src);}
-	void adc(const Reg16& dst, const Reg16& src)	{AppendInstr(I_ADC, 0x11, E_OPERAND_SIZE_PREFIX, dst, src);}
+	void adc(const Reg16& dst, const Reg16& src)	{AppendInstr(I_ADC, 0x11, E_OPERAND_SIZE_PREFIX, src, dst);}
 	void adc(const Mem16& dst, const Reg16& src)	{AppendInstr(I_ADC, 0x11, E_OPERAND_SIZE_PREFIX, src, dst);}
 	void adc(const Reg16& dst, const Mem16& src)	{AppendInstr(I_ADC, 0x13, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void adc(const Reg32& dst, const Reg32& src)	{AppendInstr(I_ADC, 0x11, 0, dst, src);}
+	void adc(const Reg32& dst, const Reg32& src)	{AppendInstr(I_ADC, 0x11, 0, src, dst);}
 	void adc(const Mem32& dst, const Reg32& src)	{AppendInstr(I_ADC, 0x11, 0, src, dst);}
 	void adc(const Reg32& dst, const Mem32& src)	{AppendInstr(I_ADC, 0x13, 0, dst, src);}
 #ifdef JITASM64
 	void adc(const Reg64& dst, const Imm32& imm)	{AppendInstr(I_ADC, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_REXW_PREFIX | E_SPECIAL, Imm8(2), dst, detail::ImmXor8(imm));}
 	void adc(const Mem64& dst, const Imm32& imm)	{AppendInstr(I_ADC, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_REXW_PREFIX, Imm8(2), dst, detail::ImmXor8(imm));}
-	void adc(const Reg64& dst, const Reg64& src)	{AppendInstr(I_ADC, 0x11, E_REXW_PREFIX, dst, src);}
+	void adc(const Reg64& dst, const Reg64& src)	{AppendInstr(I_ADC, 0x11, E_REXW_PREFIX, src, dst);}
 	void adc(const Mem64& dst, const Reg64& src)	{AppendInstr(I_ADC, 0x11, E_REXW_PREFIX, src, dst);}
 	void adc(const Reg64& dst, const Mem64& src)	{AppendInstr(I_ADC, 0x13, E_REXW_PREFIX, dst, src);}
 #endif
@@ -1172,19 +1182,19 @@ struct Frontend
 	void add(const Mem16& dst, const Imm16& imm)	{AppendInstr(I_ADD, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_OPERAND_SIZE_PREFIX, Imm8(0), dst, detail::ImmXor8(imm));}
 	void add(const Reg32& dst, const Imm32& imm)	{AppendInstr(I_ADD, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_SPECIAL, Imm8(0), dst, detail::ImmXor8(imm));}
 	void add(const Mem32& dst, const Imm32& imm)	{AppendInstr(I_ADD, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, 0, Imm8(0), dst, detail::ImmXor8(imm));}
-	void add(const Reg8& dst, const Reg8& src)		{AppendInstr(I_ADD, 0x00, 0, dst, src);}
+	void add(const Reg8& dst, const Reg8& src)		{AppendInstr(I_ADD, 0x00, 0, src, dst);}
 	void add(const Mem8& dst, const Reg8& src)		{AppendInstr(I_ADD, 0x00, 0, src, dst);}
 	void add(const Reg8& dst, const Mem8& src)		{AppendInstr(I_ADD, 0x02, 0, dst, src);}
-	void add(const Reg16& dst, const Reg16& src)	{AppendInstr(I_ADD, 0x01, E_OPERAND_SIZE_PREFIX, dst, src);}
+	void add(const Reg16& dst, const Reg16& src)	{AppendInstr(I_ADD, 0x01, E_OPERAND_SIZE_PREFIX, src, dst);}
 	void add(const Mem16& dst, const Reg16& src)	{AppendInstr(I_ADD, 0x01, E_OPERAND_SIZE_PREFIX, src, dst);}
 	void add(const Reg16& dst, const Mem16& src)	{AppendInstr(I_ADD, 0x03, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void add(const Reg32& dst, const Reg32& src)	{AppendInstr(I_ADD, 0x01, 0, dst, src);}
+	void add(const Reg32& dst, const Reg32& src)	{AppendInstr(I_ADD, 0x01, 0, src, dst);}
 	void add(const Mem32& dst, const Reg32& src)	{AppendInstr(I_ADD, 0x01, 0, src, dst);}
 	void add(const Reg32& dst, const Mem32& src)	{AppendInstr(I_ADD, 0x03, 0, dst, src);}
 #ifdef JITASM64
 	void add(const Reg64& dst, const Imm32& imm)	{AppendInstr(I_ADD, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_REXW_PREFIX | E_SPECIAL, Imm8(0), dst, detail::ImmXor8(imm));}
 	void add(const Mem64& dst, const Imm32& imm)	{AppendInstr(I_ADD, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_REXW_PREFIX, Imm8(0), dst, detail::ImmXor8(imm));}
-	void add(const Reg64& dst, const Reg64& src)	{AppendInstr(I_ADD, 0x01, E_REXW_PREFIX, dst, src);}
+	void add(const Reg64& dst, const Reg64& src)	{AppendInstr(I_ADD, 0x01, E_REXW_PREFIX, src, dst);}
 	void add(const Mem64& dst, const Reg64& src)	{AppendInstr(I_ADD, 0x01, E_REXW_PREFIX, src, dst);}
 	void add(const Reg64& dst, const Mem64& src)	{AppendInstr(I_ADD, 0x03, E_REXW_PREFIX, dst, src);}
 #endif
@@ -1194,19 +1204,19 @@ struct Frontend
 	void and(const Mem16& dst, const Imm16& imm)	{AppendInstr(I_AND, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_OPERAND_SIZE_PREFIX, Imm8(4), dst, detail::ImmXor8(imm));}
 	void and(const Reg32& dst, const Imm32& imm)	{AppendInstr(I_AND, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_SPECIAL, Imm8(4), dst, detail::ImmXor8(imm));}
 	void and(const Mem32& dst, const Imm32& imm)	{AppendInstr(I_AND, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, 0, Imm8(4), dst, detail::ImmXor8(imm));}
-	void and(const Reg8& dst, const Reg8& src)		{AppendInstr(I_AND, 0x20, 0, dst, src);}
+	void and(const Reg8& dst, const Reg8& src)		{AppendInstr(I_AND, 0x20, 0, src, dst);}
 	void and(const Mem8& dst, const Reg8& src)		{AppendInstr(I_AND, 0x20, 0, src, dst);}
 	void and(const Reg8& dst, const Mem8& src)		{AppendInstr(I_AND, 0x22, 0, dst, src);}
-	void and(const Reg16& dst, const Reg16& src)	{AppendInstr(I_AND, 0x21, E_OPERAND_SIZE_PREFIX, dst, src);}
+	void and(const Reg16& dst, const Reg16& src)	{AppendInstr(I_AND, 0x21, E_OPERAND_SIZE_PREFIX, src, dst);}
 	void and(const Mem16& dst, const Reg16& src)	{AppendInstr(I_AND, 0x21, E_OPERAND_SIZE_PREFIX, src, dst);}
 	void and(const Reg16& dst, const Mem16& src)	{AppendInstr(I_AND, 0x23, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void and(const Reg32& dst, const Reg32& src)	{AppendInstr(I_AND, 0x21, 0, dst, src);}
+	void and(const Reg32& dst, const Reg32& src)	{AppendInstr(I_AND, 0x21, 0, src, dst);}
 	void and(const Mem32& dst, const Reg32& src)	{AppendInstr(I_AND, 0x21, 0, src, dst);}
 	void and(const Reg32& dst, const Mem32& src)	{AppendInstr(I_AND, 0x23, 0, dst, src);}
 #ifdef JITASM64
 	void and(const Reg64& dst, const Imm32& imm)	{AppendInstr(I_AND, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_REXW_PREFIX | E_SPECIAL, Imm8(4), dst, detail::ImmXor8(imm));}
 	void and(const Mem64& dst, const Imm32& imm)	{AppendInstr(I_AND, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_REXW_PREFIX, Imm8(4), dst, detail::ImmXor8(imm));}
-	void and(const Reg64& dst, const Reg64& src)	{AppendInstr(I_AND, 0x21, E_REXW_PREFIX, dst, src);}
+	void and(const Reg64& dst, const Reg64& src)	{AppendInstr(I_AND, 0x21, E_REXW_PREFIX, src, dst);}
 	void and(const Mem64& dst, const Reg64& src)	{AppendInstr(I_AND, 0x21, E_REXW_PREFIX, src, dst);}
 	void and(const Reg64& dst, const Mem64& src)	{AppendInstr(I_AND, 0x23, E_REXW_PREFIX, dst, src);}
 #endif
@@ -1492,19 +1502,19 @@ struct Frontend
 	void cmp(const Mem16& dst, const Imm16& imm)	{AppendInstr(I_CMP, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_OPERAND_SIZE_PREFIX, Imm8(7), dst, detail::ImmXor8(imm));}
 	void cmp(const Reg32& dst, const Imm32& imm)	{AppendInstr(I_CMP, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_SPECIAL, Imm8(7), dst, detail::ImmXor8(imm));}
 	void cmp(const Mem32& dst, const Imm32& imm)	{AppendInstr(I_CMP, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, 0, Imm8(7), dst, detail::ImmXor8(imm));}
-	void cmp(const Reg8& dst, const Reg8& src)		{AppendInstr(I_CMP, 0x38, 0, dst, src);}
+	void cmp(const Reg8& dst, const Reg8& src)		{AppendInstr(I_CMP, 0x38, 0, src, dst);}
 	void cmp(const Mem8& dst, const Reg8& src)		{AppendInstr(I_CMP, 0x38, 0, src, dst);}
 	void cmp(const Reg8& dst, const Mem8& src)		{AppendInstr(I_CMP, 0x3A, 0, dst, src);}
-	void cmp(const Reg16& dst, const Reg16& src)	{AppendInstr(I_CMP, 0x39, E_OPERAND_SIZE_PREFIX, dst, src);}
+	void cmp(const Reg16& dst, const Reg16& src)	{AppendInstr(I_CMP, 0x39, E_OPERAND_SIZE_PREFIX, src, dst);}
 	void cmp(const Mem16& dst, const Reg16& src)	{AppendInstr(I_CMP, 0x39, E_OPERAND_SIZE_PREFIX, src, dst);}
 	void cmp(const Reg16& dst, const Mem16& src)	{AppendInstr(I_CMP, 0x3B, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void cmp(const Reg32& dst, const Reg32& src)	{AppendInstr(I_CMP, 0x39, 0, dst, src);}
+	void cmp(const Reg32& dst, const Reg32& src)	{AppendInstr(I_CMP, 0x39, 0, src, dst);}
 	void cmp(const Mem32& dst, const Reg32& src)	{AppendInstr(I_CMP, 0x39, 0, src, dst);}
 	void cmp(const Reg32& dst, const Mem32& src)	{AppendInstr(I_CMP, 0x3B, 0, dst, src);}
 #ifdef JITASM64
 	void cmp(const Reg64& dst, const Imm32& imm)	{AppendInstr(I_CMP, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_REXW_PREFIX | E_SPECIAL, Imm8(7), dst, detail::ImmXor8(imm));}
 	void cmp(const Mem64& dst, const Imm32& imm)	{AppendInstr(I_CMP, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_REXW_PREFIX, Imm8(7), dst, detail::ImmXor8(imm));}
-	void cmp(const Reg64& dst, const Reg64& src)	{AppendInstr(I_CMP, 0x39, E_REXW_PREFIX, dst, src);}
+	void cmp(const Reg64& dst, const Reg64& src)	{AppendInstr(I_CMP, 0x39, E_REXW_PREFIX, src, dst);}
 	void cmp(const Mem64& dst, const Reg64& src)	{AppendInstr(I_CMP, 0x39, E_REXW_PREFIX, src, dst);}
 	void cmp(const Reg64& dst, const Mem64& src)	{AppendInstr(I_CMP, 0x3B, E_REXW_PREFIX, dst, src);}
 #endif
@@ -1609,43 +1619,43 @@ struct Frontend
 #ifdef JITASM64
 	void iretq()	{AppendInstr(I_IRETQ, 0xCF, E_REXW_PREFIX);}
 #endif
-	void jmp(const std::string& label_name)		{AppendInstr(I_JMP, 0, E_SPECIAL, Imm64(GetLabelId(label_name)));}
-	void ja(const std::string& label_name)		{AppendJcc(JCC_A, GetLabelId(label_name));}
-	void jae(const std::string& label_name)		{AppendJcc(JCC_AE, GetLabelId(label_name));}
-	void jb(const std::string& label_name)		{AppendJcc(JCC_B, GetLabelId(label_name));}
-	void jbe(const std::string& label_name)		{AppendJcc(JCC_BE, GetLabelId(label_name));}
+	void jmp(const std::string& label_name)		{AppendJmp(GetLabelID(label_name));}
+	void ja(const std::string& label_name)		{AppendJcc(JCC_A, GetLabelID(label_name));}
+	void jae(const std::string& label_name)		{AppendJcc(JCC_AE, GetLabelID(label_name));}
+	void jb(const std::string& label_name)		{AppendJcc(JCC_B, GetLabelID(label_name));}
+	void jbe(const std::string& label_name)		{AppendJcc(JCC_BE, GetLabelID(label_name));}
 	void jc(const std::string& label_name)		{jb(label_name);}
 #ifdef JITASM64
-	void jecxz(const std::string& label_name)	{AppendJcc(JCC_ECXZ, GetLabelId(label_name));}	// short jump only
-	void jrcxz (const std::string& label_name)	{AppendJcc(JCC_RCXZ, GetLabelId(label_name));}	// short jump only
+	void jecxz(const std::string& label_name)	{AppendJcc(JCC_ECXZ, GetLabelID(label_name));}	// short jump only
+	void jrcxz (const std::string& label_name)	{AppendJcc(JCC_RCXZ, GetLabelID(label_name));}	// short jump only
 #else
-	void jcxz(const std::string& label_name)	{AppendJcc(JCC_CXZ, GetLabelId(label_name));}	// short jump only
-	void jecxz(const std::string& label_name)	{AppendJcc(JCC_ECXZ, GetLabelId(label_name));}	// short jump only
+	void jcxz(const std::string& label_name)	{AppendJcc(JCC_CXZ, GetLabelID(label_name));}	// short jump only
+	void jecxz(const std::string& label_name)	{AppendJcc(JCC_ECXZ, GetLabelID(label_name));}	// short jump only
 #endif
-	void je(const std::string& label_name)		{AppendJcc(JCC_E, GetLabelId(label_name));}
-	void jg(const std::string& label_name)		{AppendJcc(JCC_G, GetLabelId(label_name));}
-	void jge(const std::string& label_name)		{AppendJcc(JCC_GE, GetLabelId(label_name));}
-	void jl(const std::string& label_name)		{AppendJcc(JCC_L, GetLabelId(label_name));}
-	void jle(const std::string& label_name)		{AppendJcc(JCC_LE, GetLabelId(label_name));}
+	void je(const std::string& label_name)		{AppendJcc(JCC_E, GetLabelID(label_name));}
+	void jg(const std::string& label_name)		{AppendJcc(JCC_G, GetLabelID(label_name));}
+	void jge(const std::string& label_name)		{AppendJcc(JCC_GE, GetLabelID(label_name));}
+	void jl(const std::string& label_name)		{AppendJcc(JCC_L, GetLabelID(label_name));}
+	void jle(const std::string& label_name)		{AppendJcc(JCC_LE, GetLabelID(label_name));}
 	void jna(const std::string& label_name)		{jbe(label_name);}
 	void jnae(const std::string& label_name)	{jb(label_name);}
 	void jnb(const std::string& label_name)		{jae(label_name);}
 	void jnbe(const std::string& label_name)	{ja(label_name);}
 	void jnc(const std::string& label_name)		{jae(label_name);}
-	void jne(const std::string& label_name)		{AppendJcc(JCC_NE, GetLabelId(label_name));}
+	void jne(const std::string& label_name)		{AppendJcc(JCC_NE, GetLabelID(label_name));}
 	void jng(const std::string& label_name)		{jle(label_name);}
 	void jnge(const std::string& label_name)	{jl(label_name);}
 	void jnl(const std::string& label_name)		{jge(label_name);}
 	void jnle(const std::string& label_name)	{jg(label_name);}
-	void jno(const std::string& label_name)		{AppendJcc(JCC_NO, GetLabelId(label_name));}
-	void jnp(const std::string& label_name)		{AppendJcc(JCC_NP, GetLabelId(label_name));}
-	void jns(const std::string& label_name)		{AppendJcc(JCC_NS, GetLabelId(label_name));}
+	void jno(const std::string& label_name)		{AppendJcc(JCC_NO, GetLabelID(label_name));}
+	void jnp(const std::string& label_name)		{AppendJcc(JCC_NP, GetLabelID(label_name));}
+	void jns(const std::string& label_name)		{AppendJcc(JCC_NS, GetLabelID(label_name));}
 	void jnz(const std::string& label_name)		{jne(label_name);}
-	void jo(const std::string& label_name)		{AppendJcc(JCC_O, GetLabelId(label_name));}
-	void jp(const std::string& label_name)		{AppendJcc(JCC_P, GetLabelId(label_name));}
+	void jo(const std::string& label_name)		{AppendJcc(JCC_O, GetLabelID(label_name));}
+	void jp(const std::string& label_name)		{AppendJcc(JCC_P, GetLabelID(label_name));}
 	void jpe(const std::string& label_name)		{jp(label_name);}
 	void jpo(const std::string& label_name)		{jnp(label_name);}
-	void js(const std::string& label_name)		{AppendJcc(JCC_S, GetLabelId(label_name));}
+	void js(const std::string& label_name)		{AppendJcc(JCC_S, GetLabelID(label_name));}
 	void jz(const std::string& label_name)		{je(label_name);}
 	void lar(const Reg16& dst, const Reg16& src)	{AppendInstr(I_LAR, 0x0F02, E_OPERAND_SIZE_PREFIX, dst, src);}
 	void lar(const Reg16& dst, const Mem16& src)	{AppendInstr(I_LAR, 0x0F02, E_OPERAND_SIZE_PREFIX, dst, src);}
@@ -1667,9 +1677,9 @@ struct Frontend
 #ifdef JITASM64
 	void lodsq()		{AppendInstr(I_LODS_Q, 0xAD, E_REXW_PREFIX);}
 #endif
-	void loop(const std::string& label_name)	{AppendInstr(I_LOOP, 0xE2, E_SPECIAL, Imm64(GetLabelId(label_name)));}	// short jump only
-	void loope(const std::string& label_name)	{AppendInstr(I_LOOP, 0xE1, E_SPECIAL, Imm64(GetLabelId(label_name)));}	// short jump only
-	void loopne(const std::string& label_name)	{AppendInstr(I_LOOP, 0xE0, E_SPECIAL, Imm64(GetLabelId(label_name)));}	// short jump only
+	void loop(const std::string& label_name)	{AppendInstr(I_LOOP, 0xE2, E_SPECIAL, Imm64(GetLabelID(label_name)));}	// short jump only
+	void loope(const std::string& label_name)	{AppendInstr(I_LOOP, 0xE1, E_SPECIAL, Imm64(GetLabelID(label_name)));}	// short jump only
+	void loopne(const std::string& label_name)	{AppendInstr(I_LOOP, 0xE0, E_SPECIAL, Imm64(GetLabelID(label_name)));}	// short jump only
 	void rep_lodsb()	{AppendInstr(I_LODS_B, 0xAC, E_REPEAT_PREFIX);}
 	void rep_lodsw()	{AppendInstr(I_LODS_W, 0xAD, E_REPEAT_PREFIX | E_OPERAND_SIZE_PREFIX);}
 	void rep_lodsd()	{AppendInstr(I_LODS_D, 0xAD, E_REPEAT_PREFIX);}
@@ -1783,19 +1793,19 @@ struct Frontend
 	void or(const Mem16& dst, const Imm16& imm)	{AppendInstr(I_OR, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_OPERAND_SIZE_PREFIX, Imm8(1), dst, detail::ImmXor8(imm));}
 	void or(const Reg32& dst, const Imm32& imm)	{AppendInstr(I_OR, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_SPECIAL, Imm8(1), dst, detail::ImmXor8(imm));}
 	void or(const Mem32& dst, const Imm32& imm)	{AppendInstr(I_OR, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, 0, Imm8(1), dst, detail::ImmXor8(imm));}
-	void or(const Reg8& dst, const Reg8& src)	{AppendInstr(I_OR, 0x08, 0, dst, src);}
+	void or(const Reg8& dst, const Reg8& src)	{AppendInstr(I_OR, 0x08, 0, src, dst);}
 	void or(const Mem8& dst, const Reg8& src)	{AppendInstr(I_OR, 0x08, 0, src, dst);}
 	void or(const Reg8& dst, const Mem8& src)	{AppendInstr(I_OR, 0x0A, 0, dst, src);}
-	void or(const Reg16& dst, const Reg16& src)	{AppendInstr(I_OR, 0x09, E_OPERAND_SIZE_PREFIX, dst, src);}
+	void or(const Reg16& dst, const Reg16& src)	{AppendInstr(I_OR, 0x09, E_OPERAND_SIZE_PREFIX, src, dst);}
 	void or(const Mem16& dst, const Reg16& src)	{AppendInstr(I_OR, 0x09, E_OPERAND_SIZE_PREFIX, src, dst);}
 	void or(const Reg16& dst, const Mem16& src)	{AppendInstr(I_OR, 0x0B, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void or(const Reg32& dst, const Reg32& src)	{AppendInstr(I_OR, 0x09, 0, dst, src);}
+	void or(const Reg32& dst, const Reg32& src)	{AppendInstr(I_OR, 0x09, 0, src, dst);}
 	void or(const Mem32& dst, const Reg32& src)	{AppendInstr(I_OR, 0x09, 0, src, dst);}
 	void or(const Reg32& dst, const Mem32& src)	{AppendInstr(I_OR, 0x0B, 0, dst, src);}
 #ifdef JITASM64
 	void or(const Reg64& dst, const Imm32& imm)	{AppendInstr(I_OR, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_REXW_PREFIX | E_SPECIAL, Imm8(1), dst, detail::ImmXor8(imm));}
 	void or(const Mem64& dst, const Imm32& imm)	{AppendInstr(I_OR, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_REXW_PREFIX, Imm8(1), dst, detail::ImmXor8(imm));}
-	void or(const Reg64& dst, const Reg64& src)	{AppendInstr(I_OR, 0x09, E_REXW_PREFIX, dst, src);}
+	void or(const Reg64& dst, const Reg64& src)	{AppendInstr(I_OR, 0x09, E_REXW_PREFIX, src, dst);}
 	void or(const Mem64& dst, const Reg64& src)	{AppendInstr(I_OR, 0x09, E_REXW_PREFIX, src, dst);}
 	void or(const Reg64& dst, const Mem64& src)	{AppendInstr(I_OR, 0x0B, E_REXW_PREFIX, dst, src);}
 #endif
@@ -1895,19 +1905,19 @@ struct Frontend
 	void sbb(const Mem16& dst, const Imm16& imm)	{AppendInstr(I_SBB, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_OPERAND_SIZE_PREFIX, Imm8(3), dst, detail::ImmXor8(imm));}
 	void sbb(const Reg32& dst, const Imm32& imm)	{AppendInstr(I_SBB, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_SPECIAL, Imm8(3), dst, detail::ImmXor8(imm));}
 	void sbb(const Mem32& dst, const Imm32& imm)	{AppendInstr(I_SBB, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, 0, Imm8(3), dst, detail::ImmXor8(imm));}
-	void sbb(const Reg8& dst, const Reg8& src)		{AppendInstr(I_SBB, 0x18, 0, dst, src);}
+	void sbb(const Reg8& dst, const Reg8& src)		{AppendInstr(I_SBB, 0x18, 0, src, dst);}
 	void sbb(const Mem8& dst, const Reg8& src)		{AppendInstr(I_SBB, 0x18, 0, src, dst);}
 	void sbb(const Reg8& dst, const Mem8& src)		{AppendInstr(I_SBB, 0x1A, 0, dst, src);}
-	void sbb(const Reg16& dst, const Reg16& src)	{AppendInstr(I_SBB, 0x19, E_OPERAND_SIZE_PREFIX, dst, src);}
+	void sbb(const Reg16& dst, const Reg16& src)	{AppendInstr(I_SBB, 0x19, E_OPERAND_SIZE_PREFIX, src, dst);}
 	void sbb(const Mem16& dst, const Reg16& src)	{AppendInstr(I_SBB, 0x19, E_OPERAND_SIZE_PREFIX, src, dst);}
 	void sbb(const Reg16& dst, const Mem16& src)	{AppendInstr(I_SBB, 0x1B, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void sbb(const Reg32& dst, const Reg32& src)	{AppendInstr(I_SBB, 0x19, 0, dst, src);}
+	void sbb(const Reg32& dst, const Reg32& src)	{AppendInstr(I_SBB, 0x19, 0, src, dst);}
 	void sbb(const Mem32& dst, const Reg32& src)	{AppendInstr(I_SBB, 0x19, 0, src, dst);}
 	void sbb(const Reg32& dst, const Mem32& src)	{AppendInstr(I_SBB, 0x1B, 0, dst, src);}
 #ifdef JITASM64
 	void sbb(const Reg64& dst, const Imm32& imm)	{AppendInstr(I_SBB, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_REXW_PREFIX | E_SPECIAL, Imm8(3), dst, detail::ImmXor8(imm));}
 	void sbb(const Mem64& dst, const Imm32& imm)	{AppendInstr(I_SBB, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_REXW_PREFIX, Imm8(3), dst, detail::ImmXor8(imm));}
-	void sbb(const Reg64& dst, const Reg64& src)	{AppendInstr(I_SBB, 0x19, E_REXW_PREFIX, dst, src);}
+	void sbb(const Reg64& dst, const Reg64& src)	{AppendInstr(I_SBB, 0x19, E_REXW_PREFIX, src, dst);}
 	void sbb(const Mem64& dst, const Reg64& src)	{AppendInstr(I_SBB, 0x19, E_REXW_PREFIX, src, dst);}
 	void sbb(const Reg64& dst, const Mem64& src)	{AppendInstr(I_SBB, 0x1B, E_REXW_PREFIX, dst, src);}
 #endif
@@ -2020,19 +2030,19 @@ struct Frontend
 	void sub(const Mem16& dst, const Imm16& imm)	{AppendInstr(I_SUB, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_OPERAND_SIZE_PREFIX, Imm8(5), dst, detail::ImmXor8(imm));}
 	void sub(const Reg32& dst, const Imm32& imm)	{AppendInstr(I_SUB, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_SPECIAL, Imm8(5), dst, detail::ImmXor8(imm));}
 	void sub(const Mem32& dst, const Imm32& imm)	{AppendInstr(I_SUB, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, 0, Imm8(5), dst, detail::ImmXor8(imm));}
-	void sub(const Reg8& dst, const Reg8& src)		{AppendInstr(I_SUB, 0x28, 0, dst, src);}
+	void sub(const Reg8& dst, const Reg8& src)		{AppendInstr(I_SUB, 0x28, 0, src, dst);}
 	void sub(const Mem8& dst, const Reg8& src)		{AppendInstr(I_SUB, 0x28, 0, src, dst);}
 	void sub(const Reg8& dst, const Mem8& src)		{AppendInstr(I_SUB, 0x2A, 0, dst, src);}
-	void sub(const Reg16& dst, const Reg16& src)	{AppendInstr(I_SUB, 0x29, E_OPERAND_SIZE_PREFIX, dst, src);}
+	void sub(const Reg16& dst, const Reg16& src)	{AppendInstr(I_SUB, 0x29, E_OPERAND_SIZE_PREFIX, src, dst);}
 	void sub(const Mem16& dst, const Reg16& src)	{AppendInstr(I_SUB, 0x29, E_OPERAND_SIZE_PREFIX, src, dst);}
 	void sub(const Reg16& dst, const Mem16& src)	{AppendInstr(I_SUB, 0x2B, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void sub(const Reg32& dst, const Reg32& src)	{AppendInstr(I_SUB, 0x29, 0, dst, src);}
+	void sub(const Reg32& dst, const Reg32& src)	{AppendInstr(I_SUB, 0x29, 0, src, dst);}
 	void sub(const Mem32& dst, const Reg32& src)	{AppendInstr(I_SUB, 0x29, 0, src, dst);}
 	void sub(const Reg32& dst, const Mem32& src)	{AppendInstr(I_SUB, 0x2B, 0, dst, src);}
 #ifdef JITASM64
 	void sub(const Reg64& dst, const Imm32& imm)	{AppendInstr(I_SUB, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_REXW_PREFIX | E_SPECIAL, Imm8(5), dst, detail::ImmXor8(imm));}
 	void sub(const Mem64& dst, const Imm32& imm)	{AppendInstr(I_SUB, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_REXW_PREFIX, Imm8(5), dst, detail::ImmXor8(imm));}
-	void sub(const Reg64& dst, const Reg64& src)	{AppendInstr(I_SUB, 0x29, E_REXW_PREFIX, dst, src);}
+	void sub(const Reg64& dst, const Reg64& src)	{AppendInstr(I_SUB, 0x29, E_REXW_PREFIX, src, dst);}
 	void sub(const Mem64& dst, const Reg64& src)	{AppendInstr(I_SUB, 0x29, E_REXW_PREFIX, src, dst);}
 	void sub(const Reg64& dst, const Mem64& src)	{AppendInstr(I_SUB, 0x2B, E_REXW_PREFIX, dst, src);}
 #endif
@@ -2087,19 +2097,19 @@ struct Frontend
 	void xor(const Mem16& dst, const Imm16& imm)	{AppendInstr(I_XOR, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_OPERAND_SIZE_PREFIX, Imm8(6), dst, detail::ImmXor8(imm));}
 	void xor(const Reg32& dst, const Imm32& imm)	{AppendInstr(I_XOR, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_SPECIAL, Imm8(6), dst, detail::ImmXor8(imm));}
 	void xor(const Mem32& dst, const Imm32& imm)	{AppendInstr(I_XOR, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, 0, Imm8(6), dst, detail::ImmXor8(imm));}
-	void xor(const Reg8& dst, const Reg8& src)		{AppendInstr(I_XOR, 0x30, 0, dst, src);}
+	void xor(const Reg8& dst, const Reg8& src)		{AppendInstr(I_XOR, 0x30, 0, src, dst);}
 	void xor(const Mem8& dst, const Reg8& src)		{AppendInstr(I_XOR, 0x30, 0, src, dst);}
 	void xor(const Reg8& dst, const Mem8& src)		{AppendInstr(I_XOR, 0x32, 0, dst, src);}
-	void xor(const Reg16& dst, const Reg16& src)	{AppendInstr(I_XOR, 0x31, E_OPERAND_SIZE_PREFIX, dst, src);}
+	void xor(const Reg16& dst, const Reg16& src)	{AppendInstr(I_XOR, 0x31, E_OPERAND_SIZE_PREFIX, src, dst);}
 	void xor(const Mem16& dst, const Reg16& src)	{AppendInstr(I_XOR, 0x31, E_OPERAND_SIZE_PREFIX, src, dst);}
 	void xor(const Reg16& dst, const Mem16& src)	{AppendInstr(I_XOR, 0x33, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void xor(const Reg32& dst, const Reg32& src)	{AppendInstr(I_XOR, 0x31, 0, dst, src);}
+	void xor(const Reg32& dst, const Reg32& src)	{AppendInstr(I_XOR, 0x31, 0, src, dst);}
 	void xor(const Mem32& dst, const Reg32& src)	{AppendInstr(I_XOR, 0x31, 0, src, dst);}
 	void xor(const Reg32& dst, const Mem32& src)	{AppendInstr(I_XOR, 0x33, 0, dst, src);}
 #ifdef JITASM64
 	void xor(const Reg64& dst, const Imm32& imm)	{AppendInstr(I_XOR, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_REXW_PREFIX | E_SPECIAL, Imm8(6), dst, detail::ImmXor8(imm));}
 	void xor(const Mem64& dst, const Imm32& imm)	{AppendInstr(I_XOR, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_REXW_PREFIX, Imm8(6), dst, detail::ImmXor8(imm));}
-	void xor(const Reg64& dst, const Reg64& src)	{AppendInstr(I_XOR, 0x31, E_REXW_PREFIX, dst, src);}
+	void xor(const Reg64& dst, const Reg64& src)	{AppendInstr(I_XOR, 0x31, E_REXW_PREFIX, src, dst);}
 	void xor(const Mem64& dst, const Reg64& src)	{AppendInstr(I_XOR, 0x31, E_REXW_PREFIX, src, dst);}
 	void xor(const Reg64& dst, const Mem64& src)	{AppendInstr(I_XOR, 0x33, E_REXW_PREFIX, dst, src);}
 #endif
@@ -2354,9 +2364,9 @@ struct Frontend
 	void movlhps(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MOVLHPS,	0x0F16, 0, dst, src);}
 	void movlps(const XmmReg& dst, const Mem64& src)	{AppendInstr(I_MOVLPS,	0x0F12, 0, dst, src);}
 	void movlps(const Mem64& dst, const XmmReg& src)	{AppendInstr(I_MOVLPS,	0x0F13, 0, src, dst);}
-	void movmskps(const Reg32& dst, const XmmReg& src)		{AppendInstr(I_MOVMSKPS, 0x0F50, 0, dst, src);}
+	void movmskps(const Reg32& dst, const XmmReg& src)	{AppendInstr(I_MOVMSKPS, 0x0F50, 0, dst, src);}
 #ifdef JITASM64
-	void movmskps(const Reg64& dst, const XmmReg& src)		{AppendInstr(I_MOVMSKPS, 0x0F50, E_REXW_PREFIX, dst, src);}
+	void movmskps(const Reg64& dst, const XmmReg& src)	{AppendInstr(I_MOVMSKPS, 0x0F50, E_REXW_PREFIX, dst, src);}
 #endif
 	void movntps(const Mem128& dst, const XmmReg& src)	{AppendInstr(I_MOVNTPS,	0x0F2B, 0, src, dst);}
 	void movntq(const Mem64& dst, const MmxReg& src)	{AppendInstr(I_MOVNTQ,	0x0FE7, 0, src, dst);}
@@ -2958,75 +2968,231 @@ struct Frontend
 	void popcnt(const Reg64& dst, const Mem64& src)							{AppendInstr(I_POPCNT, 0x0FB8, E_MANDATORY_PREFIX_F3 | E_REXW_PREFIX, dst, src);}
 #endif
 
-	std::deque<detail::ControlStructureState> control_structure_states_;
-
-	void PushControlStructureState()
+	struct ControlState
 	{
-		detail::ControlStructureState state = {NewUnnamedLabel(), NewUnnamedLabel(), NewUnnamedLabel()};
-		control_structure_states_.push_back(state);
+		size_t beg;
+		size_t end;
+	};
+	ControlState ctrl_state_;
+	std::deque<ControlState> ctrl_state_stack_;
+
+	ControlState NewControlState()
+	{
+		ControlState state = {NewLabelID(""), NewLabelID(""),};
+		return state;
 	}
 
-	void PopControlStructureState()
+	void Repeat()
 	{
-		control_structure_states_.pop_back();
-	}
+		ctrl_state_stack_.push_back(ctrl_state_);
+		ctrl_state_ = NewControlState();
 
-	detail::ControlStructureState& GetControlStructureState()
+		L(ctrl_state_.beg);
+	}
+	template<class Ty>
+	void Until(const Ty& expr)
 	{
-		return *control_structure_states_.rbegin();
+		expr(*this, ctrl_state_.beg, ctrl_state_.end);
+		L(ctrl_state_.end);
+
+		ctrl_state_ = *ctrl_state_stack_.rbegin();
+		ctrl_state_stack_.pop_back();
 	}
 
 	template<class Ty>
-	void WHILE(const Ty& expr)
+	void While(const Ty& expr)
 	{
-		PushControlStructureState();
-		detail::ControlStructureState& state = GetControlStructureState();
-		SetLabel(state.beg_label);
-		expr(*this, true);
+		ctrl_state_stack_.push_back(ctrl_state_);
+		ctrl_state_ = NewControlState();
+		size_t label = NewLabelID("");
+
+		L(ctrl_state_.beg);
+		expr(*this, label, ctrl_state_.end);
+		L(label);
 	}
-	void ENDW()
+	void EndW()
 	{
-		detail::ControlStructureState& state = GetControlStructureState();
-//		PushBack(Instr(I_JMP, Imm64(state.beg_label)));
-		SetLabel(state.end_label);
-		PopControlStructureState();
+		AppendJmp(ctrl_state_.beg);
+		L(ctrl_state_.end);
+
+		ctrl_state_ = *ctrl_state_stack_.rbegin();
+		ctrl_state_stack_.pop_back();
+	}
+
+	template<class Ty>
+	void If(const Ty& expr)
+	{
+		ctrl_state_stack_.push_back(ctrl_state_);
+		ctrl_state_ = NewControlState();
+
+		expr(*this, ctrl_state_.beg, ctrl_state_.end);
+		L(ctrl_state_.beg);
+	}
+	void EndIf()
+	{
+		L(ctrl_state_.end);
+		ctrl_state_ = *ctrl_state_stack_.rbegin();
+		ctrl_state_stack_.pop_back();
 	}
 };
 
 namespace detail
 {
-	template<class L, class R>
-	struct CondExpr_Below
-	{
-		L	lhs_;
-		R	rhs_;
-		CondExpr_Below(const L& lhs, const R& rhs) : lhs_(lhs), rhs_(rhs) {}
-		void operator()(Frontend& f, bool not) const
-		{
-			detail::ControlStructureState& state = f.GetControlStructureState();
-			f.cmp(lhs_, rhs_);
-			//f.PushBack(Instr(I_JCC, not ? JCC_AE : JCC_JB, 0, Imm64(state.end_label)));
+	struct CondExpr {
+		virtual void operator()(Frontend& f, size_t beg, size_t end) const = 0;
+	};
+
+	struct CondExpr_ExprAnd : CondExpr {
+		const CondExpr&	lhs_;
+		const CondExpr&	rhs_;
+		CondExpr_ExprAnd(const CondExpr& lhs, const CondExpr& rhs) : lhs_(lhs), rhs_(rhs) {}
+		void operator()(Frontend& f, size_t beg, size_t end) const {
+			size_t label = f.NewLabelID("");
+			lhs_(f, label, end);
+			f.L(label);
+			rhs_(f, beg, end);
 		}
 	};
 
-	template<class L, class R>
-	struct CondExpr_Above
-	{
+	struct CondExpr_ExprOr : CondExpr {
+		const CondExpr&	lhs_;
+		const CondExpr&	rhs_;
+		CondExpr_ExprOr(const CondExpr& lhs, const CondExpr& rhs) : lhs_(lhs), rhs_(rhs) {}
+		void operator()(Frontend& f, size_t beg, size_t end) const {
+			size_t label = f.NewLabelID("");
+			lhs_(f, beg, label);
+			f.L(label);
+			rhs_(f, beg, end);
+		}
+	};
+
+	template<class L, class R, JumpCondition Jcc>
+	struct CondExpr_Cmp : CondExpr {
 		L	lhs_;
 		R	rhs_;
-		CondExpr_Above(const L& lhs, const R& rhs) : lhs_(lhs), rhs_(rhs) {}
-		void operator()(Frontend& f, bool not) const
-		{
-			detail::ControlStructureState& state = f.GetControlStructureState();
+		CondExpr_Cmp(const L& lhs, const R& rhs) : lhs_(lhs), rhs_(rhs) {}
+		void operator()(Frontend& f, size_t beg, size_t end) const {
 			f.cmp(lhs_, rhs_);
-			//f.PushBack(Instr(I_JCC, not ? JCC_BE : JCC_A, 0, Imm64(state.end_label)));
+			f.AppendJcc(Jcc, beg);
+			f.AppendJmp(end);
+		}
+	};
+
+	template<class L, class R, JumpCondition Jcc>
+	struct CondExpr_Or : CondExpr {
+		L	lhs_;
+		R	rhs_;
+		CondExpr_Or(const L& lhs, const R& rhs) : lhs_(lhs), rhs_(rhs) {}
+		void operator()(Frontend& f, size_t beg, size_t end) const {
+			f.or(lhs_, rhs_);
+			f.AppendJcc(Jcc, beg);
+			f.AppendJmp(end);
 		}
 	};
 }
-template<class R> detail::CondExpr_Below<Reg32, R> operator<(const Reg32& lhs, const R& rhs)	{return detail::CondExpr_Below<Reg32, R>(lhs, rhs);}
-template<class R> detail::CondExpr_Above<Reg32, R> operator>(const Reg32& lhs, const R& rhs)	{return detail::CondExpr_Above<Reg32, R>(lhs, rhs);}
-//template<class L, class R> detail::ExprAnd<L, R> operator&&(const L& lhs, const R& rhs)	{return detail::ExprAnd<L, R>(lhs, rhs);}
-//template<class L, class R> detail::ExprOr<L, R> operator||(const L& lhs, const R& rhs)	{return detail::ExprOr<L, R>(lhs, rhs);}
+
+// &&
+inline detail::CondExpr_ExprAnd	operator&&(const detail::CondExpr& lhs, const detail::CondExpr& rhs)	{return detail::CondExpr_ExprAnd(lhs, rhs);}
+// ||
+inline detail::CondExpr_ExprOr	operator||(const detail::CondExpr& lhs, const detail::CondExpr& rhs)	{return detail::CondExpr_ExprOr(lhs, rhs);}
+
+// !
+inline detail::CondExpr_Or<Reg8, Reg8, JCC_E>		operator!(const Reg8& lhs)		{return detail::CondExpr_Or<Reg8, Reg8, JCC_E>(lhs, lhs);}
+inline detail::CondExpr_Or<Reg16, Reg16, JCC_E>		operator!(const Reg16& lhs)		{return detail::CondExpr_Or<Reg16, Reg16, JCC_E>(lhs, lhs);}
+inline detail::CondExpr_Or<Reg32, Reg32, JCC_E>		operator!(const Reg32& lhs)		{return detail::CondExpr_Or<Reg32, Reg32, JCC_E>(lhs, lhs);}
+#ifdef JITASM64
+inline detail::CondExpr_Or<Reg64, Reg64, JCC_E>		operator!(const Reg64& lhs)		{return detail::CondExpr_Or<Reg64, Reg64, JCC_E>(lhs, lhs);}
+#endif
+inline detail::CondExpr_Cmp<Mem8, Imm8, JCC_E>		operator!(const Mem8& lhs)		{return detail::CondExpr_Cmp<Mem8, Imm8, JCC_E>(lhs, 0);}
+inline detail::CondExpr_Cmp<Mem16, Imm16, JCC_E>	operator!(const Mem16& lhs)		{return detail::CondExpr_Cmp<Mem16, Imm16, JCC_E>(lhs, 0);}
+inline detail::CondExpr_Cmp<Mem32, Imm32, JCC_E>	operator!(const Mem32& lhs)		{return detail::CondExpr_Cmp<Mem32, Imm32, JCC_E>(lhs, 0);}
+#ifdef JITASM64
+inline detail::CondExpr_Cmp<Mem64, Imm32, JCC_E>	operator!(const Mem64& lhs)		{return detail::CondExpr_Cmp<Mem64, Imm32, JCC_E>(lhs, 0);}
+#endif
+
+// <
+template<class R> detail::CondExpr_Cmp<Reg8, R, JCC_B>		operator<(const Reg8& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Reg8, R, JCC_B>(lhs, rhs);}
+template<class R> detail::CondExpr_Cmp<Reg16, R, JCC_B>		operator<(const Reg16& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Reg16, R, JCC_B>(lhs, rhs);}
+template<class R> detail::CondExpr_Cmp<Reg32, R, JCC_B>		operator<(const Reg32& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Reg32, R, JCC_B>(lhs, rhs);}
+#ifdef JITASM64
+template<class R> detail::CondExpr_Cmp<Reg64, R, JCC_B>		operator<(const Reg64& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Reg64, R, JCC_B>(lhs, rhs);}
+#endif
+template<class R> detail::CondExpr_Cmp<Mem8, R, JCC_B>		operator<(const Mem8& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Mem8, R, JCC_B>(lhs, rhs);}
+template<class R> detail::CondExpr_Cmp<Mem16, R, JCC_B>		operator<(const Mem16& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Mem16, R, JCC_B>(lhs, rhs);}
+template<class R> detail::CondExpr_Cmp<Mem32, R, JCC_B>		operator<(const Mem32& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Mem32, R, JCC_B>(lhs, rhs);}
+#ifdef JITASM64
+template<class R> detail::CondExpr_Cmp<Mem64, R, JCC_B>		operator<(const Mem64& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Mem64, R, JCC_B>(lhs, rhs);}
+#endif
+
+// >
+template<class R> detail::CondExpr_Cmp<Reg8, R, JCC_A>		operator>(const Reg8& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Reg8, R, JCC_A>(lhs, rhs);}
+template<class R> detail::CondExpr_Cmp<Reg16, R, JCC_A>		operator>(const Reg16& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Reg16, R, JCC_A>(lhs, rhs);}
+template<class R> detail::CondExpr_Cmp<Reg32, R, JCC_A>		operator>(const Reg32& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Reg32, R, JCC_A>(lhs, rhs);}
+#ifdef JITASM64
+template<class R> detail::CondExpr_Cmp<Reg64, R, JCC_A>		operator>(const Reg64& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Reg64, R, JCC_A>(lhs, rhs);}
+#endif
+template<class R> detail::CondExpr_Cmp<Mem8, R, JCC_A>		operator>(const Mem8& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Mem8, R, JCC_A>(lhs, rhs);}
+template<class R> detail::CondExpr_Cmp<Mem16, R, JCC_A>		operator>(const Mem16& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Mem16, R, JCC_A>(lhs, rhs);}
+template<class R> detail::CondExpr_Cmp<Mem32, R, JCC_A>		operator>(const Mem32& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Mem32, R, JCC_A>(lhs, rhs);}
+#ifdef JITASM64
+template<class R> detail::CondExpr_Cmp<Mem64, R, JCC_A>		operator>(const Mem64& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Mem64, R, JCC_A>(lhs, rhs);}
+#endif
+
+// <=
+template<class R> detail::CondExpr_Cmp<Reg8, R, JCC_BE>		operator<=(const Reg8& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Reg8, R, JCC_BE>(lhs, rhs);}
+template<class R> detail::CondExpr_Cmp<Reg16, R, JCC_BE>	operator<=(const Reg16& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Reg16, R, JCC_BE>(lhs, rhs);}
+template<class R> detail::CondExpr_Cmp<Reg32, R, JCC_BE>	operator<=(const Reg32& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Reg32, R, JCC_BE>(lhs, rhs);}
+#ifdef JITASM64
+template<class R> detail::CondExpr_Cmp<Reg64, R, JCC_BE>	operator<=(const Reg64& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Reg64, R, JCC_BE>(lhs, rhs);}
+#endif
+template<class R> detail::CondExpr_Cmp<Mem8, R, JCC_BE>		operator<=(const Mem8& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Mem8, R, JCC_BE>(lhs, rhs);}
+template<class R> detail::CondExpr_Cmp<Mem16, R, JCC_BE>	operator<=(const Mem16& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Mem16, R, JCC_BE>(lhs, rhs);}
+template<class R> detail::CondExpr_Cmp<Mem32, R, JCC_BE>	operator<=(const Mem32& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Mem32, R, JCC_BE>(lhs, rhs);}
+#ifdef JITASM64
+template<class R> detail::CondExpr_Cmp<Mem64, R, JCC_BE>	operator<=(const Mem64& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Mem64, R, JCC_BE>(lhs, rhs);}
+#endif
+
+// >=
+template<class R> detail::CondExpr_Cmp<Reg8, R, JCC_AE>		operator>=(const Reg8& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Reg8, R, JCC_AE>(lhs, rhs);}
+template<class R> detail::CondExpr_Cmp<Reg16, R, JCC_AE>	operator>=(const Reg16& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Reg16, R, JCC_AE>(lhs, rhs);}
+template<class R> detail::CondExpr_Cmp<Reg32, R, JCC_AE>	operator>=(const Reg32& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Reg32, R, JCC_AE>(lhs, rhs);}
+#ifdef JITASM64
+template<class R> detail::CondExpr_Cmp<Reg64, R, JCC_AE>	operator>=(const Reg64& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Reg64, R, JCC_AE>(lhs, rhs);}
+#endif
+template<class R> detail::CondExpr_Cmp<Mem8, R, JCC_AE>		operator>=(const Mem8& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Mem8, R, JCC_AE>(lhs, rhs);}
+template<class R> detail::CondExpr_Cmp<Mem16, R, JCC_AE>	operator>=(const Mem16& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Mem16, R, JCC_AE>(lhs, rhs);}
+template<class R> detail::CondExpr_Cmp<Mem32, R, JCC_AE>	operator>=(const Mem32& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Mem32, R, JCC_AE>(lhs, rhs);}
+#ifdef JITASM64
+template<class R> detail::CondExpr_Cmp<Mem64, R, JCC_AE>	operator>=(const Mem64& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Mem64, R, JCC_AE>(lhs, rhs);}
+#endif
+
+// ==
+template<class R> detail::CondExpr_Cmp<Reg8, R, JCC_E>		operator==(const Reg8& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Reg8, R, JCC_E>(lhs, rhs);}
+template<class R> detail::CondExpr_Cmp<Reg16, R, JCC_E>		operator==(const Reg16& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Reg16, R, JCC_E>(lhs, rhs);}
+template<class R> detail::CondExpr_Cmp<Reg32, R, JCC_E>		operator==(const Reg32& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Reg32, R, JCC_E>(lhs, rhs);}
+#ifdef JITASM64
+template<class R> detail::CondExpr_Cmp<Reg64, R, JCC_E>		operator==(const Reg64& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Reg64, R, JCC_E>(lhs, rhs);}
+#endif
+template<class R> detail::CondExpr_Cmp<Mem8, R, JCC_E>		operator==(const Mem8& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Mem8, R, JCC_E>(lhs, rhs);}
+template<class R> detail::CondExpr_Cmp<Mem16, R, JCC_E>		operator==(const Mem16& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Mem16, R, JCC_E>(lhs, rhs);}
+template<class R> detail::CondExpr_Cmp<Mem32, R, JCC_E>		operator==(const Mem32& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Mem32, R, JCC_E>(lhs, rhs);}
+#ifdef JITASM64
+template<class R> detail::CondExpr_Cmp<Mem64, R, JCC_E>		operator==(const Mem64& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Mem64, R, JCC_E>(lhs, rhs);}
+#endif
+
+// !=
+template<class R> detail::CondExpr_Cmp<Reg8, R, JCC_NE>		operator!=(const Reg8& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Reg8, R, JCC_NE>(lhs, rhs);}
+template<class R> detail::CondExpr_Cmp<Reg16, R, JCC_NE>	operator!=(const Reg16& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Reg16, R, JCC_NE>(lhs, rhs);}
+template<class R> detail::CondExpr_Cmp<Reg32, R, JCC_NE>	operator!=(const Reg32& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Reg32, R, JCC_NE>(lhs, rhs);}
+#ifdef JITASM64
+template<class R> detail::CondExpr_Cmp<Reg64, R, JCC_NE>	operator!=(const Reg64& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Reg64, R, JCC_NE>(lhs, rhs);}
+#endif
+template<class R> detail::CondExpr_Cmp<Mem8, R, JCC_NE>		operator!=(const Mem8& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Mem8, R, JCC_NE>(lhs, rhs);}
+template<class R> detail::CondExpr_Cmp<Mem16, R, JCC_NE>	operator!=(const Mem16& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Mem16, R, JCC_NE>(lhs, rhs);}
+template<class R> detail::CondExpr_Cmp<Mem32, R, JCC_NE>	operator!=(const Mem32& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Mem32, R, JCC_NE>(lhs, rhs);}
+#ifdef JITASM64
+template<class R> detail::CondExpr_Cmp<Mem64, R, JCC_NE>	operator!=(const Mem64& lhs, const R& rhs)	{return detail::CondExpr_Cmp<Mem64, R, JCC_NE>(lhs, rhs);}
+#endif
 
 namespace detail {
 	// Flags for ArgumentTraits

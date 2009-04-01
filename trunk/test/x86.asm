@@ -8,7 +8,6 @@
 ; SAL
 ;----------------------------------------
 masm_test_sal proc
-	
 	sal al, 1
 	sal al, 2
 	sal al, -1
