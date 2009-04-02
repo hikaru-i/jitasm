@@ -79,6 +79,9 @@ enum OpdSize
 	O_SIZE_64 = 64,
 	O_SIZE_80 = 80,
 	O_SIZE_128 = 128,
+	O_SIZE_224 = 224,
+	O_SIZE_864 = 864,
+	O_SIZE_4096 = 4096,
 };
 
 /// Register ID
@@ -177,6 +180,9 @@ typedef OpdT<O_SIZE_32>		Opd32;
 typedef OpdT<O_SIZE_64>		Opd64;
 typedef OpdT<O_SIZE_80>		Opd80;
 typedef OpdT<O_SIZE_128>	Opd128;
+typedef OpdT<O_SIZE_224>	Opd224;		// FPU environment
+typedef OpdT<O_SIZE_864>	Opd864;		// FPU state
+typedef OpdT<O_SIZE_4096>	Opd4096;	// FPU, MMX, XMM, MXCSR state
 
 template<class OpdN>
 struct RegT : OpdN
@@ -200,6 +206,7 @@ struct Reg32_eax : Reg32 {Reg32_eax() : Reg32(EAX) {}};
 #ifdef JITASM64
 struct Reg64_rax : Reg64 {Reg64_rax() : Reg64(RAX) {}};
 #endif
+struct FpuReg_st0 : FpuReg {FpuReg_st0() : FpuReg(ST0) {}};
 struct XmmReg_xmm0 : XmmReg {XmmReg_xmm0() : XmmReg(XMM0) {}};
 
 template<class OpdN>
@@ -213,6 +220,9 @@ typedef MemT<Opd32>		Mem32;
 typedef MemT<Opd64>		Mem64;
 typedef MemT<Opd80>		Mem80;
 typedef MemT<Opd128>	Mem128;
+typedef MemT<Opd224>	Mem224;		// FPU environment
+typedef MemT<Opd864>	Mem864;		// FPU state
+typedef MemT<Opd4096>	Mem4096;	// FPU, MMX, XMM, MXCSR state
 
 struct MemOffset64
 {
@@ -390,12 +400,17 @@ enum InstrID
 	I_OR, I_POP, I_PUSH, I_RDTSC, I_RET, I_RCL, I_RCR, I_ROL, I_ROR, I_SAR, I_SHL, I_SHR, I_SBB, I_SETCC, I_SHLD, I_SHRD, I_STC, I_STD, I_STI,
 	I_STOS_B, I_STOS_W, I_STOS_D, I_STOS_Q, I_SUB, I_TEST, I_UD2, I_FWAIT, I_XADD, I_XCHG, I_XOR,
 
-	I_FISTTP, I_FLD, I_FST, I_FSTP,
+	I_F2XM1, I_FABS, I_FADD, I_FADDP, I_FIADD, I_FBLD, I_FBSTP, I_FCHS, I_FCLEX, I_FNCLEX, I_FMOVCC, I_FCOM, I_FCOMP, I_FCOMPP, I_FCOMI, I_FCOMIP,
+	I_FCOS, I_FDECSTP, I_FDIV, I_FDIVP, I_FIDIV, I_FDIVR, I_FDIVRP, I_FIDIVR, I_FFREE, I_FICOM, I_FICOMP,
+	I_FILD, I_FINCSTP, I_FINIT, I_FNINIT, I_FIST, I_FISTP, I_FLD, I_FLD1, I_FLDCW, I_FLDENV, I_FLDL2E, I_FLDL2T, I_FLDLG2, I_FLDLN2, I_FLDPI, I_FLDZ,
+	I_FMUL, I_FMULP, I_FIMUL, I_FNOP, I_FPATAN, I_FPREM, I_FPREM1, I_FPTAN, I_FRNDINT, I_FRSTOR, I_FSAVE, I_FNSAVE, I_FSCALE, I_FSIN, I_FSINCOS, I_FSQRT, I_FST, I_FSTP,
+	I_FSTCW, I_FNSTCW, I_FSTENV, I_FNSTENV, I_FSTSW, I_FNSTSW, I_FSUB, I_FSUBP, I_FISUB, I_FSUBR, I_FSUBRP, I_FISUBR, I_FTST, I_FUCOM, I_FUCOMP, I_FUCOMPP, I_FUCOMI, I_FUCOMIP,
+	I_FXAM, I_FXCH, I_FXRSTOR, I_FXSAVE, I_FXTRACT, I_FYL2X, I_FYL2XP1,
 
 	I_CRC32, I_ADDPS, I_ADDSS, I_ADDPD, I_ADDSD, I_ADDSUBPS, I_ADDSUBPD, I_ANDPS, I_ANDPD, I_ANDNPS, I_ANDNPD, I_BLENDPS, I_BLENDPD, I_BLENDVPS, I_BLENDVPD, I_CLFLUSH, I_CMPPS, I_CMPSS, I_CMPPD, I_CMPSD, I_COMISS, I_COMISD,
 	I_CVTDQ2PD, I_CVTDQ2PS, I_CVTPD2DQ, I_CVTPD2PI, I_CVTPD2PS, I_CVTPI2PD, I_CVTPI2PS, I_CVTPS2DQ, I_CVTPS2PD, I_CVTPS2PI, I_CVTSD2SI,
 	I_CVTSD2SS, I_CVTSI2SD, I_CVTSI2SS, I_CVTSS2SD, I_CVTSS2SI, I_CVTTPD2DQ, I_CVTTPD2PI, I_CVTTPS2DQ, I_CVTTPS2PI, I_CVTTSD2SI, I_CVTTSS2SI,
-	I_DIVPS, I_DIVSS, I_DIVPD, I_DIVSD, I_DPPS, I_DPPD, I_EMMS, I_EXTRACTPS, I_HADDPS, I_HADDPD, I_HSUBPS, I_HSUBPD, I_INSERTPS, I_LDDQU, I_LDMXCSR, I_LFENCE,
+	I_DIVPS, I_DIVSS, I_DIVPD, I_DIVSD, I_DPPS, I_DPPD, I_EMMS, I_EXTRACTPS, I_FISTTP, I_HADDPS, I_HADDPD, I_HSUBPS, I_HSUBPD, I_INSERTPS, I_LDDQU, I_LDMXCSR, I_LFENCE,
 	I_MASKMOVDQU, I_MASKMOVQ, I_MAXPS, I_MAXSS, I_MAXPD, I_MAXSD, I_MFENCE, I_MINPS, I_MINSS, I_MINPD, I_MINSD, I_MONITOR,
 	I_MOVAPD, I_MOVAPS, I_MOVD, I_MOVDDUP, I_MOVDQA, I_MOVDQU, I_MOVDQ2Q, I_MOVHLPS, I_MOVLHPS, I_MOVHPS, I_MOVHPD, I_MOVLPS, I_MOVLPD,
 	I_MOVMSKPS, I_MOVMSKPD, I_MOVNTDQ, I_MOVNTDQA, I_MOVNTI, I_MOVNTPD, I_MOVNTPS, I_MOVNTQ, I_MOVQ, I_MOVQ2DQ, I_MOVSD, I_MOVSS, I_MOVSHDUP, I_MOVSLDUP, I_MOVUPS, I_MOVUPD,
@@ -844,6 +859,8 @@ struct Frontend
 	Reg16		cx, dx, bx, sp, bp, si, di;
 	Reg32_eax	eax;
 	Reg32		ecx, edx, ebx, esp, ebp, esi, edi;
+	FpuReg_st0	st0;
+	FpuReg		st1, st2, st3, st4, st5, st6, st7;
 	MmxReg		mm0, mm1, mm2, mm3, mm4, mm5, mm6, mm7;
 	XmmReg_xmm0 xmm0;
 	XmmReg		xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7;
@@ -855,7 +872,6 @@ struct Frontend
 	Reg64		rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r10, r11, r12, r13, r14, r15;
 	XmmReg		xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15;
 #endif
-	struct {FpuReg operator()(size_t n) const {ASSERT(n >= 0 && n <= 7); return FpuReg((RegID) (ST0 + n));}} st;
 
 	AddressingPtr<Opd8>		byte_ptr;
 	AddressingPtr<Opd16>	word_ptr;
@@ -866,6 +882,9 @@ struct Frontend
 	AddressingPtr<Opd32>	real4_ptr;
 	AddressingPtr<Opd64>	real8_ptr;
 	AddressingPtr<Opd80>	real10_ptr;
+	AddressingPtr<Opd16>	m2byte_ptr;
+	AddressingPtr<Opd224>	m28byte_ptr;
+	AddressingPtr<Opd864>	m108byte_ptr;
 
 #ifdef JITASM64
 	Reg64_rax	zax;
@@ -881,6 +900,7 @@ struct Frontend
 		: dl(DL), bl(BL), ah(AH), ch(CH), dh(DH), bh(BH),
 		cx(CX), dx(DX), bx(BX), sp(SP), bp(BP), si(SI), di(DI),
 		ecx(ECX), edx(EDX), ebx(EBX), esp(ESP), ebp(EBP), esi(ESI), edi(EDI),
+		st1(ST1), st2(ST2), st3(ST3), st4(ST4), st5(ST5), st6(ST6), st7(ST7),
 		mm0(MM0), mm1(MM1), mm2(MM2), mm3(MM3), mm4(MM4), mm5(MM5), mm6(MM6), mm7(MM7),
 		xmm1(XMM1), xmm2(XMM2), xmm3(XMM3), xmm4(XMM4), xmm5(XMM5), xmm6(XMM6), xmm7(XMM7),
 #ifdef JITASM64
@@ -898,7 +918,7 @@ struct Frontend
 	{
 	}
 
-	typedef std::deque<Instr> InstrList;
+	typedef std::vector<Instr> InstrList;
 	InstrList			instrs_;
 	bool				assembled_;
 	detail::CodeBuffer	codebuff_;
@@ -934,6 +954,7 @@ struct Frontend
 
 		// Prolog
 		InstrList main_instr;
+		main_instr.reserve(32);
 		main_instr.swap(instrs_);	// Put main instructions aside for prolog
 		push(zbp);
 		mov(zbp, zsp);
@@ -1072,6 +1093,7 @@ struct Frontend
 
 		instrs_.clear();
 		labels_.clear();
+		instrs_.reserve(128);
 		naked_main();
 
 		// Resolve jump instructions
@@ -1093,6 +1115,8 @@ struct Frontend
 			backend.Assemble(*it);
 		}
 
+		instrs_.swap(InstrList());
+		labels_.swap(LabelList());
 		assembled_ = true;
 	}
 
@@ -2066,7 +2090,6 @@ struct Frontend
 #endif
 	void ud2()		{AppendInstr(I_UD2, 0x0F0B, 0);}
 	void wait()		{fwait();}
-	void fwait()	{AppendInstr(I_FWAIT, 0x9B, 0);}
 	void xadd(const Reg8& dst, const Reg8& src)		{AppendInstr(I_XADD, 0x0FC0, 0, src, dst);}
 	void xadd(const Mem8& dst, const Reg8& src)		{AppendInstr(I_XADD, 0x0FC0, 0, src, dst);}
 	void xadd(const Reg16& dst, const Reg16& src)	{AppendInstr(I_XADD, 0x0FC1, E_OPERAND_SIZE_PREFIX, src, dst);}
@@ -2115,17 +2138,159 @@ struct Frontend
 #endif
 
 	// x87 Floating-Point Instructions
-	void fld(const Mem32& src)	{AppendInstr(I_FLD, 0xD9, 0, Imm8(0), src);}
-	void fld(const Mem64& src)	{AppendInstr(I_FLD, 0xDD, 0, Imm8(0), src);}
-	void fld(const Mem80& src)	{AppendInstr(I_FLD, 0xDB, 0, Imm8(5), src);}
-	void fld(const FpuReg& src)	{AppendInstr(I_FLD, 0xD9C0, 0, src);}
+	void f2xm1()	{AppendInstr(I_F2XM1, 0xD9F0, 0);}
+	void fabs()		{AppendInstr(I_FABS, 0xD9E1, 0);}
+	void fadd(const FpuReg_st0& dst, const FpuReg& src)		{AppendInstr(I_FADD, 0xD8C0, 0, src);}
+	void fadd(const FpuReg& dst, const FpuReg_st0& src)		{AppendInstr(I_FADD, 0xDCC0, 0, dst);}
+	void fadd(const Mem32& dst)								{AppendInstr(I_FADD, 0xD8, 0, Imm8(0), dst);}
+	void fadd(const Mem64& dst)								{AppendInstr(I_FADD, 0xDC, 0, Imm8(0), dst);}
+	void faddp()											{AppendInstr(I_FADDP, 0xDEC1, 0);}
+	void faddp(const FpuReg& dst, const FpuReg_st0& src)	{AppendInstr(I_FADDP, 0xDEC0, 0, dst);}
+	void fiadd(const Mem16& dst)							{AppendInstr(I_FIADD, 0xDE, 0, Imm8(0), dst);}
+	void fiadd(const Mem32& dst)							{AppendInstr(I_FIADD, 0xDA, 0, Imm8(0), dst);}
+	void fbld(const Mem80& dst)		{AppendInstr(I_FBLD, 0xDF, 0, Imm8(4), dst);}
+	void fbstp(const Mem80& dst)	{AppendInstr(I_FBSTP, 0xDF, 0, Imm8(6), dst);}
+	void fchs()		{AppendInstr(I_FCHS, 0xD9E0, 0);}
+	void fclex()	{AppendInstr(I_FCLEX, 0x9BDBE2, 0);}
+	void fnclex()	{AppendInstr(I_FNCLEX, 0xDBE2, 0);}
+	void fcmovb(const FpuReg_st0& dst, const FpuReg& src)	{AppendInstr(I_FMOVCC, 0xDAC0, 0, src);}
+	void fcmovbe(const FpuReg_st0& dst, const FpuReg& src)	{AppendInstr(I_FMOVCC, 0xDAD0, 0, src);}
+	void fcmove(const FpuReg_st0& dst, const FpuReg& src)	{AppendInstr(I_FMOVCC, 0xDAC8, 0, src);}
+	void fcmovnb(const FpuReg_st0& dst, const FpuReg& src)	{AppendInstr(I_FMOVCC, 0xDBC0, 0, src);}
+	void fcmovnbe(const FpuReg_st0& dst, const FpuReg& src)	{AppendInstr(I_FMOVCC, 0xDBD0, 0, src);}
+	void fcmovne(const FpuReg_st0& dst, const FpuReg& src)	{AppendInstr(I_FMOVCC, 0xDBC8, 0, src);}
+	void fcmovnu(const FpuReg_st0& dst, const FpuReg& src)	{AppendInstr(I_FMOVCC, 0xDBD8, 0, src);}
+	void fcmovu(const FpuReg_st0& dst, const FpuReg& src)	{AppendInstr(I_FMOVCC, 0xDAD8, 0, src);}
+	void fcom()												{AppendInstr(I_FCOM, 0xDBD1, 0);}
+	void fcom(const FpuReg& dst)							{AppendInstr(I_FCOM, 0xDBD0, 0, dst);}
+	void fcom(const Mem32& dst)								{AppendInstr(I_FCOM, 0xD8, 0, Imm8(2), dst);}
+	void fcom(const Mem64& dst)								{AppendInstr(I_FCOM, 0xDC, 0, Imm8(2), dst);}
+	void fcomp()											{AppendInstr(I_FCOMP, 0xD8D9, 0);}
+	void fcomp(const FpuReg& dst)							{AppendInstr(I_FCOMP, 0xD8D8, 0, dst);}
+	void fcomp(const Mem32& dst)							{AppendInstr(I_FCOMP, 0xD8, 0, Imm8(3), dst);}
+	void fcomp(const Mem64& dst)							{AppendInstr(I_FCOMP, 0xDC, 0, Imm8(3), dst);}
+	void fcompp()											{AppendInstr(I_FCOMPP, 0xDED9, 0);}
+	void fcomi(const FpuReg_st0& dst, const FpuReg& src)	{AppendInstr(I_FCOMI, 0xDBF0, 0, src);}
+	void fcomip(const FpuReg_st0& dst, const FpuReg& src)	{AppendInstr(I_FCOMIP, 0xDFF0, 0, src);}
+	void fcos()		{AppendInstr(I_FCOS, 0xD9FF, 0);}
+	void fdecstp()	{AppendInstr(I_FDECSTP, 0xD9F6, 0);}
+	void fdiv(const FpuReg_st0& dst, const FpuReg& src)		{AppendInstr(I_FDIV, 0xD8F0, 0, src);}
+	void fdiv(const FpuReg& dst, const FpuReg_st0& src)		{AppendInstr(I_FDIV, 0xDCF8, 0, dst);}
+	void fdiv(const Mem32& dst)								{AppendInstr(I_FDIV, 0xD8, 0, Imm8(6), dst);}
+	void fdiv(const Mem64& dst)								{AppendInstr(I_FDIV, 0xDC, 0, Imm8(6), dst);}
+	void fdivp()											{AppendInstr(I_FDIVP, 0xDEF9, 0);}
+	void fdivp(const FpuReg& dst, const FpuReg_st0& src)	{AppendInstr(I_FDIVP, 0xDEF8, 0, dst);}
+	void fidiv(const Mem16& dst)							{AppendInstr(I_FIDIV, 0xDE, 0, Imm8(6), dst);}
+	void fidiv(const Mem32& dst)							{AppendInstr(I_FIDIV, 0xDA, 0, Imm8(6), dst);}
+	void fdivr(const FpuReg_st0& dst, const FpuReg& src)	{AppendInstr(I_FDIVR, 0xD8F8, 0, src);}
+	void fdivr(const FpuReg& dst, const FpuReg_st0& src)	{AppendInstr(I_FDIVR, 0xDCF0, 0, dst);}
+	void fdivr(const Mem32& dst)							{AppendInstr(I_FDIVR, 0xD8, 0, Imm8(7), dst);}
+	void fdivr(const Mem64& dst)							{AppendInstr(I_FDIVR, 0xDC, 0, Imm8(7), dst);}
+	void fdivrp()											{AppendInstr(I_FDIVRP, 0xDEF1, 0);}
+	void fdivrp(const FpuReg& dst, const FpuReg_st0& src)	{AppendInstr(I_FDIVRP, 0xDEF0, 0, dst);}
+	void fidivr(const Mem16& dst)							{AppendInstr(I_FIDIVR, 0xDE, 0, Imm8(7), dst);}
+	void fidivr(const Mem32& dst)							{AppendInstr(I_FIDIVR, 0xDA, 0, Imm8(7), dst);}
+	void ffree(const FpuReg& dst)	{AppendInstr(I_FFREE, 0xDDC0, 0, dst);}
+	void ficom(const Mem16& dst)	{AppendInstr(I_FICOM, 0xDE, 0, Imm8(2), dst);}
+	void ficom(const Mem32& dst)	{AppendInstr(I_FICOM, 0xDA, 0, Imm8(2), dst);}
+	void ficomp(const Mem16& dst)	{AppendInstr(I_FICOMP, 0xDE, 0, Imm8(3), dst);}
+	void ficomp(const Mem32& dst)	{AppendInstr(I_FICOMP, 0xDA, 0, Imm8(3), dst);}
+	void fild(const Mem16& dst)		{AppendInstr(I_FILD, 0xDF, 0, Imm8(0), dst);}
+	void fild(const Mem32& dst)		{AppendInstr(I_FILD, 0xDB, 0, Imm8(0), dst);}
+	void fild(const Mem64& dst)		{AppendInstr(I_FILD, 0xDF, 0, Imm8(5), dst);}
+	void fincstp()	{AppendInstr(I_FINCSTP, 0xD9F7, 0);}
+	void finit()	{AppendInstr(I_FINIT, 0x9BDBE3, 0);}
+	void fninit()	{AppendInstr(I_FNINIT, 0xDBE3, 0);}
+	void fist(const Mem16& dst)		{AppendInstr(I_FIST, 0xDF, 0, Imm8(2), dst);}
+	void fist(const Mem32& dst)		{AppendInstr(I_FIST, 0xDB, 0, Imm8(2), dst);}
+	void fistp(const Mem16& dst)	{AppendInstr(I_FISTP, 0xDF, 0, Imm8(3), dst);}
+	void fistp(const Mem32& dst)	{AppendInstr(I_FISTP, 0xDB, 0, Imm8(3), dst);}
+	void fistp(const Mem64& dst)	{AppendInstr(I_FISTP, 0xDF, 0, Imm8(7), dst);}
+	void fisttp(const Mem16& dst)	{AppendInstr(I_FISTP, 0xDF, 0, Imm8(1), dst);}
+	void fisttp(const Mem32& dst)	{AppendInstr(I_FISTP, 0xDB, 0, Imm8(1), dst);}
+	void fisttp(const Mem64& dst)	{AppendInstr(I_FISTP, 0xDD, 0, Imm8(1), dst);}
+	void fld(const Mem32& src)		{AppendInstr(I_FLD, 0xD9, 0, Imm8(0), src);}
+	void fld(const Mem64& src)		{AppendInstr(I_FLD, 0xDD, 0, Imm8(0), src);}
+	void fld(const Mem80& src)		{AppendInstr(I_FLD, 0xDB, 0, Imm8(5), src);}
+	void fld(const FpuReg& src)		{AppendInstr(I_FLD, 0xD9C0, 0, src);}
+	void fld1()		{AppendInstr(I_FLD1, 0xD9E8, 0);}
+	void fldcw(const Mem16& src)	{AppendInstr(I_FLDCW, 0xD9, 0, Imm8(5), src);}
+	void fldenv(const Mem224& src)	{AppendInstr(I_FLDENV, 0xD9, 0, Imm8(4), src);}
+	void fldl2e()	{AppendInstr(I_FLDL2E, 0xD9EA, 0);}
+	void fldl2t()	{AppendInstr(I_FLDL2T, 0xD9E9, 0);}
+	void fldlg2()	{AppendInstr(I_FLDLG2, 0xD9EC, 0);}
+	void fldln2()	{AppendInstr(I_FLDLN2, 0xD9ED, 0);}
+	void fldpi()	{AppendInstr(I_FLDPI, 0xD9EB, 0);}
+	void fldz()		{AppendInstr(I_FLDZ, 0xD9EE, 0);}
+	void fmul(const FpuReg_st0& dst, const FpuReg& src)		{AppendInstr(I_FMUL, 0xD8C8, 0, src);}
+	void fmul(const FpuReg& dst, const FpuReg_st0& src)		{AppendInstr(I_FMUL, 0xDCC8, 0, dst);}
+	void fmul(const Mem32& dst)								{AppendInstr(I_FMUL, 0xD8, 0, Imm8(1), dst);}
+	void fmul(const Mem64& dst)								{AppendInstr(I_FMUL, 0xDC, 0, Imm8(1), dst);}
+	void fmulp()											{AppendInstr(I_FMULP, 0xDEC9, 0);}
+	void fmulp(const FpuReg& dst, const FpuReg_st0& src)	{AppendInstr(I_FMULP, 0xDEC8, 0, dst);}
+	void fimul(const Mem16& dst)							{AppendInstr(I_FIMUL, 0xDE, 0, Imm8(1), dst);}
+	void fimul(const Mem32& dst)							{AppendInstr(I_FIMUL, 0xDA, 0, Imm8(1), dst);}
+	void fnop()		{AppendInstr(I_FNOP, 0xD9D0, 0);}
+	void fpatan()	{AppendInstr(I_FPATAN, 0xD9F3, 0);}
+	void fprem()	{AppendInstr(I_FPREM, 0xD9F8, 0);}
+	void fprem1()	{AppendInstr(I_FPREM1, 0xD9F5, 0);}
+	void fptan()	{AppendInstr(I_FPTAN, 0xD9F2, 0);}
+	void frndint()	{AppendInstr(I_FRNDINT, 0xD9FC, 0);}
+	void frstor(const Mem864& src)	{AppendInstr(I_FRSTOR, 0xDD, 0, Imm8(4), src);}
+	void fsave(const Mem864& dst)	{AppendInstr(I_FSAVE, 0x9BDD, 0, Imm8(6), dst);}
+	void fnsave(const Mem864& dst)	{AppendInstr(I_FNSAVE, 0xDD, 0, Imm8(6), dst);}
+	void fscale()	{AppendInstr(I_FSCALE, 0xD9FD, 0);}
+	void fsin()		{AppendInstr(I_FSIN, 0xD9FE, 0);}
+	void fsincos()	{AppendInstr(I_FSINCOS, 0xD9FB, 0);}
+	void fsqrt()	{AppendInstr(I_FSQRT, 0xD9FA, 0);}
 	void fst(const Mem32& dst)		{AppendInstr(I_FST,	0xD9, 0, Imm8(2), dst);}
 	void fst(const Mem64& dst)		{AppendInstr(I_FST,	0xDD, 0, Imm8(2), dst);}
 	void fst(const FpuReg& dst)		{AppendInstr(I_FST,	0xDDD0, 0, dst);}
+	void fstp(const FpuReg& dst)	{AppendInstr(I_FSTP, 0xDDD8, 0, dst);}
 	void fstp(const Mem32& dst)		{AppendInstr(I_FSTP, 0xD9, 0, Imm8(3), dst);}
 	void fstp(const Mem64& dst)		{AppendInstr(I_FSTP, 0xDD, 0, Imm8(3), dst);}
 	void fstp(const Mem80& dst)		{AppendInstr(I_FSTP, 0xDB, 0, Imm8(7), dst);}
-	void fstp(const FpuReg& dst)	{AppendInstr(I_FSTP, 0xDDD8, 0, dst);}
+	void fstcw(const Mem16& dst)	{AppendInstr(I_FSTCW, 0x98D9, 0, Imm8(7), dst);}
+	void fnstcw(const Mem16& dst)	{AppendInstr(I_FNSTCW, 0xD9, 0, Imm8(7), dst);}
+	void fstenv(const Mem224& dst)	{AppendInstr(I_FSTENV, 0x98D9, 0, Imm8(6), dst);}
+	void fnstenv(const Mem224& dst)	{AppendInstr(I_FNSTENV, 0xD9, 0, Imm8(6), dst);}
+	void fstsw(const Mem16& dst)		{AppendInstr(I_FSTSW, 0x98DD, 0, Imm8(7), dst);}
+	void fstsw(const Reg16_ax& dst)		{AppendInstr(I_FSTSW, 0x98DFE0, 0);}
+	void fnstsw(const Mem16& dst)		{AppendInstr(I_FNSTSW, 0xDD, 0, Imm8(7), dst);}
+	void fnstsw(const Reg16_ax& dst)	{AppendInstr(I_FNSTSW, 0xDFE0, 0);}
+	void fsub(const FpuReg_st0& dst, const FpuReg& src)		{AppendInstr(I_FSUB, 0xD8E0, 0, src);}
+	void fsub(const FpuReg& dst, const FpuReg_st0& src)		{AppendInstr(I_FSUB, 0xDCE8, 0, dst);}
+	void fsub(const Mem32& dst)								{AppendInstr(I_FSUB, 0xD8, 0, Imm8(4), dst);}
+	void fsub(const Mem64& dst)								{AppendInstr(I_FSUB, 0xDC, 0, Imm8(4), dst);}
+	void fsubp()											{AppendInstr(I_FSUBP, 0xDEE9, 0);}
+	void fsubp(const FpuReg& dst, const FpuReg_st0& src)	{AppendInstr(I_FSUBP, 0xDEE8, 0, dst);}
+	void fisub(const Mem16& dst)							{AppendInstr(I_FISUB, 0xDE, 0, Imm8(4), dst);}
+	void fisub(const Mem32& dst)							{AppendInstr(I_FISUB, 0xDA, 0, Imm8(4), dst);}
+	void fsubr(const FpuReg_st0& dst, const FpuReg& src)	{AppendInstr(I_FSUBR, 0xD8E8, 0, src);}
+	void fsubr(const FpuReg& dst, const FpuReg_st0& src)	{AppendInstr(I_FSUBR, 0xDCE0, 0, dst);}
+	void fsubr(const Mem32& dst)							{AppendInstr(I_FSUBR, 0xD8, 0, Imm8(5), dst);}
+	void fsubr(const Mem64& dst)							{AppendInstr(I_FSUBR, 0xDC, 0, Imm8(5), dst);}
+	void fsubrp()											{AppendInstr(I_FSUBRP, 0xDEE1, 0);}
+	void fsubrp(const FpuReg& dst, const FpuReg_st0& src)	{AppendInstr(I_FSUBRP, 0xDEE0, 0, dst);}
+	void fisubr(const Mem16& dst)							{AppendInstr(I_FISUBR, 0xDE, 0, Imm8(5), dst);}
+	void fisubr(const Mem32& dst)							{AppendInstr(I_FISUBR, 0xDA, 0, Imm8(5), dst);}
+	void ftst()		{AppendInstr(I_FTST, 0xD9E4, 0);}
+	void fucom()											{AppendInstr(I_FUCOM, 0xDDE1, 0);}
+	void fucom(const FpuReg& dst)							{AppendInstr(I_FUCOM, 0xDDE0, 0, dst);}
+	void fucomp()											{AppendInstr(I_FUCOMP, 0xDDE9, 0);}
+	void fucomp(const FpuReg& dst)							{AppendInstr(I_FUCOMP, 0xDDE8, 0, dst);}
+	void fucompp()											{AppendInstr(I_FUCOMPP, 0xDAE9, 0);}
+	void fucomi(const FpuReg_st0& dst, const FpuReg& src)	{AppendInstr(I_FUCOMI, 0xDBE8, 0, src);}
+	void fucomip(const FpuReg_st0& dst, const FpuReg& src)	{AppendInstr(I_FUCOMIP, 0xDFE8, 0, src);}
+	void fwait()	{AppendInstr(I_FWAIT, 0x9B, 0);}
+	void fxam()		{AppendInstr(I_FXAM, 0xD9E5, 0);}
+	void fxch()						{AppendInstr(I_FXCH, 0xD9C9, 0);}
+	void fxch(const FpuReg& dst)	{AppendInstr(I_FXCH, 0xD9C8, 0, dst);}
+	void fxrstor(const Mem4096& src)	{AppendInstr(I_FXRSTOR, 0x0FAE, 0, Imm8(1), src);}
+	void fxsave(const Mem4096& dst)		{AppendInstr(I_FXSAVE, 0x0FAE, 0, Imm8(0), dst);}
+	void fxtract()	{AppendInstr(I_FXTRACT, 0xD9F4, 0);}
+	void fyl2x()	{AppendInstr(I_FYL2X, 0xD9F1, 0);}
+	void fyl2xp1()	{AppendInstr(I_FYL2XP1, 0xD9F9, 0);}
 
 	// MMX
 	void emms() {AppendInstr(I_EMMS, 0x0F77, 0);}
@@ -2748,9 +2913,6 @@ struct Frontend
 	void addsubps(const XmmReg& dst, const Mem128& src)		{AppendInstr(I_ADDSUBPS,	0x0FD0, E_MANDATORY_PREFIX_F2, dst, src);}
 	void addsubpd(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_ADDSUBPD,	0x0FD0, E_MANDATORY_PREFIX_66, dst, src);}
 	void addsubpd(const XmmReg& dst, const Mem128& src)		{AppendInstr(I_ADDSUBPD,	0x0FD0, E_MANDATORY_PREFIX_66, dst, src);}
-	void fisttp(const Mem16& dst)							{AppendInstr(I_FISTTP,	0xDF, 0, Imm8(1), dst);}
-	void fisttp(const Mem32& dst)							{AppendInstr(I_FISTTP,	0xDB, 0, Imm8(1), dst);}
-	void fisttp(const Mem64& dst)							{AppendInstr(I_FISTTP,	0xDD, 0, Imm8(1), dst);}
 	void haddps(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_HADDPS,	0x0F7C, E_MANDATORY_PREFIX_F2, dst, src);}
 	void haddps(const XmmReg& dst, const Mem128& src)		{AppendInstr(I_HADDPS,	0x0F7C, E_MANDATORY_PREFIX_F2, dst, src);}
 	void haddpd(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_HADDPD,	0x0F7C, E_MANDATORY_PREFIX_66, dst, src);}

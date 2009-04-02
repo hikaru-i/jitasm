@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <intrin.h>
+#include <windows.h>
 #include "jitasm.h"
 
 #define _TOSTR(s) #s
@@ -9,11 +10,17 @@
 
 size_t	g_test_succeeded = 0;
 size_t	g_test_failed = 0;
+LONGLONG g_assemble_time = 0;
 
 template<class Fn1, class Fn2>
 void test_impl(const char* func_name, Fn1 fn1, Fn2 fn2)
 {
+	LARGE_INTEGER beg_time, end_time;
+	::QueryPerformanceCounter(&beg_time);
 	fn1.Assemble();
+	::QueryPerformanceCounter(&end_time);
+	g_assemble_time += end_time.QuadPart - beg_time.QuadPart;
+
 	size_t size = fn1.GetCodeSize();
 
 	unsigned char* p1 = (unsigned char*) fn1.GetCode();
@@ -1305,8 +1312,8 @@ struct test_fld : jitasm::function<void>
 		fld(real4_ptr[esp]);
 		fld(real8_ptr[esp]);
 		fld(real10_ptr[esp]);
-		fld(st(0));
-		fld(st(7));
+		fld(st0);
+		fld(st7);
 #ifdef JITASM64
 		fld(real4_ptr[rsp]);
 		fld(real8_ptr[rsp]);
@@ -1620,13 +1627,13 @@ struct test_fst : jitasm::function<void>
 	{
 		fst(real4_ptr[esp]);
 		fst(real8_ptr[esp]);
-		fst(st(0));
-		fst(st(7));
+		fst(st0);
+		fst(st7);
 		fstp(real4_ptr[esp]);
 		fstp(real8_ptr[esp]);
 		fstp(real10_ptr[esp]);
-		fstp(st(0));
-		fstp(st(7));
+		fstp(st0);
+		fstp(st7);
 #ifdef JITASM64
 		fst(real4_ptr[rsp]);
 		fst(real8_ptr[rsp]);
@@ -3831,7 +3838,7 @@ struct test_function_return_float_st0 : jitasm::function_cdecl<float, float>
 	Result main(Arg a1)
 	{
 		fld(real4_ptr[a1]);
-		return st(0);
+		return st0;
 	}
 };
 
@@ -3881,7 +3888,7 @@ struct test_function_return_double_st0 : jitasm::function_cdecl<double, double>
 	Result main(Arg a1)
 	{
 		fld(real8_ptr[a1]);
-		return st(0);
+		return st0;
 	}
 };
 
@@ -3987,7 +3994,7 @@ struct test_function_return_m128i_ptr : jitasm::function_cdecl<__m128i>
 	}
 };
 
-int wmain()
+void test_instruction()
 {
 	TEST_M(test_sal);
 	TEST_M(test_sar);
@@ -4036,7 +4043,10 @@ int wmain()
 	TEST_M(test_ssse3);
 	TEST_M(test_sse4_1);
 	TEST_M(test_sse4_2);
+}
 
+void test_calling_convension()
+{
 	TEST_M(test_function_return_char);
 	TEST_M(test_function_return_short);
 	TEST_M(test_function_return_int_imm);
@@ -4057,7 +4067,16 @@ int wmain()
 	TEST_M(test_function_return_m128d_ptr);
 	TEST_M(test_function_return_m128i_xmm1);
 	TEST_M(test_function_return_m128i_ptr);
+}
+
+int wmain()
+{
+	test_instruction();
+	test_calling_convension();
 
 	printf("TEST RESULT - %d passed, %d failed\n", g_test_succeeded, g_test_failed);
+	LARGE_INTEGER freq;
+	::QueryPerformanceFrequency(&freq);
+	printf("Assemble time - %I64d us\n", g_assemble_time * 1000000 / freq.QuadPart);
 	getchar();
 }
