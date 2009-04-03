@@ -2045,7 +2045,23 @@ struct test_gpi_e : jitasm::function<void>
 		enter(0x100, 1);
 		enter(0x100, 2);
 		hlt();
+		in(al, 0xAA);
+		in(ax, 0xAA);
+		in(eax, 0xAA);
+		in(al, dx);
+		in(ax, dx);
+		in(eax, dx);
+		insb();
+		insw();
+		insd();
+		rep_insb();
+		rep_insw();
+		rep_insd();
 		int3();
+		intn(1);
+#ifndef JITASM64
+		into();
+#endif
 		invd();
 		invlpg(dword_ptr[esp]);
 		iret();
@@ -2062,6 +2078,10 @@ struct test_gpi_e : jitasm::function<void>
 		lar(rbx, word_ptr[esp]);
 #endif
 		leave();
+		lldt(cx);
+		lldt(word_ptr[ecx]);
+		lmsw(cx);
+		lmsw(word_ptr[ecx]);
 		//movbe(bx, word_ptr[esp]);
 		//movbe(ebx, dword_ptr[esp]);
 		//movbe(word_ptr[esp], bx);
@@ -2085,10 +2105,44 @@ struct test_gpi_e : jitasm::function<void>
 		movsxd(rbx, dword_ptr[esp]);
 #endif
 		nop();
+		out(0xAA, al);
+		out(0xAA, ax);
+		out(0xAA, eax);
+		out(dx, al);
+		out(dx, ax);
+		out(dx, eax);
+		outsb();
+		outsw();
+		outsd();
+		rep_outsb();
+		rep_outsw();
+		rep_outsd();
+		popf();
+#ifndef JITASM64
+		popfd();
+#else
+		popfq();
+#endif
+		pushf();
+#ifndef JITASM64
+		pushfd();
+#else
+		pushfq();
+#endif
+		rdmsr();
+		rdpmc();
 		rdtsc();
 		ret();
 		ret(1);
 		ret(-1);
+		rsm();
+		scasb();
+		scasw();
+		scasd();
+#ifdef JITASM64
+		scasq();
+#endif
+		sgdt(dword_ptr[esp]);
 		shld(bx, dx, 1);
 		shld(word_ptr[esp], dx, 1);
 		shld(bx, dx, cl);
@@ -2117,12 +2171,34 @@ struct test_gpi_e : jitasm::function<void>
 		shrd(rbx, rdx, cl);
 		shrd(qword_ptr[esp], rdx, cl);
 #endif
+		sidt(dword_ptr[esp]);
+		sldt(bx);
+		sldt(word_ptr[esp]);
+#ifdef JITASM64
+		sldt(r8);
+#endif
+		smsw(bx);
+		smsw(word_ptr[esp]);
+#ifdef JITASM64
+		smsw(r8);
+#endif
 		stc();
 		std();
 		sti();
+#ifndef JITASM64
+		sysenter();
+		sysexit();
+#else
+		swapgs();
+		syscall();
+		sysret();
+#endif
 		ud2();
+		verr(bx);
+		verr(word_ptr[esp]);
+		verw(bx);
+		verw(word_ptr[esp]);
 		wait();
-		fwait();
 		xadd(bl, dl);
 		xadd(byte_ptr[esp], dl);
 		xadd(bx, dx);
@@ -2133,6 +2209,173 @@ struct test_gpi_e : jitasm::function<void>
 		xadd(rbx, rdx);
 		xadd(qword_ptr[esp], rdx);
 #endif
+		wbinvd();
+		wrmsr();
+		xlatb();
+	}
+};
+
+//----------------------------------------
+// FPU
+//----------------------------------------
+extern "C" void masm_test_fpu();
+struct test_fpu : jitasm::function<void>
+{
+	virtual void naked_main()
+	{
+		f2xm1();
+		fabs();
+		fadd(st0, st2);
+		fadd(st1, st0);
+		fadd(real4_ptr[ebx]);
+		fadd(real8_ptr[edx]);
+		faddp();
+		faddp(st1, st0);
+		fiadd(word_ptr[esp]);
+		fiadd(real4_ptr[ebx]);
+		fbld(real10_ptr[edi]);
+		fbstp(real10_ptr[edi]);
+		fchs();
+		fclex();
+		fnclex();
+		fcmovb(st0, st2);
+		fcmovbe(st0, st2);
+		fcmove(st0, st2);
+		fcmovnb(st0, st2);
+		fcmovnbe(st0, st2);
+		fcmovne(st0, st2);
+		fcmovnu(st0, st2);
+		fcmovu(st0, st2);
+		fcom();
+		fcom(st1);
+		fcom(real4_ptr[ebx]);
+		fcom(real8_ptr[edx]);
+		fcomp();
+		fcomp(st1);
+		fcomp(real4_ptr[ebx]);
+		fcomp(real8_ptr[edx]);
+		fcompp();
+		fcomi(st0, st2);
+		fcomip(st0, st2);
+		fcos();
+		fdecstp();
+		fdiv(st0, st2);
+		fdiv(st1, st0);
+		fdiv(real4_ptr[ebx]);
+		fdiv(real8_ptr[edx]);
+		fdivp();
+		fdivp(st1, st0);
+		fidiv(word_ptr[esp]);
+		fidiv(real4_ptr[ebx]);
+		fdivr(st0, st2);
+		fdivr(st1, st0);
+		fdivr(real4_ptr[ebx]);
+		fdivr(real8_ptr[edx]);
+		fdivrp();
+		fdivrp(st1, st0);
+		fidivr(word_ptr[esp]);
+		fidivr(real4_ptr[ebx]);
+		ffree(st1);
+		ficom(word_ptr[esp]);
+		ficom(real4_ptr[ebx]);
+		ficomp(word_ptr[esp]);
+		ficomp(real4_ptr[ebx]);
+		fild(word_ptr[esp]);
+		fild(real4_ptr[ebx]);
+		fild(real8_ptr[edx]);
+		fincstp();
+		finit();
+		fninit();
+		fist(word_ptr[esp]);
+		fist(real4_ptr[ebx]);
+		fistp(word_ptr[esp]);
+		fistp(real4_ptr[ebx]);
+		fistp(real8_ptr[edx]);
+		fisttp(word_ptr[esp]);
+		fisttp(real4_ptr[ebx]);
+		fisttp(real8_ptr[edx]);
+		fld(real4_ptr[ecx]);
+		fld(real8_ptr[esi]);
+		fld(real10_ptr[esp]);
+		fld(st2);
+		fld1();
+		fldcw(word_ptr[ebp]);
+		fldenv(m28byte_ptr[ebp]);
+		fldl2e();
+		fldl2t();
+		fldlg2();
+		fldln2();
+		fldpi();
+		fldz();
+		fmul(st0, st2);
+		fmul(st1, st0);
+		fmul(real4_ptr[ebx]);
+		fmul(real8_ptr[edx]);
+		fmulp();
+		fmulp(st1, st0);
+		fimul(word_ptr[esp]);
+		fimul(real4_ptr[ebx]);
+		fnop();
+		fpatan();
+		fprem();
+		fprem1();
+		fptan();
+		frndint();
+		frstor(m108byte_ptr[ebp]);
+		fsave(m108byte_ptr[edi]);
+		fnsave(m108byte_ptr[edi]);
+		fscale();
+		fsin();
+		fsincos();
+		fsqrt();
+		fst(real4_ptr[ebx]);
+		fst(real8_ptr[edx]);
+		fst(st1);
+		fstp(st1);
+		fstp(real4_ptr[ebx]);
+		fstp(real8_ptr[edx]);
+		fstp(real10_ptr[edi]);
+		fstcw(word_ptr[esp]);
+		fnstcw(word_ptr[esp]);
+		fstenv(m28byte_ptr[ebp]);
+		fnstenv(m28byte_ptr[ebp]);
+		fstsw(word_ptr[esp]);
+		fstsw(ax);
+		fnstsw(word_ptr[esp]);
+		fnstsw(ax);
+		fsub(st0, st2);
+		fsub(st1, st0);
+		fsub(real4_ptr[ebx]);
+		fsub(real8_ptr[edx]);
+		fsubp();
+		fsubp(st1, st0);
+		fisub(word_ptr[esp]);
+		fisub(real4_ptr[ebx]);
+		fsubr(st0, st2);
+		fsubr(st1, st0);
+		fsubr(real4_ptr[ebx]);
+		fsubr(real8_ptr[edx]);
+		fsubrp();
+		fsubrp(st1, st0);
+		fisubr(word_ptr[esp]);
+		fisubr(real4_ptr[ebx]);
+		ftst();
+		fucom();
+		fucom(st1);
+		fucomp();
+		fucomp(st1);
+		fucompp();
+		fucomi(st0, st2);
+		fucomip(st0, st2);
+		fwait();
+		fxam();
+		fxch();
+		fxch(st1);
+		fxrstor(m512byte_ptr[esp]);
+		fxsave(m512byte_ptr[esp]);
+		fxtract();
+		fyl2x();
+		fyl2xp1();
 	}
 };
 
@@ -4038,6 +4281,7 @@ void test_instruction()
 	TEST_M(test_cmovcc);
 	TEST_M(test_gpi_b);
 	TEST_M(test_gpi_e);
+	TEST_M(test_fpu);
 	TEST_M(test_mmx);
 	TEST_M(test_mmx2);
 	TEST_M(test_sse);

@@ -1168,7 +1168,21 @@ masm_test_gpi_e proc
 	enter 100h, 1
 	enter 100h, 2
 	hlt
+	in al, 0AAh
+	in ax, 0AAh
+	in eax, 0AAh
+	in al, dx
+	in ax, dx
+	in eax, dx
+	insb
+	insw
+	insd
+	rep insb
+	rep insw
+	rep insd
 	int 3
+	int 1
+	into
 	invd
 	invlpg dword ptr[esp]
 	iret
@@ -1181,6 +1195,18 @@ masm_test_gpi_e proc
 	;lar rbx, rdx
 	;lar rbx, word ptr[esp]
 	leave 
+	db 0Fh	;lldt cx
+	db 0h
+	db 0D1h
+	db 0Fh	;lldt word ptr[ecx]
+	db 00h
+	db 11h
+	db 0Fh	;lmsw cx
+	db 01h
+	db 0F1h
+	db 0Fh	;lmsw word ptr[ecx]
+	db 01h
+	db 31h
 	;movbe bx, word ptr[esp]
 	;movbe ebx, dword ptr[esp]
 	;movbe word ptr[esp], bx
@@ -1200,10 +1226,37 @@ masm_test_gpi_e proc
 	;movsxd rbx, edx
 	;movsxd rbx, dword ptr[esp]
 	nop
+	out 0AAh, al
+	out 0AAh, ax
+	out 0AAh, eax
+	out dx, al
+	out dx, ax
+	out dx, eax
+	outsb 
+	outsw 
+	outsd 
+	rep outsb 
+	rep outsw 
+	rep outsd 
+	popf
+	popfd
+	;popfq
+	pushf
+	pushfd
+	;pushfq
+	db 0Fh	;rdmsr
+	db 32h
+	rdpmc
 	rdtsc
 	ret
 	ret 1
 	ret -1
+	rsm
+	scasb 
+	scasw 
+	scasd 
+	;scasq 
+	sgdt dword ptr[esp]
 	shld bx, dx, 1
 	shld word ptr[esp], dx, 1
 	shld bx, dx, cl
@@ -1228,12 +1281,28 @@ masm_test_gpi_e proc
 	;shrd qword ptr[esp], rdx, 1
 	;shrd rbx, rdx, cl
 	;shrd qword ptr[esp], rdx, cl
+	sidt dword ptr[esp]
+	sldt bx
+	sldt word ptr[esp]
+	;sldt r8
+	smsw bx
+	smsw word ptr[esp]
+	;smsw r8
 	stc 
 	std 
 	sti 
+	sysenter
+	db 0Fh	;sysexit
+	db 35h
+	;swapgs
+	;syscall
+	;sysret
 	ud2 
+	verr bx
+	verr word ptr[esp]
+	verw bx
+	verw word ptr[esp]
 	wait 
-	fwait 
 	xadd bl, dl
 	xadd byte ptr[esp], dl
 	xadd bx, dx
@@ -1242,7 +1311,171 @@ masm_test_gpi_e proc
 	xadd dword ptr[esp], edx
 	;xadd rbx, rdx
 	;xadd qword ptr[esp], rdx
+	db 0Fh	;wbinvd
+	db 09h
+	db 0Fh	;wrmsr
+	db 30h
+	xlatb
 masm_test_gpi_e endp
+
+;----------------------------------------
+; FPU
+;----------------------------------------
+masm_test_fpu proc
+	f2xm1 
+	fabs 
+	fadd st(0), st(2)
+	fadd st(1), st(0)
+	fadd real4 ptr[ebx]
+	fadd real8 ptr[edx]
+	faddp 
+	faddp st(1), st(0)
+	fiadd word ptr[esp]
+	fiadd real4 ptr[ebx]
+	fbld real10 ptr[edi]
+	fbstp real10 ptr[edi]
+	fchs 
+	fclex 
+	fnclex 
+	fcmovb st(0), st(2)
+	fcmovbe st(0), st(2)
+	fcmove st(0), st(2)
+	fcmovnb st(0), st(2)
+	fcmovnbe st(0), st(2)
+	fcmovne st(0), st(2)
+	fcmovnu st(0), st(2)
+	fcmovu st(0), st(2)
+	fcom 
+	fcom st(1)
+	fcom real4 ptr[ebx]
+	fcom real8 ptr[edx]
+	fcomp 
+	fcomp st(1)
+	fcomp real4 ptr[ebx]
+	fcomp real8 ptr[edx]
+	fcompp 
+	fcomi st(0), st(2)
+	fcomip st(0), st(2)
+	fcos 
+	fdecstp 
+	fdiv st(0), st(2)
+	fdiv st(1), st(0)
+	fdiv real4 ptr[ebx]
+	fdiv real8 ptr[edx]
+	fdivp 
+	fdivp st(1), st(0)
+	fidiv word ptr[esp]
+	fidiv real4 ptr[ebx]
+	fdivr st(0), st(2)
+	fdivr st(1), st(0)
+	fdivr real4 ptr[ebx]
+	fdivr real8 ptr[edx]
+	fdivrp 
+	fdivrp st(1), st(0)
+	fidivr word ptr[esp]
+	fidivr real4 ptr[ebx]
+	ffree st(1)
+	ficom word ptr[esp]
+	ficom real4 ptr[ebx]
+	ficomp word ptr[esp]
+	ficomp real4 ptr[ebx]
+	fild word ptr[esp]
+	fild real4 ptr[ebx]
+	fild real8 ptr[edx]
+	fincstp 
+	finit 
+	fninit 
+	fist word ptr[esp]
+	fist real4 ptr[ebx]
+	fistp word ptr[esp]
+	fistp real4 ptr[ebx]
+	fistp real8 ptr[edx]
+	fisttp word ptr[esp]
+	fisttp real4 ptr[ebx]
+	fisttp real8 ptr[edx]
+	fld real4 ptr[ecx]
+	fld real8 ptr[esi]
+	fld real10 ptr[esp]
+	fld st(2)
+	fld1 
+	fldcw word ptr[ebp]
+	fldenv [ebp]
+	fldl2e 
+	fldl2t 
+	fldlg2 
+	fldln2 
+	fldpi 
+	fldz 
+	fmul st(0), st(2)
+	fmul st(1), st(0)
+	fmul real4 ptr[ebx]
+	fmul real8 ptr[edx]
+	fmulp 
+	fmulp st(1), st(0)
+	fimul word ptr[esp]
+	fimul real4 ptr[ebx]
+	fnop 
+	fpatan 
+	fprem 
+	fprem1 
+	fptan 
+	frndint 
+	frstor [ebp]
+	fsave [edi]
+	fnsave [edi]
+	fscale 
+	fsin 
+	fsincos 
+	fsqrt 
+	fst real4 ptr[ebx]
+	fst real8 ptr[edx]
+	fst st(1)
+	fstp st(1)
+	fstp real4 ptr[ebx]
+	fstp real8 ptr[edx]
+	fstp real10 ptr[edi]
+	fstcw word ptr[esp]
+	fnstcw word ptr[esp]
+	fstenv [ebp]
+	fnstenv [ebp]
+	fstsw word ptr[esp]
+	fstsw ax
+	fnstsw word ptr[esp]
+	fnstsw ax
+	fsub st(0), st(2)
+	fsub st(1), st(0)
+	fsub real4 ptr[ebx]
+	fsub real8 ptr[edx]
+	fsubp 
+	fsubp st(1), st(0)
+	fisub word ptr[esp]
+	fisub real4 ptr[ebx]
+	fsubr st(0), st(2)
+	fsubr st(1), st(0)
+	fsubr real4 ptr[ebx]
+	fsubr real8 ptr[edx]
+	fsubrp 
+	fsubrp st(1), st(0)
+	fisubr word ptr[esp]
+	fisubr real4 ptr[ebx]
+	ftst 
+	fucom 
+	fucom st(1)
+	fucomp 
+	fucomp st(1)
+	fucompp 
+	fucomi st(0), st(2)
+	fucomip st(0), st(2)
+	fwait 
+	fxam 
+	fxch 
+	fxch st(1)
+	fxrstor [esp]
+	fxsave [esp]
+	fxtract 
+	fyl2x 
+	fyl2xp1 
+masm_test_fpu endp
 
 ;----------------------------------------
 ; MMX
