@@ -2058,11 +2058,15 @@ masm_test_sse4_2 proc
 	crc32 eax, ecx
 	crc32 eax, dword ptr[esi]
 	pcmpestri xmm2, xmm1, 0
+	pcmpestri xmm2, xmmword ptr[esi], 0
 	pcmpestrm xmm2, xmm1, 1
+	pcmpestrm xmm2, xmmword ptr[esi], 1
 	pcmpistri xmm2, xmm1, 0
+	pcmpistri xmm2, xmmword ptr[esi], 0
 	pcmpistrm xmm2, xmm1, 1
+	pcmpistrm xmm2, xmmword ptr[esi], 1
 	pcmpgtq xmm0, xmm1
-	pcmpgtq xmm0, xmm1
+	pcmpgtq xmm0, xmmword ptr[esi]
 	popcnt ax, cx
 	popcnt bx, word ptr[esi]
 	popcnt eax, ecx
