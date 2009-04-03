@@ -399,7 +399,8 @@ enum InstrID
 {
 	I_ADC, I_ADD, I_AND,
 	I_BSF, I_BSR, I_BSWAP, I_BT, I_BTC, I_BTR, I_BTS,
-	I_CALL, I_CBW, I_CLC, I_CLD, I_CLI, I_CLTS, I_CMC, I_CMOVCC, I_CMP, I_CMPXCHG, I_CMPXCHG8B, I_CMPXCHG16B, I_CPUID, I_CWD, I_CDQ, I_CQO,
+	I_CALL, I_CBW, I_CLC, I_CLD, I_CLI, I_CLTS, I_CMC, I_CMOVCC, I_CMP, I_CMPS_B, I_CMPS_W, I_CMPS_D, I_CMPS_Q, I_CMPXCHG,
+	I_CMPXCHG8B, I_CMPXCHG16B, I_CPUID, I_CWD, I_CDQ, I_CQO,
 	I_DEC, I_DIV,
 	I_ENTER,
 	I_HLT,
@@ -1587,7 +1588,12 @@ struct Frontend
 	void cmp(const Mem64& dst, const Reg64& src)	{AppendInstr(I_CMP, 0x39, E_REXW_PREFIX, src, dst);}
 	void cmp(const Reg64& dst, const Mem64& src)	{AppendInstr(I_CMP, 0x3B, E_REXW_PREFIX, dst, src);}
 #endif
-	//cmps
+	void cmpsb()		{AppendInstr(I_CMPS_B, 0xA6, 0);}
+	void cmpsw()		{AppendInstr(I_CMPS_W, 0xA7, E_OPERAND_SIZE_PREFIX);}
+	void cmpsd()		{AppendInstr(I_CMPS_D, 0xA7, 0);}
+#ifdef JITASM64
+	void cmpsq()		{AppendInstr(I_CMPS_Q, 0xA7, E_REXW_PREFIX);}
+#endif
 	void cmpxchg(const Reg8& dst, const Reg8& src)		{AppendInstr(I_CMPXCHG, 0x0FB0, 0, src, dst);}
 	void cmpxchg(const Mem8& dst, const Reg8& src)		{AppendInstr(I_CMPXCHG, 0x0FB0, 0, src, dst);}
 	void cmpxchg(const Reg16& dst, const Reg16& src)	{AppendInstr(I_CMPXCHG, 0x0FB1, E_OPERAND_SIZE_PREFIX, src, dst);}
