@@ -1162,6 +1162,10 @@ masm_test_movs proc
 	rep stosd 
 	stosq 
 	rep stosq 
+	cmpsb 
+	cmpsw 
+	cmpsd 
+	cmpsq 
 masm_test_movs endp
 
 ;----------------------------------------

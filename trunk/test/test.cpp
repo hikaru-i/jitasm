@@ -1471,6 +1471,12 @@ struct test_movs : jitasm::function<void>
 		stosq();
 		rep_stosq();
 #endif
+		cmpsb();
+		cmpsw();
+		cmpsd();
+#ifdef JITASM64
+		cmpsq();
+#endif
 	}
 };
 
