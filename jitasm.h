@@ -35,7 +35,6 @@
 #include <string>
 #include <deque>
 #include <vector>
-#include <set>
 #include <assert.h>
 
 #pragma warning( push )
@@ -63,7 +62,6 @@ typedef unsigned __int32	uint32;
 typedef unsigned __int64	uint64;
 
 template<typename T> inline void avoid_unused_warn(const T&) {}
-template<typename T, typename U> inline void avoid_unused_warn(const T&, const U&) {}
 
 /// Operand type
 enum OpdType
@@ -400,8 +398,7 @@ enum InstrID
 {
 	I_ADC, I_ADD, I_AND,
 	I_BSF, I_BSR, I_BSWAP, I_BT, I_BTC, I_BTR, I_BTS,
-	I_CALL, I_CBW, I_CLC, I_CLD, I_CLI, I_CLTS, I_CMC, I_CMOVCC, I_CMP, I_CMPS_B, I_CMPS_W, I_CMPS_D, I_CMPS_Q, I_CMPXCHG,
-	I_CMPXCHG8B, I_CMPXCHG16B, I_CPUID, I_CWD, I_CDQ, I_CQO,
+	I_CALL, I_CBW, I_CLC, I_CLD, I_CLI, I_CLTS, I_CMC, I_CMOVCC, I_CMP, I_CMPXCHG, I_CMPXCHG8B, I_CMPXCHG16B, I_CPUID, I_CWD, I_CDQ, I_CQO,
 	I_DEC, I_DIV,
 	I_ENTER,
 	I_HLT,
@@ -826,11 +823,6 @@ namespace detail
 		return x & 0x0000003F;
 	}
 
-	template<class It> It next(const It &it) {
-		It next = it;
-		return ++next;
-	}
-
 	class CodeBuffer
 	{
 		void*	pbuff_;
@@ -1055,12 +1047,6 @@ struct Frontend
 		return id == I_JMP || id == I_JCC || id == I_LOOP;
 	}
 
-	size_t GetJumpTo(const Instr& instr) const
-	{
-		size_t label_id = (size_t) instr.GetOpd(0).GetImm();
-		return labels_[label_id].instr_number;
-	}
-
 	// TODO: Return an error when there is no destination.
 	void ResolveJump()
 	{
@@ -1068,7 +1054,8 @@ struct Frontend
 		for (InstrList::iterator it = instrs_.begin(); it != instrs_.end(); ++it) {
 			Instr& instr = *it;
 			if (IsJump(instr.GetID())) {
-				instr = Instr(instr.GetID(), instr.opcode_, instr.encoding_flag_, Imm8(0x7F), Imm64(GetJumpTo(instr)));	// Opd(0) = max value in sint8, Opd(1) = instruction number
+				size_t label_id = (size_t) instr.GetOpd(0).GetImm();
+				instr = Instr(instr.GetID(), instr.opcode_, instr.encoding_flag_, Imm8(0x7F), Imm64(labels_[label_id].instr_number));	// Opd(0) = max value in sint8, Opd(1) = instruction number
 			}
 		}
 
@@ -1138,10 +1125,6 @@ struct Frontend
 		labels_.clear();
 		instrs_.reserve(128);
 		naked_main();
-
-		//ControlFlowGraph cfg;
-		//BuildControlFlowGraph(cfg);
-		//cfg.dump_dot();
 
 		// Resolve jump instructions
 		if (!labels_.empty()) {
@@ -1589,12 +1572,7 @@ struct Frontend
 	void cmp(const Mem64& dst, const Reg64& src)	{AppendInstr(I_CMP, 0x39, E_REXW_PREFIX, src, dst);}
 	void cmp(const Reg64& dst, const Mem64& src)	{AppendInstr(I_CMP, 0x3B, E_REXW_PREFIX, dst, src);}
 #endif
-	void cmpsb()		{AppendInstr(I_CMPS_B, 0xA6, 0);}
-	void cmpsw()		{AppendInstr(I_CMPS_W, 0xA7, E_OPERAND_SIZE_PREFIX);}
-	void cmpsd()		{AppendInstr(I_CMPS_D, 0xA7, 0);}
-#ifdef JITASM64
-	void cmpsq()		{AppendInstr(I_CMPS_Q, 0xA7, E_REXW_PREFIX);}
-#endif
+	//cmps
 	void cmpxchg(const Reg8& dst, const Reg8& src)		{AppendInstr(I_CMPXCHG, 0x0FB0, 0, src, dst);}
 	void cmpxchg(const Mem8& dst, const Reg8& src)		{AppendInstr(I_CMPXCHG, 0x0FB0, 0, src, dst);}
 	void cmpxchg(const Reg16& dst, const Reg16& src)	{AppendInstr(I_CMPXCHG, 0x0FB1, E_OPERAND_SIZE_PREFIX, src, dst);}
@@ -1675,12 +1653,12 @@ struct Frontend
 	void imul(const Reg64& dst, const Mem64& src, const Imm32& imm)	{AppendInstr(I_IMUL, detail::IsInt8(imm.GetImm()) ? 0x6B : 0x69, E_REXW_PREFIX, dst, src, detail::ImmXor8(imm));}
 	void imul(const Reg64& dst, const Imm32& imm)					{imul(dst, dst, imm);}
 #endif
-	void in(const Reg8_al& dst, const Imm8& src)		{AppendInstr(I_IN, 0xE4, 0, src); avoid_unused_warn(dst);}
-	void in(const Reg16_ax& dst, const Imm8& src)		{AppendInstr(I_IN, 0xE5, E_OPERAND_SIZE_PREFIX, src); avoid_unused_warn(dst);}
-	void in(const Reg32_eax& dst, const Imm8& src)		{AppendInstr(I_IN, 0xE5, 0, src); avoid_unused_warn(dst);}
-	void in(const Reg8_al& dst, const Reg16_dx& src)	{AppendInstr(I_IN, 0xEC, 0); avoid_unused_warn(dst, src);}
-	void in(const Reg16_ax& dst, const Reg16_dx& src)	{AppendInstr(I_IN, 0xED, E_OPERAND_SIZE_PREFIX); avoid_unused_warn(dst, src);}
-	void in(const Reg32_eax& dst, const Reg16_dx& src)	{AppendInstr(I_IN, 0xED, 0); avoid_unused_warn(dst, src);}
+	void in(const Reg8_al& dst, const Imm8& src)		{AppendInstr(I_IN, 0xE4, 0, src);}
+	void in(const Reg16_ax& dst, const Imm8& src)		{AppendInstr(I_IN, 0xE5, E_OPERAND_SIZE_PREFIX, src);}
+	void in(const Reg32_eax& dst, const Imm8& src)		{AppendInstr(I_IN, 0xE5, 0, src);}
+	void in(const Reg8_al& dst, const Reg16_dx& src)	{AppendInstr(I_IN, 0xEC, 0);}
+	void in(const Reg16_ax& dst, const Reg16_dx& src)	{AppendInstr(I_IN, 0xED, E_OPERAND_SIZE_PREFIX);}
+	void in(const Reg32_eax& dst, const Reg16_dx& src)	{AppendInstr(I_IN, 0xED, 0);}
 	void inc(const Reg8& dst)	{AppendInstr(I_INC, 0xFE, 0, Imm8(0), dst);}
 	void inc(const Mem8& dst)	{AppendInstr(I_INC, 0xFE, 0, Imm8(0), dst);}
 	void inc(const Mem16& dst)	{AppendInstr(I_INC, 0xFF, E_OPERAND_SIZE_PREFIX, Imm8(0), dst);}
@@ -1918,12 +1896,12 @@ struct Frontend
 	void or(const Mem64& dst, const Reg64& src)	{AppendInstr(I_OR, 0x09, E_REXW_PREFIX, src, dst);}
 	void or(const Reg64& dst, const Mem64& src)	{AppendInstr(I_OR, 0x0B, E_REXW_PREFIX, dst, src);}
 #endif
-	void out(const Imm8& dst, const Reg8_al& src)		{AppendInstr(I_OUT, 0xE6, 0, dst); avoid_unused_warn(src);}
-	void out(const Imm8& dst, const Reg16_ax& src)		{AppendInstr(I_OUT, 0xE7, E_OPERAND_SIZE_PREFIX, dst); avoid_unused_warn(src);}
-	void out(const Imm8& dst, const Reg32_eax& src)		{AppendInstr(I_OUT, 0xE7, 0, dst); avoid_unused_warn(src);}
-	void out(const Reg16_dx& dst, const Reg8_al& src)	{AppendInstr(I_OUT, 0xEE, 0); avoid_unused_warn(dst, src);}
-	void out(const Reg16_dx& dst, const Reg16_ax& src)	{AppendInstr(I_OUT, 0xEF, E_OPERAND_SIZE_PREFIX); avoid_unused_warn(dst, src);}
-	void out(const Reg16_dx& dst, const Reg32_eax& src)	{AppendInstr(I_OUT, 0xEF, 0); avoid_unused_warn(dst, src);}
+	void out(const Imm8& dst, const Reg8_al& src)		{AppendInstr(I_OUT, 0xE6, 0, dst);}
+	void out(const Imm8& dst, const Reg16_ax& src)		{AppendInstr(I_OUT, 0xE7, E_OPERAND_SIZE_PREFIX, dst);}
+	void out(const Imm8& dst, const Reg32_eax& src)		{AppendInstr(I_OUT, 0xE7, 0, dst);}
+	void out(const Reg16_dx& dst, const Reg8_al& src)	{AppendInstr(I_OUT, 0xEE, 0);}
+	void out(const Reg16_dx& dst, const Reg16_ax& src)	{AppendInstr(I_OUT, 0xEF, E_OPERAND_SIZE_PREFIX);}
+	void out(const Reg16_dx& dst, const Reg32_eax& src)	{AppendInstr(I_OUT, 0xEF, 0);}
 	void outsb()		{AppendInstr(I_OUTS_B, 0x6E, 0);}
 	void outsw()		{AppendInstr(I_OUTS_W, 0x6F, E_OPERAND_SIZE_PREFIX);}
 	void outsd()		{AppendInstr(I_OUTS_D, 0x6F, 0);}
@@ -2300,14 +2278,14 @@ struct Frontend
 	void fchs()		{AppendInstr(I_FCHS, 0xD9E0, 0);}
 	void fclex()	{AppendInstr(I_FCLEX, 0x9BDBE2, 0);}
 	void fnclex()	{AppendInstr(I_FNCLEX, 0xDBE2, 0);}
-	void fcmovb(const FpuReg_st0& dst, const FpuReg& src)	{AppendInstr(I_FCMOVCC, 0xDAC0, 0, src); avoid_unused_warn(dst);}
-	void fcmovbe(const FpuReg_st0& dst, const FpuReg& src)	{AppendInstr(I_FCMOVCC, 0xDAD0, 0, src); avoid_unused_warn(dst);}
-	void fcmove(const FpuReg_st0& dst, const FpuReg& src)	{AppendInstr(I_FCMOVCC, 0xDAC8, 0, src); avoid_unused_warn(dst);}
-	void fcmovnb(const FpuReg_st0& dst, const FpuReg& src)	{AppendInstr(I_FCMOVCC, 0xDBC0, 0, src); avoid_unused_warn(dst);}
-	void fcmovnbe(const FpuReg_st0& dst, const FpuReg& src)	{AppendInstr(I_FCMOVCC, 0xDBD0, 0, src); avoid_unused_warn(dst);}
-	void fcmovne(const FpuReg_st0& dst, const FpuReg& src)	{AppendInstr(I_FCMOVCC, 0xDBC8, 0, src); avoid_unused_warn(dst);}
-	void fcmovnu(const FpuReg_st0& dst, const FpuReg& src)	{AppendInstr(I_FCMOVCC, 0xDBD8, 0, src); avoid_unused_warn(dst);}
-	void fcmovu(const FpuReg_st0& dst, const FpuReg& src)	{AppendInstr(I_FCMOVCC, 0xDAD8, 0, src); avoid_unused_warn(dst);}
+	void fcmovb(const FpuReg_st0& dst, const FpuReg& src)	{AppendInstr(I_FCMOVCC, 0xDAC0, 0, src);}
+	void fcmovbe(const FpuReg_st0& dst, const FpuReg& src)	{AppendInstr(I_FCMOVCC, 0xDAD0, 0, src);}
+	void fcmove(const FpuReg_st0& dst, const FpuReg& src)	{AppendInstr(I_FCMOVCC, 0xDAC8, 0, src);}
+	void fcmovnb(const FpuReg_st0& dst, const FpuReg& src)	{AppendInstr(I_FCMOVCC, 0xDBC0, 0, src);}
+	void fcmovnbe(const FpuReg_st0& dst, const FpuReg& src)	{AppendInstr(I_FCMOVCC, 0xDBD0, 0, src);}
+	void fcmovne(const FpuReg_st0& dst, const FpuReg& src)	{AppendInstr(I_FCMOVCC, 0xDBC8, 0, src);}
+	void fcmovnu(const FpuReg_st0& dst, const FpuReg& src)	{AppendInstr(I_FCMOVCC, 0xDBD8, 0, src);}
+	void fcmovu(const FpuReg_st0& dst, const FpuReg& src)	{AppendInstr(I_FCMOVCC, 0xDAD8, 0, src);}
 	void fcom()												{AppendInstr(I_FCOM, 0xD8D1, 0);}
 	void fcom(const FpuReg& dst)							{AppendInstr(I_FCOM, 0xD8D0, 0, dst);}
 	void fcom(const Mem32& dst)								{AppendInstr(I_FCOM, 0xD8, 0, Imm8(2), dst);}
@@ -2402,7 +2380,7 @@ struct Frontend
 	void fstenv(const Mem224& dst)	{AppendInstr(I_FSTENV, 0x9BD9, 0, Imm8(6), dst);}
 	void fnstenv(const Mem224& dst)	{AppendInstr(I_FNSTENV, 0xD9, 0, Imm8(6), dst);}
 	void fstsw(const Mem16& dst)		{AppendInstr(I_FSTSW, 0x9BDD, 0, Imm8(7), dst);}
-	void fstsw(const Reg16_ax& dst)		{AppendInstr(I_FSTSW, 0x9BDFE0, 0); avoid_unused_warn(dst);}
+	void fstsw(const Reg16_ax& dst)		{AppendInstr(I_FSTSW, 0x9BDFE0, 0);}
 	void fnstsw(const Mem16& dst)		{AppendInstr(I_FNSTSW, 0xDD, 0, Imm8(7), dst);}
 	void fnstsw(const Reg16_ax& dst)	{AppendInstr(I_FNSTSW, 0xDFE0, 0); avoid_unused_warn(dst);}
 	void fsub(const FpuReg_st0& dst, const FpuReg& src)		{AppendInstr(I_FSUB, 0xD8E0, 0, src); avoid_unused_warn(dst);}
@@ -3365,115 +3343,6 @@ struct Frontend
 
 		ctrl_state_ = *ctrl_state_stack_.rbegin();
 		ctrl_state_stack_.pop_back();
-	}
-
-	// Compiler
-
-	struct BasicBlock
-	{
-		BasicBlock *successor_[2];
-		size_t instr_begin_;		// index of begin of the range
-		size_t instr_end_;			// next index of end of the range
-
-		BasicBlock(size_t instr_begin, size_t instr_end, BasicBlock *successor0 = NULL, BasicBlock *successor1 = NULL) : instr_begin_(instr_begin), instr_end_(instr_end) {
-			successor_[0] = successor0;
-			successor_[1] = successor1;
-		}
-
-		bool operator<(const BasicBlock& rhs) const {
-			return instr_begin_ < rhs.instr_begin_;
-		}
-	};
-
-	class ControlFlowGraph
-	{
-	public:
-		typedef std::set<BasicBlock> BlockList;
-
-	private:
-		BlockList blocks_;
-
-	public:
-		BlockList::iterator initialize(size_t num_of_instructions) {
-			blocks_.clear();
-			BlockList::iterator enter_block = blocks_.insert(BasicBlock(0, num_of_instructions)).first;
-			blocks_.insert(BasicBlock(num_of_instructions, num_of_instructions));	// exit block
-			return enter_block;
-		}
-
-		BlockList::iterator split(BlockList::iterator target_block, size_t instr_idx) {
-			if (target_block->instr_begin_ == instr_idx)
-				return target_block;
-
-			BlockList::iterator new_block = blocks_.insert(detail::next(target_block), BasicBlock(instr_idx, target_block->instr_end_));
-			ASSERT(detail::next(target_block) == new_block);
-			new_block->successor_[0] = target_block->successor_[0];
-			new_block->successor_[1] = target_block->successor_[1];
-			target_block->successor_[0] = &*new_block;
-			target_block->successor_[1] = NULL;
-			target_block->instr_end_ = instr_idx;
-			return new_block;
-		}
-
-		BlockList::iterator get_block(size_t instr_idx) {
-			BlockList::iterator it = blocks_.upper_bound(BasicBlock(instr_idx, instr_idx));
-			return it != blocks_.begin() ? --it : blocks_.end();
-		}
-
-		BlockList::iterator get_exit_block() {
-			BlockList::iterator it = blocks_.end();
-			return --it;
-		}
-
-		void dump_dot() const
-		{
-			printf("digraph CFG {\n");
-			for (BlockList::const_iterator it = blocks_.begin(); it != blocks_.end(); ++it) {
-				printf("\tBlock%d\n", it->instr_begin_);
-				if (it->successor_[0]) printf("\tBlock%d -> Block%d\n", it->instr_begin_, it->successor_[0]->instr_begin_);
-				if (it->successor_[1]) printf("\tBlock%d -> Block%d\n", it->instr_begin_, it->successor_[1]->instr_begin_);
-			}
-			printf("}\n");
-		}
-	};
-
-	void BuildControlFlowGraph(ControlFlowGraph &cfg) const
-	{
-		typedef ControlFlowGraph::BlockList::iterator BlockIterator;
-		BlockIterator cur_block = cfg.initialize(instrs_.size());
-		for (InstrList::const_iterator it = instrs_.begin(); it != instrs_.end(); ++it) {
-			InstrID instr_id = it->GetID();
-			if (IsJump(instr_id) || instr_id == I_RET || instr_id == I_IRET) {
-				// jump instruction always terminate basic block
-				const size_t instr_idx = std::distance(instrs_.begin(), it);
-				BlockIterator next_block;
-				if (instr_idx + 1 < cur_block->instr_end_) {
-					// split basic block
-					next_block = cfg.split(cur_block, instr_idx + 1);
-				}
-				else {
-					// already splitted
-					next_block = detail::next(cur_block);
-				}
-
-				if (instr_id == I_RET || instr_id == I_IRET) {
-					cur_block->successor_[0] = &*cfg.get_exit_block();
-				}
-				else {
-					const size_t jump_to = GetJumpTo(*it);	// jump target instruction index
-					BlockIterator jump_target = cfg.split(cfg.get_block(jump_to), jump_to);
-					if (instr_id == I_JMP) {
-						cur_block->successor_[0] = &*jump_target;
-					}
-					else {
-						ASSERT(instr_id == I_JCC || instr_id == I_LOOP);
-						cur_block->successor_[1] = &*jump_target;
-					}
-				}
-
-				cur_block = next_block;
-			}
-		}
 	}
 };
 
