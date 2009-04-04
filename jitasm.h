@@ -35,7 +35,6 @@
 #include <string>
 #include <deque>
 #include <vector>
-#include <set>
 #include <assert.h>
 
 #pragma warning( push )
@@ -826,11 +825,6 @@ namespace detail
 		return x & 0x0000003F;
 	}
 
-	template<class It> It next(const It &it) {
-		It next = it;
-		return ++next;
-	}
-
 	class CodeBuffer
 	{
 		void*	pbuff_;
@@ -1055,12 +1049,6 @@ struct Frontend
 		return id == I_JMP || id == I_JCC || id == I_LOOP;
 	}
 
-	size_t GetJumpTo(const Instr& instr) const
-	{
-		size_t label_id = (size_t) instr.GetOpd(0).GetImm();
-		return labels_[label_id].instr_number;
-	}
-
 	// TODO: Return an error when there is no destination.
 	void ResolveJump()
 	{
@@ -1068,7 +1056,8 @@ struct Frontend
 		for (InstrList::iterator it = instrs_.begin(); it != instrs_.end(); ++it) {
 			Instr& instr = *it;
 			if (IsJump(instr.GetID())) {
-				instr = Instr(instr.GetID(), instr.opcode_, instr.encoding_flag_, Imm8(0x7F), Imm64(GetJumpTo(instr)));	// Opd(0) = max value in sint8, Opd(1) = instruction number
+				size_t label_id = (size_t) instr.GetOpd(0).GetImm();
+				instr = Instr(instr.GetID(), instr.opcode_, instr.encoding_flag_, Imm8(0x7F), Imm64(labels_[label_id].instr_number));	// Opd(0) = max value in sint8, Opd(1) = instruction number
 			}
 		}
 
@@ -1138,10 +1127,6 @@ struct Frontend
 		labels_.clear();
 		instrs_.reserve(128);
 		naked_main();
-
-		//ControlFlowGraph cfg;
-		//BuildControlFlowGraph(cfg);
-		//cfg.dump_dot();
 
 		// Resolve jump instructions
 		if (!labels_.empty()) {
@@ -3365,115 +3350,6 @@ struct Frontend
 
 		ctrl_state_ = *ctrl_state_stack_.rbegin();
 		ctrl_state_stack_.pop_back();
-	}
-
-	// Compiler
-
-	struct BasicBlock
-	{
-		BasicBlock *successor_[2];
-		size_t instr_begin_;		// index of begin of the range
-		size_t instr_end_;			// next index of end of the range
-
-		BasicBlock(size_t instr_begin, size_t instr_end, BasicBlock *successor0 = NULL, BasicBlock *successor1 = NULL) : instr_begin_(instr_begin), instr_end_(instr_end) {
-			successor_[0] = successor0;
-			successor_[1] = successor1;
-		}
-
-		bool operator<(const BasicBlock& rhs) const {
-			return instr_begin_ < rhs.instr_begin_;
-		}
-	};
-
-	class ControlFlowGraph
-	{
-	public:
-		typedef std::set<BasicBlock> BlockList;
-
-	private:
-		BlockList blocks_;
-
-	public:
-		BlockList::iterator initialize(size_t num_of_instructions) {
-			blocks_.clear();
-			BlockList::iterator enter_block = blocks_.insert(BasicBlock(0, num_of_instructions)).first;
-			blocks_.insert(BasicBlock(num_of_instructions, num_of_instructions));	// exit block
-			return enter_block;
-		}
-
-		BlockList::iterator split(BlockList::iterator target_block, size_t instr_idx) {
-			if (target_block->instr_begin_ == instr_idx)
-				return target_block;
-
-			BlockList::iterator new_block = blocks_.insert(detail::next(target_block), BasicBlock(instr_idx, target_block->instr_end_));
-			ASSERT(detail::next(target_block) == new_block);
-			new_block->successor_[0] = target_block->successor_[0];
-			new_block->successor_[1] = target_block->successor_[1];
-			target_block->successor_[0] = &*new_block;
-			target_block->successor_[1] = NULL;
-			target_block->instr_end_ = instr_idx;
-			return new_block;
-		}
-
-		BlockList::iterator get_block(size_t instr_idx) {
-			BlockList::iterator it = blocks_.upper_bound(BasicBlock(instr_idx, instr_idx));
-			return it != blocks_.begin() ? --it : blocks_.end();
-		}
-
-		BlockList::iterator get_exit_block() {
-			BlockList::iterator it = blocks_.end();
-			return --it;
-		}
-
-		void dump_dot() const
-		{
-			printf("digraph CFG {\n");
-			for (BlockList::const_iterator it = blocks_.begin(); it != blocks_.end(); ++it) {
-				printf("\tBlock%d\n", it->instr_begin_);
-				if (it->successor_[0]) printf("\tBlock%d -> Block%d\n", it->instr_begin_, it->successor_[0]->instr_begin_);
-				if (it->successor_[1]) printf("\tBlock%d -> Block%d\n", it->instr_begin_, it->successor_[1]->instr_begin_);
-			}
-			printf("}\n");
-		}
-	};
-
-	void BuildControlFlowGraph(ControlFlowGraph &cfg) const
-	{
-		typedef ControlFlowGraph::BlockList::iterator BlockIterator;
-		BlockIterator cur_block = cfg.initialize(instrs_.size());
-		for (InstrList::const_iterator it = instrs_.begin(); it != instrs_.end(); ++it) {
-			InstrID instr_id = it->GetID();
-			if (IsJump(instr_id) || instr_id == I_RET || instr_id == I_IRET) {
-				// jump instruction always terminate basic block
-				const size_t instr_idx = std::distance(instrs_.begin(), it);
-				BlockIterator next_block;
-				if (instr_idx + 1 < cur_block->instr_end_) {
-					// split basic block
-					next_block = cfg.split(cur_block, instr_idx + 1);
-				}
-				else {
-					// already splitted
-					next_block = detail::next(cur_block);
-				}
-
-				if (instr_id == I_RET || instr_id == I_IRET) {
-					cur_block->successor_[0] = &*cfg.get_exit_block();
-				}
-				else {
-					const size_t jump_to = GetJumpTo(*it);	// jump target instruction index
-					BlockIterator jump_target = cfg.split(cfg.get_block(jump_to), jump_to);
-					if (instr_id == I_JMP) {
-						cur_block->successor_[0] = &*jump_target;
-					}
-					else {
-						ASSERT(instr_id == I_JCC || instr_id == I_LOOP);
-						cur_block->successor_[1] = &*jump_target;
-					}
-				}
-
-				cur_block = next_block;
-			}
-		}
 	}
 };
 
