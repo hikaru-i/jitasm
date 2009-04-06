@@ -65,6 +65,77 @@ typedef unsigned __int64	uint64;
 template<typename T> inline void avoid_unused_warn(const T&) {}
 template<typename T, typename U> inline void avoid_unused_warn(const T&, const U&) {}
 
+namespace detail
+{
+	inline long interlocked_increment(long *addend)				{ return ::InterlockedIncrement(addend); }
+	inline long interlocked_decrement(long *addend)				{ return ::InterlockedDecrement(addend); }
+	inline long interlocked_exchange(long *target, long value)	{ return ::InterlockedExchange(target, value); }
+}	// namespace detail
+
+/// Physical register ID
+enum PhysicalRegID
+{
+	INVALID=-1,
+
+	EAX=0, ECX, EDX, EBX, ESP, EBP, ESI, EDI,
+	AL=0, CL, DL, BL, AH, CH, DH, BH,
+	AX=0, CX, DX, BX, SP, BP, SI, DI,
+	RAX=0, RCX, RDX, RBX, RSP, RBP, RSI, RDI,
+
+	R8=0x10, R9, R10, R11, R12, R13, R14, R15,
+	R8B=0x10, R9B, R10B, R11B, R12B, R13B, R14B, R15B,
+	R8W=0x10, R9W, R10W, R11W, R12W, R13W, R14W, R15W,
+	R8D=0x10, R9D, R10D, R11D, R12D, R13D, R14D, R15D,
+
+	ST0=0x100, ST1, ST2, ST3, ST4, ST5, ST6, ST7,
+
+	MM0=0x200, MM1, MM2, MM3, MM4, MM5, MM6, MM7,
+	XMM0=0x300, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7,
+	XMM8=0x310, XMM9, XMM10, XMM11, XMM12, XMM13, XMM14, XMM15,
+};
+
+/// Register type
+enum RegType
+{
+	R_TYPE_GP,				///< General purpose register
+	R_TYPE_FPU,				///< FPU register
+	R_TYPE_MMX,				///< MMX register
+	R_TYPE_XMM,				///< XMM register
+	R_TYPE_SYMBOLIC_GP,		///< Symbolic general purpose register
+	R_TYPE_SYMBOLIC_MMX,	///< Symbolic MMX register
+	R_TYPE_SYMBOLIC_XMM		///< Symbolic XMM register
+};
+
+/// Register identifier
+struct RegID
+{
+	RegType type_;
+	int id_;		///< PhysicalRegID or symbolic register id
+
+	bool IsInvalid() const	{return type_ == R_TYPE_GP && id_ == INVALID;}
+	bool IsSymbolic() const {return type_ == R_TYPE_SYMBOLIC_GP || type_ == R_TYPE_SYMBOLIC_MMX || type_ == R_TYPE_SYMBOLIC_XMM;}
+
+	static RegID InvalidRegID() {
+		RegID reg;
+		reg.type_ = R_TYPE_GP;
+		reg.id_ = INVALID;
+		return reg;
+	}
+	static RegID CreatePhysicalRegID(RegType type, PhysicalRegID id) {
+		RegID reg;
+		reg.type_ = type;
+		reg.id_ = id;
+		return reg;
+	}
+	static RegID CreateSymbolicRegID(RegType type) {
+		static long s_id = 0;
+		RegID reg;
+		reg.type_ = type;
+		reg.id_ = static_cast<int>(detail::interlocked_increment(&s_id));
+		return reg;
+	}
+};
+
 /// Operand type
 enum OpdType
 {
@@ -86,28 +157,6 @@ enum OpdSize
 	O_SIZE_224 = 224,
 	O_SIZE_864 = 864,
 	O_SIZE_4096 = 4096,
-};
-
-/// Register ID
-enum RegID
-{
-	INVALID=-1,
-
-	EAX=0, ECX, EDX, EBX, ESP, EBP, ESI, EDI,
-	AL=0, CL, DL, BL, AH, CH, DH, BH,
-	AX=0, CX, DX, BX, SP, BP, SI, DI,
-	RAX=0, RCX, RDX, RBX, RSP, RBP, RSI, RDI,
-
-	R8=0x10, R9, R10, R11, R12, R13, R14, R15,
-	R8B=0x10, R9B, R10B, R11B, R12B, R13B, R14B, R15B,
-	R8W=0x10, R9W, R10W, R11W, R12W, R13W, R14W, R15W,
-	R8D=0x10, R9D, R10D, R11D, R12D, R13D, R14D, R15D,
-
-	ST0=0x100, ST1, ST2, ST3, ST4, ST5, ST6, ST7,
-
-	MM0=0x200, MM1, MM2, MM3, MM4, MM5, MM6, MM7,
-	XMM0=0x300, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7,
-	XMM8=0x310, XMM9, XMM10, XMM11, XMM12, XMM13, XMM14, XMM15,
 };
 
 /// Operand base class
@@ -134,7 +183,7 @@ struct Opd
 	/// NONE
 	Opd() : opdtype_(O_TYPE_NONE) {}
 	/// REG
-	explicit Opd(OpdSize opdsize, RegID reg) : opdtype_(O_TYPE_REG), opdsize_(opdsize), reg_(reg) {}
+	Opd(OpdSize opdsize, const RegID& reg) : opdtype_(O_TYPE_REG), opdsize_(opdsize), reg_(reg) {}
 	/// MEM
 	Opd(OpdSize opdsize, OpdSize addrsize, RegID base, RegID index, sint64 scale, sint64 disp)
 		: opdtype_(O_TYPE_MEM), opdsize_(opdsize), addrsize_(addrsize), base_(base), index_(index), scale_(scale), disp_(disp) {}
@@ -143,34 +192,32 @@ protected:
 	explicit Opd(OpdSize opdsize, sint64 imm) : opdtype_(O_TYPE_IMM), opdsize_(opdsize), imm_(imm) {}
 
 public:
-	bool	IsNone() const	{return opdtype_ == O_TYPE_NONE;}
-	bool	IsReg() const	{return opdtype_ == O_TYPE_REG;}
-	bool	IsMem() const	{return opdtype_ == O_TYPE_MEM;}
-	bool	IsImm() const	{return opdtype_ == O_TYPE_IMM;}
+	bool	IsNone() const		{return opdtype_ == O_TYPE_NONE;}
+	bool	IsReg() const		{return opdtype_ == O_TYPE_REG;}
+	bool	IsGpReg() const		{return opdtype_ == O_TYPE_REG && reg_.type_ == R_TYPE_GP;}
+	bool	IsFpuReg() const	{return opdtype_ == O_TYPE_REG && reg_.type_ == R_TYPE_FPU;}
+	bool	IsMmxReg() const	{return opdtype_ == O_TYPE_REG && reg_.type_ == R_TYPE_MMX;}
+	bool	IsXmmReg() const	{return opdtype_ == O_TYPE_REG && reg_.type_ == R_TYPE_XMM;}
+	bool	IsMem() const		{return opdtype_ == O_TYPE_MEM;}
+	bool	IsImm() const		{return opdtype_ == O_TYPE_IMM;}
 
-	OpdSize	GetSize() const		{return opdsize_;}
-	OpdSize	GetAddressSize() const	{return addrsize_;}
-	RegID	GetReg() const		{return reg_;}
-	RegID	GetBase() const		{return base_;}
-	RegID	GetIndex() const	{return index_;}
-	sint64	GetScale() const	{return scale_;}
-	sint64	GetDisp() const		{return disp_;}
-	sint64	GetImm() const		{return imm_;}
+	OpdSize			GetSize() const			{return opdsize_;}
+	OpdSize			GetAddressSize() const	{return addrsize_;}
+	const RegID&	GetReg() const			{return reg_;}
+	const RegID&	GetBase() const			{return base_;}
+	const RegID&	GetIndex() const		{return index_;}
+	sint64			GetScale() const		{return scale_;}
+	sint64			GetDisp() const			{return disp_;}
+	sint64			GetImm() const			{return imm_;}
 };
-
-namespace detail
-{
-	inline bool IsGpReg(const Opd& reg)		{return reg.IsReg() && (reg.GetReg() & 0xF00) == EAX;}
-	inline bool IsFpuReg(const Opd& reg)	{return reg.IsReg() && (reg.GetReg() & 0xF00) == ST0;}
-	inline bool IsMmxReg(const Opd& reg)	{return reg.IsReg() && (reg.GetReg() & 0xF00) == MM0;}
-	inline bool IsXmmReg(const Opd& reg)	{return reg.IsReg() && (reg.GetReg() & 0xF00) == XMM0;}
-}	// namespace detail
 
 template<int Size>
 struct OpdT : Opd
 {
+	/// NONE
+	OpdT() : Opd() {}
 	/// REG
-	explicit OpdT(RegID reg) : Opd(static_cast<OpdSize>(Size), reg) {}
+	explicit OpdT(const RegID& reg) : Opd(static_cast<OpdSize>(Size), reg) {}
 	/// MEM
 	OpdT(OpdSize addrsize, RegID base, RegID index, sint64 scale, sint64 disp)
 		: Opd(static_cast<OpdSize>(Size), addrsize, base, index, scale, disp) {}
@@ -188,20 +235,42 @@ typedef OpdT<O_SIZE_224>	Opd224;		// FPU environment
 typedef OpdT<O_SIZE_864>	Opd864;		// FPU state
 typedef OpdT<O_SIZE_4096>	Opd4096;	// FPU, MMX, XMM, MXCSR state
 
-template<class OpdN>
-struct RegT : OpdN
-{
-	explicit RegT(RegID reg) : OpdN(reg) {}
+/// 8bit general purpose register
+struct Reg8 : Opd8 {
+	Reg8() : Opd8(RegID::CreateSymbolicRegID(R_TYPE_GP)) {}
+	explicit Reg8(PhysicalRegID id) : Opd8(RegID::CreatePhysicalRegID(R_TYPE_GP, id)) {}
 };
-struct Reg8 : Opd8 { explicit Reg8(RegID reg) : Opd8(reg) {} };
-struct Reg16 : Opd16 { explicit Reg16(RegID reg) : Opd16(reg) {} };
-struct Reg32 : Opd32 { explicit Reg32(RegID reg) : Opd32(reg) {} };
+/// 16bit general purpose register
+struct Reg16 : Opd16 {
+	Reg16() : Opd16(RegID::CreateSymbolicRegID(R_TYPE_GP)) {}
+	explicit Reg16(PhysicalRegID id) : Opd16(RegID::CreatePhysicalRegID(R_TYPE_GP, id)) {}
+};
+/// 32bit general purpose register
+struct Reg32 : Opd32 {
+	Reg32() : Opd32(RegID::CreateSymbolicRegID(R_TYPE_GP)) {}
+	explicit Reg32(PhysicalRegID id) : Opd32(RegID::CreatePhysicalRegID(R_TYPE_GP, id)) {}
+};
 #ifdef JITASM64
-struct Reg64 : Opd64 { explicit Reg64(RegID reg) : Opd64(reg) {} };
+/// 64bit general purpose register
+struct Reg64 : Opd64 {
+	Reg64() : Opd64(RegID::CreateSymbolicRegID(R_TYPE_GP)) {}
+	explicit Reg64(PhysicalRegID id) : Opd64(RegID::CreatePhysicalRegID(R_TYPE_GP, id)) {}
+};
 #endif
-struct FpuReg : Opd80 { explicit FpuReg(RegID reg) : Opd80(reg) {} };
-struct MmxReg : Opd64 { explicit MmxReg(RegID reg) : Opd64(reg) {} };
-struct XmmReg : Opd128 { explicit XmmReg(RegID reg) : Opd128(reg) {} };
+/// FPU register
+struct FpuReg : Opd80 {
+	explicit FpuReg(PhysicalRegID id) : Opd80(RegID::CreatePhysicalRegID(R_TYPE_FPU, id)) {}
+};
+/// MMX register
+struct MmxReg : Opd64 {
+	MmxReg() : Opd64(RegID::CreateSymbolicRegID(R_TYPE_MMX)) {}
+	explicit MmxReg(PhysicalRegID id) : Opd64(RegID::CreatePhysicalRegID(R_TYPE_MMX, id)) {}
+};
+/// XMM register
+struct XmmReg : Opd128 {
+	XmmReg() : Opd128(RegID::CreateSymbolicRegID(R_TYPE_XMM)) {}
+	explicit XmmReg(PhysicalRegID id) : Opd128(RegID::CreatePhysicalRegID(R_TYPE_XMM, id)) {}
+};
 
 struct Reg8_al : Reg8 {Reg8_al() : Reg8(AL) {}};
 struct Reg8_cl : Reg8 {Reg8_cl() : Reg8(CL) {}};
@@ -217,7 +286,7 @@ struct XmmReg_xmm0 : XmmReg {XmmReg_xmm0() : XmmReg(XMM0) {}};
 template<class OpdN>
 struct MemT : OpdN
 {
-	MemT(OpdSize addrsize, RegID base, RegID index, sint64 scale, sint64 disp) : OpdN(addrsize, base, index, scale, disp) {}
+	MemT(OpdSize addrsize, const RegID& base, const RegID& index, sint64 scale, sint64 disp) : OpdN(addrsize, base, index, scale, disp) {}
 };
 typedef MemT<Opd8>		Mem8;
 typedef MemT<Opd16>		Mem16;
@@ -261,7 +330,7 @@ struct Reg32Expr
 	RegID reg_;
 	sint64 disp_;
 	Reg32Expr(const Reg32& obj) : reg_(obj.reg_), disp_(0) {}	// implicit
-	Reg32Expr(RegID reg, sint64 disp) : reg_(reg), disp_(disp) {}
+	Reg32Expr(const RegID& reg, sint64 disp) : reg_(reg), disp_(disp) {}
 };
 inline Reg32Expr operator+(const Reg32& lhs, sint64 rhs) {return Reg32Expr(lhs.reg_, rhs);}
 inline Reg32Expr operator+(sint64 lhs, const Reg32& rhs) {return rhs + lhs;}
@@ -275,7 +344,7 @@ struct Reg32ExprBI
 	RegID base_;
 	RegID index_;
 	sint64 disp_;
-	Reg32ExprBI(RegID base, RegID index, sint64 disp) : base_(base), index_(index), disp_(disp) {}
+	Reg32ExprBI(const RegID& base, const RegID& index, sint64 disp) : base_(base), index_(index), disp_(disp) {}
 };
 inline Reg32ExprBI operator+(const Reg32Expr& lhs, const Reg32Expr& rhs) {return Reg32ExprBI(rhs.reg_, lhs.reg_, lhs.disp_ + rhs.disp_);}
 inline Reg32ExprBI operator+(const Reg32ExprBI& lhs, sint64 rhs) {return Reg32ExprBI(lhs.base_, lhs.index_, lhs.disp_ + rhs);}
@@ -287,7 +356,7 @@ struct Reg32ExprSI
 	RegID index_;
 	sint64 scale_;
 	sint64 disp_;
-	Reg32ExprSI(RegID index, sint64 scale, sint64 disp) : index_(index), scale_(scale), disp_(disp) {}
+	Reg32ExprSI(const RegID& index, sint64 scale, sint64 disp) : index_(index), scale_(scale), disp_(disp) {}
 };
 inline Reg32ExprSI operator*(const Reg32& lhs, sint64 rhs) {return Reg32ExprSI(lhs.reg_, rhs, 0);}
 inline Reg32ExprSI operator*(sint64 lhs, const Reg32& rhs) {return rhs * lhs;}
@@ -303,7 +372,7 @@ struct Reg32ExprSIB
 	RegID index_;
 	sint64 scale_;
 	sint64 disp_;
-	Reg32ExprSIB(RegID base, RegID index, sint64 scale, sint64 disp) : base_(base), index_(index), scale_(scale), disp_(disp) {}
+	Reg32ExprSIB(const RegID& base, const RegID& index, sint64 scale, sint64 disp) : base_(base), index_(index), scale_(scale), disp_(disp) {}
 };
 inline Reg32ExprSIB operator+(const Reg32Expr& lhs, const Reg32ExprSI& rhs) {return Reg32ExprSIB(lhs.reg_, rhs.index_, rhs.scale_, lhs.disp_ + rhs.disp_);}
 inline Reg32ExprSIB operator+(const Reg32ExprSI& lhs, const Reg32Expr& rhs) {return rhs + lhs;}
@@ -317,7 +386,7 @@ struct Reg64Expr
 	RegID reg_;
 	sint64 disp_;
 	Reg64Expr(const Reg64& obj) : reg_(obj.reg_), disp_(0) {}	// implicit
-	Reg64Expr(RegID reg, sint64 disp) : reg_(reg), disp_(disp) {}
+	Reg64Expr(const RegID& reg, sint64 disp) : reg_(reg), disp_(disp) {}
 };
 inline Reg64Expr operator+(const Reg64& lhs, sint64 rhs) {return Reg64Expr(lhs.reg_, rhs);}
 inline Reg64Expr operator+(sint64 lhs, const Reg64& rhs) {return rhs + lhs;}
@@ -331,7 +400,7 @@ struct Reg64ExprBI
 	RegID base_;
 	RegID index_;
 	sint64 disp_;
-	Reg64ExprBI(RegID base, RegID index, sint64 disp) : base_(base), index_(index), disp_(disp) {}
+	Reg64ExprBI(const RegID& base, const RegID& index, sint64 disp) : base_(base), index_(index), disp_(disp) {}
 };
 inline Reg64ExprBI operator+(const Reg64Expr& lhs, const Reg64Expr& rhs) {return Reg64ExprBI(rhs.reg_, lhs.reg_, lhs.disp_ + rhs.disp_);}
 inline Reg64ExprBI operator+(const Reg64ExprBI& lhs, sint64 rhs) {return Reg64ExprBI(lhs.base_, lhs.index_, lhs.disp_ + rhs);}
@@ -343,7 +412,7 @@ struct Reg64ExprSI
 	RegID index_;
 	sint64 scale_;
 	sint64 disp_;
-	Reg64ExprSI(RegID index, sint64 scale, sint64 disp) : index_(index), scale_(scale), disp_(disp) {}
+	Reg64ExprSI(const RegID& index, sint64 scale, sint64 disp) : index_(index), scale_(scale), disp_(disp) {}
 };
 inline Reg64ExprSI operator*(const Reg64& lhs, sint64 rhs) {return Reg64ExprSI(lhs.reg_, rhs, 0);}
 inline Reg64ExprSI operator*(sint64 lhs, const Reg64& rhs) {return rhs * lhs;}
@@ -359,7 +428,7 @@ struct Reg64ExprSIB
 	RegID index_;
 	sint64 scale_;
 	sint64 disp_;
-	Reg64ExprSIB(RegID base, RegID index, sint64 scale, sint64 disp) : base_(base), index_(index), scale_(scale), disp_(disp) {}
+	Reg64ExprSIB(const RegID& base, const RegID& index, sint64 scale, sint64 disp) : base_(base), index_(index), scale_(scale), disp_(disp) {}
 };
 inline Reg64ExprSIB operator+(const Reg64Expr& lhs, const Reg64ExprSI& rhs) {return Reg64ExprSIB(lhs.reg_, rhs.index_, rhs.scale_, lhs.disp_ + rhs.disp_);}
 inline Reg64ExprSIB operator+(const Reg64ExprSI& lhs, const Reg64Expr& rhs) {return rhs + lhs;}
@@ -372,23 +441,23 @@ template<typename OpdN>
 struct AddressingPtr
 {
 	// 32bit-Addressing
-	MemT<OpdN> operator[](const Reg32Expr& obj)		{return MemT<OpdN>(O_SIZE_32, obj.reg_, INVALID, 0, obj.disp_);}
+	MemT<OpdN> operator[](const Reg32Expr& obj)		{return MemT<OpdN>(O_SIZE_32, obj.reg_, RegID::InvalidRegID(), 0, obj.disp_);}
 	MemT<OpdN> operator[](const Reg32ExprBI& obj)	{return MemT<OpdN>(O_SIZE_32, obj.base_, obj.index_, 0, obj.disp_);}
-	MemT<OpdN> operator[](const Reg32ExprSI& obj)	{return MemT<OpdN>(O_SIZE_32, INVALID, obj.index_, obj.scale_, obj.disp_);}
+	MemT<OpdN> operator[](const Reg32ExprSI& obj)	{return MemT<OpdN>(O_SIZE_32, RegID::InvalidRegID(), obj.index_, obj.scale_, obj.disp_);}
 	MemT<OpdN> operator[](const Reg32ExprSIB& obj)	{return MemT<OpdN>(O_SIZE_32, obj.base_, obj.index_, obj.scale_, obj.disp_);}
 #ifdef JITASM64
-	MemT<OpdN> operator[](sint32 disp)				{return MemT<OpdN>(O_SIZE_64, INVALID, INVALID, 0, disp);}
-	MemT<OpdN> operator[](uint32 disp)				{return MemT<OpdN>(O_SIZE_64, INVALID, INVALID, 0, (sint32) disp);}
+	MemT<OpdN> operator[](sint32 disp)				{return MemT<OpdN>(O_SIZE_64, RegID::InvalidRegID(), RegID::InvalidRegID(), 0, disp);}
+	MemT<OpdN> operator[](uint32 disp)				{return MemT<OpdN>(O_SIZE_64, RegID::InvalidRegID(), RegID::InvalidRegID(), 0, (sint32) disp);}
 #else
-	MemT<OpdN> operator[](sint32 disp)				{return MemT<OpdN>(O_SIZE_32, INVALID, INVALID, 0, disp);}
-	MemT<OpdN> operator[](uint32 disp)				{return MemT<OpdN>(O_SIZE_32, INVALID, INVALID, 0, (sint32) disp);}
+	MemT<OpdN> operator[](sint32 disp)				{return MemT<OpdN>(O_SIZE_32, RegID::InvalidRegID(), RegID::InvalidRegID(), 0, disp);}
+	MemT<OpdN> operator[](uint32 disp)				{return MemT<OpdN>(O_SIZE_32, RegID::InvalidRegID(), RegID::InvalidRegID(), 0, (sint32) disp);}
 #endif
 
 #ifdef JITASM64
 	// 64bit-Addressing
-	MemT<OpdN> operator[](const Reg64Expr& obj)		{return MemT<OpdN>(O_SIZE_64, obj.reg_, INVALID, 0, obj.disp_);}
+	MemT<OpdN> operator[](const Reg64Expr& obj)		{return MemT<OpdN>(O_SIZE_64, obj.reg_, RegID::InvalidRegID(), 0, obj.disp_);}
 	MemT<OpdN> operator[](const Reg64ExprBI& obj)	{return MemT<OpdN>(O_SIZE_64, obj.base_, obj.index_, 0, obj.disp_);}
-	MemT<OpdN> operator[](const Reg64ExprSI& obj)	{return MemT<OpdN>(O_SIZE_64, INVALID, obj.index_, obj.scale_, obj.disp_);}
+	MemT<OpdN> operator[](const Reg64ExprSI& obj)	{return MemT<OpdN>(O_SIZE_64, RegID::InvalidRegID(), obj.index_, obj.scale_, obj.disp_);}
 	MemT<OpdN> operator[](const Reg64ExprSIB& obj)	{return MemT<OpdN>(O_SIZE_64, obj.base_, obj.index_, obj.scale_, obj.disp_);}
 	MemOffset64 operator[](sint64 offset)			{return MemOffset64(offset);}
 	MemOffset64 operator[](uint64 offset)			{return MemOffset64((sint64) offset);}
@@ -438,7 +507,8 @@ enum InstrID
 	I_FXAM, I_FXCH, I_FXRSTOR, I_FXSAVE, I_FXTRACT,
 	I_FYL2X, I_FYL2XP1,
 
-	I_CRC32, I_ADDPS, I_ADDSS, I_ADDPD, I_ADDSD, I_ADDSUBPS, I_ADDSUBPD, I_ANDPS, I_ANDPD, I_ANDNPS, I_ANDNPD, I_BLENDPS, I_BLENDPD, I_BLENDVPS, I_BLENDVPD, I_CLFLUSH, I_CMPPS, I_CMPSS, I_CMPPD, I_CMPSD, I_COMISS, I_COMISD,
+	I_ADDPS, I_ADDSS, I_ADDPD, I_ADDSD, I_ADDSUBPS, I_ADDSUBPD, I_ANDPS, I_ANDPD, I_ANDNPS, I_ANDNPD, I_BLENDPS, I_BLENDPD, I_BLENDVPS, I_BLENDVPD,
+	I_CLFLUSH, I_CMPPS, I_CMPSS, I_CMPPD, I_CMPSD, I_COMISS, I_COMISD, I_CRC32,
 	I_CVTDQ2PD, I_CVTDQ2PS, I_CVTPD2DQ, I_CVTPD2PI, I_CVTPD2PS, I_CVTPI2PD, I_CVTPI2PS, I_CVTPS2DQ, I_CVTPS2PD, I_CVTPS2PI, I_CVTSD2SI,
 	I_CVTSD2SS, I_CVTSI2SD, I_CVTSI2SS, I_CVTSS2SD, I_CVTSS2SI, I_CVTTPD2DQ, I_CVTTPD2PI, I_CVTTPS2DQ, I_CVTTPS2PI, I_CVTTSD2SI, I_CVTTSS2SI,
 	I_DIVPS, I_DIVSS, I_DIVPD, I_DIVSD, I_DPPS, I_DPPD, I_EMMS, I_EXTRACTPS, I_FISTTP, I_HADDPS, I_HADDPD, I_HSUBPS, I_HSUBPD, I_INSERTPS, I_LDDQU, I_LDMXCSR, I_LFENCE,
@@ -532,14 +602,14 @@ struct Backend
 	{
 		uint8 wrxb = w ? 8 : 0;
 		if (reg.IsReg()) {
-			if (reg.GetReg() != INVALID && reg.GetReg() & 0x10) wrxb |= 4;
+			if (!reg.GetReg().IsInvalid() && reg.GetReg().id_ & 0x10) wrxb |= 4;
 		}
 		if (r_m.IsReg()) {
-			if (r_m.GetReg() & 0x10) wrxb |= 1;
+			if (r_m.GetReg().id_ & 0x10) wrxb |= 1;
 		}
 		if (r_m.IsMem()) {
-			if (r_m.GetIndex() != INVALID && r_m.GetIndex() & 0x10) wrxb |= 2;
-			if (r_m.GetBase() != INVALID && r_m.GetBase() & 0x10) wrxb |= 1;
+			if (!r_m.GetIndex().IsInvalid() && r_m.GetIndex().id_ & 0x10) wrxb |= 2;
+			if (!r_m.GetBase().IsInvalid() && r_m.GetBase().id_ & 0x10) wrxb |= 1;
 		}
 		return wrxb;
 	}
@@ -548,8 +618,8 @@ struct Backend
 	{
 		uint8 rex_wrxb = GetRexPrefix(encoding_flag & E_REXW_PREFIX, reg, r_m);
 		if (rex_wrxb) {
-			ASSERT(!reg.IsReg() || reg.GetSize() != O_SIZE_8 || reg.GetReg() < AH || reg.GetReg() >= R8B);	// AH, BH, CH, or DH may not be used with REX.
-			ASSERT(!r_m.IsReg() || r_m.GetSize() != O_SIZE_8 || r_m.GetReg() < AH || r_m.GetReg() >= R8B);	// AH, BH, CH, or DH may not be used with REX.
+			ASSERT(!reg.IsReg() || reg.GetSize() != O_SIZE_8 || reg.GetReg().id_ < AH || reg.GetReg().id_ >= R8B);	// AH, BH, CH, or DH may not be used with REX.
+			ASSERT(!r_m.IsReg() || r_m.GetSize() != O_SIZE_8 || r_m.GetReg().id_ < AH || r_m.GetReg().id_ >= R8B);	// AH, BH, CH, or DH may not be used with REX.
 
 			if (encoding_flag & E_REPEAT_PREFIX) db(0xF3);
 #ifdef JITASM64
@@ -575,16 +645,17 @@ struct Backend
 		}
 	}
 
-	void EncodeModRM(const Opd& reg, const Opd& r_m) {EncodeModRM((uint8) reg.GetReg(), r_m);}
+	void EncodeModRM(const Opd& reg, const Opd& r_m) {EncodeModRM((uint8) reg.GetReg().id_, r_m);}
 	void EncodeModRM(uint8 reg, const Opd& r_m)
 	{
 		reg &= 0xF;
 
 		if (r_m.IsReg()) {
-			db(0xC0 | reg << 3 | r_m.GetReg() & 0xF);
+			db(0xC0 | reg << 3 | r_m.GetReg().id_ & 0xF);
 		} else if (r_m.IsMem()) {
-			int base = r_m.GetBase(); if (base != INVALID) base &= 0xF;
-			int index = r_m.GetIndex(); if (index != INVALID) index &= 0xF;
+			ASSERT(r_m.GetBase().type_ == R_TYPE_GP && r_m.GetIndex().type_ == R_TYPE_GP);
+			int base = r_m.GetBase().id_; if (base != INVALID) base &= 0xF;
+			int index = r_m.GetIndex().id_; if (index != INVALID) index &= 0xF;
 
 			if (base == INVALID && index == INVALID) {
 #ifdef JITASM64
@@ -666,10 +737,13 @@ struct Backend
 		const Opd& opd1 = instr.GetOpd(0);
 		const Opd& opd2 = instr.GetOpd(1);
 		const Opd& opd3 = instr.GetOpd(2);
+		ASSERT(!(opd1.IsReg() && opd1.GetReg().IsSymbolic()));
+		ASSERT(!(opd2.IsReg() && opd2.GetReg().IsSymbolic()));
+		ASSERT(!(opd3.IsReg() && opd3.GetReg().IsSymbolic()));
 
 		// +rb, +rw, +rd, +ro
 		if (opd1.IsReg() && (opd2.IsNone() || opd2.IsImm())) {
-			opcode += opd1.GetReg() & 0xF;
+			opcode += opd1.GetReg().id_ & 0xF;
 		}
 
 		if ((opd1.IsImm() || opd1.IsReg()) && (opd2.IsReg() || opd2.IsMem())) {	// ModR/M
@@ -702,7 +776,7 @@ struct Backend
 		const Opd& imm = instr.GetOpd(2);
 		ASSERT(instr.GetOpd(0).IsImm() && reg.IsReg() && imm.IsImm());
 
-		if (reg.GetReg() == EAX && (reg.GetSize() == O_SIZE_8 || !detail::IsInt8(imm.GetImm()))) {
+		if (reg.GetReg().id_ == EAX && (reg.GetSize() == O_SIZE_8 || !detail::IsInt8(imm.GetImm()))) {
 			opcode |= (reg.GetSize() == O_SIZE_8 ? 0 : 1);
 			Encode(Instr(instr.GetID(), opcode, instr.encoding_flag_, reg, imm));
 		} else {
@@ -741,7 +815,7 @@ struct Backend
 		const Opd& mem = instr.GetOpd(1);
 		ASSERT(reg.IsReg() && mem.IsMem());
 
-		if (reg.GetReg() == EAX && mem.GetBase() == INVALID && mem.GetIndex() == INVALID) {
+		if (reg.GetReg().id_ == EAX && mem.GetBase().IsInvalid() && mem.GetIndex().IsInvalid()) {
 			uint32 opcode = 0xA0 | ~instr.opcode_ & 0x2 | instr.opcode_ & 1;
 			Encode(Instr(instr.GetID(), opcode, instr.encoding_flag_, Imm32((sint32) mem.GetDisp())));
 		} else {
@@ -758,7 +832,7 @@ struct Backend
 		const Opd& imm = instr.GetOpd(2);
 		ASSERT(instr.GetOpd(0).IsImm() && reg.IsReg() && imm.IsImm());
 
-		if (reg.GetReg() == EAX) {
+		if (reg.GetReg().id_ == EAX) {
 			uint32 opcode = 0xA8 | (reg.GetSize() == O_SIZE_8 ? 0 : 1);
 			Encode(Instr(instr.GetID(), opcode, instr.encoding_flag_, reg, imm));
 		} else {
@@ -772,9 +846,9 @@ struct Backend
 		const Opd& src = instr.GetOpd(1);
 		ASSERT(dst.IsReg() && src.IsReg());
 
-		if (dst.GetReg() == EAX) {
+		if (dst.GetReg().id_ == EAX) {
 			Encode(Instr(instr.GetID(), 0x90, instr.encoding_flag_, src));
-		} else if (src.GetReg() == EAX) {
+		} else if (src.GetReg().id_ == EAX) {
 			Encode(Instr(instr.GetID(), 0x90, instr.encoding_flag_, dst));
 		} else {
 			Encode(instr);
@@ -871,8 +945,8 @@ namespace detail
 		long lock_;
 	public:
 		SpinLock() : lock_(0) {}
-		void Lock() {while (::InterlockedExchange(&lock_, 1));}
-		void Unlock() {::InterlockedExchange(&lock_, 0);}
+		void Lock() {while (interlocked_exchange(&lock_, 1));}
+		void Unlock() {interlocked_exchange(&lock_, 0);}
 	};
 
 	template<class Ty>
@@ -981,11 +1055,11 @@ struct Frontend
 		for (InstrList::iterator it = instrs_.begin(); it != instrs_.end(); ++it) {
 			for (size_t i = 0; i < Instr::MAX_OPERAND_COUNT; ++i) {
 				const Opd& opd = it->GetOpd(i);
-				if (detail::IsGpReg(opd)) {
-					gpreg |= 1 << (opd.GetReg() - EAX);
+				if (opd.IsGpReg()) {
+					gpreg |= 1 << (opd.GetReg().id_ - EAX);
 				}
-				else if (detail::IsXmmReg(opd)) {
-					xmmreg |= 1 << (opd.GetReg() - XMM0);
+				else if (opd.IsXmmReg()) {
+					xmmreg |= 1 << (opd.GetReg().id_ - XMM0);
 				}
 			}
 		}
@@ -1013,7 +1087,7 @@ struct Frontend
 		size_t offset = 0;
 		for (int reg_id = XMM15; reg_id >= XMM6; --reg_id) {
 			if (xmmreg & (1 << (reg_id - XMM0))) {
-				movdqa(xmmword_ptr[rsp + offset], XmmReg(static_cast<RegID>(reg_id)));
+				movdqa(xmmword_ptr[rsp + offset], XmmReg(static_cast<PhysicalRegID>(reg_id)));
 				offset += 16;
 			}
 		}
@@ -1033,7 +1107,7 @@ struct Frontend
 		for (int reg_id = XMM6; reg_id <= XMM15; ++reg_id) {
 			if (xmmreg & (1 << (reg_id - XMM0))) {
 				offset -= 16;
-				movdqa(XmmReg(static_cast<RegID>(reg_id)), xmmword_ptr[rsp + offset]);
+				movdqa(XmmReg(static_cast<PhysicalRegID>(reg_id)), xmmword_ptr[rsp + offset]);
 			}
 		}
 		if (xmm_store > 0)
@@ -3770,7 +3844,7 @@ namespace detail {
 		enum { ArgR = 1 /* First (hidden) argument is pointer for copying result. */};
 		typedef typename ResultTraits<T>::OpdR OpdR;
 		OpdR val_;
-		ResultT() : val_(INVALID) {}
+		ResultT() {}
 		ResultT(const MemT<OpdR>& val) : val_(val) {}
 		void Store(Frontend& f)
 		{
@@ -3796,13 +3870,13 @@ namespace detail {
 	struct ResultT<T, 1> {
 		enum { ArgR = 0 };
 		Opd8 val_;
-		ResultT() : val_(INVALID) {}
+		ResultT() {}
 		ResultT(const Opd8& val) : val_(val) {}
 		ResultT(uint8 imm) : val_(Imm8(imm)) {}
 		void Store(Frontend& f)
 		{
-			if (detail::IsGpReg(val_)) {
-				if (val_.GetReg() != AL)
+			if (val_.IsGpReg()) {
+				if (val_.GetReg().id_ != AL)
 					f.mov(f.al, static_cast<Reg8&>(val_));
 			}
 			else if (val_.IsMem()) {
@@ -3819,13 +3893,13 @@ namespace detail {
 	struct ResultT<T, 2> {
 		enum { ArgR = 0 };
 		Opd16 val_;
-		ResultT() : val_(INVALID) {}
+		ResultT() {}
 		ResultT(const Opd16& val) : val_(val) {}
 		ResultT(uint16 imm) : val_(Imm16(imm)) {}
 		void Store(Frontend& f)
 		{
-			if (detail::IsGpReg(val_)) {
-				if (val_.GetReg() != AX)
+			if (val_.IsGpReg()) {
+				if (val_.GetReg().id_ != AX)
 					f.mov(f.ax, static_cast<Reg16&>(val_));
 			}
 			else if (val_.IsMem()) {
@@ -3842,13 +3916,13 @@ namespace detail {
 	struct ResultT<T, 4> {
 		enum { ArgR = 0 };
 		Opd32 val_;
-		ResultT() : val_(INVALID) {}
+		ResultT() {}
 		ResultT(const Opd32& val) : val_(val) {}
 		ResultT(uint32 imm) : val_(Imm32(imm)) {}
 		void Store(Frontend& f)
 		{
-			if (detail::IsGpReg(val_)) {
-				if (val_.GetReg() != EAX)
+			if (val_.IsGpReg()) {
+				if (val_.GetReg().id_ != EAX)
 					f.mov(f.eax, static_cast<Reg32&>(val_));
 			}
 			else if (val_.IsMem()) {
@@ -3865,14 +3939,14 @@ namespace detail {
 	struct ResultT<T, 8> {
 		enum { ArgR = 0 };
 		Opd64 val_;
-		ResultT() : val_(INVALID) {}
+		ResultT() {}
 		ResultT(const Opd64& val) : val_(val) {}
 		ResultT(uint64 imm) : val_(Imm64(imm)) {}
 		void Store(Frontend& f)
 		{
 #ifdef JITASM64
-			if (detail::IsGpReg(val_)) {
-				if (val_.GetReg() != RAX)
+			if (val_.IsGpReg()) {
+				if (val_.GetReg().id_ != RAX)
 					f.mov(f.rax, static_cast<Reg64&>(val_));
 			}
 			else if (val_.IsMem()) {
@@ -3881,7 +3955,7 @@ namespace detail {
 			else if (val_.IsImm()) {
 				f.mov(f.rax, static_cast<Imm64&>(val_));
 			}
-			else if (detail::IsMmxReg(val_)) {
+			else if (val_.IsMmxReg()) {
 				f.movq(f.rax, static_cast<MmxReg&>(val_));
 			}
 #else
@@ -3914,7 +3988,7 @@ namespace detail {
 		void Store(Frontend& f)
 		{
 #ifdef JITASM64
-			if (detail::IsFpuReg(val_)) {
+			if (val_.IsFpuReg()) {
 				// from FPU register
 				f.fstp(f.real4_ptr[f.rsp - 4]);
 				f.movss(f.xmm0, f.dword_ptr[f.rsp - 4]);
@@ -3923,9 +3997,9 @@ namespace detail {
 				// from memory
 				f.movss(f.xmm0, static_cast<Mem32&>(val_));
 			}
-			else if (detail::IsXmmReg(val_)) {
+			else if (val_.IsXmmReg()) {
 				// from XMM register
-				if (val_.GetReg() != XMM0)
+				if (val_.GetReg().id_ != XMM0)
 					f.movss(f.xmm0, static_cast<XmmReg&>(val_));
 			}
 			else if (val_.IsImm()) {
@@ -3934,16 +4008,16 @@ namespace detail {
 				f.movss(f.xmm0, f.dword_ptr[f.rsp - 4]);
 			}
 #else
-			if (detail::IsFpuReg(val_)) {
+			if (val_.IsFpuReg()) {
 				// from FPU register
-				if (val_.GetReg() != ST0)
+				if (val_.GetReg().id_ != ST0)
 					f.fld(static_cast<FpuReg&>(val_));
 			}
 			else if (val_.IsMem() && val_.GetSize() == O_SIZE_32) {
 				// from memory
 				f.fld(static_cast<Mem32&>(val_));
 			}
-			else if (detail::IsXmmReg(val_)) {
+			else if (val_.IsXmmReg()) {
 				// from XMM register
 				f.movss(f.dword_ptr[f.esp - 4], static_cast<XmmReg&>(val_));
 				f.fld(f.real4_ptr[f.esp - 4]);
@@ -3971,7 +4045,7 @@ namespace detail {
 		void Store(Frontend& f)
 		{
 #ifdef JITASM64
-			if (detail::IsFpuReg(val_)) {
+			if (val_.IsFpuReg()) {
 				// from FPU register
 				f.fstp(f.real8_ptr[f.rsp - 8]);
 				f.movsd(f.xmm0, f.qword_ptr[f.rsp - 8]);
@@ -3980,9 +4054,9 @@ namespace detail {
 				// from memory
 				f.movsd(f.xmm0, static_cast<Mem64&>(val_));
 			}
-			else if (detail::IsXmmReg(val_)) {
+			else if (val_.IsXmmReg()) {
 				// from XMM register
-				if (val_.GetReg() != XMM0)
+				if (val_.GetReg().id_ != XMM0)
 					f.movsd(f.xmm0, static_cast<XmmReg&>(val_));
 			}
 			else if (val_.IsImm()) {
@@ -3992,16 +4066,16 @@ namespace detail {
 				f.movsd(f.xmm0, f.qword_ptr[f.rsp - 8]);
 			}
 #else
-			if (detail::IsFpuReg(val_)) {
+			if (val_.IsFpuReg()) {
 				// from FPU register
-				if (val_.GetReg() != ST0)
+				if (val_.GetReg().id_ != ST0)
 					f.fld(static_cast<FpuReg&>(val_));
 			}
 			else if (val_.IsMem() && val_.GetSize() == O_SIZE_64) {
 				// from memory
 				f.fld(static_cast<Mem64&>(val_));
 			}
-			else if (detail::IsXmmReg(val_)) {
+			else if (val_.IsXmmReg()) {
 				// from XMM register
 				f.movsd(f.qword_ptr[f.esp - 8], static_cast<XmmReg&>(val_));
 				f.fld(f.real8_ptr[f.esp - 8]);
@@ -4024,13 +4098,13 @@ namespace detail {
 	struct ResultT<__m128, 16> {
 		enum { ArgR = 1 };
 		Opd128 val_;
-		ResultT() : val_(INVALID) {}
+		ResultT() {}
 		ResultT(const XmmReg& xmm) : val_(xmm) {}
 		ResultT(const Mem128& mem) : val_(mem) {}
 		void Store(Frontend& f)
 		{
 			f.mov(f.zax, f.zword_ptr[f.zbp + sizeof(void *) * 2]);
-			if (detail::IsXmmReg(val_)) {
+			if (val_.IsXmmReg()) {
 				f.movaps(f.xmmword_ptr[f.zax], static_cast<const XmmReg&>(val_));
 			}
 			else if (val_.IsMem()) {
@@ -4047,13 +4121,13 @@ namespace detail {
 	struct ResultT<__m128d, 16> {
 		enum { ArgR = 1 };
 		Opd128 val_;
-		ResultT() : val_(INVALID) {}
+		ResultT() {}
 		ResultT(const XmmReg& xmm) : val_(xmm) {}
 		ResultT(const Mem128& mem) : val_(mem) {}
 		void Store(Frontend& f)
 		{
 			f.mov(f.zax, f.zword_ptr[f.zbp + sizeof(void *) * 2]);
-			if (detail::IsXmmReg(val_)) {
+			if (val_.IsXmmReg()) {
 				f.movapd(f.xmmword_ptr[f.zax], static_cast<const XmmReg&>(val_));
 			}
 			else if (val_.IsMem()) {
@@ -4068,13 +4142,13 @@ namespace detail {
 	struct ResultT<__m128i, 16> {
 		enum { ArgR = 1 };
 		Opd128 val_;
-		ResultT() : val_(INVALID) {}
+		ResultT() {}
 		ResultT(const XmmReg& xmm) : val_(xmm) {}
 		ResultT(const Mem128& mem) : val_(mem) {}
 		void Store(Frontend& f)
 		{
 			f.mov(f.zax, f.zword_ptr[f.zbp + sizeof(void *) * 2]);
-			if (detail::IsXmmReg(val_)) {
+			if (val_.IsXmmReg()) {
 				f.movdqa(f.xmmword_ptr[f.zax], static_cast<const XmmReg&>(val_));
 			}
 			else if (val_.IsMem()) {
@@ -4093,13 +4167,13 @@ namespace detail {
 	struct ResultT<__m64, 8> {
 		enum { ArgR = 0 };
 		Opd64 val_;
-		ResultT() : val_(INVALID) {}
+		ResultT() {}
 		ResultT(const MmxReg& mm) : val_(mm) {}
 		ResultT(const Mem64& mem) : val_(mem) {}
 		void Store(Frontend& f)
 		{
-			if (detail::IsMmxReg(val_)) {
-				if (val_.GetReg() != MM0)
+			if (val_.IsMmxReg()) {
+				if (val_.GetReg().id_ != MM0)
 					f.movq(f.mm0, static_cast<const MmxReg&>(val_));
 			}
 			else if (val_.IsMem()) {
@@ -4115,13 +4189,13 @@ namespace detail {
 	struct ResultT<__m128, 16> {
 		enum { ArgR = 0 };
 		Opd128 val_;
-		ResultT() : val_(INVALID) {}
+		ResultT() {}
 		ResultT(const XmmReg& xmm) : val_(xmm) {}
 		ResultT(const Mem128& mem) : val_(mem) {}
 		void Store(Frontend& f)
 		{
-			if (detail::IsXmmReg(val_)) {
-				if (val_.GetReg() != XMM0)
+			if (val_.IsXmmReg()) {
+				if (val_.GetReg().id_ != XMM0)
 					f.movaps(f.xmm0, static_cast<const XmmReg&>(val_));
 			}
 			else if (val_.IsMem()) {
@@ -4137,13 +4211,13 @@ namespace detail {
 	struct ResultT<__m128d, 16> {
 		enum { ArgR = 0 };
 		Opd128 val_;
-		ResultT() : val_(INVALID) {}
+		ResultT() {}
 		ResultT(const XmmReg& xmm) : val_(xmm) {}
 		ResultT(const Mem128& mem) : val_(mem) {}
 		void Store(Frontend& f)
 		{
-			if (detail::IsXmmReg(val_)) {
-				if (val_.GetReg() != XMM0)
+			if (val_.IsXmmReg()) {
+				if (val_.GetReg().id_ != XMM0)
 					f.movapd(f.xmm0, static_cast<const XmmReg&>(val_));
 			}
 			else if (val_.IsMem()) {
@@ -4157,13 +4231,13 @@ namespace detail {
 	struct ResultT<__m128i, 16> {
 		enum { ArgR = 0 };
 		Opd128 val_;
-		ResultT() : val_(INVALID) {}
+		ResultT() {}
 		ResultT(const XmmReg& xmm) : val_(xmm) {}
 		ResultT(const Mem128& mem) : val_(mem) {}
 		void Store(Frontend& f)
 		{
-			if (detail::IsXmmReg(val_)) {
-				if (val_.GetReg() != XMM0)
+			if (val_.IsXmmReg()) {
+				if (val_.GetReg().id_ != XMM0)
 					f.movdqa(f.xmm0, static_cast<const XmmReg&>(val_));
 			}
 			else if (val_.IsMem()) {
@@ -4210,11 +4284,11 @@ namespace detail {
 #ifdef JITASM64
 			if (dump_regarg_x64_ || bForceCopy) {
 				if (ArgTraits<N, T>::flag & ARG_IN_REG)
-					mov(qword_ptr[addr], Reg64(static_cast<RegID>(ArgTraits<N, T>::reg_id)));
+					mov(qword_ptr[addr], Reg64(static_cast<PhysicalRegID>(ArgTraits<N, T>::reg_id)));
 				else if (ArgTraits<N, T>::flag & ARG_IN_XMM_SP)
-					movss(dword_ptr[addr], XmmReg(static_cast<RegID>(ArgTraits<N, T>::reg_id)));
+					movss(dword_ptr[addr], XmmReg(static_cast<PhysicalRegID>(ArgTraits<N, T>::reg_id)));
 				else if (ArgTraits<N, T>::flag & ARG_IN_XMM_DP)
-					movsd(qword_ptr[addr], XmmReg(static_cast<RegID>(ArgTraits<N, T>::reg_id)));
+					movsd(qword_ptr[addr], XmmReg(static_cast<PhysicalRegID>(ArgTraits<N, T>::reg_id)));
 			}
 #endif
 		}
