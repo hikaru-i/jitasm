@@ -76,22 +76,14 @@ namespace detail
 enum PhysicalRegID
 {
 	INVALID=-1,
-
-	EAX=0, ECX, EDX, EBX, ESP, EBP, ESI, EDI,
-	AL=0, CL, DL, BL, AH, CH, DH, BH,
-	AX=0, CX, DX, BX, SP, BP, SI, DI,
-	RAX=0, RCX, RDX, RBX, RSP, RBP, RSI, RDI,
-
-	R8=0x10, R9, R10, R11, R12, R13, R14, R15,
-	R8B=0x10, R9B, R10B, R11B, R12B, R13B, R14B, R15B,
-	R8W=0x10, R9W, R10W, R11W, R12W, R13W, R14W, R15W,
-	R8D=0x10, R9D, R10D, R11D, R12D, R13D, R14D, R15D,
-
+	EAX=0, ECX, EDX, EBX, ESP, EBP, ESI, EDI, R8D, R9D, R10D, R11D, R12D, R13D, R14D, R15D,
+	AL=0, CL, DL, BL, AH, CH, DH, BH, R8B, R9B, R10B, R11B, R12B, R13B, R14B, R15B,
+	AX=0, CX, DX, BX, SP, BP, SI, DI, R8W, R9W, R10W, R11W, R12W, R13W, R14W, R15W,
+	RAX=0, RCX, RDX, RBX, RSP, RBP, RSI, RDI, R8, R9, R10, R11, R12, R13, R14, R15,
 	ST0=0, ST1, ST2, ST3, ST4, ST5, ST6, ST7,
-
 	MM0=0, MM1, MM2, MM3, MM4, MM5, MM6, MM7,
-	XMM0=0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7,
-	XMM8=0x10, XMM9, XMM10, XMM11, XMM12, XMM13, XMM14, XMM15,
+	XMM0=0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7, XMM8, XMM9, XMM10, XMM11, XMM12, XMM13, XMM14, XMM15,
+	YMM0=0, YMM1, YMM2, YMM3, YMM4, YMM5, YMM6, YMM7, YMM8, YMM9, YMM10, YMM11, YMM12, YMM13, YMM14, YMM15,
 };
 
 /// Register type
@@ -101,6 +93,7 @@ enum RegType
 	R_TYPE_FPU,				///< FPU register
 	R_TYPE_MMX,				///< MMX register
 	R_TYPE_XMM,				///< XMM register
+	R_TYPE_YMM,				///< YMM register
 	R_TYPE_SYMBOLIC_GP,		///< Symbolic general purpose register
 	R_TYPE_SYMBOLIC_MMX,	///< Symbolic MMX register
 	R_TYPE_SYMBOLIC_XMM		///< Symbolic XMM register
@@ -155,6 +148,7 @@ enum OpdSize
 	O_SIZE_80 = 80,
 	O_SIZE_128 = 128,
 	O_SIZE_224 = 224,
+	O_SIZE_256 = 256,
 	O_SIZE_864 = 864,
 	O_SIZE_4096 = 4096,
 };
@@ -201,14 +195,14 @@ public:
 	bool	IsMem() const		{return opdtype_ == O_TYPE_MEM;}
 	bool	IsImm() const		{return opdtype_ == O_TYPE_IMM;}
 
-	OpdSize			GetSize() const			{return opdsize_;}
-	OpdSize			GetAddressSize() const	{return addrsize_;}
-	const RegID&	GetReg() const			{return reg_;}
-	const RegID&	GetBase() const			{return base_;}
-	const RegID&	GetIndex() const		{return index_;}
-	sint64			GetScale() const		{return scale_;}
-	sint64			GetDisp() const			{return disp_;}
-	sint64			GetImm() const			{return imm_;}
+	OpdSize	GetSize() const		{return opdsize_;}
+	OpdSize	GetAddressSize() const	{return addrsize_;}
+	RegID	GetReg() const		{ASSERT(IsReg()); return reg_;}
+	RegID	GetBase() const		{ASSERT(IsMem()); return base_;}
+	RegID	GetIndex() const	{ASSERT(IsMem()); return index_;}
+	sint64	GetScale() const	{ASSERT(IsMem()); return scale_;}
+	sint64	GetDisp() const		{ASSERT(IsMem()); return disp_;}
+	sint64	GetImm() const		{ASSERT(IsImm()); return imm_;}
 };
 
 template<int Size>
@@ -232,6 +226,7 @@ typedef OpdT<O_SIZE_64>		Opd64;
 typedef OpdT<O_SIZE_80>		Opd80;
 typedef OpdT<O_SIZE_128>	Opd128;
 typedef OpdT<O_SIZE_224>	Opd224;		// FPU environment
+typedef OpdT<O_SIZE_256>	Opd256;
 typedef OpdT<O_SIZE_864>	Opd864;		// FPU state
 typedef OpdT<O_SIZE_4096>	Opd4096;	// FPU, MMX, XMM, MXCSR state
 
@@ -271,6 +266,11 @@ struct XmmReg : Opd128 {
 	XmmReg() : Opd128(RegID::CreateSymbolicRegID(R_TYPE_XMM)) {}
 	explicit XmmReg(PhysicalRegID id) : Opd128(RegID::CreatePhysicalRegID(R_TYPE_XMM, id)) {}
 };
+/// YMM register
+struct YmmReg : Opd256 {
+	YmmReg() : Opd256(RegID::CreateSymbolicRegID(R_TYPE_YMM)) {}
+	explicit YmmReg(PhysicalRegID id) : Opd256(RegID::CreatePhysicalRegID(R_TYPE_YMM, id)) {}
+};
 
 struct Reg8_al : Reg8 {Reg8_al() : Reg8(AL) {}};
 struct Reg8_cl : Reg8 {Reg8_cl() : Reg8(CL) {}};
@@ -295,6 +295,7 @@ typedef MemT<Opd64>		Mem64;
 typedef MemT<Opd80>		Mem80;
 typedef MemT<Opd128>	Mem128;
 typedef MemT<Opd224>	Mem224;		// FPU environment
+typedef MemT<Opd256>	Mem256;
 typedef MemT<Opd864>	Mem864;		// FPU state
 typedef MemT<Opd4096>	Mem4096;	// FPU, MMX, XMM, MXCSR state
 
@@ -528,38 +529,60 @@ enum InstrID
 	I_PSUBUSB, I_PSUBUSW, I_PTEST, I_PUNPCKHBW, I_PUNPCKHWD, I_PUNPCKHDQ, I_PUNPCKHQDQ, I_PUNPCKLBW, I_PUNPCKLWD, I_PUNPCKLDQ, I_PUNPCKLQDQ,
 	I_PXOR, I_RCPPS, I_RCPSS, I_ROUNDPS, I_ROUNDPD, I_ROUNDSS, I_ROUNDSD, I_RSQRTPS, I_RSQRTSS, I_SFENCE, I_SHUFPS, I_SHUFPD, I_SQRTPS, I_SQRTSS, I_SQRTPD, I_SQRTSD, I_STMXCSR, 
 	I_SUBPS, I_SUBSS, I_SUBPD, I_SUBSD, I_UCOMISS, I_UCOMISD, I_UNPCKHPS, I_UNPCKHPD, I_UNPCKLPS, I_UNPCKLPD, I_XORPS, I_XORPD,
+
+	I_AESENC, I_AESENCLAST, I_AESDEC, I_AESDECLAST, I_AESIMC, I_AESKEYGENASSIST,
 };
 
 enum JumpCondition
 {
-	JCC_O, JCC_NO, JCC_B, JCC_AE, JCC_E, JCC_NE, JCC_BE, JCC_A, JCC_S, JCC_NS,
-	JCC_P, JCC_NP, JCC_L, JCC_GE, JCC_LE, JCC_G,
+	JCC_O, JCC_NO, JCC_B, JCC_AE, JCC_E, JCC_NE, JCC_BE, JCC_A, JCC_S, JCC_NS, JCC_P, JCC_NP, JCC_L, JCC_GE, JCC_LE, JCC_G,
 	JCC_CXZ, JCC_ECXZ, JCC_RCXZ,
 };
 
 enum EncodingFlags
 {
-	E_SPECIAL					= 0x00000001,
-	E_OPERAND_SIZE_PREFIX		= 0x00000002,
-	E_REPEAT_PREFIX				= 0x00000004,
-	E_REXW_PREFIX				= 0x00000008,
-	E_MANDATORY_PREFIX_66		= 0x00000010,
-	E_MANDATORY_PREFIX_F2		= 0x00000020,
-	E_MANDATORY_PREFIX_F3		= 0x00000040,
+	E_SPECIAL				= 1 << 0,
+	E_OPERAND_SIZE_PREFIX	= 1 << 1,	///< Operand-size override prefix
+	E_REP_PREFIX			= 1 << 2,	///< REP prefix
+	E_REXW_PREFIX			= 1 << 3,	///< REX.W
+	E_MANDATORY_PREFIX_66	= 1 << 4,	///< Mandatory prefix 66
+	E_MANDATORY_PREFIX_F2	= 1 << 5,	///< Mandatory prefix F2
+	E_MANDATORY_PREFIX_F3	= 1 << 6,	///< Mandatory prefix F3
+	E_VEX					= 1 << 7,
+	E_VEX_L					= 1 << 8,
+	E_VEX_W					= 1 << 9,
+	E_VEX_0F				= 1 << 10,
+	E_VEX_0F38				= 1 << 11,
+	E_VEX_0F3A				= 1 << 12,
+	E_VEX_66				= 1 << 13,
+	E_VEX_F2				= 1 << 14,
+	E_VEX_F3				= 1 << 15,
+
+	E_VEX_128		= E_VEX,
+	E_VEX_256		= E_VEX | E_VEX_L,
+	E_VEX_66_0F		= E_VEX_66 | E_VEX_0F,
+	E_VEX_66_0F38	= E_VEX_66 | E_VEX_0F38,
+	E_VEX_66_0F3A	= E_VEX_66 | E_VEX_0F3A,
+	E_VEX_F2_0F		= E_VEX_F2 | E_VEX_0F,
+	E_VEX_F2_0F38	= E_VEX_F2 | E_VEX_0F38,
+	E_VEX_F2_0F3A	= E_VEX_F2 | E_VEX_0F3A,
+	E_VEX_F3_0F		= E_VEX_F3 | E_VEX_0F,
+	E_VEX_F3_0F38	= E_VEX_F3 | E_VEX_0F38,
+	E_VEX_F3_0F3A	= E_VEX_F3 | E_VEX_0F3A,
 };
 
 /// Instruction
 struct Instr
 {
-	static const size_t MAX_OPERAND_COUNT = 3;
+	static const size_t MAX_OPERAND_COUNT = 4;
 
 	InstrID	id_;
 	uint32  opcode_;					///< Opcode
 	uint32  encoding_flag_;				///< EncodingFlags
 	Opd		opd_[MAX_OPERAND_COUNT];	///< Operands
 
-	Instr(InstrID id, uint32 opcode, uint32 encoding_flag, const Opd& opd1 = Opd(), const Opd& opd2 = Opd(), const Opd& opd3 = Opd())
-		: id_(id), opcode_(opcode), encoding_flag_(encoding_flag) {opd_[0] = opd1, opd_[1] = opd2, opd_[2] = opd3;}
+	Instr(InstrID id, uint32 opcode, uint32 encoding_flag, const Opd& opd1 = Opd(), const Opd& opd2 = Opd(), const Opd& opd3 = Opd(), const Opd& opd4 = Opd())
+		: id_(id), opcode_(opcode), encoding_flag_(encoding_flag) {opd_[0] = opd1, opd_[1] = opd2, opd_[2] = opd3, opd_[3] = opd4;}
 
 	InstrID GetID() const {return id_;}
 	const Opd& GetOpd(size_t index) const {return opd_[index];}
@@ -598,64 +621,93 @@ struct Backend
 	void dd(uint64 d) {put_bytes(&d, 4);}
 	void dq(uint64 q) {put_bytes(&q, 8);}
 
-	uint8 GetRexPrefix(int w, const Opd& reg, const Opd& r_m)
+	uint8 GetWRXB(int w, const Opd& reg, const Opd& r_m)
 	{
 		uint8 wrxb = w ? 8 : 0;
 		if (reg.IsReg()) {
-			if (!reg.GetReg().IsInvalid() && reg.GetReg().id & 0x10) wrxb |= 4;
+			if (!reg.GetReg().IsInvalid() && reg.GetReg().id >= R8) wrxb |= 4;
 		}
 		if (r_m.IsReg()) {
-			if (r_m.GetReg().id & 0x10) wrxb |= 1;
+			if (r_m.GetReg().id >= R8) wrxb |= 1;
 		}
 		if (r_m.IsMem()) {
-			if (!r_m.GetIndex().IsInvalid() && r_m.GetIndex().id & 0x10) wrxb |= 2;
-			if (!r_m.GetBase().IsInvalid() && r_m.GetBase().id & 0x10) wrxb |= 1;
+			if (!r_m.GetIndex().IsInvalid() && r_m.GetIndex().id >= R8) wrxb |= 2;
+			if (!r_m.GetBase().IsInvalid() && r_m.GetBase().id >= R8) wrxb |= 1;
 		}
 		return wrxb;
 	}
 
-	void EncodePrefixes(uint32 encoding_flag, const Opd& reg, const Opd& r_m)
+	void EncodePrefixes(uint32 flag, const Opd& reg, const Opd& r_m, const Opd& vex)
 	{
-		uint8 rex_wrxb = GetRexPrefix(encoding_flag & E_REXW_PREFIX, reg, r_m);
-		if (rex_wrxb) {
-			ASSERT(!reg.IsReg() || reg.GetSize() != O_SIZE_8 || reg.GetReg().id < AH || reg.GetReg().id >= R8B);	// AH, BH, CH, or DH may not be used with REX.
-			ASSERT(!r_m.IsReg() || r_m.GetSize() != O_SIZE_8 || r_m.GetReg().id < AH || r_m.GetReg().id >= R8B);	// AH, BH, CH, or DH may not be used with REX.
-
-			if (encoding_flag & E_REPEAT_PREFIX) db(0xF3);
+		if (flag & E_VEX) {
+			// Encode VEX prefix
 #ifdef JITASM64
 			if (r_m.IsMem() && r_m.GetAddressSize() != O_SIZE_64) db(0x67);
 #endif
-			if (encoding_flag & E_OPERAND_SIZE_PREFIX) db(0x66);
+			uint8 vvvv = vex.IsReg() ? 0xF - vex.GetReg().id : 0xF;
 
-			if (encoding_flag & E_MANDATORY_PREFIX_66) db(0x66);
-			else if (encoding_flag & E_MANDATORY_PREFIX_F2) db(0xF2);
-			else if (encoding_flag & E_MANDATORY_PREFIX_F3) db(0xF3);
+			uint8 pp = 0;
+			if (flag & E_VEX_66) pp = 1;
+			else if (flag & E_VEX_F3) pp = 2;
+			else if (flag & E_VEX_F2) pp = 3;
 
-			db(0x40 | rex_wrxb);
+			uint8 wrxb = GetWRXB(flag & E_VEX_W, reg, r_m);
+			if (wrxb & 0xB) {
+				uint8 mmmmm = 0;
+				if (flag & E_VEX_0F) mmmmm = 1;
+				else if (flag & E_VEX_0F38) mmmmm = 2;
+				else if (flag & E_VEX_0F3A) mmmmm = 3;
+				else ASSERT(0);
+
+				db(0xC4);
+				db((~wrxb & 7) << 5 | mmmmm);
+				db((wrxb & 8) << 4 | vvvv << 3 | (flag & E_VEX_L ? 4 : 0) | pp);
+			} else {
+				db(0xC5);
+				db((~wrxb & 4) << 5 | vvvv << 3 | (flag & E_VEX_L ? 4 : 0) | pp);
+			}
 		} else {
-			if (encoding_flag & E_MANDATORY_PREFIX_66) db(0x66);
-			else if (encoding_flag & E_MANDATORY_PREFIX_F2) db(0xF2);
-			else if (encoding_flag & E_MANDATORY_PREFIX_F3) db(0xF3);
+			uint8 wrxb = GetWRXB(flag & E_REXW_PREFIX, reg, r_m);
+			if (wrxb) {
+				// Encode REX prefix
+				ASSERT(!reg.IsReg() || reg.GetSize() != O_SIZE_8 || reg.GetReg().id < AH || reg.GetReg().id >= R8B);	// AH, BH, CH, or DH may not be used with REX.
+				ASSERT(!r_m.IsReg() || r_m.GetSize() != O_SIZE_8 || r_m.GetReg().id < AH || r_m.GetReg().id >= R8B);	// AH, BH, CH, or DH may not be used with REX.
 
-			if (encoding_flag & E_REPEAT_PREFIX) db(0xF3);
+				if (flag & E_REP_PREFIX) db(0xF3);
 #ifdef JITASM64
-			if (r_m.IsMem() && r_m.GetAddressSize() != O_SIZE_64) db(0x67);
+				if (r_m.IsMem() && r_m.GetAddressSize() != O_SIZE_64) db(0x67);
 #endif
-			if (encoding_flag & E_OPERAND_SIZE_PREFIX) db(0x66);
+				if (flag & E_OPERAND_SIZE_PREFIX) db(0x66);
+
+				if (flag & E_MANDATORY_PREFIX_66) db(0x66);
+				else if (flag & E_MANDATORY_PREFIX_F2) db(0xF2);
+				else if (flag & E_MANDATORY_PREFIX_F3) db(0xF3);
+
+				db(0x40 | wrxb);
+			} else {
+				if (flag & E_MANDATORY_PREFIX_66) db(0x66);
+				else if (flag & E_MANDATORY_PREFIX_F2) db(0xF2);
+				else if (flag & E_MANDATORY_PREFIX_F3) db(0xF3);
+
+				if (flag & E_REP_PREFIX) db(0xF3);
+#ifdef JITASM64
+				if (r_m.IsMem() && r_m.GetAddressSize() != O_SIZE_64) db(0x67);
+#endif
+				if (flag & E_OPERAND_SIZE_PREFIX) db(0x66);
+			}
 		}
 	}
 
-	void EncodeModRM(const Opd& reg, const Opd& r_m) {EncodeModRM((uint8) reg.GetReg().id, r_m);}
 	void EncodeModRM(uint8 reg, const Opd& r_m)
 	{
-		reg &= 0xF;
+		reg &= 0x7;
 
 		if (r_m.IsReg()) {
-			db(0xC0 | reg << 3 | r_m.GetReg().id & 0xF);
+			db(0xC0 | reg << 3 | r_m.GetReg().id & 0x7);
 		} else if (r_m.IsMem()) {
 			ASSERT(r_m.GetBase().type == R_TYPE_GP && r_m.GetIndex().type == R_TYPE_GP);
-			int base = r_m.GetBase().id; if (base != INVALID) base &= 0xF;
-			int index = r_m.GetIndex().id; if (index != INVALID) index &= 0xF;
+			int base = r_m.GetBase().id; if (base != INVALID) base &= 0x7;
+			int index = r_m.GetIndex().id; if (index != INVALID) index &= 0x7;
 
 			if (base == INVALID && index == INVALID) {
 #ifdef JITASM64
@@ -734,34 +786,28 @@ struct Backend
 	{
 		uint32 opcode = instr.opcode_;
 
-		const Opd& opd1 = instr.GetOpd(0);
-		const Opd& opd2 = instr.GetOpd(1);
-		const Opd& opd3 = instr.GetOpd(2);
-		ASSERT(!(opd1.IsReg() && opd1.GetReg().IsSymbolic()));
-		ASSERT(!(opd2.IsReg() && opd2.GetReg().IsSymbolic()));
-		ASSERT(!(opd3.IsReg() && opd3.GetReg().IsSymbolic()));
+		const Opd& opd1 = instr.GetOpd(0);	ASSERT(!(opd1.IsReg() && opd1.GetReg().IsSymbolic()));
+		const Opd& opd2 = instr.GetOpd(1);	ASSERT(!(opd2.IsReg() && opd2.GetReg().IsSymbolic()));
+		const Opd& opd3 = instr.GetOpd(2);	ASSERT(!(opd3.IsReg() && opd3.GetReg().IsSymbolic()));
+		const Opd& opd4 = instr.GetOpd(3);	ASSERT(!(opd4.IsReg() && opd4.GetReg().IsSymbolic()));
 
 		// +rb, +rw, +rd, +ro
 		if (opd1.IsReg() && (opd2.IsNone() || opd2.IsImm())) {
-			opcode += opd1.GetReg().id & 0xF;
+			opcode += opd1.GetReg().id & 0x7;
 		}
 
 		if ((opd1.IsImm() || opd1.IsReg()) && (opd2.IsReg() || opd2.IsMem())) {	// ModR/M
 			const Opd& reg = opd1;
 			const Opd& r_m = opd2;
-
-			EncodePrefixes(instr.encoding_flag_, reg, r_m);
+			const Opd& vex = opd4.IsReg() ? opd4 : opd3.IsReg() ? opd3 : Opd();
+			EncodePrefixes(instr.encoding_flag_, reg, r_m, vex);
 			EncodeOpcode(opcode);
-
-			if (reg.IsImm())
-				EncodeModRM(static_cast<uint8>(reg.GetImm()), r_m);
-			else
-				EncodeModRM(reg, r_m);
+			EncodeModRM((uint8) (reg.IsImm() ? reg.GetImm() : reg.GetReg().id), r_m);
 		} else {
 			const Opd& reg = Opd();
 			const Opd& r_m = opd1.IsReg() ? opd1 : Opd();
-
-			EncodePrefixes(instr.encoding_flag_, reg, r_m);
+			const Opd& vex = Opd();
+			EncodePrefixes(instr.encoding_flag_, reg, r_m, vex);
 			EncodeOpcode(opcode);
 		}
 
@@ -975,6 +1021,7 @@ struct Frontend
 	MmxReg		mm0, mm1, mm2, mm3, mm4, mm5, mm6, mm7;
 	XmmReg_xmm0 xmm0;
 	XmmReg		xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7;
+	YmmReg		ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7;
 #ifdef JITASM64
 	Reg8		r8b, r9b, r10b, r11b, r12b, r13b, r14b, r15b;
 	Reg16		r8w, r9w, r10w, r11w, r12w, r13w, r14w, r15w;
@@ -982,6 +1029,7 @@ struct Frontend
 	Reg64_rax	rax;
 	Reg64		rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r10, r11, r12, r13, r14, r15;
 	XmmReg		xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15;
+	YmmReg		ymm8, ymm9, ymm10, ymm11, ymm12, ymm13, ymm14, ymm15;
 #endif
 
 	AddressingPtr<Opd8>		byte_ptr;
@@ -990,6 +1038,7 @@ struct Frontend
 	AddressingPtr<Opd64>	qword_ptr;
 	AddressingPtr<Opd64>	mmword_ptr;
 	AddressingPtr<Opd128>	xmmword_ptr;
+	AddressingPtr<Opd256>	ymmword_ptr;
 	AddressingPtr<Opd32>	real4_ptr;
 	AddressingPtr<Opd64>	real8_ptr;
 	AddressingPtr<Opd80>	real10_ptr;
@@ -1015,6 +1064,7 @@ struct Frontend
 		st1(ST1), st2(ST2), st3(ST3), st4(ST4), st5(ST5), st6(ST6), st7(ST7),
 		mm0(MM0), mm1(MM1), mm2(MM2), mm3(MM3), mm4(MM4), mm5(MM5), mm6(MM6), mm7(MM7),
 		xmm1(XMM1), xmm2(XMM2), xmm3(XMM3), xmm4(XMM4), xmm5(XMM5), xmm6(XMM6), xmm7(XMM7),
+		ymm0(YMM0), ymm1(YMM1), ymm2(YMM2), ymm3(YMM3), ymm4(YMM4), ymm5(YMM5), ymm6(YMM6), ymm7(YMM7),
 #ifdef JITASM64
 		r8b(R8B), r9b(R9B), r10b(R10B), r11b(R11B), r12b(R12B), r13b(R13B), r14b(R14B), r15b(R15B),
 		r8w(R8W), r9w(R9W), r10w(R10W), r11w(R11W), r12w(R12W), r13w(R13W), r14w(R14W), r15w(R15W),
@@ -1022,6 +1072,7 @@ struct Frontend
 		rcx(RCX), rdx(RDX), rbx(RBX), rsp(RSP), rbp(RBP), rsi(RSI), rdi(RDI),
 		r8(R8), r9(R9), r10(R10), r11(R11), r12(R12), r13(R13), r14(R14), r15(R15),
 		xmm8(XMM8), xmm9(XMM9), xmm10(XMM10), xmm11(XMM11), xmm12(XMM12), xmm13(XMM13), xmm14(XMM14), xmm15(XMM15),
+		ymm8(YMM8), ymm9(YMM9), ymm10(YMM10), ymm11(YMM11), ymm12(YMM12), ymm13(YMM13), ymm14(YMM14), ymm15(YMM15),
 		zcx(RCX), zdx(RDX), zbx(RBX), zsp(RSP), zbp(RBP), zsi(RSI), zdi(RDI),
 #else
 		zcx(ECX), zdx(EDX), zbx(EBX), zsp(ESP), zbp(EBP), zsi(ESI), zdi(EDI),
@@ -1256,9 +1307,9 @@ struct Frontend
 		return codebuff_.GetCodeSize();
 	}
 
-	void AppendInstr(InstrID id, uint32 opcode, uint32 encoding_flag, const Opd& opd1 = Opd(), const Opd& opd2 = Opd(), const Opd& opd3 = Opd())
+	void AppendInstr(InstrID id, uint32 opcode, uint32 encoding_flag, const Opd& opd1 = Opd(), const Opd& opd2 = Opd(), const Opd& opd3 = Opd(), const Opd& opd4 = Opd())
 	{
-		instrs_.push_back(Instr(id, opcode, encoding_flag, opd1, opd2, opd3));
+		instrs_.push_back(Instr(id, opcode, encoding_flag, opd1, opd2, opd3, opd4));
 	}
 
 	void AppendJmp(size_t label_id)
@@ -1771,9 +1822,9 @@ struct Frontend
 	void insb()		{AppendInstr(I_INS_B, 0x6C, 0);}
 	void insw()		{AppendInstr(I_INS_W, 0x6D, E_OPERAND_SIZE_PREFIX);}
 	void insd()		{AppendInstr(I_INS_D, 0x6D, 0);}
-	void rep_insb()	{AppendInstr(I_INS_B, 0x6C, E_REPEAT_PREFIX);}
-	void rep_insw()	{AppendInstr(I_INS_W, 0x6D, E_REPEAT_PREFIX | E_OPERAND_SIZE_PREFIX);}
-	void rep_insd()	{AppendInstr(I_INS_D, 0x6D, E_REPEAT_PREFIX);}
+	void rep_insb()	{AppendInstr(I_INS_B, 0x6C, E_REP_PREFIX);}
+	void rep_insw()	{AppendInstr(I_INS_W, 0x6D, E_REP_PREFIX | E_OPERAND_SIZE_PREFIX);}
+	void rep_insd()	{AppendInstr(I_INS_D, 0x6D, E_REP_PREFIX);}
 	void int3()					{AppendInstr(I_INT3, 0xCC, 0);}
 	void intn(const Imm8& n)	{AppendInstr(I_INTN, 0xCD, 0, n);}
 #ifndef JITASM64
@@ -1850,11 +1901,11 @@ struct Frontend
 #ifdef JITASM64
 	void lodsq()		{AppendInstr(I_LODS_Q, 0xAD, E_REXW_PREFIX);}
 #endif
-	void rep_lodsb()	{AppendInstr(I_LODS_B, 0xAC, E_REPEAT_PREFIX);}
-	void rep_lodsw()	{AppendInstr(I_LODS_W, 0xAD, E_REPEAT_PREFIX | E_OPERAND_SIZE_PREFIX);}
-	void rep_lodsd()	{AppendInstr(I_LODS_D, 0xAD, E_REPEAT_PREFIX);}
+	void rep_lodsb()	{AppendInstr(I_LODS_B, 0xAC, E_REP_PREFIX);}
+	void rep_lodsw()	{AppendInstr(I_LODS_W, 0xAD, E_REP_PREFIX | E_OPERAND_SIZE_PREFIX);}
+	void rep_lodsd()	{AppendInstr(I_LODS_D, 0xAD, E_REP_PREFIX);}
 #ifdef JITASM64
-	void rep_lodsq()	{AppendInstr(I_LODS_Q, 0xAD, E_REPEAT_PREFIX | E_REXW_PREFIX);}
+	void rep_lodsq()	{AppendInstr(I_LODS_Q, 0xAD, E_REP_PREFIX | E_REXW_PREFIX);}
 #endif
 	void loop(const std::string& label_name)	{AppendInstr(I_LOOP, 0xE2, E_SPECIAL, Imm64(GetLabelID(label_name)));}	// short jump only
 	void loope(const std::string& label_name)	{AppendInstr(I_LOOP, 0xE1, E_SPECIAL, Imm64(GetLabelID(label_name)));}	// short jump only
@@ -1907,11 +1958,11 @@ struct Frontend
 #ifdef JITASM64
 	void movsq()		{AppendInstr(I_MOVS_Q, 0xA5, E_REXW_PREFIX);}
 #endif
-	void rep_movsb()	{AppendInstr(I_MOVS_B, 0xA4, E_REPEAT_PREFIX);}
-	void rep_movsw()	{AppendInstr(I_MOVS_W, 0xA5, E_REPEAT_PREFIX | E_OPERAND_SIZE_PREFIX);}
-	void rep_movsd()	{AppendInstr(I_MOVS_D, 0xA5, E_REPEAT_PREFIX);}
+	void rep_movsb()	{AppendInstr(I_MOVS_B, 0xA4, E_REP_PREFIX);}
+	void rep_movsw()	{AppendInstr(I_MOVS_W, 0xA5, E_REP_PREFIX | E_OPERAND_SIZE_PREFIX);}
+	void rep_movsd()	{AppendInstr(I_MOVS_D, 0xA5, E_REP_PREFIX);}
 #ifdef JITASM64
-	void rep_movsq()	{AppendInstr(I_MOVS_Q, 0xA5, E_REPEAT_PREFIX | E_REXW_PREFIX);}
+	void rep_movsq()	{AppendInstr(I_MOVS_Q, 0xA5, E_REP_PREFIX | E_REXW_PREFIX);}
 #endif
 	void movsx(const Reg16& dst, const Reg8& src)	{AppendInstr(I_MOVSX, 0x0FBE, E_OPERAND_SIZE_PREFIX, dst, src);}
 	void movsx(const Reg16& dst, const Mem8& src)	{AppendInstr(I_MOVSX, 0x0FBE, E_OPERAND_SIZE_PREFIX, dst, src);}
@@ -2001,9 +2052,9 @@ struct Frontend
 	void outsb()		{AppendInstr(I_OUTS_B, 0x6E, 0);}
 	void outsw()		{AppendInstr(I_OUTS_W, 0x6F, E_OPERAND_SIZE_PREFIX);}
 	void outsd()		{AppendInstr(I_OUTS_D, 0x6F, 0);}
-	void rep_outsb()	{AppendInstr(I_OUTS_B, 0x6E, E_REPEAT_PREFIX);}
-	void rep_outsw()	{AppendInstr(I_OUTS_W, 0x6F, E_REPEAT_PREFIX | E_OPERAND_SIZE_PREFIX);}
-	void rep_outsd()	{AppendInstr(I_OUTS_D, 0x6F, E_REPEAT_PREFIX);}
+	void rep_outsb()	{AppendInstr(I_OUTS_B, 0x6E, E_REP_PREFIX);}
+	void rep_outsw()	{AppendInstr(I_OUTS_W, 0x6F, E_REP_PREFIX | E_OPERAND_SIZE_PREFIX);}
+	void rep_outsd()	{AppendInstr(I_OUTS_D, 0x6F, E_REP_PREFIX);}
 	void pop(const Reg16& dst)	{AppendInstr(I_POP, 0x58, E_OPERAND_SIZE_PREFIX, dst);}
 	void pop(const Mem16& dst)	{AppendInstr(I_POP, 0x8F, E_OPERAND_SIZE_PREFIX, Imm8(0), dst);}
 #ifndef JITASM64
@@ -2031,7 +2082,7 @@ struct Frontend
 #endif
 	void push(const Imm32& imm)	{AppendInstr(I_PUSH, detail::IsInt8(imm.GetImm()) ? 0x6A : 0x68, 0, detail::ImmXor8(imm));}
 #ifndef JITASM64
-	void pushf()		{AppendInstr(I_PUSHF, 0x9C, E_OPERAND_SIZE_PREFIX);}
+	void pushf()	{AppendInstr(I_PUSHF, 0x9C, E_OPERAND_SIZE_PREFIX);}
 	void pushfd()	{AppendInstr(I_PUSHFD, 0x9C, 0);}
 #else
 	void pushf()	{AppendInstr(I_PUSHF, 0x9C, E_OPERAND_SIZE_PREFIX);}
@@ -2248,11 +2299,11 @@ struct Frontend
 #ifdef JITASM64
 	void stosq()		{AppendInstr(I_STOS_Q, 0xAB, E_REXW_PREFIX);}
 #endif
-	void rep_stosb()	{AppendInstr(I_STOS_B, 0xAA, E_REPEAT_PREFIX);}
-	void rep_stosw()	{AppendInstr(I_STOS_W, 0xAB, E_REPEAT_PREFIX | E_OPERAND_SIZE_PREFIX);}
-	void rep_stosd()	{AppendInstr(I_STOS_D, 0xAB, E_REPEAT_PREFIX);}
+	void rep_stosb()	{AppendInstr(I_STOS_B, 0xAA, E_REP_PREFIX);}
+	void rep_stosw()	{AppendInstr(I_STOS_W, 0xAB, E_REP_PREFIX | E_OPERAND_SIZE_PREFIX);}
+	void rep_stosd()	{AppendInstr(I_STOS_D, 0xAB, E_REP_PREFIX);}
 #ifdef JITASM64
-	void rep_stosq()	{AppendInstr(I_STOS_Q, 0xAB, E_REPEAT_PREFIX | E_REXW_PREFIX);}
+	void rep_stosq()	{AppendInstr(I_STOS_Q, 0xAB, E_REP_PREFIX | E_REXW_PREFIX);}
 #endif
 	void sub(const Reg8& dst, const Imm8& imm)		{AppendInstr(I_SUB, 0x80, E_SPECIAL, Imm8(5), dst, imm);}
 	void sub(const Mem8& dst, const Imm8& imm)		{AppendInstr(I_SUB, 0x80, 0, Imm8(5), dst, imm);}
@@ -3354,6 +3405,68 @@ struct Frontend
 	void popcnt(const Reg64& dst, const Reg64& src)							{AppendInstr(I_POPCNT, 0x0FB8, E_MANDATORY_PREFIX_F3 | E_REXW_PREFIX, dst, src);}
 	void popcnt(const Reg64& dst, const Mem64& src)							{AppendInstr(I_POPCNT, 0x0FB8, E_MANDATORY_PREFIX_F3 | E_REXW_PREFIX, dst, src);}
 #endif
+
+	// AES
+	void aesenc(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_AESENC, 0x0F38DC, E_MANDATORY_PREFIX_66, dst, src);}
+	void aesenc(const XmmReg& dst, const Mem128& src)		{AppendInstr(I_AESENC, 0x0F38DC, E_MANDATORY_PREFIX_66, dst, src);}
+	void aesenclast(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_AESENCLAST, 0x0F38DD, E_MANDATORY_PREFIX_66, dst, src);}
+	void aesenclast(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_AESENCLAST, 0x0F38DD, E_MANDATORY_PREFIX_66, dst, src);}
+	void aesdec(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_AESDEC, 0x0F38DE, E_MANDATORY_PREFIX_66, dst, src);}
+	void aesdec(const XmmReg& dst, const Mem128& src)		{AppendInstr(I_AESDEC, 0x0F38DE, E_MANDATORY_PREFIX_66, dst, src);}
+	void aesdeclast(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_AESDECLAST, 0x0F38DF, E_MANDATORY_PREFIX_66, dst, src);}
+	void aesdeclast(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_AESDECLAST, 0x0F38DF, E_MANDATORY_PREFIX_66, dst, src);}
+	void aesimc(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_AESIMC, 0x0F38DB, E_MANDATORY_PREFIX_66, dst, src);}
+	void aesimc(const XmmReg& dst, const Mem128& src)		{AppendInstr(I_AESIMC, 0x0F38DB, E_MANDATORY_PREFIX_66, dst, src);}
+	void aeskeygenassist(const XmmReg& dst, const XmmReg& src, const Imm8& imm)	{AppendInstr(I_AESKEYGENASSIST, 0x0F3ADF, E_MANDATORY_PREFIX_66, dst, src, imm);}
+	void aeskeygenassist(const XmmReg& dst, const Mem128& src, const Imm8& imm)	{AppendInstr(I_AESKEYGENASSIST, 0x0F3ADF, E_MANDATORY_PREFIX_66, dst, src, imm);}
+
+	// AVX
+	void vaddpd(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_ADDPD, 0x58, E_VEX_128 | E_VEX_66_0F, dst, src2, src1);}
+	void vaddpd(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_ADDPD, 0x58, E_VEX_128 | E_VEX_66_0F, dst, src2, src1);}
+	void vaddpd(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2)	{AppendInstr(I_ADDPD, 0x58, E_VEX_256 | E_VEX_66_0F, dst, src2, src1);}
+	void vaddpd(const YmmReg& dst, const YmmReg& src1, const Mem256& src2)	{AppendInstr(I_ADDPD, 0x58, E_VEX_256 | E_VEX_66_0F, dst, src2, src1);}
+	void vaddps(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_ADDPS, 0x58, E_VEX_128 | E_VEX_0F, dst, src2, src1);}
+	void vaddps(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_ADDPS, 0x58, E_VEX_128 | E_VEX_0F, dst, src2, src1);}
+	void vaddps(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2)	{AppendInstr(I_ADDPS, 0x58, E_VEX_256 | E_VEX_0F, dst, src2, src1);}
+	void vaddps(const YmmReg& dst, const YmmReg& src1, const Mem256& src2)	{AppendInstr(I_ADDPS, 0x58, E_VEX_256 | E_VEX_0F, dst, src2, src1);}
+	void vaddsd(const XmmReg& dst, const XmmReg& src1, const Mem64& src2)	{AppendInstr(I_ADDSD, 0x58, E_VEX_128 | E_VEX_F2_0F, dst, src2, src1);}
+	void vaddss(const XmmReg& dst, const XmmReg& src1, const Mem32& src2)	{AppendInstr(I_ADDSS, 0x58, E_VEX_128 | E_VEX_F3_0F, dst, src2, src1);}
+	void vaddsubpd(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_ADDSUBPD, 0xD0, E_VEX_128 | E_VEX_66_0F, dst, src2, src1);}
+	void vaddsubpd(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_ADDSUBPD, 0xD0, E_VEX_128 | E_VEX_66_0F, dst, src2, src1);}
+	void vaddsubpd(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2)	{AppendInstr(I_ADDSUBPD, 0xD0, E_VEX_256 | E_VEX_66_0F, dst, src2, src1);}
+	void vaddsubpd(const YmmReg& dst, const YmmReg& src1, const Mem256& src2)	{AppendInstr(I_ADDSUBPD, 0xD0, E_VEX_256 | E_VEX_66_0F, dst, src2, src1);}
+	void vaddsubps(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_ADDSUBPS, 0xD0, E_VEX_128 | E_VEX_F2_0F, dst, src2, src1);}
+	void vaddsubps(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_ADDSUBPS, 0xD0, E_VEX_128 | E_VEX_F2_0F, dst, src2, src1);}
+	void vaddsubps(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2)	{AppendInstr(I_ADDSUBPS, 0xD0, E_VEX_256 | E_VEX_F2_0F, dst, src2, src1);}
+	void vaddsubps(const YmmReg& dst, const YmmReg& src1, const Mem256& src2)	{AppendInstr(I_ADDSUBPS, 0xD0, E_VEX_256 | E_VEX_F2_0F, dst, src2, src1);}
+	void vaesenc(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_AESENC, 0xDC, E_VEX_128 | E_VEX_66_0F38, dst, src);}
+	void vaesenc(const XmmReg& dst, const Mem128& src)		{AppendInstr(I_AESENC, 0xDC, E_VEX_128 | E_VEX_66_0F38, dst, src);}
+	void vaesenclast(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_AESENCLAST, 0xDD, E_VEX_128 | E_VEX_66_0F38, dst, src);}
+	void vaesenclast(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_AESENCLAST, 0xDD, E_VEX_128 | E_VEX_66_0F38 , dst, src);}
+	void vaesdec(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_AESDEC, 0xDE, E_VEX_128 | E_VEX_66_0F38, dst, src);}
+	void vaesdec(const XmmReg& dst, const Mem128& src)		{AppendInstr(I_AESDEC, 0xDE, E_VEX_128 | E_VEX_66_0F38, dst, src);}
+	void vaesdeclast(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_AESDECLAST, 0xDF, E_VEX_128 | E_VEX_66_0F38, dst, src);}
+	void vaesdeclast(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_AESDECLAST, 0xDF, E_VEX_128 | E_VEX_66_0F38, dst, src);}
+	void vaesimc(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_AESIMC, 0xDB, E_VEX_128 | E_VEX_66_0F38, dst, src);}
+	void vaesimc(const XmmReg& dst, const Mem128& src)		{AppendInstr(I_AESIMC, 0xDB, E_VEX_128 | E_VEX_66_0F38, dst, src);}
+	void vaeskeygenassist(const XmmReg& dst, const XmmReg& src, const Imm8& imm)	{AppendInstr(I_AESKEYGENASSIST, 0xDF, E_VEX_128 | E_VEX_66_0F3A, dst, src, imm);}
+	void vaeskeygenassist(const XmmReg& dst, const Mem128& src, const Imm8& imm)	{AppendInstr(I_AESKEYGENASSIST, 0xDF, E_VEX_128 | E_VEX_66_0F3A, dst, src, imm);}
+	void vandpd(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_ANDPD, 0x54, E_VEX_128 | E_VEX_66_0F, dst, src2, src1);}
+	void vandpd(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_ANDPD, 0x54, E_VEX_128 | E_VEX_66_0F, dst, src2, src1);}
+	void vandpd(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2)	{AppendInstr(I_ANDPD, 0x54, E_VEX_256 | E_VEX_66_0F, dst, src2, src1);}
+	void vandpd(const YmmReg& dst, const YmmReg& src1, const Mem256& src2)	{AppendInstr(I_ANDPD, 0x54, E_VEX_256 | E_VEX_66_0F, dst, src2, src1);}
+	void vandps(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_ANDPS, 0x54, E_VEX_128 | E_VEX_0F, dst, src2, src1);}
+	void vandps(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_ANDPS, 0x54, E_VEX_128 | E_VEX_0F, dst, src2, src1);}
+	void vandps(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2)	{AppendInstr(I_ANDPS, 0x54, E_VEX_256 | E_VEX_0F, dst, src2, src1);}
+	void vandps(const YmmReg& dst, const YmmReg& src1, const Mem256& src2)	{AppendInstr(I_ANDPS, 0x54, E_VEX_256 | E_VEX_0F, dst, src2, src1);}
+	void vandnpd(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_ANDNPD, 0x55, E_VEX_128 | E_VEX_66_0F, dst, src2, src1);}
+	void vandnpd(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_ANDNPD, 0x55, E_VEX_128 | E_VEX_66_0F, dst, src2, src1);}
+	void vandnpd(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2)	{AppendInstr(I_ANDNPD, 0x55, E_VEX_256 | E_VEX_66_0F, dst, src2, src1);}
+	void vandnpd(const YmmReg& dst, const YmmReg& src1, const Mem256& src2)	{AppendInstr(I_ANDNPD, 0x55, E_VEX_256 | E_VEX_66_0F, dst, src2, src1);}
+	void vandnps(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_ANDNPS, 0x55, E_VEX_128 | E_VEX_0F, dst, src2, src1);}
+	void vandnps(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_ANDNPS, 0x55, E_VEX_128 | E_VEX_0F, dst, src2, src1);}
+	void vandnps(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2)	{AppendInstr(I_ANDNPS, 0x55, E_VEX_256 | E_VEX_0F, dst, src2, src1);}
+	void vandnps(const YmmReg& dst, const YmmReg& src1, const Mem256& src2)	{AppendInstr(I_ANDNPS, 0x55, E_VEX_256 | E_VEX_0F, dst, src2, src1);}
 
 	struct ControlState
 	{
