@@ -4054,6 +4054,54 @@ struct test_avx_a : jitasm::function<void>
 		vandnps(xmm1, xmm2, xmmword_ptr[edx]);
 		vandnps(ymm1, ymm2, ymm3);
 		vandnps(ymm1, ymm2, ymmword_ptr[edx]);
+#ifdef JITASM64
+		vaddpd(xmm9, xmm10, xmm11);
+		vaddpd(xmm9, xmm10, xmmword_ptr[r11]);
+		vaddpd(ymm1, ymm2, ymm3);
+		vaddpd(ymm1, ymm2, ymmword_ptr[r11]);
+		vaddps(xmm9, xmm10, xmm11);
+		vaddps(xmm9, xmm10, xmmword_ptr[r11]);
+		vaddps(ymm1, ymm2, ymm3);
+		vaddps(ymm1, ymm2, ymmword_ptr[r11]);
+		vaddsd(xmm9, xmm10, qword_ptr[r11]);
+		vaddss(xmm9, xmm10, dword_ptr[r11]);
+		vaddsubpd(xmm9, xmm10, xmm11);
+		vaddsubpd(xmm9, xmm10, xmmword_ptr[r11]);
+		vaddsubpd(ymm1, ymm2, ymm3);
+		vaddsubpd(ymm1, ymm2, ymmword_ptr[r11]);
+		vaddsubps(xmm9, xmm10, xmm11);
+		vaddsubps(xmm9, xmm10, xmmword_ptr[r11]);
+		vaddsubps(ymm1, ymm2, ymm3);
+		vaddsubps(ymm1, ymm2, ymmword_ptr[r11]);
+		//vaesenc(xmm9, xmm10);
+		//vaesenc(xmm9, xmmword_ptr[r11]);
+		//vaesenclast(xmm9, xmm10);
+		//vaesenclast(xmm9, xmmword_ptr[r11]);
+		//vaesdec(xmm9, xmm10);
+		//vaesdec(xmm9, xmmword_ptr[r11]);
+		//vaesdeclast(xmm9, xmm10);
+		//vaesdeclast(xmm9, xmmword_ptr[r11]);
+		//vaesimc(xmm9, xmm10);
+		//vaesimc(xmm9, xmmword_ptr[r11]);
+		//vaeskeygenassist(xmm9, xmm10, 3);
+		//vaeskeygenassist(xmm9, xmmword_ptr[r11], 3);
+		vandpd(xmm9, xmm10, xmm11);
+		vandpd(xmm9, xmm10, xmmword_ptr[r11]);
+		vandpd(ymm1, ymm2, ymm3);
+		vandpd(ymm1, ymm2, ymmword_ptr[r11]);
+		vandps(xmm9, xmm10, xmm11);
+		vandps(xmm9, xmm10, xmmword_ptr[r11]);
+		vandps(ymm1, ymm2, ymm3);
+		vandps(ymm1, ymm2, ymmword_ptr[r11]);
+		vandnpd(xmm9, xmm10, xmm11);
+		vandnpd(xmm9, xmm10, xmmword_ptr[r11]);
+		vandnpd(ymm1, ymm2, ymm3);
+		vandnpd(ymm1, ymm2, ymmword_ptr[r11]);
+		vandnps(xmm9, xmm10, xmm11);
+		vandnps(xmm9, xmm10, xmmword_ptr[r11]);
+		vandnps(ymm1, ymm2, ymm3);
+		vandnps(ymm1, ymm2, ymmword_ptr[r11]);
+#endif
 	}
 };
 

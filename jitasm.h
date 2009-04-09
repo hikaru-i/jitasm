@@ -644,7 +644,7 @@ struct Backend
 #ifdef JITASM64
 			if (r_m.IsMem() && r_m.GetAddressSize() != O_SIZE_64) db(0x67);
 #endif
-			uint8 vvvv = vex.IsReg() ? 0xF - vex.GetReg().id : 0xF;
+			uint8 vvvv = vex.IsReg() ? 0xF - (uint8) vex.GetReg().id : 0xF;
 
 			uint8 pp = 0;
 			if (flag & E_VEX_66) pp = 1;
