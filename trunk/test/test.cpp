@@ -4001,6 +4001,63 @@ struct test_sse4_2 : jitasm::function<void>
 };
 
 //----------------------------------------
+// AVX A~
+//----------------------------------------
+extern "C" void nasm_test_avx_a();
+struct test_avx_a : jitasm::function<void>
+{
+	virtual void naked_main()
+	{
+		vaddpd(xmm1, xmm2, xmm3);
+		vaddpd(xmm1, xmm2, xmmword_ptr[edx]);
+		vaddpd(ymm1, ymm2, ymm3);
+		vaddpd(ymm1, ymm2, ymmword_ptr[edx]);
+		vaddps(xmm1, xmm2, xmm3);
+		vaddps(xmm1, xmm2, xmmword_ptr[edx]);
+		vaddps(ymm1, ymm2, ymm3);
+		vaddps(ymm1, ymm2, ymmword_ptr[edx]);
+		vaddsd(xmm1, xmm2, qword_ptr[edx]);
+		vaddss(xmm1, xmm2, dword_ptr[edx]);
+		vaddsubpd(xmm1, xmm2, xmm3);
+		vaddsubpd(xmm1, xmm2, xmmword_ptr[edx]);
+		vaddsubpd(ymm1, ymm2, ymm3);
+		vaddsubpd(ymm1, ymm2, ymmword_ptr[edx]);
+		vaddsubps(xmm1, xmm2, xmm3);
+		vaddsubps(xmm1, xmm2, xmmword_ptr[edx]);
+		vaddsubps(ymm1, ymm2, ymm3);
+		vaddsubps(ymm1, ymm2, ymmword_ptr[edx]);
+		//vaesenc(xmm1, xmm2);
+		//vaesenc(xmm1, xmmword_ptr[edx]);
+		//vaesenclast(xmm1, xmm2);
+		//vaesenclast(xmm1, xmmword_ptr[edx]);
+		//vaesdec(xmm1, xmm2);
+		//vaesdec(xmm1, xmmword_ptr[edx]);
+		//vaesdeclast(xmm1, xmm2);
+		//vaesdeclast(xmm1, xmmword_ptr[edx]);
+		//vaesimc(xmm1, xmm2);
+		//vaesimc(xmm1, xmmword_ptr[edx]);
+		//vaeskeygenassist(xmm1, xmm2, 3);
+		//vaeskeygenassist(xmm1, xmmword_ptr[edx], 3);
+		vandpd(xmm1, xmm2, xmm3);
+		vandpd(xmm1, xmm2, xmmword_ptr[edx]);
+		vandpd(ymm1, ymm2, ymm3);
+		vandpd(ymm1, ymm2, ymmword_ptr[edx]);
+		vandps(xmm1, xmm2, xmm3);
+		vandps(xmm1, xmm2, xmmword_ptr[edx]);
+		vandps(ymm1, ymm2, ymm3);
+		vandps(ymm1, ymm2, ymmword_ptr[edx]);
+		vandnpd(xmm1, xmm2, xmm3);
+		vandnpd(xmm1, xmm2, xmmword_ptr[edx]);
+		vandnpd(ymm1, ymm2, ymm3);
+		vandnpd(ymm1, ymm2, ymmword_ptr[edx]);
+		vandnps(xmm1, xmm2, xmm3);
+		vandnps(xmm1, xmm2, xmmword_ptr[edx]);
+		vandnps(ymm1, ymm2, ymm3);
+		vandnps(ymm1, ymm2, ymmword_ptr[edx]);
+	}
+};
+
+//----------------------------------------
 // function_cdecl<char>
 //----------------------------------------
 extern "C" void masm_test_function_return_char();
@@ -4327,10 +4384,16 @@ void test_calling_convension()
 	TEST_M(test_function_return_m128i_ptr);
 }
 
+void test_avx_instructions()
+{
+	TEST_N(test_avx_a);
+}
+
 int wmain()
 {
 	test_instruction();
 	test_calling_convension();
+	test_avx_instructions();
 
 	printf("TEST RESULT - %d passed, %d failed\n", g_test_succeeded, g_test_failed);
 	LARGE_INTEGER freq;
