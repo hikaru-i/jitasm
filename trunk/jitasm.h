@@ -105,6 +105,7 @@ struct RegID
 	RegType type;
 	int id;		///< PhysicalRegID or symbolic register id
 
+	bool operator<(const RegID& rhs) const {return type != rhs.type ? type < rhs.type : id < rhs.id;}
 	bool IsInvalid() const	{return type == R_TYPE_GP && id == INVALID;}
 	bool IsSymbolic() const {return type == R_TYPE_SYMBOLIC_GP || type == R_TYPE_SYMBOLIC_MMX || type == R_TYPE_SYMBOLIC_XMM;}
 
@@ -1266,6 +1267,8 @@ struct Frontend
 
 		//ControlFlowGraph cfg;
 		//BuildControlFlowGraph(cfg);
+		//std::deque<BasicBlock *> ordered_blocks;
+		//GetDepthFirstBlocks(&*cfg.get_block(0), ordered_blocks);
 		//cfg.dump_dot();
 
 		// Resolve jump instructions
@@ -3559,17 +3562,16 @@ struct Frontend
 	struct BasicBlock
 	{
 		BasicBlock *successor_[2];
-		size_t instr_begin_;		// index of begin of the range
-		size_t instr_end_;			// next index of end of the range
+		size_t instr_begin_;		///< begin instruction index of the basic block (inclusive)
+		size_t instr_end_;			///< end instruction index of the basic block (exclusive)
+		size_t depth_;				///< Depth-first order of Control flow
 
-		BasicBlock(size_t instr_begin, size_t instr_end, BasicBlock *successor0 = NULL, BasicBlock *successor1 = NULL) : instr_begin_(instr_begin), instr_end_(instr_end) {
+		BasicBlock(size_t instr_begin, size_t instr_end, BasicBlock *successor0 = NULL, BasicBlock *successor1 = NULL) : instr_begin_(instr_begin), instr_end_(instr_end), depth_(-1) {
 			successor_[0] = successor0;
 			successor_[1] = successor1;
 		}
 
-		bool operator<(const BasicBlock& rhs) const {
-			return instr_begin_ < rhs.instr_begin_;
-		}
+		bool operator<(const BasicBlock& rhs) const { return instr_begin_ < rhs.instr_begin_; }
 	};
 
 	class ControlFlowGraph
@@ -3616,9 +3618,9 @@ struct Frontend
 		{
 			printf("digraph CFG {\n");
 			for (BlockList::const_iterator it = blocks_.begin(); it != blocks_.end(); ++it) {
-				printf("\tBlock%d\n", it->instr_begin_);
-				if (it->successor_[0]) printf("\tBlock%d -> Block%d\n", it->instr_begin_, it->successor_[0]->instr_begin_);
-				if (it->successor_[1]) printf("\tBlock%d -> Block%d\n", it->instr_begin_, it->successor_[1]->instr_begin_);
+				printf("\tBlock%d\n", it->depth_);
+				if (it->successor_[0]) printf("\tBlock%d -> Block%d\n", it->depth_, it->successor_[0]->depth_);
+				if (it->successor_[1]) printf("\tBlock%d -> Block%d\n", it->depth_, it->successor_[1]->depth_);
 			}
 			printf("}\n");
 		}
@@ -3643,6 +3645,7 @@ struct Frontend
 					next_block = detail::next(cur_block);
 				}
 
+				// set successors of current block
 				if (instr_id == I_RET || instr_id == I_IRET) {
 					cur_block->successor_[0] = &*cfg.get_exit_block();
 				}
@@ -3659,6 +3662,24 @@ struct Frontend
 				}
 
 				cur_block = next_block;
+			}
+		}
+	}
+
+	void GetDepthFirstBlocks(BasicBlock *block, std::deque<BasicBlock *>& blocks, bool first = true)
+	{
+		block->depth_ = 0;	// mark "visited"
+		for (size_t i = 0; i < 2; ++i) {
+			BasicBlock *s = block->successor_[i];
+			if (s && s->depth_ != 0)
+				GetDepthFirstBlocks(s, blocks, false);
+		}
+		blocks.push_front(block);
+
+		if (first) {
+			// Numbering depth after all pushes
+			for (size_t i = 0; i < blocks.size(); ++i) {
+				blocks[i]->depth_ = i;
 			}
 		}
 	}
