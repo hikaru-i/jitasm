@@ -1176,7 +1176,7 @@ struct Frontend
 		ret();
 	}
 
-	bool IsJump(InstrID id) const
+	static bool IsJump(InstrID id)
 	{
 		return id == I_JMP || id == I_JCC || id == I_LOOP;
 	}
@@ -1264,12 +1264,6 @@ struct Frontend
 		labels_.clear();
 		instrs_.reserve(128);
 		naked_main();
-
-		//ControlFlowGraph cfg;
-		//BuildControlFlowGraph(cfg);
-		//std::deque<BasicBlock *> ordered_blocks;
-		//GetDepthFirstBlocks(&*cfg.get_block(0), ordered_blocks);
-		//cfg.dump_dot();
 
 		// Resolve jump instructions
 		if (!labels_.empty()) {
@@ -3556,9 +3550,10 @@ struct Frontend
 		ctrl_state_ = *ctrl_state_stack_.rbegin();
 		ctrl_state_stack_.pop_back();
 	}
+};
 
-	// Compiler
-
+namespace detail
+{
 	struct BasicBlock
 	{
 		BasicBlock *successor_[2];
@@ -3566,7 +3561,7 @@ struct Frontend
 		size_t instr_end_;			///< end instruction index of the basic block (exclusive)
 		size_t depth_;				///< Depth-first order of Control flow
 
-		BasicBlock(size_t instr_begin, size_t instr_end, BasicBlock *successor0 = NULL, BasicBlock *successor1 = NULL) : instr_begin_(instr_begin), instr_end_(instr_end), depth_(-1) {
+		BasicBlock(size_t instr_begin, size_t instr_end, BasicBlock *successor0 = NULL, BasicBlock *successor1 = NULL) : instr_begin_(instr_begin), instr_end_(instr_end), depth_((size_t)-1) {
 			successor_[0] = successor0;
 			successor_[1] = successor1;
 		}
@@ -3624,66 +3619,110 @@ struct Frontend
 			}
 			printf("}\n");
 		}
-	};
 
-	void BuildControlFlowGraph(ControlFlowGraph &cfg) const
-	{
-		typedef ControlFlowGraph::BlockList::iterator BlockIterator;
-		BlockIterator cur_block = cfg.initialize(instrs_.size());
-		for (InstrList::const_iterator it = instrs_.begin(); it != instrs_.end(); ++it) {
-			InstrID instr_id = it->GetID();
-			if (IsJump(instr_id) || instr_id == I_RET || instr_id == I_IRET) {
-				// jump instruction always terminate basic block
-				const size_t instr_idx = std::distance(instrs_.begin(), it);
-				BlockIterator next_block;
-				if (instr_idx + 1 < cur_block->instr_end_) {
-					// split basic block
-					next_block = cfg.split(cur_block, instr_idx + 1);
-				}
-				else {
-					// already splitted
-					next_block = detail::next(cur_block);
-				}
+		void GetDepthFirstBlocks(std::deque<BasicBlock *>& blocks)
+		{
+			GetDepthFirstBlocks(&*get_block(0), blocks);
 
-				// set successors of current block
-				if (instr_id == I_RET || instr_id == I_IRET) {
-					cur_block->successor_[0] = &*cfg.get_exit_block();
-				}
-				else {
-					const size_t jump_to = GetJumpTo(*it);	// jump target instruction index
-					BlockIterator jump_target = cfg.split(cfg.get_block(jump_to), jump_to);
-					if (instr_id == I_JMP) {
-						cur_block->successor_[0] = &*jump_target;
-					}
-					else {
-						ASSERT(instr_id == I_JCC || instr_id == I_LOOP);
-						cur_block->successor_[1] = &*jump_target;
-					}
-				}
-
-				cur_block = next_block;
-			}
-		}
-	}
-
-	void GetDepthFirstBlocks(BasicBlock *block, std::deque<BasicBlock *>& blocks, bool first = true)
-	{
-		block->depth_ = 0;	// mark "visited"
-		for (size_t i = 0; i < 2; ++i) {
-			BasicBlock *s = block->successor_[i];
-			if (s && s->depth_ != 0)
-				GetDepthFirstBlocks(s, blocks, false);
-		}
-		blocks.push_front(block);
-
-		if (first) {
 			// Numbering depth after all pushes
 			for (size_t i = 0; i < blocks.size(); ++i) {
 				blocks[i]->depth_ = i;
 			}
 		}
-	}
-};
+
+		void GetDepthFirstBlocks(BasicBlock *block, std::deque<BasicBlock *>& blocks)
+		{
+			block->depth_ = 0;	// mark "visited"
+			for (size_t i = 0; i < 2; ++i) {
+				BasicBlock *s = block->successor_[i];
+				if (s && s->depth_ != 0)
+					GetDepthFirstBlocks(s, blocks);
+			}
+			blocks.push_front(block);
+		}
+
+		void Build(const Frontend& f)
+		{
+			typedef BlockList::iterator BlockIterator;
+			BlockIterator cur_block = initialize(f.instrs_.size());
+			for (Frontend::InstrList::const_iterator it = f.instrs_.begin(); it != f.instrs_.end(); ++it) {
+				InstrID instr_id = it->GetID();
+				if (Frontend::IsJump(instr_id) || instr_id == I_RET || instr_id == I_IRET) {
+					// jump instruction always terminate basic block
+					const size_t instr_idx = std::distance(f.instrs_.begin(), it);
+					BlockIterator next_block;
+					if (instr_idx + 1 < cur_block->instr_end_) {
+						// split basic block
+						next_block = split(cur_block, instr_idx + 1);
+					}
+					else {
+						// already splitted
+						next_block = detail::next(cur_block);
+					}
+
+					// set successors of current block
+					if (instr_id == I_RET || instr_id == I_IRET) {
+						cur_block->successor_[0] = &*get_exit_block();
+					}
+					else {
+						const size_t jump_to = f.GetJumpTo(*it);	// jump target instruction index
+						BlockIterator jump_target = split(get_block(jump_to), jump_to);
+						if (instr_id == I_JMP) {
+							cur_block->successor_[0] = &*jump_target;
+						}
+						else {
+							ASSERT(instr_id == I_JCC || instr_id == I_LOOP);
+							cur_block->successor_[1] = &*jump_target;
+						}
+					}
+
+					cur_block = next_block;
+				}
+			}
+		}
+	};
+
+	class LinearScanRegisterAllocator
+	{
+	private:
+		Frontend& f_;
+
+		void NormalizeSymbolicReg()
+		{
+			struct RegIDMap {
+			} reg_id_map;
+
+
+			for (Frontend::InstrList::iterator it = f_.instrs_.begin(); it != f_.instrs_.end(); ++it) {
+				for (size_t i = 0; i < Instr::MAX_OPERAND_COUNT; ++i) {
+					const Opd& opd = it->GetOpd(i);
+					if (opd.IsReg()) {
+						RegID reg = opd.GetReg();
+
+					}
+					else if (opd.IsMem()) {
+					}
+				}
+			}
+		}
+
+	public:
+		LinearScanRegisterAllocator(Frontend& f) : f_(f) {}
+
+		bool execute()
+		{
+			ControlFlowGraph cfg;
+			cfg.Build(f_);
+
+			std::deque<BasicBlock *> ordered_blocks;
+			cfg.GetDepthFirstBlocks(ordered_blocks);
+			cfg.dump_dot();
+
+			return true;
+		}
+	};
+
+}	// namespace dtail
 
 namespace detail
 {
@@ -4872,6 +4911,10 @@ struct function_cdecl<void, detail::ArgNone, detail::ArgNone, detail::ArgNone, d
 	virtual void main() {}
 	void naked_main() {
 		main();
+
+		detail::LinearScanRegisterAllocator reg_alloc(*this);
+		reg_alloc.execute();
+
 		MakePrologAndEpilog();
 	}
 };
