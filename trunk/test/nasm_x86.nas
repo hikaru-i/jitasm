@@ -36,18 +36,30 @@ _nasm_test_avx_a:
 	vaddsubps xmm1, xmm2, [edx]
 	vaddsubps ymm1, ymm2, ymm3
 	vaddsubps ymm1, ymm2, [edx]
-	;vaesenc xmm1, xmm2
-	;vaesenc xmm1, [edx]
-	;vaesenclast xmm1, xmm2
-	;vaesenclast xmm1, [edx]
-	;vaesdec xmm1, xmm2
-	;vaesdec xmm1, [edx]
-	;vaesdeclast xmm1, xmm2
-	;vaesdeclast xmm1, [edx]
-	;vaesimc xmm1, xmm2
-	;vaesimc xmm1, [edx]
-	;vaeskeygenassist xmm1, xmm2, 3
-	;vaeskeygenassist xmm1, [edx], 3
+	;aesenc xmm1, xmm2
+	;aesenc xmm1, [edx]
+	vaesenc xmm1, xmm2, xmm3
+	vaesenc xmm1, xmm2, [edx]
+	;aesenclast xmm1, xmm2
+	;aesenclast xmm1, [edx]
+	vaesenclast xmm1, xmm2, xmm3
+	vaesenclast xmm1, xmm2, [edx]
+	;aesdec xmm1, xmm2
+	;aesdec xmm1, [edx]
+	vaesdec xmm1, xmm2, xmm3
+	vaesdec xmm1, xmm2, [edx]
+	;aesdeclast xmm1, xmm2
+	;aesdeclast xmm1, [edx]
+	vaesdeclast xmm1, xmm2, xmm3
+	vaesdeclast xmm1, xmm2, [edx]
+	;aesimc xmm1, xmm2
+	;aesimc xmm1, [edx]
+	vaesimc xmm1, xmm2
+	vaesimc xmm1, [edx]
+	;aeskeygenassist xmm1, xmm2, 3
+	;aeskeygenassist xmm1, [edx], 3
+	vaeskeygenassist xmm1, xmm2, 3
+	vaeskeygenassist xmm1, [edx], 3
 	vandpd xmm1, xmm2, xmm3
 	vandpd xmm1, xmm2, [edx]
 	vandpd ymm1, ymm2, ymm3
@@ -64,3 +76,102 @@ _nasm_test_avx_a:
 	vandnps xmm1, xmm2, [edx]
 	vandnps ymm1, ymm2, ymm3
 	vandnps ymm1, ymm2, [edx]
+
+global	_nasm_test_avx_b
+_nasm_test_avx_b:
+	vblendpd xmm1, xmm2, xmm2, 3
+	vblendpd xmm1, xmm2, [edx], 3
+	vblendpd ymm1, ymm2, ymm2, 3
+	vblendpd ymm1, ymm2, [edx], 3
+	vblendps xmm1, xmm2, xmm2, 3
+	vblendps xmm1, xmm2, [edx], 3
+	vblendps ymm1, ymm2, ymm2, 3
+	vblendps ymm1, ymm2, [edx], 3
+	vblendvpd xmm1, xmm2, xmm2, xmm3
+	vblendvpd xmm1, xmm2, [edx], xmm3
+	vblendvpd ymm1, ymm2, ymm2, ymm3
+	vblendvpd ymm1, ymm2, [edx], ymm3
+	vblendvps xmm1, xmm2, xmm2, xmm3
+	vblendvps xmm1, xmm2, [edx], xmm3
+	vblendvps ymm1, ymm2, ymm2, ymm3
+	vblendvps ymm1, ymm2, [edx], ymm3
+	vbroadcastss xmm1, [edx]
+	vbroadcastss ymm1, [edx]
+	vbroadcastsd ymm1, [edx]
+	vbroadcastf128 ymm1, [edx]
+	vcmppd xmm1, xmm2, xmm2, 3
+	vcmppd xmm1, xmm2, [edx], 3
+	vcmppd ymm1, ymm2, ymm2, 3
+	vcmppd ymm1, ymm2, [edx], 3
+	vcmpps xmm1, xmm2, xmm2, 3
+	vcmpps xmm1, xmm2, [edx], 3
+	vcmpps ymm1, ymm2, ymm2, 3
+	vcmpps ymm1, ymm2, [edx], 3
+	vcmpsd xmm1, xmm2, xmm2, 3
+	vcmpsd xmm1, xmm2, [edx], 3
+	vcmpss xmm1, xmm2, xmm2, 3
+	vcmpss xmm1, xmm2, [edx], 3
+	vcomisd xmm1, xmm2
+	vcomisd xmm1, [edx]
+	vcomiss xmm1, xmm2
+	vcomiss xmm1, [edx]
+	vcvtdq2pd xmm1, xmm2
+	vcvtdq2pd xmm1, [edx]
+	vcvtdq2pd ymm1, xmm2
+	vcvtdq2pd ymm1, [edx]
+	vcvtdq2ps xmm1, xmm2
+	vcvtdq2ps xmm1, [edx]
+	vcvtdq2ps ymm1, ymm2
+	vcvtdq2ps ymm1, [edx]
+	vcvtpd2dq xmm1, xmm2
+	vcvtpd2dq xmm1, oword [edx]
+	vcvtpd2dq xmm1, ymm2
+	vcvtpd2dq xmm1, yword [edx]
+	vcvtpd2ps xmm1, xmm2
+	vcvtpd2ps xmm1, oword [edx]
+	vcvtpd2ps xmm1, ymm2
+	vcvtpd2ps xmm1, yword [edx]
+	vcvtps2dq xmm1, xmm2
+	vcvtps2dq xmm1, [edx]
+	vcvtps2dq ymm1, ymm2
+	vcvtps2dq ymm1, [edx]
+	vcvtps2pd xmm1, xmm2
+	vcvtps2pd xmm1, [edx]
+	vcvtps2pd ymm1, xmm2
+	vcvtps2pd ymm1, [edx]
+	vcvtsd2si esp, xmm2
+	vcvtsd2si esp, [edx]
+	;vcvtsd2si rsp, xmm2
+	;vcvtsd2si rsp, [edx]
+	vcvtsd2ss xmm1, xmm2, xmm2
+	vcvtsd2ss xmm1, xmm2, [edx]
+	vcvtsi2sd xmm1, xmm2, ebx
+	vcvtsi2sd xmm1, xmm2, [edx]
+	;vcvtsi2sd xmm1, xmm2, rbx
+	;vcvtsi2sd xmm1, xmm2, [edx]
+	vcvtsi2ss xmm1, xmm2, ebx
+	vcvtsi2ss xmm1, xmm2, [edx]
+	;vcvtsi2ss xmm1, xmm2, rbx
+	;vcvtsi2ss xmm1, xmm2, [edx]
+	vcvtss2sd xmm1, xmm2, xmm2
+	vcvtss2sd xmm1, xmm2, [edx]
+	vcvtss2si ecx, xmm2
+	vcvtss2si ecx, [edx]
+	;vcvtss2si rcx, xmm2
+	;vcvtss2si rcx, [edx]
+	vcvttpd2dq xmm1, xmm2
+	vcvttpd2dq xmm1, oword [edx]
+	vcvttpd2dq xmm1, ymm2
+	vcvttpd2dq xmm1, yword [edx]
+	vcvttps2dq xmm1, xmm2
+	vcvttps2dq xmm1, [edx]
+	vcvttps2dq ymm1, ymm2
+	vcvttps2dq ymm1, [edx]
+	vcvttsd2si ecx, xmm2
+	vcvttsd2si ecx, [edx]
+	;vcvttsd2si rcx, xmm2
+	;vcvttsd2si rcx, [edx]
+	vcvttss2si ecx, xmm2
+	vcvttss2si ecx, [edx]
+	;vcvttss2si rcx, xmm2
+	;vcvttss2si rcx, [edx]
