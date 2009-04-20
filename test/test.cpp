@@ -4026,18 +4026,30 @@ struct test_avx_a : jitasm::function<void>
 		vaddsubps(xmm1, xmm2, xmmword_ptr[edx]);
 		vaddsubps(ymm1, ymm2, ymm3);
 		vaddsubps(ymm1, ymm2, ymmword_ptr[edx]);
-		//vaesenc(xmm1, xmm2);
-		//vaesenc(xmm1, xmmword_ptr[edx]);
-		//vaesenclast(xmm1, xmm2);
-		//vaesenclast(xmm1, xmmword_ptr[edx]);
-		//vaesdec(xmm1, xmm2);
-		//vaesdec(xmm1, xmmword_ptr[edx]);
-		//vaesdeclast(xmm1, xmm2);
-		//vaesdeclast(xmm1, xmmword_ptr[edx]);
-		//vaesimc(xmm1, xmm2);
-		//vaesimc(xmm1, xmmword_ptr[edx]);
-		//vaeskeygenassist(xmm1, xmm2, 3);
-		//vaeskeygenassist(xmm1, xmmword_ptr[edx], 3);
+		//aesenc(xmm1, xmm2);
+		//aesenc(xmm1, xmmword_ptr[edx]);
+		vaesenc(xmm1, xmm2, xmm3);
+		vaesenc(xmm1, xmm2, xmmword_ptr[edx]);
+		//aesenclast(xmm1, xmm2);
+		//aesenclast(xmm1, xmmword_ptr[edx]);
+		vaesenclast(xmm1, xmm2, xmm3);
+		vaesenclast(xmm1, xmm2, xmmword_ptr[edx]);
+		//aesdec(xmm1, xmm2);
+		//aesdec(xmm1, xmmword_ptr[edx]);
+		vaesdec(xmm1, xmm2, xmm3);
+		vaesdec(xmm1, xmm2, xmmword_ptr[edx]);
+		//aesdeclast(xmm1, xmm2);
+		//aesdeclast(xmm1, xmmword_ptr[edx]);
+		vaesdeclast(xmm1, xmm2, xmm3);
+		vaesdeclast(xmm1, xmm2, xmmword_ptr[edx]);
+		//aesimc(xmm1, xmm2);
+		//aesimc(xmm1, xmmword_ptr[edx]);
+		vaesimc(xmm1, xmm2);
+		vaesimc(xmm1, xmmword_ptr[edx]);
+		//aeskeygenassist(xmm1, xmm2, 3);
+		//aeskeygenassist(xmm1, xmmword_ptr[edx], 3);
+		vaeskeygenassist(xmm1, xmm2, 3);
+		vaeskeygenassist(xmm1, xmmword_ptr[edx], 3);
 		vandpd(xmm1, xmm2, xmm3);
 		vandpd(xmm1, xmm2, xmmword_ptr[edx]);
 		vandpd(ymm1, ymm2, ymm3);
@@ -4057,51 +4069,181 @@ struct test_avx_a : jitasm::function<void>
 #ifdef JITASM64
 		vaddpd(xmm9, xmm10, xmm11);
 		vaddpd(xmm9, xmm10, xmmword_ptr[r11]);
-		vaddpd(ymm1, ymm2, ymm3);
-		vaddpd(ymm1, ymm2, ymmword_ptr[r11]);
+		vaddpd(ymm9, ymm10, ymm11);
+		vaddpd(ymm9, ymm10, ymmword_ptr[r11]);
 		vaddps(xmm9, xmm10, xmm11);
 		vaddps(xmm9, xmm10, xmmword_ptr[r11]);
-		vaddps(ymm1, ymm2, ymm3);
-		vaddps(ymm1, ymm2, ymmword_ptr[r11]);
+		vaddps(ymm9, ymm10, ymm11);
+		vaddps(ymm9, ymm10, ymmword_ptr[r11]);
 		vaddsd(xmm9, xmm10, qword_ptr[r11]);
 		vaddss(xmm9, xmm10, dword_ptr[r11]);
 		vaddsubpd(xmm9, xmm10, xmm11);
 		vaddsubpd(xmm9, xmm10, xmmword_ptr[r11]);
-		vaddsubpd(ymm1, ymm2, ymm3);
-		vaddsubpd(ymm1, ymm2, ymmword_ptr[r11]);
+		vaddsubpd(ymm9, ymm10, ymm11);
+		vaddsubpd(ymm9, ymm10, ymmword_ptr[r11]);
 		vaddsubps(xmm9, xmm10, xmm11);
 		vaddsubps(xmm9, xmm10, xmmword_ptr[r11]);
-		vaddsubps(ymm1, ymm2, ymm3);
-		vaddsubps(ymm1, ymm2, ymmword_ptr[r11]);
-		//vaesenc(xmm9, xmm10);
-		//vaesenc(xmm9, xmmword_ptr[r11]);
-		//vaesenclast(xmm9, xmm10);
-		//vaesenclast(xmm9, xmmword_ptr[r11]);
-		//vaesdec(xmm9, xmm10);
-		//vaesdec(xmm9, xmmword_ptr[r11]);
-		//vaesdeclast(xmm9, xmm10);
-		//vaesdeclast(xmm9, xmmword_ptr[r11]);
-		//vaesimc(xmm9, xmm10);
-		//vaesimc(xmm9, xmmword_ptr[r11]);
-		//vaeskeygenassist(xmm9, xmm10, 3);
-		//vaeskeygenassist(xmm9, xmmword_ptr[r11], 3);
+		vaddsubps(ymm9, ymm10, ymm11);
+		vaddsubps(ymm9, ymm10, ymmword_ptr[r11]);
+		vaesenc(xmm9, xmm10, xmm11);
+		vaesenc(xmm9, xmm10, xmmword_ptr[r11]);
+		vaesenclast(xmm9, xmm10, xmm11);
+		vaesenclast(xmm9, xmm10, xmmword_ptr[r11]);
+		vaesdec(xmm9, xmm10, xmm11);
+		vaesdec(xmm9, xmm10, xmmword_ptr[r11]);
+		vaesdeclast(xmm9, xmm10, xmm11);
+		vaesdeclast(xmm9, xmm10, xmmword_ptr[r11]);
+		vaesimc(xmm9, xmm10);
+		vaesimc(xmm9, xmmword_ptr[r11]);
+		vaeskeygenassist(xmm9, xmm10, 3);
+		vaeskeygenassist(xmm9, xmmword_ptr[r11], 3);
 		vandpd(xmm9, xmm10, xmm11);
 		vandpd(xmm9, xmm10, xmmword_ptr[r11]);
-		vandpd(ymm1, ymm2, ymm3);
-		vandpd(ymm1, ymm2, ymmword_ptr[r11]);
+		vandpd(ymm9, ymm10, ymm11);
+		vandpd(ymm9, ymm10, ymmword_ptr[r11]);
 		vandps(xmm9, xmm10, xmm11);
 		vandps(xmm9, xmm10, xmmword_ptr[r11]);
-		vandps(ymm1, ymm2, ymm3);
-		vandps(ymm1, ymm2, ymmword_ptr[r11]);
+		vandps(ymm9, ymm10, ymm11);
+		vandps(ymm9, ymm10, ymmword_ptr[r11]);
 		vandnpd(xmm9, xmm10, xmm11);
 		vandnpd(xmm9, xmm10, xmmword_ptr[r11]);
-		vandnpd(ymm1, ymm2, ymm3);
-		vandnpd(ymm1, ymm2, ymmword_ptr[r11]);
+		vandnpd(ymm9, ymm10, ymm11);
+		vandnpd(ymm9, ymm10, ymmword_ptr[r11]);
 		vandnps(xmm9, xmm10, xmm11);
 		vandnps(xmm9, xmm10, xmmword_ptr[r11]);
-		vandnps(ymm1, ymm2, ymm3);
-		vandnps(ymm1, ymm2, ymmword_ptr[r11]);
+		vandnps(ymm9, ymm10, ymm11);
+		vandnps(ymm9, ymm10, ymmword_ptr[r11]);
 #endif
+	}
+};
+
+//----------------------------------------
+// AVX B~
+//----------------------------------------
+extern "C" void nasm_test_avx_b();
+struct test_avx_b : jitasm::function<void>
+{
+	virtual void naked_main()
+	{
+		vblendpd(xmm1, xmm2, xmm2, 3);
+		vblendpd(xmm1, xmm2, xmmword_ptr[edx], 3);
+		vblendpd(ymm1, ymm2, ymm2, 3);
+		vblendpd(ymm1, ymm2, ymmword_ptr[edx], 3);
+		vblendps(xmm1, xmm2, xmm2, 3);
+		vblendps(xmm1, xmm2, xmmword_ptr[edx], 3);
+		vblendps(ymm1, ymm2, ymm2, 3);
+		vblendps(ymm1, ymm2, ymmword_ptr[edx], 3);
+		vblendvpd(xmm1, xmm2, xmm2, xmm3);
+		vblendvpd(xmm1, xmm2, xmmword_ptr[edx], xmm3);
+		vblendvpd(ymm1, ymm2, ymm2, ymm3);
+		vblendvpd(ymm1, ymm2, ymmword_ptr[edx], ymm3);
+		vblendvps(xmm1, xmm2, xmm2, xmm3);
+		vblendvps(xmm1, xmm2, xmmword_ptr[edx], xmm3);
+		vblendvps(ymm1, ymm2, ymm2, ymm3);
+		vblendvps(ymm1, ymm2, ymmword_ptr[edx], ymm3);
+		vbroadcastss(xmm1, dword_ptr[edx]);
+		vbroadcastss(ymm1, dword_ptr[edx]);
+		vbroadcastsd(ymm1, qword_ptr[edx]);
+		vbroadcastf128(ymm1, xmmword_ptr[edx]);
+		vcmppd(xmm1, xmm2, xmm2, 3);
+		vcmppd(xmm1, xmm2, xmmword_ptr[edx], 3);
+		vcmppd(ymm1, ymm2, ymm2, 3);
+		vcmppd(ymm1, ymm2, ymmword_ptr[edx], 3);
+		vcmpps(xmm1, xmm2, xmm2, 3);
+		vcmpps(xmm1, xmm2, xmmword_ptr[edx], 3);
+		vcmpps(ymm1, ymm2, ymm2, 3);
+		vcmpps(ymm1, ymm2, ymmword_ptr[edx], 3);
+		vcmpsd(xmm1, xmm2, xmm2, 3);
+		vcmpsd(xmm1, xmm2, qword_ptr[edx], 3);
+		vcmpss(xmm1, xmm2, xmm2, 3);
+		vcmpss(xmm1, xmm2, dword_ptr[edx], 3);
+		vcomisd(xmm1, xmm2);
+		vcomisd(xmm1, qword_ptr[edx]);
+		vcomiss(xmm1, xmm2);
+		vcomiss(xmm1, dword_ptr[edx]);
+		vcvtdq2pd(xmm1, xmm2);
+		vcvtdq2pd(xmm1, qword_ptr[edx]);
+		vcvtdq2pd(ymm1, xmm2);
+		vcvtdq2pd(ymm1, xmmword_ptr[edx]);
+		vcvtdq2ps(xmm1, xmm2);
+		vcvtdq2ps(xmm1, xmmword_ptr[edx]);
+		vcvtdq2ps(ymm1, ymm2);
+		vcvtdq2ps(ymm1, ymmword_ptr[edx]);
+		vcvtpd2dq(xmm1, xmm2);
+		vcvtpd2dq(xmm1, xmmword_ptr[edx]);
+		vcvtpd2dq(xmm1, ymm2);
+		vcvtpd2dq(xmm1, ymmword_ptr[edx]);
+		vcvtpd2ps(xmm1, xmm2);
+		vcvtpd2ps(xmm1, xmmword_ptr[edx]);
+		vcvtpd2ps(xmm1, ymm2);
+		vcvtpd2ps(xmm1, ymmword_ptr[edx]);
+		vcvtps2dq(xmm1, xmm2);
+		vcvtps2dq(xmm1, xmmword_ptr[edx]);
+		vcvtps2dq(ymm1, ymm2);
+		vcvtps2dq(ymm1, ymmword_ptr[edx]);
+		vcvtps2pd(xmm1, xmm2);
+		vcvtps2pd(xmm1, qword_ptr[edx]);
+		vcvtps2pd(ymm1, xmm2);
+		vcvtps2pd(ymm1, xmmword_ptr[edx]);
+		vcvtsd2si(esp, xmm2);
+		vcvtsd2si(esp, qword_ptr[edx]);
+#ifdef JITASM64
+		vcvtsd2si(rsp, xmm2);
+		vcvtsd2si(rsp, qword_ptr[edx]);
+#endif
+		vcvtsd2ss(xmm1, xmm2, xmm2);
+		vcvtsd2ss(xmm1, xmm2, qword_ptr[edx]);
+		vcvtsi2sd(xmm1, xmm2, ebx);
+		vcvtsi2sd(xmm1, xmm2, dword_ptr[edx]);
+#ifdef JITASM64
+		vcvtsi2sd(xmm1, xmm2, rbx);
+		vcvtsi2sd(xmm1, xmm2, qword_ptr[edx]);
+#endif
+		vcvtsi2ss(xmm1, xmm2, ebx);
+		vcvtsi2ss(xmm1, xmm2, dword_ptr[edx]);
+#ifdef JITASM64
+		vcvtsi2ss(xmm1, xmm2, rbx);
+		vcvtsi2ss(xmm1, xmm2, qword_ptr[edx]);
+#endif
+		vcvtss2sd(xmm1, xmm2, xmm2);
+		vcvtss2sd(xmm1, xmm2, dword_ptr[edx]);
+		vcvtss2si(ecx, xmm2);
+		vcvtss2si(ecx, dword_ptr[edx]);
+#ifdef JITASM64
+		vcvtss2si(rcx, xmm2);
+		vcvtss2si(rcx, dword_ptr[edx]);
+#endif
+		vcvttpd2dq(xmm1, xmm2);
+		vcvttpd2dq(xmm1, xmmword_ptr[edx]);
+		vcvttpd2dq(xmm1, ymm2);
+		vcvttpd2dq(xmm1, ymmword_ptr[edx]);
+		vcvttps2dq(xmm1, xmm2);
+		vcvttps2dq(xmm1, xmmword_ptr[edx]);
+		vcvttps2dq(ymm1, ymm2);
+		vcvttps2dq(ymm1, ymmword_ptr[edx]);
+		vcvttsd2si(ecx, xmm2);
+		vcvttsd2si(ecx, qword_ptr[edx]);
+#ifdef JITASM64
+		vcvttsd2si(rcx, xmm2);
+		vcvttsd2si(rcx, qword_ptr[edx]);
+#endif
+		vcvttss2si(ecx, xmm2);
+		vcvttss2si(ecx, dword_ptr[edx]);
+#ifdef JITASM64
+		vcvttss2si(rcx, xmm2);
+		vcvttss2si(rcx, dword_ptr[edx]);
+#endif
+	}
+};
+
+//----------------------------------------
+// AVX D~
+//----------------------------------------
+extern "C" void nasm_test_avx_d();
+struct test_avx_d : jitasm::function<void>
+{
+	virtual void naked_main()
+	{
 	}
 };
 
@@ -4435,6 +4577,7 @@ void test_calling_convension()
 void test_avx_instructions()
 {
 	TEST_N(test_avx_a);
+	TEST_N(test_avx_b);
 }
 
 int wmain()
