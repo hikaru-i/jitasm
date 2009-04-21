@@ -36,6 +36,7 @@
 #include <deque>
 #include <vector>
 #include <set>
+#include <map>
 #include <assert.h>
 
 #pragma warning( push )
@@ -96,7 +97,8 @@ enum RegType
 	R_TYPE_YMM,				///< YMM register
 	R_TYPE_SYMBOLIC_GP,		///< Symbolic general purpose register
 	R_TYPE_SYMBOLIC_MMX,	///< Symbolic MMX register
-	R_TYPE_SYMBOLIC_XMM		///< Symbolic XMM register
+	R_TYPE_SYMBOLIC_XMM,	///< Symbolic XMM register
+	R_TYPE_SYMBOLIC_YMM		///< Symbolic YMM register
 };
 
 /// Register identifier
@@ -137,6 +139,10 @@ enum OpdType
 	O_TYPE_REG,
 	O_TYPE_MEM,
 	O_TYPE_IMM,
+
+	O_TYPE_DUMMY	= 1 << 8,	///< The operand which has this flag is not encoded. This is for register allocator.
+	O_TYPE_READ		= 1 << 9,	///< The operand is used for reading.
+	O_TYPE_WRITE	= 1 << 10	///< The operand is used for writing.
 };
 
 /// Operand size
@@ -591,6 +597,7 @@ struct Instr
 
 	InstrID GetID() const {return id_;}
 	const Opd& GetOpd(size_t index) const {return opd_[index];}
+	Opd& GetOpd(size_t index) {return opd_[index];}
 };
 
 /// Assembler backend
@@ -3667,21 +3674,63 @@ struct Frontend
 	}
 };
 
-namespace detail
+namespace compiler
 {
+	struct RegUsePoint
+	{
+		size_t instr_idx;
+		OpdType type;
+
+		RegUsePoint(size_t idx, OpdType t) : instr_idx(idx), type(t) {}
+	};
+
+	struct LifetimeTable
+	{
+		// x86      x64
+		// 0  - 7   0  - 15  General purpose register
+		// 8  - 15  16 - 23  MMX register
+		// 16 - 23  24 - 39  XMM register
+		// 24 - 31  40 - 55  YMM register
+		// 32 -     56 -     Symbolic register
+		std::vector< std::vector<RegUsePoint> > reg_usage_;
+
+		LifetimeTable() : reg_usage_(16) {}
+
+		void AddUsePoint(size_t instr_idx, const RegID& reg, OpdType opd_type) {
+#if JITASM64
+			const size_t offset[] = {0, 0, 16, 24, 40, 56, 56, 56, 56};
+#else
+			const size_t offset[] = {0, 0, 8, 16, 24, 32, 32, 32, 32};
+#endif
+			ASSERT(R_TYPE_GP == 0 && R_TYPE_FPU == 1 && R_TYPE_MMX == 2 && R_TYPE_XMM == 3 && R_TYPE_YMM == 4 && R_TYPE_SYMBOLIC_GP == 5 && R_TYPE_SYMBOLIC_MMX == 6 && R_TYPE_SYMBOLIC_XMM == 7 && R_TYPE_SYMBOLIC_YMM == 8);
+			ASSERT(R_TYPE_GP <= reg.type && reg.type <= R_TYPE_SYMBOLIC_YMM);
+			if (reg.type == R_TYPE_FPU)
+				return;		// not supported
+
+			const size_t reg_idx = offset[reg.type] + reg.id;
+			if (reg_usage_.size() <= reg_idx)
+				reg_usage_.resize(reg_idx + 1);
+
+			reg_usage_[reg_idx].push_back(RegUsePoint(instr_idx, opd_type));
+		}
+	};
+
 	struct BasicBlock
 	{
-		BasicBlock *successor_[2];
-		size_t instr_begin_;		///< begin instruction index of the basic block (inclusive)
-		size_t instr_end_;			///< end instruction index of the basic block (exclusive)
-		size_t depth_;				///< Depth-first order of Control flow
+		BasicBlock *successor[2];
+		size_t instr_begin;		///< begin instruction index of the basic block (inclusive)
+		size_t instr_end;			///< end instruction index of the basic block (exclusive)
+		size_t depth;				///< Depth-first order of Control flow
+		std::vector<uint32> live_in;
+		std::vector<uint32> live_out;
+		LifetimeTable lifetime;
 
-		BasicBlock(size_t instr_begin, size_t instr_end, BasicBlock *successor0 = NULL, BasicBlock *successor1 = NULL) : instr_begin_(instr_begin), instr_end_(instr_end), depth_((size_t)-1) {
-			successor_[0] = successor0;
-			successor_[1] = successor1;
+		BasicBlock(size_t instr_begin_, size_t instr_end_, BasicBlock *successor0 = NULL, BasicBlock *successor1 = NULL) : instr_begin(instr_begin_), instr_end(instr_end_), depth((size_t)-1) {
+			successor[0] = successor0;
+			successor[1] = successor1;
 		}
 
-		bool operator<(const BasicBlock& rhs) const { return instr_begin_ < rhs.instr_begin_; }
+		bool operator<(const BasicBlock& rhs) const { return instr_begin < rhs.instr_begin; }
 	};
 
 	class ControlFlowGraph
@@ -3701,16 +3750,16 @@ namespace detail
 		}
 
 		BlockList::iterator split(BlockList::iterator target_block, size_t instr_idx) {
-			if (target_block->instr_begin_ == instr_idx)
+			if (target_block->instr_begin == instr_idx)
 				return target_block;
 
-			BlockList::iterator new_block = blocks_.insert(detail::next(target_block), BasicBlock(instr_idx, target_block->instr_end_));
+			BlockList::iterator new_block = blocks_.insert(detail::next(target_block), BasicBlock(instr_idx, target_block->instr_end));
 			ASSERT(detail::next(target_block) == new_block);
-			new_block->successor_[0] = target_block->successor_[0];
-			new_block->successor_[1] = target_block->successor_[1];
-			target_block->successor_[0] = &*new_block;
-			target_block->successor_[1] = NULL;
-			target_block->instr_end_ = instr_idx;
+			new_block->successor[0] = target_block->successor[0];
+			new_block->successor[1] = target_block->successor[1];
+			target_block->successor[0] = &*new_block;
+			target_block->successor[1] = NULL;
+			target_block->instr_end = instr_idx;
 			return new_block;
 		}
 
@@ -3724,13 +3773,16 @@ namespace detail
 			return --it;
 		}
 
+		BlockList::iterator begin() { return blocks_.begin(); }
+		BlockList::iterator end() { return blocks_.end(); }
+
 		void dump_dot() const
 		{
 			printf("digraph CFG {\n");
 			for (BlockList::const_iterator it = blocks_.begin(); it != blocks_.end(); ++it) {
-				printf("\tBlock%d\n", it->depth_);
-				if (it->successor_[0]) printf("\tBlock%d -> Block%d\n", it->depth_, it->successor_[0]->depth_);
-				if (it->successor_[1]) printf("\tBlock%d -> Block%d\n", it->depth_, it->successor_[1]->depth_);
+				printf("\tBlock%d\n", it->depth);
+				if (it->successor[0]) printf("\tBlock%d -> Block%d\n", it->depth, it->successor[0]->depth);
+				if (it->successor[1]) printf("\tBlock%d -> Block%d\n", it->depth, it->successor[1]->depth);
 			}
 			printf("}\n");
 		}
@@ -3741,16 +3793,16 @@ namespace detail
 
 			// Numbering depth after all pushes
 			for (size_t i = 0; i < blocks.size(); ++i) {
-				blocks[i]->depth_ = i;
+				blocks[i]->depth = i;
 			}
 		}
 
 		void GetDepthFirstBlocks(BasicBlock *block, std::deque<BasicBlock *>& blocks)
 		{
-			block->depth_ = 0;	// mark "visited"
+			block->depth = 0;	// mark "visited"
 			for (size_t i = 0; i < 2; ++i) {
-				BasicBlock *s = block->successor_[i];
-				if (s && s->depth_ != 0)
+				BasicBlock *s = block->successor[i];
+				if (s && s->depth != 0)
 					GetDepthFirstBlocks(s, blocks);
 			}
 			blocks.push_front(block);
@@ -3766,7 +3818,7 @@ namespace detail
 					// jump instruction always terminate basic block
 					const size_t instr_idx = std::distance(f.instrs_.begin(), it);
 					BlockIterator next_block;
-					if (instr_idx + 1 < cur_block->instr_end_) {
+					if (instr_idx + 1 < cur_block->instr_end) {
 						// split basic block
 						next_block = split(cur_block, instr_idx + 1);
 					}
@@ -3777,17 +3829,17 @@ namespace detail
 
 					// set successors of current block
 					if (instr_id == I_RET || instr_id == I_IRET) {
-						cur_block->successor_[0] = &*get_exit_block();
+						cur_block->successor[0] = &*get_exit_block();
 					}
 					else {
 						const size_t jump_to = f.GetJumpTo(*it);	// jump target instruction index
 						BlockIterator jump_target = split(get_block(jump_to), jump_to);
 						if (instr_id == I_JMP) {
-							cur_block->successor_[0] = &*jump_target;
+							cur_block->successor[0] = &*jump_target;
 						}
 						else {
 							ASSERT(instr_id == I_JCC || instr_id == I_LOOP);
-							cur_block->successor_[1] = &*jump_target;
+							cur_block->successor[1] = &*jump_target;
 						}
 					}
 
@@ -3797,45 +3849,83 @@ namespace detail
 		}
 	};
 
-	class LinearScanRegisterAllocator
+	/// Re-number symbolic register ID
+	/**
+	 * \return Number of symbolic registers
+	 */
+	inline int NormalizeSymbolicReg(Frontend& f)
 	{
-	private:
-		Frontend& f_;
+		struct RegIDMap {
+			int next_id_;
+			std::map<int, int> id_map_;
+			RegIDMap() : next_id_(0) {}
+			int GetNewID(int id) {
+				std::map<int, int>::iterator it = id_map_.find(id);
+				if (it != id_map_.end())
+					return it->second;
+				int new_id = next_id_++;
+				id_map_.insert(std::pair<int, int>(id, new_id));
+				return new_id;
+			}
+		} reg_id_map;
 
-		void NormalizeSymbolicReg()
-		{
-			struct RegIDMap {
-			} reg_id_map;
-
-
-			for (Frontend::InstrList::iterator it = f_.instrs_.begin(); it != f_.instrs_.end(); ++it) {
-				for (size_t i = 0; i < Instr::MAX_OPERAND_COUNT; ++i) {
-					const Opd& opd = it->GetOpd(i);
-					if (opd.IsReg()) {
-						RegID reg = opd.GetReg();
-
-					}
-					else if (opd.IsMem()) {
-					}
+		for (Frontend::InstrList::iterator it = f.instrs_.begin(); it != f.instrs_.end(); ++it) {
+			for (size_t i = 0; i < Instr::MAX_OPERAND_COUNT; ++i) {
+				Opd& opd = it->GetOpd(i);
+				if (opd.IsReg()) {
+					RegID reg = opd.GetReg();
+					if (reg.IsSymbolic())
+						opd.reg_.id = reg_id_map.GetNewID(reg.id);
+				} else if (opd.IsMem()) {
+					RegID base = opd.GetBase();
+					if (base.IsSymbolic())
+						opd.base_.id = reg_id_map.GetNewID(base.id);
+					RegID index = opd.GetIndex();
+					if (index.IsSymbolic())
+						opd.index_.id = reg_id_map.GetNewID(index.id);
 				}
 			}
 		}
 
-	public:
-		LinearScanRegisterAllocator(Frontend& f) : f_(f) {}
+		return reg_id_map.next_id_;		// Number of symbolic registers
+	}
 
-		bool execute()
-		{
-			ControlFlowGraph cfg;
-			cfg.Build(f_);
-
-			std::deque<BasicBlock *> ordered_blocks;
-			cfg.GetDepthFirstBlocks(ordered_blocks);
-			cfg.dump_dot();
-
-			return true;
+	inline void LiveVariableAnalysis(const Frontend& f, ControlFlowGraph& cfg)
+	{
+		for (ControlFlowGraph::BlockList::iterator it = cfg.begin(); it != cfg.end(); ++it) {
+			for (size_t i = it->instr_begin; i != it->instr_end; ++i) {
+				for (size_t j = 0; j < Instr::MAX_OPERAND_COUNT; ++j) {
+					const Opd& opd = f.instrs_[i].GetOpd(j);
+					if (opd.IsReg()) {
+						it->lifetime.AddUsePoint(i, opd.GetReg(), opd.opdtype_);
+					} else if (opd.IsMem()) {
+						RegID base = opd.GetBase();
+						if (!base.IsInvalid())
+							it->lifetime.AddUsePoint(i, base, static_cast<OpdType>(O_TYPE_REG | O_TYPE_READ));
+						RegID index = opd.GetIndex();
+						if (!index.IsInvalid())
+							it->lifetime.AddUsePoint(i, index, static_cast<OpdType>(O_TYPE_REG | O_TYPE_READ));
+					}
+				}
+			}
 		}
-	};
+	}
+
+	inline bool LinearScanRegisterAlloc(Frontend& f)
+	{
+		int num_of_sym_reg = NormalizeSymbolicReg(f);
+		if (num_of_sym_reg == 0)
+			return true;	// no need to register allocation
+
+		ControlFlowGraph cfg;
+		cfg.Build(f);
+
+		std::deque<BasicBlock *> ordered_blocks;
+		cfg.GetDepthFirstBlocks(ordered_blocks);
+		cfg.dump_dot();
+
+		return true;
+	}
 
 }	// namespace dtail
 
@@ -5027,9 +5117,7 @@ struct function_cdecl<void, detail::ArgNone, detail::ArgNone, detail::ArgNone, d
 	void naked_main() {
 		main();
 
-		detail::LinearScanRegisterAllocator reg_alloc(*this);
-		reg_alloc.execute();
-
+		//compiler::LinearScanRegisterAlloc(*this);
 		MakePrologAndEpilog();
 	}
 };
