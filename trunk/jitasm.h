@@ -3722,7 +3722,7 @@ struct Frontend
 
 namespace compiler
 {
-	struct BitSet : std::vector<uint32>
+	struct BitVector : std::vector<uint32>
 	{
 		bool get_bit(size_t idx) const
 		{
@@ -3739,14 +3739,14 @@ namespace compiler
 			else	at(i) &= ~mask;
 		}
 
-		bool is_equal(const BitSet& rhs) const
+		bool is_equal(const BitVector& rhs) const
 		{
 			const size_t min_size = size() < rhs.size() ? size() : rhs.size();
 			for (size_t i = 0; i < min_size; ++i) {
 				if (at(i) != rhs[i]) return false;
 			}
 
-			const BitSet& larger = size() < rhs.size() ? rhs : *this;
+			const BitVector& larger = size() < rhs.size() ? rhs : *this;
 			for (size_t i = min_size; i < larger.size(); ++i) {
 				if (larger[i] != 0) return false;
 			}
@@ -3754,7 +3754,7 @@ namespace compiler
 			return true;
 		}
 
-		void set_union(const BitSet& rhs)
+		void set_union(const BitVector& rhs)
 		{
 			if (size() < rhs.size()) resize(rhs.size());
 			for (size_t i = 0; i < rhs.size(); ++i) {
@@ -3762,7 +3762,7 @@ namespace compiler
 			}
 		}
 
-		void set_subtract(const BitSet& rhs)
+		void set_subtract(const BitVector& rhs)
 		{
 			const size_t min_size = size() < rhs.size() ? size() : rhs.size();
 			for (size_t i = 0; i < min_size; ++i) {
@@ -3788,10 +3788,10 @@ namespace compiler
 		// 24 - 31  40 - 55  YMM register
 		// 32 -     56 -     Symbolic register
 		std::vector< std::vector<RegUsePoint> > use_points;
-		BitSet gen;					///< The set of variables used before any assignment
-		BitSet kill;				///< The set of variables assigned a value before any use
-		BitSet live_in;				///< The set of live variables at the start of this block
-		BitSet live_out;			///< The set of live variables at the end of this block
+		BitVector gen;					///< The set of variables used before any assignment
+		BitVector kill;				///< The set of variables assigned a value before any use
+		BitVector live_in;				///< The set of live variables at the start of this block
+		BitVector live_out;			///< The set of live variables at the end of this block
 		bool dirty_live_out;		///< The dirty flag of live_out
 
 		Lifetime() : use_points(16), dirty_live_out(true) {}
@@ -3853,12 +3853,14 @@ namespace compiler
 	{
 		BasicBlock *successor[2];
 		std::vector<BasicBlock *> predecessor;
-		size_t instr_begin;			///< begin instruction index of the basic block (inclusive)
-		size_t instr_end;			///< end instruction index of the basic block (exclusive)
-		size_t depth;				///< Depth-first order of Control flow
+		size_t instr_begin;					///< Begin instruction index of the basic block (inclusive)
+		size_t instr_end;					///< End instruction index of the basic block (exclusive)
+		size_t depth;						///< Depth-first order of Control flow
+		BasicBlock *dfs_parent;				///< Depth-first search tree parent
+		BasicBlock *immediate_dominator;	///< Immediate dominator
 		Lifetime lifetime;
 
-		BasicBlock(size_t instr_begin_, size_t instr_end_, BasicBlock *successor0 = NULL, BasicBlock *successor1 = NULL) : instr_begin(instr_begin_), instr_end(instr_end_), depth((size_t)-1) {
+		BasicBlock(size_t instr_begin_, size_t instr_end_, BasicBlock *successor0 = NULL, BasicBlock *successor1 = NULL) : instr_begin(instr_begin_), instr_end(instr_end_), depth((size_t)-1), dfs_parent(NULL), immediate_dominator(NULL) {
 			successor[0] = successor0;
 			successor[1] = successor1;
 		}
@@ -3870,6 +3872,115 @@ namespace compiler
 			if (it != predecessor.end())
 				predecessor.erase(it);
 		}
+
+		bool replace_predecessor(BasicBlock *old_pred, BasicBlock *new_pred) {
+			std::vector<BasicBlock *>::iterator it = std::find(predecessor.begin(), predecessor.end(), old_pred);
+			if (it != predecessor.end()) {
+				*it = new_pred;
+				return true;
+			}
+			return false;
+		}
+	};
+
+	/**
+	 * The Lengauer-Tarjan algorithm
+	 */
+	class DominatorFinder
+	{
+	private:
+		std::vector<size_t> sdom_;			// semidominator
+		std::vector<size_t> ancestor_;
+		std::vector<size_t> best_;
+
+		void Link(size_t v, size_t w)
+		{
+			ancestor_[w] = v;
+		}
+
+#if 1
+		size_t Eval(size_t v)
+		{
+			size_t a = ancestor_[v];
+			while (ancestor_[a] != 0) {
+				if (sdom_[v] > sdom_[a])
+					v = a;
+				a = ancestor_[a];
+			}
+			return v;
+		}
+#else
+		size_t Eval(size_t v)
+		{
+			if (ancestor_[v] == 0) return v;
+			Compress(v);
+			return best_[v];
+		}
+#endif
+
+		void Compress(size_t v)
+		{
+			size_t a = ancestor_[v];
+			if (ancestor_[a] == 0)
+				return;
+
+			Compress(a);
+
+			if (sdom_[best_[v]] > sdom_[best_[a]])
+				best_[v] = best_[a];
+
+			ancestor_[v] = ancestor_[a];
+		}
+
+	public:
+		void operator()(std::deque<BasicBlock *>& depth_first_blocks)
+		{
+			const size_t num_of_nodes = depth_first_blocks.size();
+			if (num_of_nodes == 0) return;
+
+			// initialize
+			sdom_.resize(num_of_nodes);			// semidominator
+			ancestor_.clear();
+			ancestor_.resize(num_of_nodes);
+			best_.resize(num_of_nodes);
+			std::vector< std::vector<size_t> > bucket(num_of_nodes);
+			std::vector<size_t> dom(num_of_nodes);
+			for (size_t i = 0; i < num_of_nodes; ++i) {
+				sdom_[i] = i;
+				best_[i] = i;
+			}
+
+			for (size_t w = num_of_nodes - 1; w > 0; --w) {
+				BasicBlock *wb = depth_first_blocks[w];
+				size_t p = wb->dfs_parent->depth;
+
+				// Compute the semidominator
+				for (std::vector<BasicBlock *>::iterator v = wb->predecessor.begin(); v != wb->predecessor.end(); ++v) {
+					if ((*v)->depth != (size_t)-1) {	// skip out of DFS tree
+						size_t u = Eval((*v)->depth);
+						if (sdom_[u] < sdom_[w])
+							sdom_[w] = sdom_[u];
+					}
+				}
+				bucket[sdom_[w]].push_back(w);
+				Link(p, w);
+
+				// Implicity compute immediate dominator
+				for (std::vector<size_t>::iterator v = bucket[p].begin(); v != bucket[p].end(); ++v) {
+					size_t u = Eval(*v);
+					dom[*v] = sdom_[u] < sdom_[*v] ? u : p;
+				}
+				bucket[p].clear();
+			}
+
+			// Explicity compute immediate dominator
+			for (size_t w = 1; w < num_of_nodes; ++w) {
+				if (dom[w] != sdom_[w])
+					dom[w] = dom[dom[w]];
+				depth_first_blocks[w]->immediate_dominator = depth_first_blocks[dom[w]];
+			}
+			depth_first_blocks[0]->immediate_dominator = NULL;
+		}
 	};
 
 	class ControlFlowGraph
@@ -3879,13 +3990,29 @@ namespace compiler
 
 	private:
 		BlockList blocks_;
+		std::deque<BasicBlock *> depth_first_blocks_;
+
+		void MakeDepthFirstBlocks(BasicBlock *block)
+		{
+			block->depth = 0;	// mark "visited"
+			for (size_t i = 0; i < 2; ++i) {
+				BasicBlock *s = block->successor[i];
+				if (s && s->depth != 0) {
+					s->dfs_parent = block;
+					MakeDepthFirstBlocks(s);
+				}
+			}
+			depth_first_blocks_.push_front(block);
+		}
 
 	public:
 		BlockList::iterator initialize(size_t num_of_instructions) {
 			blocks_.clear();
+			depth_first_blocks_.clear();
 			BlockList::iterator enter_block = blocks_.insert(BasicBlock(0, num_of_instructions)).first;
 			if (num_of_instructions > 0) {
 				BlockList::iterator exit_block = blocks_.insert(BasicBlock(num_of_instructions, num_of_instructions)).first;	// exit block
+				enter_block->successor[0] = &*exit_block;
 				exit_block->predecessor.push_back(&*enter_block);
 			}
 			return enter_block;
@@ -3903,6 +4030,11 @@ namespace compiler
 			target_block->successor[0] = &*new_block;
 			target_block->successor[1] = NULL;
 			target_block->instr_end = instr_idx;
+
+			// replace predecessor of successors
+			if (new_block->successor[0]) new_block->successor[0]->replace_predecessor(&*target_block, &*new_block);
+			if (new_block->successor[1]) new_block->successor[1]->replace_predecessor(&*target_block, &*new_block);
+
 			return new_block;
 		}
 
@@ -3921,7 +4053,7 @@ namespace compiler
 		BlockList::iterator begin() { return blocks_.begin(); }
 		BlockList::iterator end() { return blocks_.end(); }
 
-		void dump_dot() const
+		void DumpDot() const
 		{
 			printf("digraph CFG {\n");
 			printf("\tnode[shape=box];\n");
@@ -3943,29 +4075,13 @@ namespace compiler
 				printf("\tnode%d[label=\"Block%d\\ninstruction %d - %d\\n%s\\n%s\"];\n", it->instr_begin, it->depth, it->instr_begin, it->instr_end - 1, live_in.c_str(), live_out.c_str());
 				if (it->successor[0]) printf("\t\"node%d\" -> \"node%d\";\n", it->instr_begin, it->successor[0]->instr_begin);
 				if (it->successor[1]) printf("\t\"node%d\" -> \"node%d\";\n", it->instr_begin, it->successor[1]->instr_begin);
+				//if (it->dfs_parent) printf("\t\"node%d\" -> \"node%d\";\n", it->instr_begin, it->dfs_parent->instr_begin);
+				if (it->immediate_dominator) printf("\t\"node%d\" -> \"node%d\" [color=\"#0000ff\"];\n", it->instr_begin, it->immediate_dominator->instr_begin);
+				for (size_t i = 0; i < it->predecessor.size(); ++i) {
+					printf("\t\"node%d\" -> \"node%d\" [color=\"#808080\"];\n", it->instr_begin, it->predecessor[i]->instr_begin);
+				}
 			}
 			printf("}\n");
-		}
-
-		void GetDepthFirstBlocksCore(BasicBlock *block, std::deque<BasicBlock *>& blocks)
-		{
-			block->depth = 0;	// mark "visited"
-			for (size_t i = 0; i < 2; ++i) {
-				BasicBlock *s = block->successor[i];
-				if (s && s->depth != 0)
-					GetDepthFirstBlocksCore(s, blocks);
-			}
-			blocks.push_front(block);
-		}
-
-		void GetDepthFirstBlocks(std::deque<BasicBlock *>& blocks)
-		{
-			GetDepthFirstBlocksCore(&*get_block(0), blocks);
-
-			// Numbering depth after all pushes
-			for (size_t i = 0; i < blocks.size(); ++i) {
-				blocks[i]->depth = i;
-			}
 		}
 
 		void Build(const Frontend& f)
@@ -4015,6 +4131,18 @@ namespace compiler
 					cur_block = next_block;
 				}
 			}
+
+			// make depth first orderd list
+			MakeDepthFirstBlocks(&*get_block(0));
+
+			// Numbering depth after all pushes
+			for (size_t i = 0; i < depth_first_blocks_.size(); ++i) {
+				depth_first_blocks_[i]->depth = i;
+			}
+
+			// make dominator tree
+			DominatorFinder dom_finder;
+			dom_finder(depth_first_blocks_);
 		}
 	};
 
@@ -4111,7 +4239,7 @@ namespace compiler
 				block->lifetime.dirty_live_out = false;
 
 				// live_in = gen OR (live_out - kill)
-				BitSet new_live_in = block->lifetime.live_out;
+				BitVector new_live_in = block->lifetime.live_out;
 				new_live_in.set_subtract(block->lifetime.kill);
 				new_live_in.set_union(block->lifetime.gen);
 
@@ -4136,12 +4264,9 @@ namespace compiler
 		ControlFlowGraph cfg;
 		cfg.Build(f);
 
-		std::deque<BasicBlock *> ordered_blocks;
-		cfg.GetDepthFirstBlocks(ordered_blocks);
-
 		LiveVariableAnalysis(f, cfg);
 
-		cfg.dump_dot();
+		cfg.DumpDot();
 
 		return true;
 	}
