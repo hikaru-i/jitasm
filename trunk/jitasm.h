@@ -1003,9 +1003,14 @@ namespace detail
 		return x & 0x0000003F;
 	}
 
+	template<class It> It prior(const It &it) {
+		It i = it;
+		return --i;
+	}
+
 	template<class It> It next(const It &it) {
-		It next = it;
-		return ++next;
+		It i = it;
+		return ++i;
 	}
 
 	inline void append_num(std::string& str, size_t num) {
@@ -3858,9 +3863,10 @@ namespace compiler
 		size_t depth;						///< Depth-first order of Control flow
 		BasicBlock *dfs_parent;				///< Depth-first search tree parent
 		BasicBlock *immediate_dominator;	///< Immediate dominator
+		size_t loop_depth;					///< Loop nesting depth
 		Lifetime lifetime;
 
-		BasicBlock(size_t instr_begin_, size_t instr_end_, BasicBlock *successor0 = NULL, BasicBlock *successor1 = NULL) : instr_begin(instr_begin_), instr_end(instr_end_), depth((size_t)-1), dfs_parent(NULL), immediate_dominator(NULL) {
+		BasicBlock(size_t instr_begin_, size_t instr_end_, BasicBlock *successor0 = NULL, BasicBlock *successor1 = NULL) : instr_begin(instr_begin_), instr_end(instr_end_), depth((size_t)-1), dfs_parent(NULL), immediate_dominator(NULL), loop_depth(0) {
 			successor[0] = successor0;
 			successor[1] = successor1;
 		}
@@ -3880,6 +3886,11 @@ namespace compiler
 				return true;
 			}
 			return false;
+		}
+
+		bool is_dominated(BasicBlock *block) const {
+			if (block == this) return true;
+			return immediate_dominator ? immediate_dominator->is_dominated(block) : false;
 		}
 	};
 
@@ -4005,6 +4016,54 @@ namespace compiler
 			depth_first_blocks_.push_front(block);
 		}
 
+		void DetectLoops()
+		{
+			// make dominator tree
+			DominatorFinder dom_finder;
+			dom_finder(depth_first_blocks_);
+
+			// identify backedges
+			std::vector< std::pair<size_t, size_t> > backedges;
+			for (size_t i = 0; i < depth_first_blocks_.size(); ++i) {
+				BasicBlock *block = depth_first_blocks_[i];
+				for (size_t j = 0; j < 2; ++j) {
+					if (block->successor[j] && block->depth > block->successor[j]->depth) {		// retreating edge
+						if (block->is_dominated(block->successor[j])) {
+							backedges.push_back(std::make_pair(block->depth, block->successor[j]->depth));
+						}
+					}
+				}
+			}
+
+			// merge loops with the same loop header
+			struct sort_backedge {
+				bool operator()(const std::pair<size_t, size_t>& lhs, const std::pair<size_t, size_t>& rhs) const {
+					if (lhs.second < rhs.second) return true;						// smaller depth loop header first
+					if (lhs.second == rhs.second) return lhs.first > rhs.first;		// larger depth of end of loop first if same loop header
+					return false;
+				}
+			};
+			std::sort(backedges.begin(), backedges.end(), sort_backedge());
+			if (backedges.size() >= 2) {
+				std::vector< std::pair<size_t, size_t> >::iterator it = backedges.begin() + 1;
+				while (it != backedges.end()) {
+					if (detail::prior(it)->second == it->second) {
+						// erase backedge of smaller loop
+						it = backedges.erase(it);
+					} else {
+						++it;
+					}
+				}
+			}
+
+			// set loop depth
+			for (std::vector< std::pair<size_t, size_t> >::iterator it = backedges.begin(); it != backedges.end(); ++it) {
+				for (size_t i = it->second; i <= it->first; ++i) {
+					depth_first_blocks_[i]->loop_depth++;
+				}
+			}
+		}
+
 	public:
 		BlockList::iterator initialize(size_t num_of_instructions) {
 			blocks_.clear();
@@ -4072,14 +4131,14 @@ namespace compiler
 						live_out.append(Lifetime::GetRegName(i));
 					}
 				}
-				printf("\tnode%d[label=\"Block%d\\ninstruction %d - %d\\n%s\\n%s\"];\n", it->instr_begin, it->depth, it->instr_begin, it->instr_end - 1, live_in.c_str(), live_out.c_str());
-				if (it->successor[0]) printf("\t\"node%d\" -> \"node%d\";\n", it->instr_begin, it->successor[0]->instr_begin);
-				if (it->successor[1]) printf("\t\"node%d\" -> \"node%d\";\n", it->instr_begin, it->successor[1]->instr_begin);
-				//if (it->dfs_parent) printf("\t\"node%d\" -> \"node%d\";\n", it->instr_begin, it->dfs_parent->instr_begin);
-				if (it->immediate_dominator) printf("\t\"node%d\" -> \"node%d\" [color=\"#0000ff\"];\n", it->instr_begin, it->immediate_dominator->instr_begin);
-				for (size_t i = 0; i < it->predecessor.size(); ++i) {
-					printf("\t\"node%d\" -> \"node%d\" [color=\"#808080\"];\n", it->instr_begin, it->predecessor[i]->instr_begin);
-				}
+				printf("\tnode%d[label=\"Block%d\\ninstruction %d - %d\\nloop depth %d\\n%s\\n%s\"];\n", it->instr_begin, it->depth, it->instr_begin, it->instr_end - 1, it->loop_depth, live_in.c_str(), live_out.c_str());
+				if (it->successor[0]) printf("\t\"node%d\" -> \"node%d\" [constraint=false];\n", it->instr_begin, it->successor[0]->instr_begin);
+				if (it->successor[1]) printf("\t\"node%d\" -> \"node%d\" [constraint=false];\n", it->instr_begin, it->successor[1]->instr_begin);
+				if (it->dfs_parent) printf("\t\"node%d\" -> \"node%d\" [color=\"#ff0000\"];\n", it->instr_begin, it->dfs_parent->instr_begin);
+				if (it->immediate_dominator) printf("\t\"node%d\" -> \"node%d\" [constraint=false, color=\"#0000ff\"];\n", it->instr_begin, it->immediate_dominator->instr_begin);
+				//for (size_t i = 0; i < it->predecessor.size(); ++i) {
+				//	printf("\t\"node%d\" -> \"node%d\" [constraint=false, color=\"#808080\"];\n", it->instr_begin, it->predecessor[i]->instr_begin);
+				//}
 			}
 			printf("}\n");
 		}
@@ -4135,14 +4194,13 @@ namespace compiler
 			// make depth first orderd list
 			MakeDepthFirstBlocks(&*get_block(0));
 
-			// Numbering depth after all pushes
+			// numbering depth after all pushes
 			for (size_t i = 0; i < depth_first_blocks_.size(); ++i) {
 				depth_first_blocks_[i]->depth = i;
 			}
 
-			// make dominator tree
-			DominatorFinder dom_finder;
-			dom_finder(depth_first_blocks_);
+			// detect loops
+			DetectLoops();
 		}
 	};
 
@@ -5461,7 +5519,7 @@ struct function_cdecl<void, detail::ArgNone, detail::ArgNone, detail::ArgNone, d
 	void naked_main() {
 		main();
 
-		//compiler::LinearScanRegisterAlloc(*this);
+		compiler::LinearScanRegisterAlloc(*this);
 		MakePrologAndEpilog();
 	}
 };
