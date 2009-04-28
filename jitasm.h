@@ -199,10 +199,11 @@ namespace detail
 	public:
 		bool	IsNone() const		{return (opdtype_ & O_TYPE_TYPE_MASK) == O_TYPE_NONE;}
 		bool	IsReg() const		{return (opdtype_ & O_TYPE_TYPE_MASK) == O_TYPE_REG;}
-		bool	IsGpReg() const		{return IsReg() && reg_.type == R_TYPE_GP;}
+		bool	IsGpReg() const		{return IsReg() && (reg_.type == R_TYPE_GP || reg_.type == R_TYPE_SYMBOLIC_GP);}
 		bool	IsFpuReg() const	{return IsReg() && reg_.type == R_TYPE_FPU;}
-		bool	IsMmxReg() const	{return IsReg() && reg_.type == R_TYPE_MMX;}
-		bool	IsXmmReg() const	{return IsReg() && reg_.type == R_TYPE_XMM;}
+		bool	IsMmxReg() const	{return IsReg() && (reg_.type == R_TYPE_MMX || reg_.type == R_TYPE_SYMBOLIC_MMX);}
+		bool	IsXmmReg() const	{return IsReg() && (reg_.type == R_TYPE_XMM || reg_.type == R_TYPE_SYMBOLIC_XMM);}
+		bool	IsYmmReg() const	{return IsReg() && (reg_.type == R_TYPE_YMM || reg_.type == R_TYPE_SYMBOLIC_YMM);}
 		bool	IsMem() const		{return (opdtype_ & O_TYPE_TYPE_MASK) == O_TYPE_MEM;}
 		bool	IsImm() const		{return (opdtype_ & O_TYPE_TYPE_MASK) == O_TYPE_IMM;}
 		bool	IsDummy() const		{return (opdtype_ & O_TYPE_DUMMY) != 0;}
@@ -3778,7 +3779,7 @@ namespace compiler
 
 	struct RegUsePoint
 	{
-		size_t instr_idx;
+		size_t instr_idx;	///< Instruction index offset from basic block start point
 		OpdType type;
 
 		RegUsePoint(size_t idx, OpdType t) : instr_idx(idx), type(t) {}
@@ -3793,9 +3794,9 @@ namespace compiler
 		// 24 - 31  40 - 55  YMM register
 		// 32 -     56 -     Symbolic register
 		std::vector< std::vector<RegUsePoint> > use_points;
-		BitVector gen;					///< The set of variables used before any assignment
+		BitVector gen;				///< The set of variables used before any assignment
 		BitVector kill;				///< The set of variables assigned a value before any use
-		BitVector live_in;				///< The set of live variables at the start of this block
+		BitVector live_in;			///< The set of live variables at the start of this block
 		BitVector live_out;			///< The set of live variables at the end of this block
 		bool dirty_live_out;		///< The dirty flag of live_out
 
@@ -3803,52 +3804,44 @@ namespace compiler
 
 		void AddUsePoint(size_t instr_idx, const RegID& reg, OpdType opd_type)
 		{
-			if (reg.type == R_TYPE_FPU)
-				return;		// not supported
-
-			const size_t reg_idx = GetRegIndex(reg);
+			const size_t reg_idx = reg.IsSymbolic() ? reg.id + 16 : reg.id;
 			if (use_points.size() <= reg_idx)
 				use_points.resize(reg_idx + 1);
 
 			use_points[reg_idx].push_back(RegUsePoint(instr_idx, opd_type));
 		}
 
-		static size_t GetRegIndex(const RegID& reg)
+		template<class Fn>
+		void EnumLifetimeInterval(Fn& fn)
 		{
-#ifdef JITASM64
-			const size_t offset[] = {0, 0, 16, 24, 40, 56, 56, 56, 56};
-#else
-			const size_t offset[] = {0, 0, 8, 16, 24, 32, 32, 32, 32};
-#endif
-			ASSERT(R_TYPE_GP == 0 && R_TYPE_FPU == 1 && R_TYPE_MMX == 2 && R_TYPE_XMM == 3 && R_TYPE_YMM == 4 && R_TYPE_SYMBOLIC_GP == 5 && R_TYPE_SYMBOLIC_MMX == 6 && R_TYPE_SYMBOLIC_XMM == 7 && R_TYPE_SYMBOLIC_YMM == 8);
-			ASSERT(R_TYPE_GP <= reg.type && reg.type <= R_TYPE_SYMBOLIC_YMM && reg.type != R_TYPE_FPU);
-			return offset[reg.type] + reg.id;
+			BitVector liveness = live_in;
+			size_t instr_idx = 0;
+			fn(instr_idx, liveness);
+
 		}
 
-		static std::string GetRegName(size_t reg_idx)
+		static std::string GetRegName(RegType type, size_t reg_idx)
 		{
 #ifdef JITASM64
-			const size_t offset[] = {0, 0, 16, 24, 40, 56, 56, 56, 56};
 			const static std::string s_gp_reg_name[] = {"rax", "rcx", "rdx", "rbx", "rsp", "rbp", "rsi", "rdi", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"};
 #else
-			const size_t offset[] = {0, 0, 8, 16, 24, 32, 32, 32, 32};
 			const static std::string s_gp_reg_name[] = {"eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi"};
 #endif
 			std::string name;
-			if (offset[R_TYPE_GP] <= reg_idx && reg_idx < offset[R_TYPE_MMX]) {
-				return s_gp_reg_name[reg_idx - offset[R_TYPE_GP]];
-			} else if (offset[R_TYPE_MMX] <= reg_idx && reg_idx < offset[R_TYPE_XMM]) {
-				name.assign("mm");
-				detail::append_num(name, reg_idx - offset[R_TYPE_MMX]);
-			} else if (offset[R_TYPE_XMM] <= reg_idx && reg_idx < offset[R_TYPE_YMM]) {
-				name.assign("xmm");
-				detail::append_num(name, reg_idx - offset[R_TYPE_XMM]);
-			} else if (offset[R_TYPE_YMM] <= reg_idx && reg_idx < offset[R_TYPE_SYMBOLIC_GP]) {
-				name.assign("ymm");
-				detail::append_num(name, reg_idx - offset[R_TYPE_YMM]);
-			} else {
+			if (reg_idx >= 16) {
 				name.assign("sym");
-				detail::append_num(name, reg_idx - offset[R_TYPE_SYMBOLIC_GP]);
+				detail::append_num(name, reg_idx - 16);
+			} else if (type == R_TYPE_GP) {
+				return s_gp_reg_name[reg_idx];
+			} else if (type == R_TYPE_MMX) {
+				name.assign("mm");
+				detail::append_num(name, reg_idx);
+			} else if (type == R_TYPE_XMM) {
+				name.assign("xmm");
+				detail::append_num(name, reg_idx);
+			} else if (type == R_TYPE_YMM) {
+				name.assign("ymm");
+				detail::append_num(name, reg_idx);
 			}
 			return name;
 		}
@@ -3861,12 +3854,13 @@ namespace compiler
 		size_t instr_begin;					///< Begin instruction index of the basic block (inclusive)
 		size_t instr_end;					///< End instruction index of the basic block (exclusive)
 		size_t depth;						///< Depth-first order of Control flow
+		size_t dfs_instr_begin;				///< Begin instruction index in depth-first order
 		BasicBlock *dfs_parent;				///< Depth-first search tree parent
 		BasicBlock *immediate_dominator;	///< Immediate dominator
 		size_t loop_depth;					///< Loop nesting depth
-		Lifetime lifetime;
+		Lifetime lifetime[4];				///< Variable lifetime (0: GP, 1: MMX, 2: XMM, 3: YMM)
 
-		BasicBlock(size_t instr_begin_, size_t instr_end_, BasicBlock *successor0 = NULL, BasicBlock *successor1 = NULL) : instr_begin(instr_begin_), instr_end(instr_end_), depth((size_t)-1), dfs_parent(NULL), immediate_dominator(NULL), loop_depth(0) {
+		BasicBlock(size_t instr_begin_, size_t instr_end_, BasicBlock *successor0 = NULL, BasicBlock *successor1 = NULL) : instr_begin(instr_begin_), instr_end(instr_end_), depth((size_t)-1), dfs_instr_begin(0), dfs_parent(NULL), immediate_dominator(NULL), loop_depth(0) {
 			successor[0] = successor0;
 			successor[1] = successor1;
 		}
@@ -4118,17 +4112,17 @@ namespace compiler
 			printf("\tnode[shape=box];\n");
 			for (BlockList::const_iterator it = blocks_.begin(); it != blocks_.end(); ++it) {
 				std::string live_in = "live in:";
-				for (size_t i = 0; i < it->lifetime.live_in.size() * 32; ++i) {
-					if (it->lifetime.live_in.get_bit(i)) {
+				for (size_t i = 0; i < it->lifetime[0].live_in.size() * 32; ++i) {
+					if (it->lifetime[0].live_in.get_bit(i)) {
 						live_in.append(" ");
-						live_in.append(Lifetime::GetRegName(i));
+						live_in.append(Lifetime::GetRegName(R_TYPE_GP, i));
 					}
 				}
 				std::string live_out = "live out:";
-				for (size_t i = 0; i < it->lifetime.live_out.size() * 32; ++i) {
-					if (it->lifetime.live_out.get_bit(i)) {
+				for (size_t i = 0; i < it->lifetime[0].live_out.size() * 32; ++i) {
+					if (it->lifetime[0].live_out.get_bit(i)) {
 						live_out.append(" ");
-						live_out.append(Lifetime::GetRegName(i));
+						live_out.append(Lifetime::GetRegName(R_TYPE_GP, i));
 					}
 				}
 				printf("\tnode%d[label=\"Block%d\\ninstruction %d - %d\\nloop depth %d\\n%s\\n%s\"];\n", it->instr_begin, it->depth, it->instr_begin, it->instr_end - 1, it->loop_depth, live_in.c_str(), live_out.c_str());
@@ -4194,9 +4188,12 @@ namespace compiler
 			// make depth first orderd list
 			MakeDepthFirstBlocks(&*get_block(0));
 
-			// numbering depth after all pushes
+			// numbering depth and set dfs_instr_begin
+			size_t dfs_instr_begin = 0;
 			for (size_t i = 0; i < depth_first_blocks_.size(); ++i) {
 				depth_first_blocks_[i]->depth = i;
+				depth_first_blocks_[i]->dfs_instr_begin = dfs_instr_begin;
+				dfs_instr_begin += depth_first_blocks_[i]->instr_end - depth_first_blocks_[i]->instr_begin;
 			}
 
 			// detect loops
@@ -4253,31 +4250,40 @@ namespace compiler
 		for (ControlFlowGraph::BlockList::iterator it = cfg.begin(); it != cfg.end(); ++it) {
 			// Scanning instructions of basic block and make register lifetime table
 			for (size_t i = it->instr_begin; i != it->instr_end; ++i) {
+				const size_t instr_offset = i - it->instr_begin;
 				for (size_t j = 0; j < Instr::MAX_OPERAND_COUNT; ++j) {
 					const detail::Opd& opd = f.instrs_[i].GetOpd(j);
-					if (opd.IsReg()) {
-						it->lifetime.AddUsePoint(i, opd.GetReg(), opd.opdtype_);
+					if (opd.IsGpReg()) {
+						it->lifetime[0].AddUsePoint(instr_offset, opd.GetReg(), opd.opdtype_);
+					} else if (opd.IsMmxReg()) {
+						it->lifetime[1].AddUsePoint(instr_offset, opd.GetReg(), opd.opdtype_);
+					} else if (opd.IsXmmReg()) {
+						it->lifetime[2].AddUsePoint(instr_offset, opd.GetReg(), opd.opdtype_);
+					} else if (opd.IsYmmReg()) {
+						it->lifetime[3].AddUsePoint(instr_offset, opd.GetReg(), opd.opdtype_);
 					} else if (opd.IsMem()) {
 						RegID base = opd.GetBase();
 						if (!base.IsInvalid())
-							it->lifetime.AddUsePoint(i, base, static_cast<OpdType>(O_TYPE_REG | O_TYPE_READ));
+							it->lifetime[0].AddUsePoint(instr_offset, base, static_cast<OpdType>(O_TYPE_REG | O_TYPE_READ));
 						RegID index = opd.GetIndex();
 						if (!index.IsInvalid())
-							it->lifetime.AddUsePoint(i, index, static_cast<OpdType>(O_TYPE_REG | O_TYPE_READ));
+							it->lifetime[0].AddUsePoint(instr_offset, index, static_cast<OpdType>(O_TYPE_REG | O_TYPE_READ));
 					}
 				}
 			}
 
 			// Make GEN and KILL set
-			const size_t num_of_used_reg = it->lifetime.use_points.size();
-			for (size_t i = 0; i < num_of_used_reg; ++i) {
-				if (!it->lifetime.use_points[i].empty()) {
-					OpdType type = it->lifetime.use_points[i][0].type;
-					if (type & O_TYPE_READ) {
-						it->lifetime.gen.set_bit(i, true);	// GEN
-					} else {
-						ASSERT(type & O_TYPE_WRITE);
-						it->lifetime.kill.set_bit(i, true);	// KILL
+			for (size_t reg_type = 0; reg_type < 4; ++reg_type) {
+				const size_t num_of_used_reg = it->lifetime[reg_type].use_points.size();
+				for (size_t i = 0; i < num_of_used_reg; ++i) {
+					if (!it->lifetime[reg_type].use_points[i].empty()) {
+						OpdType type = it->lifetime[reg_type].use_points[i][0].type;
+						if (type & O_TYPE_READ) {
+							it->lifetime[reg_type].gen.set_bit(i, true);	// GEN
+						} else {
+							ASSERT(type & O_TYPE_WRITE);
+							it->lifetime[reg_type].kill.set_bit(i, true);	// KILL
+						}
 					}
 				}
 			}
@@ -4288,25 +4294,28 @@ namespace compiler
 		while (!update_target.empty()) {
 			BasicBlock *block = update_target.back();
 			update_target.pop_back();
-			if (block->lifetime.dirty_live_out) {
-				// live_out is the union of the live_in of the successors
-				for (size_t i = 0; i < 2; ++i) {
-					if (block->successor[i])
-						block->lifetime.live_out.set_union(block->successor[i]->lifetime.live_in);
-				}
-				block->lifetime.dirty_live_out = false;
+			for (size_t reg_type = 0; reg_type < 4; ++reg_type) {
+				Lifetime& lifetime = block->lifetime[reg_type];
+				if (lifetime.dirty_live_out) {
+					// live_out is the union of the live_in of the successors
+					for (size_t i = 0; i < 2; ++i) {
+						if (block->successor[i])
+							lifetime.live_out.set_union(block->successor[i]->lifetime[reg_type].live_in);
+					}
+					lifetime.dirty_live_out = false;
 
-				// live_in = gen OR (live_out - kill)
-				BitVector new_live_in = block->lifetime.live_out;
-				new_live_in.set_subtract(block->lifetime.kill);
-				new_live_in.set_union(block->lifetime.gen);
+					// live_in = gen OR (live_out - kill)
+					BitVector new_live_in = lifetime.live_out;
+					new_live_in.set_subtract(lifetime.kill);
+					new_live_in.set_union(lifetime.gen);
 
-				if (!block->lifetime.live_in.is_equal(new_live_in)) {
-					block->lifetime.live_in.swap(new_live_in);
+					if (!lifetime.live_in.is_equal(new_live_in)) {
+						lifetime.live_in.swap(new_live_in);
 
-					for (size_t i = 0; i < block->predecessor.size(); ++i) {
-						block->predecessor[i]->lifetime.dirty_live_out = true;
-						update_target.push_back(block->predecessor[i]);
+						for (size_t i = 0; i < block->predecessor.size(); ++i) {
+							block->predecessor[i]->lifetime[reg_type].dirty_live_out = true;
+							update_target.push_back(block->predecessor[i]);
+						}
 					}
 				}
 			}
@@ -4326,10 +4335,16 @@ namespace compiler
 
 		cfg.DumpDot();
 
+		std::vector< std::pair<size_t, size_t> > live_count;
+
+		// Spill identification
+
+		// Spill resurrection
+
 		return true;
 	}
 
-}	// namespace dtail
+}	// namespace compiler
 
 namespace detail
 {
