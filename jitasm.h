@@ -3814,10 +3814,37 @@ namespace compiler
 		template<class Fn>
 		void EnumLifetimeInterval(Fn& fn)
 		{
-			BitVector liveness = live_in;
-			size_t instr_idx = 0;
-			fn(instr_idx, liveness);
+			std::vector<std::vector<RegUsePoint>::iterator> iterators(use_points.size());
+			for (size_t i = 0; i < use_points.size(); ++i) {
+				iterators[i] = use_points[i].begin();
+			}
 
+			BitVector liveness;
+			size_t instr_idx = 0;
+			size_t end_count;
+			do {
+				BitVector l = live_in;
+				end_count = 0;
+				for (size_t i = 0; i < iterators.size(); ++i) {
+					if (iterators[i] == use_points[i].end()) {
+						liveness.set_bit(i, live_out.get_bit(i));
+						++end_count;
+					} else if (iterators[i]->instr_idx == instr_idx) {
+						liveness.set_bit(i, true);
+						++iterators[i];
+					} else if (iterators[i]->type & O_TYPE_READ) {
+						liveness.set_bit(i, true);
+					} else if (iterators[i]->type & O_TYPE_WRITE) {
+						liveness.set_bit(i, false);
+					}
+				}
+
+				if (!liveness.is_equal(l)) {
+					liveness.swap(l);
+					fn(instr_idx, liveness);
+				}
+				++instr_idx;
+			} while (end_count < iterators.size());
 		}
 
 		static std::string GetRegName(RegType type, size_t reg_idx)
