@@ -39,6 +39,7 @@
 #include <map>
 #include <algorithm>
 #include <assert.h>
+#include <intrin.h>
 
 #pragma warning( push )
 #pragma warning( disable : 4127 )	// conditional expression is constant.
@@ -3730,6 +3731,8 @@ namespace compiler
 {
 	struct BitVector : std::vector<uint32>
 	{
+		size_t size_bit() const { return size() * 32; }
+
 		bool get_bit(size_t idx) const
 		{
 			const size_t i = idx / 32;
@@ -3758,6 +3761,30 @@ namespace compiler
 			}
 
 			return true;
+		}
+
+		size_t count_bit() const
+		{
+			size_t count = 0;
+			for (size_t i = 0; i < size(); ++i) {
+				count += detail::Count1Bits(at(i));
+			}
+			return count;
+		}
+
+		void get_bit_indexes(std::vector<size_t>& indexes) const
+		{
+			indexes.clear();
+			for (size_t i = 0; i < size(); ++i) {
+				uint32 m = at(i);
+				while (m != 0) {
+					unsigned long index;
+					_BitScanForward(&index, m);
+					//index = __builtin_ctz(m);		// for gcc
+					indexes.push_back(i * 32 + index);
+					m &= ~(1 << index);
+				}
+			}
 		}
 
 		void set_union(const BitVector& rhs)
@@ -3811,8 +3838,21 @@ namespace compiler
 			use_points[reg_idx].push_back(RegUsePoint(instr_idx, opd_type));
 		}
 
+		void GetSpillCost(int freq, std::vector<int>& spill_cost) const
+		{
+			spill_cost.resize(use_points.size());
+			for(size_t i = 0; i < use_points.size(); ++i) {
+				int cost = 0;
+				for (std::vector<RegUsePoint>::const_iterator it = use_points[i].begin(); it != use_points[i].end(); ++it) {
+					if (it->type & O_TYPE_READ)  cost += 2;
+					if (it->type & O_TYPE_WRITE) cost += 3;
+				}
+				spill_cost[i] += cost * freq;
+			}
+		}
+
 		template<class Fn>
-		void EnumLifetimeInterval(Fn& fn)
+		void EnumLifetimeInterval(Fn fn)
 		{
 			std::vector<std::vector<RegUsePoint>::iterator> iterators(use_points.size());
 			for (size_t i = 0; i < use_points.size(); ++i) {
@@ -3825,17 +3865,25 @@ namespace compiler
 			do {
 				BitVector l = live_in;
 				end_count = 0;
+				size_t min_instr_idx = (size_t)-1;
 				for (size_t i = 0; i < iterators.size(); ++i) {
 					if (iterators[i] == use_points[i].end()) {
-						liveness.set_bit(i, live_out.get_bit(i));
+						l.set_bit(i, live_out.get_bit(i));
 						++end_count;
-					} else if (iterators[i]->instr_idx == instr_idx) {
-						liveness.set_bit(i, true);
-						++iterators[i];
-					} else if (iterators[i]->type & O_TYPE_READ) {
-						liveness.set_bit(i, true);
-					} else if (iterators[i]->type & O_TYPE_WRITE) {
-						liveness.set_bit(i, false);
+					} else {
+						if (iterators[i]->instr_idx < min_instr_idx)
+							min_instr_idx = iterators[i]->instr_idx;
+
+						if (iterators[i]->instr_idx == instr_idx) {
+							l.set_bit(i, true);
+							++iterators[i];
+						} else if (iterators[i]->type & O_TYPE_READ) {
+							l.set_bit(i, true);
+						} else if (iterators[i]->type & O_TYPE_WRITE) {
+							l.set_bit(i, false);
+						} else {
+							ASSERT(0);
+						}
 					}
 				}
 
@@ -3843,7 +3891,7 @@ namespace compiler
 					liveness.swap(l);
 					fn(instr_idx, liveness);
 				}
-				++instr_idx;
+				instr_idx = min_instr_idx == instr_idx ? instr_idx + 1 : min_instr_idx;
 			} while (end_count < iterators.size());
 		}
 
@@ -3930,7 +3978,7 @@ namespace compiler
 			ancestor_[w] = v;
 		}
 
-#if 1
+#if 0
 		size_t Eval(size_t v)
 		{
 			size_t a = ancestor_[v];
@@ -4018,10 +4066,11 @@ namespace compiler
 	class ControlFlowGraph
 	{
 	public:
-		typedef std::set<BasicBlock> BlockList;
+		typedef std::set<BasicBlock> BlockSet;
+		typedef std::deque<BasicBlock *> BlockList;
 
 	private:
-		BlockList blocks_;
+		BlockSet blocks_;
 		std::deque<BasicBlock *> depth_first_blocks_;
 
 		void MakeDepthFirstBlocks(BasicBlock *block)
@@ -4086,23 +4135,23 @@ namespace compiler
 		}
 
 	public:
-		BlockList::iterator initialize(size_t num_of_instructions) {
+		BlockSet::iterator initialize(size_t num_of_instructions) {
 			blocks_.clear();
 			depth_first_blocks_.clear();
-			BlockList::iterator enter_block = blocks_.insert(BasicBlock(0, num_of_instructions)).first;
+			BlockSet::iterator enter_block = blocks_.insert(BasicBlock(0, num_of_instructions)).first;
 			if (num_of_instructions > 0) {
-				BlockList::iterator exit_block = blocks_.insert(BasicBlock(num_of_instructions, num_of_instructions)).first;	// exit block
+				BlockSet::iterator exit_block = blocks_.insert(BasicBlock(num_of_instructions, num_of_instructions)).first;	// exit block
 				enter_block->successor[0] = &*exit_block;
 				exit_block->predecessor.push_back(&*enter_block);
 			}
 			return enter_block;
 		}
 
-		BlockList::iterator split(BlockList::iterator target_block, size_t instr_idx) {
+		BlockSet::iterator split(BlockSet::iterator target_block, size_t instr_idx) {
 			if (target_block->instr_begin == instr_idx)
 				return target_block;
 
-			BlockList::iterator new_block = blocks_.insert(detail::next(target_block), BasicBlock(instr_idx, target_block->instr_end));
+			BlockSet::iterator new_block = blocks_.insert(detail::next(target_block), BasicBlock(instr_idx, target_block->instr_end));
 			ASSERT(detail::next(target_block) == new_block);
 			new_block->successor[0] = target_block->successor[0];
 			new_block->successor[1] = target_block->successor[1];
@@ -4118,35 +4167,37 @@ namespace compiler
 			return new_block;
 		}
 
-		BlockList::iterator get_block(size_t instr_idx) {
-			BlockList::iterator it = blocks_.upper_bound(BasicBlock(instr_idx, instr_idx));
+		BlockSet::iterator get_block(size_t instr_idx) {
+			BlockSet::iterator it = blocks_.upper_bound(BasicBlock(instr_idx, instr_idx));
 			return it != blocks_.begin() ? --it : blocks_.end();
 		}
 
-		BlockList::iterator get_exit_block() {
-			BlockList::iterator it = blocks_.end();
+		BlockSet::iterator get_exit_block() {
+			BlockSet::iterator it = blocks_.end();
 			return --it;
 		}
 
 		size_t size() { return blocks_.size(); }
 
-		BlockList::iterator begin() { return blocks_.begin(); }
-		BlockList::iterator end() { return blocks_.end(); }
+		BlockSet::iterator begin() { return blocks_.begin(); }
+		BlockSet::iterator end() { return blocks_.end(); }
+		BlockList::iterator dfs_begin() { return depth_first_blocks_.begin(); }
+		BlockList::iterator dfs_end() { return depth_first_blocks_.end(); }
 
 		void DumpDot() const
 		{
 			printf("digraph CFG {\n");
 			printf("\tnode[shape=box];\n");
-			for (BlockList::const_iterator it = blocks_.begin(); it != blocks_.end(); ++it) {
+			for (BlockSet::const_iterator it = blocks_.begin(); it != blocks_.end(); ++it) {
 				std::string live_in = "live in:";
-				for (size_t i = 0; i < it->lifetime[0].live_in.size() * 32; ++i) {
+				for (size_t i = 0; i < it->lifetime[0].live_in.size_bit(); ++i) {
 					if (it->lifetime[0].live_in.get_bit(i)) {
 						live_in.append(" ");
 						live_in.append(Lifetime::GetRegName(R_TYPE_GP, i));
 					}
 				}
 				std::string live_out = "live out:";
-				for (size_t i = 0; i < it->lifetime[0].live_out.size() * 32; ++i) {
+				for (size_t i = 0; i < it->lifetime[0].live_out.size_bit(); ++i) {
 					if (it->lifetime[0].live_out.get_bit(i)) {
 						live_out.append(" ");
 						live_out.append(Lifetime::GetRegName(R_TYPE_GP, i));
@@ -4166,7 +4217,7 @@ namespace compiler
 
 		void Build(const Frontend& f)
 		{
-			typedef BlockList::iterator BlockIterator;
+			typedef BlockSet::iterator BlockIterator;
 			BlockIterator cur_block = initialize(f.instrs_.size());
 			for (Frontend::InstrList::const_iterator it = f.instrs_.begin(); it != f.instrs_.end(); ++it) {
 				InstrID instr_id = it->GetID();
@@ -4274,7 +4325,7 @@ namespace compiler
 		std::vector<BasicBlock *> update_target;
 		update_target.reserve(cfg.size());
 
-		for (ControlFlowGraph::BlockList::iterator it = cfg.begin(); it != cfg.end(); ++it) {
+		for (ControlFlowGraph::BlockSet::iterator it = cfg.begin(); it != cfg.end(); ++it) {
 			// Scanning instructions of basic block and make register lifetime table
 			for (size_t i = it->instr_begin; i != it->instr_end; ++i) {
 				const size_t instr_offset = i - it->instr_begin;
@@ -4349,7 +4400,126 @@ namespace compiler
 		}
 	}
 
-	inline bool LinearScanRegisterAlloc(Frontend& f)
+	struct ProgramPoint {
+		BasicBlock *block;
+		size_t instr_idx_offset;
+		ProgramPoint(BasicBlock *b, size_t i) : block(b), instr_idx_offset(i) {}
+	};
+
+	struct LiveInterval {
+		ProgramPoint program_point;
+		BitVector liveness;
+		size_t live_count;
+		LiveInterval(const ProgramPoint& p) : program_point(p), live_count(0) {}
+		LiveInterval(const ProgramPoint& p, const BitVector& l) : program_point(p), liveness(l), live_count(l.count_bit()) {}
+	};
+
+	inline bool IsResurrectable(const std::vector<LiveInterval>& live_intervals, const std::vector<LiveInterval>& spill_intervals, size_t reg, size_t threshold)
+	{
+		for (size_t i = 0; i < live_intervals.size(); ++i) {
+			if (spill_intervals[i].liveness.get_bit(reg)) {
+				if (live_intervals[i].live_count >= threshold) {
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+
+	inline void LinearScanRegisterAlloc(ControlFlowGraph& cfg, int reg_type, uint32 available_reg)
+	{
+		uint32 available_reg_count = detail::Count1Bits(available_reg);
+
+		struct LiveIntervalAdder {
+			std::vector<LiveInterval> *live_intervals;
+			BasicBlock *block;
+			LiveIntervalAdder(BasicBlock *b, std::vector<LiveInterval> *live_intervals_) : block(b), live_intervals(live_intervals_) {}
+			void operator()(size_t idx, const BitVector& liveness) {
+				live_intervals->push_back(LiveInterval(ProgramPoint(block, idx), liveness));
+			}
+		};
+
+		std::vector<LiveInterval> live_intervals;
+		std::vector<int> total_spill_cost;
+		for (ControlFlowGraph::BlockList::iterator it = cfg.dfs_begin(); it != cfg.dfs_end(); ++it) {
+			(*it)->lifetime[reg_type].EnumLifetimeInterval(LiveIntervalAdder(*it, &live_intervals));
+			(*it)->lifetime[reg_type].GetSpillCost(1 + (*it)->loop_depth * 100, total_spill_cost);
+		}
+
+		// Spill identification
+		std::vector<LiveInterval> spill_intervals;
+		spill_intervals.reserve(live_intervals.size());
+		std::vector<LiveInterval *> spill_targets;	// Intervals which needs number of registers more than available_reg_count
+		for (std::vector<LiveInterval>::iterator it = live_intervals.begin(); it != live_intervals.end(); ++it) {
+			if (it->live_count > available_reg_count) {
+				spill_targets.push_back(&*it);
+			}
+			// initialize spill_intervals
+			spill_intervals.push_back(LiveInterval(it->program_point));
+		}
+		struct LiveIntervalFreqLess {
+			bool operator()(const LiveInterval *lhs, const LiveInterval *rhs) {
+				return lhs->program_point.block->loop_depth < rhs->program_point.block->loop_depth;
+			}
+		};
+		std::sort(spill_targets.begin(), spill_targets.end(), LiveIntervalFreqLess());
+		std::vector<size_t> spill;
+		std::vector<size_t> live_regs;
+		while (!spill_targets.empty()) {
+			LiveInterval *interval = spill_targets.back();	// the largest estimated frequency interval in the spill targets
+			spill_targets.pop_back();
+			interval->liveness.get_bit_indexes(live_regs);
+
+			// Spill from the smallest cost
+			struct TotalSpillCostLess {
+				const std::vector<int> *total_spill_cost_;
+				TotalSpillCostLess(const std::vector<int> *total_spill_cost) : total_spill_cost_(total_spill_cost) {}
+				bool operator()(size_t lhs, size_t rhs) const {
+					const int lhs_cost = lhs < total_spill_cost_->size() ? total_spill_cost_->at(lhs) : 0;
+					const int rhs_cost = rhs < total_spill_cost_->size() ? total_spill_cost_->at(rhs) : 0;
+					return lhs_cost < rhs_cost;
+				}
+			};
+			std::sort(live_regs.begin(), live_regs.end(), TotalSpillCostLess(&total_spill_cost));
+			for (size_t i = 0; i < live_regs.size() - available_reg_count + 1; ++i) {
+				const size_t reg = live_regs[i];
+				spill.push_back(reg);
+
+				// move interval from live_intervals to spill_intervals
+				for (size_t j = 0; j < live_intervals.size(); ++j) {
+					if (live_intervals[j].liveness.get_bit(reg)) {
+						live_intervals[j].liveness.set_bit(reg, false);
+						live_intervals[j].live_count--;
+						spill_intervals[j].liveness.set_bit(reg, true);
+						spill_intervals[j].live_count++;
+					}
+				}
+			}
+		}
+
+		// Spill resurrection
+		for (ptrdiff_t i = spill.size() - 1; i >= 0; --i) {
+			const size_t reg = spill[i];
+			if (IsResurrectable(live_intervals, spill_intervals, reg, available_reg_count - 1)) {
+				spill.erase(spill.begin() + i);
+
+				// move interval from spill_intervals to live_intervals
+				for (size_t j = 0; j < live_intervals.size(); ++j) {
+					if (spill_intervals[j].liveness.get_bit(reg)) {
+						spill_intervals[j].liveness.set_bit(reg, false);
+						spill_intervals[j].live_count--;
+						live_intervals[j].liveness.set_bit(reg, true);
+						live_intervals[j].live_count++;
+					}
+				}
+			}
+		}
+
+		// Register assignment
+
+	}
+
+	inline bool RegisterAllocation(Frontend& f)
 	{
 		int num_of_sym_reg = NormalizeSymbolicReg(f);
 		if (num_of_sym_reg == 0)
@@ -4362,11 +4532,8 @@ namespace compiler
 
 		cfg.DumpDot();
 
-		std::vector< std::pair<size_t, size_t> > live_count;
-
-		// Spill identification
-
-		// Spill resurrection
+		uint32 available = (1 << EAX) | (1 << ECX) | (1 << EDX) | (1 << EBX) | (1 << ESI) | (1 << EDI);
+		LinearScanRegisterAlloc(cfg, 0, available);
 
 		return true;
 	}
@@ -5561,7 +5728,7 @@ struct function_cdecl<void, detail::ArgNone, detail::ArgNone, detail::ArgNone, d
 	void naked_main() {
 		main();
 
-		compiler::LinearScanRegisterAlloc(*this);
+		compiler::RegisterAllocation(*this);
 		MakePrologAndEpilog();
 	}
 };
