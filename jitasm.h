@@ -3814,12 +3814,8 @@ namespace compiler
 
 	struct Lifetime
 	{
-		// x86      x64
-		// 0  - 7   0  - 15  General purpose register
-		// 8  - 15  16 - 23  MMX register
-		// 16 - 23  24 - 39  XMM register
-		// 24 - 31  40 - 55  YMM register
-		// 32 -     56 -     Symbolic register
+		//  0 ~ 15 : Physical register
+		// 16 ~    : Symbolic register
 		std::vector< std::vector<RegUsePoint> > use_points;
 		BitVector gen;				///< The set of variables used before any assignment
 		BitVector kill;				///< The set of variables assigned a value before any use
@@ -3840,7 +3836,9 @@ namespace compiler
 
 		void GetSpillCost(int freq, std::vector<int>& spill_cost) const
 		{
-			spill_cost.resize(use_points.size());
+			if (spill_cost.size() < use_points.size()) {
+				spill_cost.resize(use_points.size());	// expand
+			}
 			for(size_t i = 0; i < use_points.size(); ++i) {
 				int cost = 0;
 				for (std::vector<RegUsePoint>::const_iterator it = use_points[i].begin(); it != use_points[i].end(); ++it) {
@@ -4445,6 +4443,7 @@ namespace compiler
 			(*it)->lifetime[reg_type].EnumLifetimeInterval(LiveIntervalAdder(*it, &live_intervals));
 			(*it)->lifetime[reg_type].GetSpillCost(1 + (*it)->loop_depth * 100, total_spill_cost);
 		}
+		const size_t num_of_variables = total_spill_cost.size();
 
 		// Spill identification
 		std::vector<LiveInterval> spill_intervals;
@@ -4481,17 +4480,21 @@ namespace compiler
 				}
 			};
 			std::sort(live_regs.begin(), live_regs.end(), TotalSpillCostLess(&total_spill_cost));
-			for (size_t i = 0; i < live_regs.size() - available_reg_count + 1; ++i) {
+			size_t spill_count = 0;
+			for (size_t i = 0; i < live_regs.size() && spill_count < live_regs.size() - available_reg_count; ++i) {
 				const size_t reg = live_regs[i];
-				spill.push_back(reg);
+				if (reg >= 16) {	// pysical register is not spill
+					spill.push_back(reg);
+					++spill_count;
 
-				// move interval from live_intervals to spill_intervals
-				for (size_t j = 0; j < live_intervals.size(); ++j) {
-					if (live_intervals[j].liveness.get_bit(reg)) {
-						live_intervals[j].liveness.set_bit(reg, false);
-						live_intervals[j].live_count--;
-						spill_intervals[j].liveness.set_bit(reg, true);
-						spill_intervals[j].live_count++;
+					// move interval from live_intervals to spill_intervals
+					for (size_t j = 0; j < live_intervals.size(); ++j) {
+						if (live_intervals[j].liveness.get_bit(reg)) {
+							live_intervals[j].liveness.set_bit(reg, false);
+							live_intervals[j].live_count--;
+							spill_intervals[j].liveness.set_bit(reg, true);
+							spill_intervals[j].live_count++;
+						}
 					}
 				}
 			}
@@ -4516,7 +4519,39 @@ namespace compiler
 		}
 
 		// Register assignment
+		ASSERT(num_of_variables > 16);
+		const size_t num_of_sym_reg = num_of_variables - 16;
+		std::vector<int> assignment_table(num_of_sym_reg * live_intervals.size(), -1);
+		for (size_t i = 0; i < live_intervals.size(); ++i) {
+			uint32 cur_avail = available_reg;
+			live_intervals[i].liveness.get_bit_indexes(live_regs);
+			for (std::vector<size_t>::iterator it = live_regs.begin(); it != live_regs.end(); ++it) {
+				ASSERT(cur_avail != 0);
+				int assigned_reg;
+				if (*it < 16) {
+					// Pysical register
+					assigned_reg = static_cast<int>(*it);
+				} else {
+					// Symbolic register
+					const size_t sym_reg = *it - 16;
+					const int last_assigned = i > 0 ? assignment_table[num_of_sym_reg * (i - 1) + sym_reg] : -1;
+					if (last_assigned != -1 && (cur_avail & (1 << last_assigned))) {
+						// select last assigned register
+						assigned_reg = last_assigned;
+					} else {
+						_BitScanForward(reinterpret_cast<unsigned long *>(&assigned_reg), cur_avail);
+						//assigned_reg = __builtin_ctz(cur_avail);		// for gcc
+					}
+					assignment_table[num_of_sym_reg * i + sym_reg] = assigned_reg;
+				}
+				cur_avail &= ~(1 << assigned_reg);
+			}
+		}
 
+		// Register move
+		for (size_t i = 0; i < live_intervals.size(); ++i) {
+
+		}
 	}
 
 	inline bool RegisterAllocation(Frontend& f)
