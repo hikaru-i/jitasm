@@ -173,7 +173,10 @@ namespace detail
 
 		union {
 			// REG
-			RegID reg_;
+			struct {
+				RegID reg_;
+				uint32 reg_assignable_;
+			};
 			// MEM
 			struct {
 				RegID	base_;
@@ -189,9 +192,9 @@ namespace detail
 		/// NONE
 		Opd() : opdtype_(O_TYPE_NONE) {}
 		/// REG
-		Opd(OpdSize opdsize, const RegID& reg) : opdtype_(O_TYPE_REG), opdsize_(opdsize), reg_(reg) {}
+		Opd(OpdSize opdsize, const RegID& reg, uint32 reg_assignable = 0xFFFFFFFF) : opdtype_(O_TYPE_REG), opdsize_(opdsize), reg_(reg), reg_assignable_(reg_assignable) {}
 		/// MEM
-		Opd(OpdSize opdsize, OpdSize addrsize, RegID base, RegID index, sint64 scale, sint64 disp)
+		Opd(OpdSize opdsize, OpdSize addrsize, const RegID& base, const RegID& index, sint64 scale, sint64 disp)
 			: opdtype_(O_TYPE_MEM), opdsize_(opdsize), addrsize_(addrsize), base_(base), index_(index), scale_(scale), disp_(disp) {}
 	protected:
 		/// IMM
@@ -227,6 +230,16 @@ namespace detail
 		return o;
 	}
 
+	/// Add O_TYPE_DUMMY to the specified operand and constraint of register assignment
+	inline Opd Dummy(const Opd& opd, const Opd& constraint)
+	{
+		ASSERT(opd.IsReg() && (opd.opdtype_ & O_TYPE_TYPE_MASK) == (constraint.opdtype_ & O_TYPE_TYPE_MASK) && !constraint.GetReg().IsSymbolic());
+		Opd o(opd);
+		o.opdtype_ = static_cast<OpdType>(static_cast<int>(o.opdtype_) | O_TYPE_DUMMY);
+		o.reg_assignable_ = (1 << constraint.reg_.id);
+		return o;
+	}
+
 	/// Add O_TYPE_READ to the specified operand
 	inline Opd R(const Opd& opd)
 	{
@@ -257,9 +270,9 @@ namespace detail
 		/// NONE
 		OpdT() : Opd() {}
 		/// REG
-		explicit OpdT(const RegID& reg) : Opd(static_cast<OpdSize>(Size), reg) {}
+		explicit OpdT(const RegID& reg, uint32 reg_assignable = 0xFFFFFFFF) : Opd(static_cast<OpdSize>(Size), reg, reg_assignable) {}
 		/// MEM
-		OpdT(OpdSize addrsize, RegID base, RegID index, sint64 scale, sint64 disp)
+		OpdT(OpdSize addrsize, const RegID& base, const RegID& index, sint64 scale, sint64 disp)
 			: Opd(static_cast<OpdSize>(Size), addrsize, base, index, scale, disp) {}
 	protected:
 		/// IMM
@@ -281,7 +294,7 @@ typedef detail::OpdT<O_SIZE_4096>	Opd4096;	// FPU, MMX, XMM, MXCSR state
 
 /// 8bit general purpose register
 struct Reg8 : Opd8 {
-	Reg8() : Opd8(RegID::CreateSymbolicRegID(R_TYPE_SYMBOLIC_GP)) {}
+	Reg8() : Opd8(RegID::CreateSymbolicRegID(R_TYPE_SYMBOLIC_GP), 0xFFFFFF0F) {}
 	explicit Reg8(PhysicalRegID id) : Opd8(RegID::CreatePhysicalRegID(R_TYPE_GP, id)) {}
 };
 /// 16bit general purpose register
@@ -330,7 +343,6 @@ struct Reg32_eax : Reg32 {Reg32_eax() : Reg32(EAX) {}};
 struct Reg64_rax : Reg64 {Reg64_rax() : Reg64(RAX) {}};
 #endif
 struct FpuReg_st0 : FpuReg {FpuReg_st0() : FpuReg(ST0) {}};
-struct XmmReg_xmm0 : XmmReg {XmmReg_xmm0() : XmmReg(XMM0) {}};
 
 template<class OpdN>
 struct MemT : OpdN
@@ -1089,8 +1101,7 @@ struct Frontend
 	FpuReg_st0	st0;
 	FpuReg		st1, st2, st3, st4, st5, st6, st7;
 	MmxReg		mm0, mm1, mm2, mm3, mm4, mm5, mm6, mm7;
-	XmmReg_xmm0 xmm0;
-	XmmReg		xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7;
+	XmmReg		xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7;
 	YmmReg		ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7;
 #ifdef JITASM64
 	Reg8		r8b, r9b, r10b, r11b, r12b, r13b, r14b, r15b;
@@ -3340,10 +3351,10 @@ struct Frontend
 	void blendps(const XmmReg& dst, const Mem128& src, const Imm8& mask)	{AppendInstr(I_BLENDPS,	0x0F3A0C, E_MANDATORY_PREFIX_66, dst, src, mask);}
 	void blendpd(const XmmReg& dst, const XmmReg& src, const Imm8& mask)	{AppendInstr(I_BLENDPD,	0x0F3A0D, E_MANDATORY_PREFIX_66, dst, src, mask);}
 	void blendpd(const XmmReg& dst, const Mem128& src, const Imm8& mask)	{AppendInstr(I_BLENDPD,	0x0F3A0D, E_MANDATORY_PREFIX_66, dst, src, mask);}
-	void blendvps(const XmmReg& dst, const XmmReg& src, const XmmReg_xmm0& mask)	{AppendInstr(I_BLENDVPS,	0x0F3814, E_MANDATORY_PREFIX_66, dst, src); avoid_unused_warn(mask);}
-	void blendvps(const XmmReg& dst, const Mem128& src, const XmmReg_xmm0& mask)	{AppendInstr(I_BLENDVPS,	0x0F3814, E_MANDATORY_PREFIX_66, dst, src); avoid_unused_warn(mask);}
-	void blendvpd(const XmmReg& dst, const XmmReg& src, const XmmReg_xmm0& mask)	{AppendInstr(I_BLENDVPD,	0x0F3815, E_MANDATORY_PREFIX_66, dst, src); avoid_unused_warn(mask);}
-	void blendvpd(const XmmReg& dst, const Mem128& src, const XmmReg_xmm0& mask)	{AppendInstr(I_BLENDVPD,	0x0F3815, E_MANDATORY_PREFIX_66, dst, src); avoid_unused_warn(mask);}
+	void blendvps(const XmmReg& dst, const XmmReg& src, const XmmReg& mask)	{AppendInstr(I_BLENDVPS,	0x0F3814, E_MANDATORY_PREFIX_66, RW(dst), R(src), Dummy(R(mask), xmm0));}
+	void blendvps(const XmmReg& dst, const Mem128& src, const XmmReg& mask)	{AppendInstr(I_BLENDVPS,	0x0F3814, E_MANDATORY_PREFIX_66, RW(dst), R(src), Dummy(R(mask), xmm0));}
+	void blendvpd(const XmmReg& dst, const XmmReg& src, const XmmReg& mask)	{AppendInstr(I_BLENDVPD,	0x0F3815, E_MANDATORY_PREFIX_66, RW(dst), R(src), Dummy(R(mask), xmm0));}
+	void blendvpd(const XmmReg& dst, const Mem128& src, const XmmReg& mask)	{AppendInstr(I_BLENDVPD,	0x0F3815, E_MANDATORY_PREFIX_66, RW(dst), R(src), Dummy(R(mask), xmm0));}
 	void dpps(const XmmReg& dst, const XmmReg& src, const Imm8& mask)		{AppendInstr(I_DPPS,		0x0F3A40, E_MANDATORY_PREFIX_66, dst, src, mask);}
 	void dpps(const XmmReg& dst, const Mem128& src, const Imm8& mask)		{AppendInstr(I_DPPS,		0x0F3A40, E_MANDATORY_PREFIX_66, dst, src, mask);}
 	void dppd(const XmmReg& dst, const XmmReg& src, const Imm8& mask)		{AppendInstr(I_DPPD,		0x0F3A41, E_MANDATORY_PREFIX_66, dst, src, mask);}
@@ -3360,8 +3371,8 @@ struct Frontend
 	void mpsadbw(const XmmReg& dst, const Mem128& src, const Imm8& offsets)	{AppendInstr(I_MPSADBW,	0x0F3A42, E_MANDATORY_PREFIX_66, dst, src, offsets);}
 	void packusdw(const XmmReg& dst, const XmmReg& src)						{AppendInstr(I_PACKUSDW, 0x0F382B, E_MANDATORY_PREFIX_66, dst, src);}
 	void packusdw(const XmmReg& dst, const Mem128& src)						{AppendInstr(I_PACKUSDW, 0x0F382B, E_MANDATORY_PREFIX_66, dst, src);}
-	void pblendvb(const XmmReg& dst, const XmmReg& src, const XmmReg_xmm0& mask)	{AppendInstr(I_PBLENDVB, 0x0F3810, E_MANDATORY_PREFIX_66, dst, src); avoid_unused_warn(mask);}
-	void pblendvb(const XmmReg& dst, const Mem128& src, const XmmReg_xmm0& mask)	{AppendInstr(I_PBLENDVB, 0x0F3810, E_MANDATORY_PREFIX_66, dst, src); avoid_unused_warn(mask);}
+	void pblendvb(const XmmReg& dst, const XmmReg& src, const XmmReg& mask)	{AppendInstr(I_PBLENDVB, 0x0F3810, E_MANDATORY_PREFIX_66, RW(dst), R(src), Dummy(R(mask), xmm0));}
+	void pblendvb(const XmmReg& dst, const Mem128& src, const XmmReg& mask)	{AppendInstr(I_PBLENDVB, 0x0F3810, E_MANDATORY_PREFIX_66, RW(dst), R(src), Dummy(R(mask), xmm0));}
 	void pblendw(const XmmReg& dst, const XmmReg& src, const Imm8& mask)	{AppendInstr(I_PBLENDW,	0x0F3A0E, E_MANDATORY_PREFIX_66, dst, src, mask);}
 	void pblendw(const XmmReg& dst, const Mem128& src, const Imm8& mask)	{AppendInstr(I_PBLENDW,	0x0F3A0E, E_MANDATORY_PREFIX_66, dst, src, mask);}
 	void pcmpeqq(const XmmReg& dst, const XmmReg& src)						{AppendInstr(I_PCMPEQQ,	0x0F3829, E_MANDATORY_PREFIX_66, dst, src);}
@@ -3808,8 +3819,18 @@ namespace compiler
 	{
 		size_t instr_idx;	///< Instruction index offset from basic block start point
 		OpdType type;
+		uint32 reg_assignable;
 
-		RegUsePoint(size_t idx, OpdType t) : instr_idx(idx), type(t) {}
+		RegUsePoint(size_t idx, OpdType t, uint32 assignable) : instr_idx(idx), type(t), size(s), reg_assignable(assignable) {}
+		bool operator<(const RegUsePoint& rhs) const {
+			if (instr_idx == rhs.instr_idx) {
+				// R < RW < W
+				const int lhs_type = (type & O_TYPE_READ ? -1 : 0) + (type & O_TYPE_WRITE ? 1 : 0);
+				const int rhs_type = (rhs.type & O_TYPE_READ ? -1 : 0) + (rhs.type & O_TYPE_WRITE ? 1 : 0);
+				return lhs_type < rhs_type;
+			}
+			return instr_idx < rhs.instr_idx;
+		}
 	};
 
 	struct Lifetime
@@ -3825,13 +3846,20 @@ namespace compiler
 
 		Lifetime() : use_points(16), dirty_live_out(true) {}
 
-		void AddUsePoint(size_t instr_idx, const RegID& reg, OpdType opd_type)
+		void AddUsePoint(size_t instr_idx, const RegID& reg, OpdType opd_type, OpdSize opd_size, uint32 reg_assignable)
 		{
 			const size_t reg_idx = reg.IsSymbolic() ? reg.id + 16 : reg.id;
 			if (use_points.size() <= reg_idx)
 				use_points.resize(reg_idx + 1);
 
-			use_points[reg_idx].push_back(RegUsePoint(instr_idx, opd_type));
+			// add read attribute when writing to 8/16bit register because it is partial write
+			if ((opd_type & O_TYPE_WRITE) && (opd_size == O_SIZE_8 || opd_size == O_SIZE_16))
+				opd_type = static_cast<OpdType>(static_cast<int>(opd_type) | O_TYPE_READ);
+
+			RegUsePoint use_point(instr_idx, opd_type, reg_assignable);
+			std::vector<RegUsePoint>::reverse_iterator it = use_points[reg_idx].rbegin();
+			while (it != use_points[reg_idx].rend() && use_point < *it) ++it;
+			use_points[reg_idx].insert(it.base(), use_point);
 		}
 
 		void GetSpillCost(int freq, std::vector<int>& spill_cost) const
@@ -3858,21 +3886,29 @@ namespace compiler
 			}
 
 			BitVector liveness;
+			std::vector<uint32> reg_assignables;
+			const size_t num_of_variables = live_in.size_bit() < use_points.size() ? use_points.size() : live_in.size_bit();
 			size_t instr_idx = 0;
 			size_t end_count;
 			do {
 				BitVector l = live_in;
 				end_count = 0;
+				reg_assignables.clear();
 				size_t min_instr_idx = (size_t)-1;
 				for (size_t i = 0; i < iterators.size(); ++i) {
 					if (iterators[i] == use_points[i].end()) {
 						l.set_bit(i, live_out.get_bit(i));
 						++end_count;
 					} else {
-						if (iterators[i]->instr_idx < min_instr_idx)
+						if (iterators[i]->instr_idx < min_instr_idx) {
 							min_instr_idx = iterators[i]->instr_idx;
+						}
 
 						if (iterators[i]->instr_idx == instr_idx) {
+							if (iterators[i]->reg_assignable != 0xFFFFFFFF) {
+								reg_assignables.resize(num_of_variables, 0xFFFFFFFF);
+								reg_assignables[i] = iterators[i]->reg_assignable;
+							}
 							l.set_bit(i, true);
 							++iterators[i];
 						} else if (iterators[i]->type & O_TYPE_READ) {
@@ -3885,9 +3921,9 @@ namespace compiler
 					}
 				}
 
-				if (!liveness.is_equal(l)) {
+				if (!reg_assignables.empty() || !liveness.is_equal(l)) {
 					liveness.swap(l);
-					fn(instr_idx, liveness);
+					fn(instr_idx, liveness, reg_assignables);
 				}
 				instr_idx = min_instr_idx == instr_idx ? instr_idx + 1 : min_instr_idx;
 			} while (end_count < iterators.size());
@@ -3901,21 +3937,15 @@ namespace compiler
 			const static std::string s_gp_reg_name[] = {"eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi"};
 #endif
 			std::string name;
-			if (reg_idx >= 16) {
-				name.assign("sym");
-				detail::append_num(name, reg_idx - 16);
-			} else if (type == R_TYPE_GP) {
-				return s_gp_reg_name[reg_idx];
-			} else if (type == R_TYPE_MMX) {
-				name.assign("mm");
-				detail::append_num(name, reg_idx);
-			} else if (type == R_TYPE_XMM) {
-				name.assign("xmm");
-				detail::append_num(name, reg_idx);
-			} else if (type == R_TYPE_YMM) {
-				name.assign("ymm");
-				detail::append_num(name, reg_idx);
-			}
+			if (type == R_TYPE_GP)					{return s_gp_reg_name[reg_idx];}
+			else if (type == R_TYPE_MMX)			{name.assign("mm");}
+			else if (type == R_TYPE_XMM)			{name.assign("xmm");}
+			else if (type == R_TYPE_YMM)			{name.assign("ymm");}
+			else if (type == R_TYPE_SYMBOLIC_GP)	{name.assign("gpsym"); reg_idx -= 16;}
+			else if (type == R_TYPE_SYMBOLIC_MMX)	{name.assign("mmsym"); reg_idx -= 16;}
+			else if (type == R_TYPE_SYMBOLIC_XMM)	{name.assign("xmmsym"); reg_idx -= 16;}
+			else if (type == R_TYPE_SYMBOLIC_YMM)	{name.assign("ymmsym"); reg_idx -= 16;}
+			detail::append_num(name, reg_idx);
 			return name;
 		}
 	};
@@ -4330,20 +4360,20 @@ namespace compiler
 				for (size_t j = 0; j < Instr::MAX_OPERAND_COUNT; ++j) {
 					const detail::Opd& opd = f.instrs_[i].GetOpd(j);
 					if (opd.IsGpReg()) {
-						it->lifetime[0].AddUsePoint(instr_offset, opd.GetReg(), opd.opdtype_);
+						it->lifetime[0].AddUsePoint(instr_offset, opd.GetReg(), opd.opdtype_, opd.GetSize(), opd.reg_assignable_);
 					} else if (opd.IsMmxReg()) {
-						it->lifetime[1].AddUsePoint(instr_offset, opd.GetReg(), opd.opdtype_);
+						it->lifetime[1].AddUsePoint(instr_offset, opd.GetReg(), opd.opdtype_, opd.GetSize(), opd.reg_assignable_);
 					} else if (opd.IsXmmReg()) {
-						it->lifetime[2].AddUsePoint(instr_offset, opd.GetReg(), opd.opdtype_);
+						it->lifetime[2].AddUsePoint(instr_offset, opd.GetReg(), opd.opdtype_, opd.GetSize(), opd.reg_assignable_);
 					} else if (opd.IsYmmReg()) {
-						it->lifetime[3].AddUsePoint(instr_offset, opd.GetReg(), opd.opdtype_);
+						it->lifetime[3].AddUsePoint(instr_offset, opd.GetReg(), opd.opdtype_, opd.GetSize(), opd.reg_assignable_);
 					} else if (opd.IsMem()) {
 						RegID base = opd.GetBase();
 						if (!base.IsInvalid())
-							it->lifetime[0].AddUsePoint(instr_offset, base, static_cast<OpdType>(O_TYPE_REG | O_TYPE_READ));
+							it->lifetime[0].AddUsePoint(instr_offset, base, static_cast<OpdType>(O_TYPE_REG | O_TYPE_READ), opd.GetAddressSize(), 0xFFFFFFFF);
 						RegID index = opd.GetIndex();
 						if (!index.IsInvalid())
-							it->lifetime[0].AddUsePoint(instr_offset, index, static_cast<OpdType>(O_TYPE_REG | O_TYPE_READ));
+							it->lifetime[0].AddUsePoint(instr_offset, index, static_cast<OpdType>(O_TYPE_REG | O_TYPE_READ), opd.GetAddressSize(), 0xFFFFFFFF);
 					}
 				}
 			}
@@ -4408,8 +4438,9 @@ namespace compiler
 		ProgramPoint program_point;
 		BitVector liveness;
 		size_t live_count;
-		LiveInterval(const ProgramPoint& p) : program_point(p), live_count(0) {}
-		LiveInterval(const ProgramPoint& p, const BitVector& l) : program_point(p), liveness(l), live_count(l.count_bit()) {}
+		std::vector<uint32> reg_assignables;
+		LiveInterval(const ProgramPoint& p, const std::vector<uint32>& assignables) : program_point(p), live_count(0) {}
+		LiveInterval(const ProgramPoint& p, const BitVector& l, const std::vector<uint32>& assignables) : program_point(p), liveness(l), live_count(l.count_bit()), reg_assignables(assignables) {}
 	};
 
 	inline bool IsResurrectable(const std::vector<LiveInterval>& live_intervals, const std::vector<LiveInterval>& spill_intervals, size_t reg, size_t threshold)
@@ -4432,8 +4463,8 @@ namespace compiler
 			std::vector<LiveInterval> *live_intervals;
 			BasicBlock *block;
 			LiveIntervalAdder(BasicBlock *b, std::vector<LiveInterval> *live_intervals_) : block(b), live_intervals(live_intervals_) {}
-			void operator()(size_t idx, const BitVector& liveness) {
-				live_intervals->push_back(LiveInterval(ProgramPoint(block, idx), liveness));
+			void operator()(size_t idx, const BitVector& liveness, const std::vector<uint32>& reg_assignable) {
+				live_intervals->push_back(LiveInterval(ProgramPoint(block, idx), liveness, reg_assignable));
 			}
 		};
 
@@ -4454,14 +4485,14 @@ namespace compiler
 				spill_targets.push_back(&*it);
 			}
 			// initialize spill_intervals
-			spill_intervals.push_back(LiveInterval(it->program_point));
+			spill_intervals.push_back(LiveInterval(it->program_point, it->reg_assignables));
 		}
-		struct LiveIntervalFreqLess {
+		struct LessLiveIntervalFreq {
 			bool operator()(const LiveInterval *lhs, const LiveInterval *rhs) {
 				return lhs->program_point.block->loop_depth < rhs->program_point.block->loop_depth;
 			}
 		};
-		std::sort(spill_targets.begin(), spill_targets.end(), LiveIntervalFreqLess());
+		std::sort(spill_targets.begin(), spill_targets.end(), LessLiveIntervalFreq());
 		std::vector<size_t> spill;
 		std::vector<size_t> live_regs;
 		while (!spill_targets.empty()) {
@@ -4470,16 +4501,16 @@ namespace compiler
 			interval->liveness.get_bit_indexes(live_regs);
 
 			// Spill from the smallest cost
-			struct TotalSpillCostLess {
+			struct LessTotalSpillCost {
 				const std::vector<int> *total_spill_cost_;
-				TotalSpillCostLess(const std::vector<int> *total_spill_cost) : total_spill_cost_(total_spill_cost) {}
+				LessTotalSpillCost(const std::vector<int> *total_spill_cost) : total_spill_cost_(total_spill_cost) {}
 				bool operator()(size_t lhs, size_t rhs) const {
 					const int lhs_cost = lhs < total_spill_cost_->size() ? total_spill_cost_->at(lhs) : 0;
 					const int rhs_cost = rhs < total_spill_cost_->size() ? total_spill_cost_->at(rhs) : 0;
 					return lhs_cost < rhs_cost;
 				}
 			};
-			std::sort(live_regs.begin(), live_regs.end(), TotalSpillCostLess(&total_spill_cost));
+			std::sort(live_regs.begin(), live_regs.end(), LessTotalSpillCost(&total_spill_cost));
 			size_t spill_count = 0;
 			for (size_t i = 0; i < live_regs.size() && spill_count < live_regs.size() - available_reg_count; ++i) {
 				const size_t reg = live_regs[i];
@@ -4525,8 +4556,22 @@ namespace compiler
 		for (size_t i = 0; i < live_intervals.size(); ++i) {
 			uint32 cur_avail = available_reg;
 			live_intervals[i].liveness.get_bit_indexes(live_regs);
+
+			// assign from harder constraint
+			if (!live_intervals[i].reg_assignables.empty()) {
+				struct LessRegAssignable {
+					std::vector<uint32> *reg_assignables;
+					LessRegAssignable(std::vector<uint32> *assignables) : reg_assignables(assignables) {}
+					bool operator()(uint32 lhs, uint32 rhs) const {
+						return detail::Count1Bits(reg_assignables->at(lhs)) < detail::Count1Bits(reg_assignables->at(rhs));
+					}
+				};
+				std::sort(live_regs.begin(), live_regs.end(), LessRegAssignable(&live_intervals[i].reg_assignables));
+			}
+
 			for (std::vector<size_t>::iterator it = live_regs.begin(); it != live_regs.end(); ++it) {
-				ASSERT(cur_avail != 0);
+				const uint32 reg_assignable = live_intervals[i].reg_assignables[*it];
+				ASSERT((cur_avail & reg_assignable) != 0);
 				int assigned_reg;
 				if (*it < 16) {
 					// Pysical register
@@ -4535,12 +4580,12 @@ namespace compiler
 					// Symbolic register
 					const size_t sym_reg = *it - 16;
 					const int last_assigned = i > 0 ? assignment_table[num_of_sym_reg * (i - 1) + sym_reg] : -1;
-					if (last_assigned != -1 && (cur_avail & (1 << last_assigned))) {
+					if (last_assigned != -1 && (cur_avail & reg_assignable & (1 << last_assigned))) {
 						// select last assigned register
 						assigned_reg = last_assigned;
 					} else {
-						_BitScanForward(reinterpret_cast<unsigned long *>(&assigned_reg), cur_avail);
-						//assigned_reg = __builtin_ctz(cur_avail);		// for gcc
+						_BitScanForward(reinterpret_cast<unsigned long *>(&assigned_reg), cur_avail & reg_assignable);
+						//assigned_reg = __builtin_ctz(cur_avail & reg_assignable);		// for gcc
 					}
 					assignment_table[num_of_sym_reg * i + sym_reg] = assigned_reg;
 				}
