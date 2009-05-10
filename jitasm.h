@@ -1144,7 +1144,7 @@ struct Frontend
 		ecx(ECX), edx(EDX), ebx(EBX), esp(ESP), ebp(EBP), esi(ESI), edi(EDI),
 		st1(ST1), st2(ST2), st3(ST3), st4(ST4), st5(ST5), st6(ST6), st7(ST7),
 		mm0(MM0), mm1(MM1), mm2(MM2), mm3(MM3), mm4(MM4), mm5(MM5), mm6(MM6), mm7(MM7),
-		xmm1(XMM1), xmm2(XMM2), xmm3(XMM3), xmm4(XMM4), xmm5(XMM5), xmm6(XMM6), xmm7(XMM7),
+		xmm0(XMM0), xmm1(XMM1), xmm2(XMM2), xmm3(XMM3), xmm4(XMM4), xmm5(XMM5), xmm6(XMM6), xmm7(XMM7),
 		ymm0(YMM0), ymm1(YMM1), ymm2(YMM2), ymm3(YMM3), ymm4(YMM4), ymm5(YMM5), ymm6(YMM6), ymm7(YMM7),
 #ifdef JITASM64
 		r8b(R8B), r9b(R9B), r10b(R10B), r11b(R11B), r12b(R12B), r13b(R13B), r14b(R14B), r15b(R15B),
@@ -3821,7 +3821,7 @@ namespace compiler
 		OpdType type;
 		uint32 reg_assignable;
 
-		RegUsePoint(size_t idx, OpdType t, uint32 assignable) : instr_idx(idx), type(t), size(s), reg_assignable(assignable) {}
+		RegUsePoint(size_t idx, OpdType t, uint32 assignable) : instr_idx(idx), type(t), reg_assignable(assignable) {}
 		bool operator<(const RegUsePoint& rhs) const {
 			if (instr_idx == rhs.instr_idx) {
 				// R < RW < W
@@ -3835,14 +3835,28 @@ namespace compiler
 
 	struct Lifetime
 	{
+		struct Interval
+		{
+			size_t instr_idx_offset;
+			BitVector liveness;
+			size_t live_count;
+			std::vector<uint32> reg_assignables;
+
+			Interval(size_t instr_idx, const std::vector<uint32>& assignables) : instr_idx_offset(instr_idx), live_count(0), reg_assignables(assignables) {}
+			Interval(size_t instr_idx, const BitVector& l, const std::vector<uint32>& assignables) : instr_idx_offset(instr_idx), liveness(l), live_count(l.count_bit()), reg_assignables(assignables) {}
+		};
+
 		//  0 ~ 15 : Physical register
 		// 16 ~    : Symbolic register
 		std::vector< std::vector<RegUsePoint> > use_points;
-		BitVector gen;				///< The set of variables used before any assignment
-		BitVector kill;				///< The set of variables assigned a value before any use
-		BitVector live_in;			///< The set of live variables at the start of this block
-		BitVector live_out;			///< The set of live variables at the end of this block
-		bool dirty_live_out;		///< The dirty flag of live_out
+		BitVector gen;							///< The set of variables used before any assignment
+		BitVector kill;							///< The set of variables assigned a value before any use
+		BitVector live_in;						///< The set of live variables at the start of this block
+		BitVector live_out;						///< The set of live variables at the end of this block
+		bool dirty_live_out;					///< The dirty flag of live_out
+		std::vector<Interval> intervals;		///< Lifetime intervals
+		std::vector<Interval> spill_intervals;	///< Intervals of spill target
+		std::vector<int> assignment_table;		///< Register assignment table
 
 		Lifetime() : use_points(16), dirty_live_out(true) {}
 
@@ -3877,27 +3891,26 @@ namespace compiler
 			}
 		}
 
-		template<class Fn>
-		void EnumLifetimeInterval(Fn fn)
+		void BuildIntervals()
 		{
 			std::vector<std::vector<RegUsePoint>::iterator> iterators(use_points.size());
 			for (size_t i = 0; i < use_points.size(); ++i) {
 				iterators[i] = use_points[i].begin();
 			}
 
-			BitVector liveness;
+			BitVector *last_liveness = NULL;
 			std::vector<uint32> reg_assignables;
 			const size_t num_of_variables = live_in.size_bit() < use_points.size() ? use_points.size() : live_in.size_bit();
 			size_t instr_idx = 0;
 			size_t end_count;
 			do {
-				BitVector l = live_in;
+				BitVector liveness = live_in;
 				end_count = 0;
 				reg_assignables.clear();
 				size_t min_instr_idx = (size_t)-1;
 				for (size_t i = 0; i < iterators.size(); ++i) {
 					if (iterators[i] == use_points[i].end()) {
-						l.set_bit(i, live_out.get_bit(i));
+						liveness.set_bit(i, live_out.get_bit(i));
 						++end_count;
 					} else {
 						if (iterators[i]->instr_idx < min_instr_idx) {
@@ -3909,24 +3922,75 @@ namespace compiler
 								reg_assignables.resize(num_of_variables, 0xFFFFFFFF);
 								reg_assignables[i] = iterators[i]->reg_assignable;
 							}
-							l.set_bit(i, true);
+							liveness.set_bit(i, true);
 							++iterators[i];
 						} else if (iterators[i]->type & O_TYPE_READ) {
-							l.set_bit(i, true);
+							liveness.set_bit(i, true);
 						} else if (iterators[i]->type & O_TYPE_WRITE) {
-							l.set_bit(i, false);
+							liveness.set_bit(i, false);
 						} else {
 							ASSERT(0);
 						}
 					}
 				}
 
-				if (!reg_assignables.empty() || !liveness.is_equal(l)) {
-					liveness.swap(l);
-					fn(instr_idx, liveness, reg_assignables);
+				if (!reg_assignables.empty() || !last_liveness || !last_liveness->is_equal(liveness)) {
+					intervals.push_back(Interval(instr_idx, liveness, reg_assignables));
+					last_liveness = &intervals.back().liveness;
 				}
 				instr_idx = min_instr_idx == instr_idx ? instr_idx + 1 : min_instr_idx;
 			} while (end_count < iterators.size());
+
+			// initialize spill_intervals
+			spill_intervals.reserve(intervals.size());
+			for (std::vector<Interval>::iterator it = intervals.begin(); it != intervals.end(); ++it) {
+				spill_intervals.push_back(Interval(it->instr_idx_offset, it->reg_assignables));
+			}
+		}
+
+		void AssignRegister(uint32 available_reg, size_t num_of_sym_reg)
+		{
+			std::vector<size_t> live_regs;
+			assignment_table.resize(num_of_sym_reg * intervals.size(), -1);
+			for (size_t i = 0; i < intervals.size(); ++i) {
+				uint32 cur_avail = available_reg;
+				intervals[i].liveness.get_bit_indexes(live_regs);
+
+				// assign from harder constraint
+				if (!intervals[i].reg_assignables.empty()) {
+					struct LessRegAssignable {
+						std::vector<uint32> *reg_assignables;
+						LessRegAssignable(std::vector<uint32> *assignables) : reg_assignables(assignables) {}
+						bool operator()(uint32 lhs, uint32 rhs) const {
+							return detail::Count1Bits(reg_assignables->at(lhs)) < detail::Count1Bits(reg_assignables->at(rhs));
+						}
+					};
+					std::sort(live_regs.begin(), live_regs.end(), LessRegAssignable(&intervals[i].reg_assignables));
+				}
+
+				for (std::vector<size_t>::iterator it = live_regs.begin(); it != live_regs.end(); ++it) {
+					const uint32 reg_assignable = intervals[i].reg_assignables[*it];
+					ASSERT((cur_avail & reg_assignable) != 0);
+					int assigned_reg;
+					if (*it < 16) {
+						// Pysical register
+						assigned_reg = static_cast<int>(*it);
+					} else {
+						// Symbolic register
+						const size_t sym_reg = *it - 16;
+						const int last_assigned = i > 0 ? assignment_table[num_of_sym_reg * (i - 1) + sym_reg] : -1;
+						if (last_assigned != -1 && (cur_avail & reg_assignable & (1 << last_assigned))) {
+							// select last assigned register
+							assigned_reg = last_assigned;
+						} else {
+							_BitScanForward(reinterpret_cast<unsigned long *>(&assigned_reg), cur_avail & reg_assignable);
+							//assigned_reg = __builtin_ctz(cur_avail & reg_assignable);		// for gcc
+						}
+						assignment_table[num_of_sym_reg * i + sym_reg] = assigned_reg;
+					}
+					cur_avail &= ~(1 << assigned_reg);
+				}
+			}
 		}
 
 		static std::string GetRegName(RegType type, size_t reg_idx)
@@ -4428,27 +4492,15 @@ namespace compiler
 		}
 	}
 
-	struct ProgramPoint {
-		BasicBlock *block;
-		size_t instr_idx_offset;
-		ProgramPoint(BasicBlock *b, size_t i) : block(b), instr_idx_offset(i) {}
-	};
-
-	struct LiveInterval {
-		ProgramPoint program_point;
-		BitVector liveness;
-		size_t live_count;
-		std::vector<uint32> reg_assignables;
-		LiveInterval(const ProgramPoint& p, const std::vector<uint32>& assignables) : program_point(p), live_count(0) {}
-		LiveInterval(const ProgramPoint& p, const BitVector& l, const std::vector<uint32>& assignables) : program_point(p), liveness(l), live_count(l.count_bit()), reg_assignables(assignables) {}
-	};
-
-	inline bool IsResurrectable(const std::vector<LiveInterval>& live_intervals, const std::vector<LiveInterval>& spill_intervals, size_t reg, size_t threshold)
+	inline bool IsResurrectable(ControlFlowGraph& cfg, int reg_type, size_t reg, size_t threshold)
 	{
-		for (size_t i = 0; i < live_intervals.size(); ++i) {
-			if (spill_intervals[i].liveness.get_bit(reg)) {
-				if (live_intervals[i].live_count >= threshold) {
-					return false;
+		for (ControlFlowGraph::BlockList::iterator block = cfg.dfs_begin(); block != cfg.dfs_end(); ++block) {
+			Lifetime& lifetime = (*block)->lifetime[reg_type];
+			for (size_t i = 0; i < lifetime.intervals.size(); ++i) {
+				if (lifetime.spill_intervals[i].liveness.get_bit(reg)) {
+					if (lifetime.intervals[i].live_count >= threshold) {
+						return false;
+					}
 				}
 			}
 		}
@@ -4459,46 +4511,36 @@ namespace compiler
 	{
 		uint32 available_reg_count = detail::Count1Bits(available_reg);
 
-		struct LiveIntervalAdder {
-			std::vector<LiveInterval> *live_intervals;
-			BasicBlock *block;
-			LiveIntervalAdder(BasicBlock *b, std::vector<LiveInterval> *live_intervals_) : block(b), live_intervals(live_intervals_) {}
-			void operator()(size_t idx, const BitVector& liveness, const std::vector<uint32>& reg_assignable) {
-				live_intervals->push_back(LiveInterval(ProgramPoint(block, idx), liveness, reg_assignable));
-			}
-		};
-
-		std::vector<LiveInterval> live_intervals;
 		std::vector<int> total_spill_cost;
 		for (ControlFlowGraph::BlockList::iterator it = cfg.dfs_begin(); it != cfg.dfs_end(); ++it) {
-			(*it)->lifetime[reg_type].EnumLifetimeInterval(LiveIntervalAdder(*it, &live_intervals));
+			(*it)->lifetime[reg_type].BuildIntervals();
 			(*it)->lifetime[reg_type].GetSpillCost(1 + (*it)->loop_depth * 100, total_spill_cost);
 		}
 		const size_t num_of_variables = total_spill_cost.size();
 
 		// Spill identification
-		std::vector<LiveInterval> spill_intervals;
-		spill_intervals.reserve(live_intervals.size());
-		std::vector<LiveInterval *> spill_targets;	// Intervals which needs number of registers more than available_reg_count
-		for (std::vector<LiveInterval>::iterator it = live_intervals.begin(); it != live_intervals.end(); ++it) {
-			if (it->live_count > available_reg_count) {
-				spill_targets.push_back(&*it);
+		typedef std::pair<BasicBlock *, Lifetime::Interval *> SpillTargetInterval;
+		std::vector<SpillTargetInterval> spill_targets;	// Intervals which needs number of registers more than available_reg_count
+		for (ControlFlowGraph::BlockList::iterator block = cfg.dfs_begin(); block != cfg.dfs_end(); ++block) {
+			Lifetime& lifetime = (*block)->lifetime[reg_type];
+			for (std::vector<Lifetime::Interval>::iterator it = lifetime.intervals.begin(); it != lifetime.intervals.end(); ++it) {
+				if (it->live_count > available_reg_count) {
+					spill_targets.push_back(SpillTargetInterval(*block, &*it));
+				}
 			}
-			// initialize spill_intervals
-			spill_intervals.push_back(LiveInterval(it->program_point, it->reg_assignables));
 		}
 		struct LessLiveIntervalFreq {
-			bool operator()(const LiveInterval *lhs, const LiveInterval *rhs) {
-				return lhs->program_point.block->loop_depth < rhs->program_point.block->loop_depth;
+			bool operator()(const SpillTargetInterval& lhs, const SpillTargetInterval& rhs) {
+				return lhs.first->loop_depth < rhs.first->loop_depth;
 			}
 		};
 		std::sort(spill_targets.begin(), spill_targets.end(), LessLiveIntervalFreq());
 		std::vector<size_t> spill;
 		std::vector<size_t> live_regs;
 		while (!spill_targets.empty()) {
-			LiveInterval *interval = spill_targets.back();	// the largest estimated frequency interval in the spill targets
+			SpillTargetInterval interval = spill_targets.back();	// the largest estimated frequency interval in the spill targets
 			spill_targets.pop_back();
-			interval->liveness.get_bit_indexes(live_regs);
+			interval.second->liveness.get_bit_indexes(live_regs);
 
 			// Spill from the smallest cost
 			struct LessTotalSpillCost {
@@ -4519,12 +4561,15 @@ namespace compiler
 					++spill_count;
 
 					// move interval from live_intervals to spill_intervals
-					for (size_t j = 0; j < live_intervals.size(); ++j) {
-						if (live_intervals[j].liveness.get_bit(reg)) {
-							live_intervals[j].liveness.set_bit(reg, false);
-							live_intervals[j].live_count--;
-							spill_intervals[j].liveness.set_bit(reg, true);
-							spill_intervals[j].live_count++;
+					for (ControlFlowGraph::BlockList::iterator block = cfg.dfs_begin(); block != cfg.dfs_end(); ++block) {
+						Lifetime& lifetime = (*block)->lifetime[reg_type];
+						for (size_t j = 0; j < lifetime.intervals.size(); ++j) {
+							if (lifetime.intervals[j].liveness.get_bit(reg)) {
+								lifetime.intervals[j].liveness.set_bit(reg, false);
+								lifetime.intervals[j].live_count--;
+								lifetime.spill_intervals[j].liveness.set_bit(reg, true);
+								lifetime.spill_intervals[j].live_count++;
+							}
 						}
 					}
 				}
@@ -4534,16 +4579,19 @@ namespace compiler
 		// Spill resurrection
 		for (ptrdiff_t i = spill.size() - 1; i >= 0; --i) {
 			const size_t reg = spill[i];
-			if (IsResurrectable(live_intervals, spill_intervals, reg, available_reg_count - 1)) {
+			if (IsResurrectable(cfg, reg_type, reg, available_reg_count - 1)) {
 				spill.erase(spill.begin() + i);
 
 				// move interval from spill_intervals to live_intervals
-				for (size_t j = 0; j < live_intervals.size(); ++j) {
-					if (spill_intervals[j].liveness.get_bit(reg)) {
-						spill_intervals[j].liveness.set_bit(reg, false);
-						spill_intervals[j].live_count--;
-						live_intervals[j].liveness.set_bit(reg, true);
-						live_intervals[j].live_count++;
+				for (ControlFlowGraph::BlockList::iterator block = cfg.dfs_begin(); block != cfg.dfs_end(); ++block) {
+					Lifetime& lifetime = (*block)->lifetime[reg_type];
+					for (size_t j = 0; j < lifetime.intervals.size(); ++j) {
+						if (lifetime.spill_intervals[j].liveness.get_bit(reg)) {
+							lifetime.spill_intervals[j].liveness.set_bit(reg, false);
+							lifetime.spill_intervals[j].live_count--;
+							lifetime.intervals[j].liveness.set_bit(reg, true);
+							lifetime.intervals[j].live_count++;
+						}
 					}
 				}
 			}
@@ -4552,50 +4600,25 @@ namespace compiler
 		// Register assignment
 		ASSERT(num_of_variables > 16);
 		const size_t num_of_sym_reg = num_of_variables - 16;
-		std::vector<int> assignment_table(num_of_sym_reg * live_intervals.size(), -1);
-		for (size_t i = 0; i < live_intervals.size(); ++i) {
-			uint32 cur_avail = available_reg;
-			live_intervals[i].liveness.get_bit_indexes(live_regs);
-
-			// assign from harder constraint
-			if (!live_intervals[i].reg_assignables.empty()) {
-				struct LessRegAssignable {
-					std::vector<uint32> *reg_assignables;
-					LessRegAssignable(std::vector<uint32> *assignables) : reg_assignables(assignables) {}
-					bool operator()(uint32 lhs, uint32 rhs) const {
-						return detail::Count1Bits(reg_assignables->at(lhs)) < detail::Count1Bits(reg_assignables->at(rhs));
-					}
-				};
-				std::sort(live_regs.begin(), live_regs.end(), LessRegAssignable(&live_intervals[i].reg_assignables));
-			}
-
-			for (std::vector<size_t>::iterator it = live_regs.begin(); it != live_regs.end(); ++it) {
-				const uint32 reg_assignable = live_intervals[i].reg_assignables[*it];
-				ASSERT((cur_avail & reg_assignable) != 0);
-				int assigned_reg;
-				if (*it < 16) {
-					// Pysical register
-					assigned_reg = static_cast<int>(*it);
-				} else {
-					// Symbolic register
-					const size_t sym_reg = *it - 16;
-					const int last_assigned = i > 0 ? assignment_table[num_of_sym_reg * (i - 1) + sym_reg] : -1;
-					if (last_assigned != -1 && (cur_avail & reg_assignable & (1 << last_assigned))) {
-						// select last assigned register
-						assigned_reg = last_assigned;
-					} else {
-						_BitScanForward(reinterpret_cast<unsigned long *>(&assigned_reg), cur_avail & reg_assignable);
-						//assigned_reg = __builtin_ctz(cur_avail & reg_assignable);		// for gcc
-					}
-					assignment_table[num_of_sym_reg * i + sym_reg] = assigned_reg;
-				}
-				cur_avail &= ~(1 << assigned_reg);
-			}
+		for (ControlFlowGraph::BlockList::iterator block = cfg.dfs_begin(); block != cfg.dfs_end(); ++block) {
+			(*block)->lifetime[reg_type].AssignRegister(available_reg, num_of_sym_reg);
 		}
 
 		// Register move
-		for (size_t i = 0; i < live_intervals.size(); ++i) {
-
+		for (ControlFlowGraph::BlockList::iterator block = cfg.dfs_begin(); block != cfg.dfs_end(); ++block) {
+			Lifetime& lifetime = (*block)->lifetime[reg_type];
+			for (size_t i = 0; i < lifetime.intervals.size(); ++i) {
+				Lifetime::Interval *successors[2] = {NULL, NULL};
+				if (i + 1 == lifetime.intervals.size()) {
+					for (size_t j = 0; j < 2; ++j) {
+						if ((*block)->successor[j] && !(*block)->successor[j]->lifetime[reg_type].intervals.empty()) {
+							successors[j] = &(*block)->successor[j]->lifetime[reg_type].intervals[0];
+						}
+					}
+				} else {
+					successors[0] = &lifetime.intervals[i + 1];
+				}
+			}
 		}
 	}
 
