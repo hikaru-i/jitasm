@@ -93,10 +93,10 @@ enum PhysicalRegID
 enum RegType
 {
 	R_TYPE_GP,				///< General purpose register
-	R_TYPE_FPU,				///< FPU register
 	R_TYPE_MMX,				///< MMX register
 	R_TYPE_XMM,				///< XMM register
 	R_TYPE_YMM,				///< YMM register
+	R_TYPE_FPU,				///< FPU register
 	R_TYPE_SYMBOLIC_GP,		///< Symbolic general purpose register
 	R_TYPE_SYMBOLIC_MMX,	///< Symbolic MMX register
 	R_TYPE_SYMBOLIC_XMM,	///< Symbolic XMM register
@@ -109,6 +109,8 @@ struct RegID
 	RegType type;
 	int id;		///< PhysicalRegID or symbolic register id
 
+	bool operator==(const RegID& rhs) const {return type == rhs.type && id == rhs.id;}
+	bool operator!=(const RegID& rhs) const {return !(*this == rhs);}
 	bool operator<(const RegID& rhs) const {return type != rhs.type ? type < rhs.type : id < rhs.id;}
 	bool IsInvalid() const	{return type == R_TYPE_GP && id == INVALID;}
 	bool IsSymbolic() const {return type == R_TYPE_SYMBOLIC_GP || type == R_TYPE_SYMBOLIC_MMX || type == R_TYPE_SYMBOLIC_XMM;}
@@ -220,6 +222,16 @@ namespace detail
 		sint64	GetScale() const	{ASSERT(IsMem()); return scale_;}
 		sint64	GetDisp() const		{ASSERT(IsMem()); return disp_;}
 		sint64	GetImm() const		{ASSERT(IsImm()); return imm_;}
+
+		bool operator==(const Opd& rhs) const
+		{
+			if ((opdtype_ & O_TYPE_TYPE_MASK) != (rhs.opdtype_ & O_TYPE_TYPE_MASK) || opdsize_ != opdsize_) {return false;}
+			if (IsReg()) {return reg_ == rhs.reg_ && reg_assignable_ == rhs.reg_assignable_;}
+			if (IsMem()) {return base_ == rhs.base_ && index_ == rhs.index_ && scale_ == rhs.scale_ && disp_ == rhs.disp_ && addrsize_ == rhs.addrsize_;}
+			if (IsImm()) {return imm_ == rhs.imm_;}
+			return true;
+		}
+		bool operator!=(const Opd& rhs) const {return !(*this == rhs);}
 	};
 
 	/// Add O_TYPE_DUMMY to the specified operand
@@ -234,6 +246,7 @@ namespace detail
 	inline Opd Dummy(const Opd& opd, const Opd& constraint)
 	{
 		ASSERT(opd.IsReg() && (opd.opdtype_ & O_TYPE_TYPE_MASK) == (constraint.opdtype_ & O_TYPE_TYPE_MASK) && !constraint.GetReg().IsSymbolic());
+		ASSERT(opd.GetReg().IsSymbolic() || opd.GetReg().id == constraint.GetReg().id);
 		Opd o(opd);
 		o.opdtype_ = static_cast<OpdType>(static_cast<int>(o.opdtype_) | O_TYPE_DUMMY);
 		o.reg_assignable_ = (1 << constraint.reg_.id);
@@ -1449,27 +1462,27 @@ struct Frontend
 	void adc(const Mem64& dst, const Reg64& src)	{AppendInstr(I_ADC, 0x11, E_REXW_PREFIX, src, dst);}
 	void adc(const Reg64& dst, const Mem64& src)	{AppendInstr(I_ADC, 0x13, E_REXW_PREFIX, dst, src);}
 #endif
-	void add(const Reg8& dst, const Imm8& imm)		{AppendInstr(I_ADD, 0x80, E_SPECIAL, Imm8(0), dst, imm);}
-	void add(const Mem8& dst, const Imm8& imm)		{AppendInstr(I_ADD, 0x80, 0, Imm8(0), dst, imm);}
-	void add(const Reg16& dst, const Imm16& imm)	{AppendInstr(I_ADD, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_OPERAND_SIZE_PREFIX | E_SPECIAL, Imm8(0), dst, detail::ImmXor8(imm));}
-	void add(const Mem16& dst, const Imm16& imm)	{AppendInstr(I_ADD, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_OPERAND_SIZE_PREFIX, Imm8(0), dst, detail::ImmXor8(imm));}
-	void add(const Reg32& dst, const Imm32& imm)	{AppendInstr(I_ADD, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_SPECIAL, Imm8(0), dst, detail::ImmXor8(imm));}
-	void add(const Mem32& dst, const Imm32& imm)	{AppendInstr(I_ADD, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, 0, Imm8(0), dst, detail::ImmXor8(imm));}
-	void add(const Reg8& dst, const Reg8& src)		{AppendInstr(I_ADD, 0x00, 0, src, dst);}
-	void add(const Mem8& dst, const Reg8& src)		{AppendInstr(I_ADD, 0x00, 0, src, dst);}
-	void add(const Reg8& dst, const Mem8& src)		{AppendInstr(I_ADD, 0x02, 0, dst, src);}
-	void add(const Reg16& dst, const Reg16& src)	{AppendInstr(I_ADD, 0x01, E_OPERAND_SIZE_PREFIX, src, dst);}
-	void add(const Mem16& dst, const Reg16& src)	{AppendInstr(I_ADD, 0x01, E_OPERAND_SIZE_PREFIX, src, dst);}
-	void add(const Reg16& dst, const Mem16& src)	{AppendInstr(I_ADD, 0x03, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void add(const Reg32& dst, const Reg32& src)	{AppendInstr(I_ADD, 0x01, 0, src, dst);}
-	void add(const Mem32& dst, const Reg32& src)	{AppendInstr(I_ADD, 0x01, 0, src, dst);}
-	void add(const Reg32& dst, const Mem32& src)	{AppendInstr(I_ADD, 0x03, 0, dst, src);}
+	void add(const Reg8& dst, const Imm8& imm)		{AppendInstr(I_ADD, 0x80, E_SPECIAL, Imm8(0), RW(dst), imm);}
+	void add(const Mem8& dst, const Imm8& imm)		{AppendInstr(I_ADD, 0x80, 0, Imm8(0), RW(dst), imm);}
+	void add(const Reg16& dst, const Imm16& imm)	{AppendInstr(I_ADD, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_OPERAND_SIZE_PREFIX | E_SPECIAL, Imm8(0), RW(dst), detail::ImmXor8(imm));}
+	void add(const Mem16& dst, const Imm16& imm)	{AppendInstr(I_ADD, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_OPERAND_SIZE_PREFIX, Imm8(0), RW(dst), detail::ImmXor8(imm));}
+	void add(const Reg32& dst, const Imm32& imm)	{AppendInstr(I_ADD, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_SPECIAL, Imm8(0), RW(dst), detail::ImmXor8(imm));}
+	void add(const Mem32& dst, const Imm32& imm)	{AppendInstr(I_ADD, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, 0, Imm8(0), RW(dst), detail::ImmXor8(imm));}
+	void add(const Reg8& dst, const Reg8& src)		{AppendInstr(I_ADD, 0x00, 0, R(src), RW(dst));}
+	void add(const Mem8& dst, const Reg8& src)		{AppendInstr(I_ADD, 0x00, 0, R(src), RW(dst));}
+	void add(const Reg8& dst, const Mem8& src)		{AppendInstr(I_ADD, 0x02, 0, RW(dst), R(src));}
+	void add(const Reg16& dst, const Reg16& src)	{AppendInstr(I_ADD, 0x01, E_OPERAND_SIZE_PREFIX, R(src), RW(dst));}
+	void add(const Mem16& dst, const Reg16& src)	{AppendInstr(I_ADD, 0x01, E_OPERAND_SIZE_PREFIX, R(src), RW(dst));}
+	void add(const Reg16& dst, const Mem16& src)	{AppendInstr(I_ADD, 0x03, E_OPERAND_SIZE_PREFIX, RW(dst), R(src));}
+	void add(const Reg32& dst, const Reg32& src)	{AppendInstr(I_ADD, 0x01, 0, R(src), RW(dst));}
+	void add(const Mem32& dst, const Reg32& src)	{AppendInstr(I_ADD, 0x01, 0, R(src), RW(dst));}
+	void add(const Reg32& dst, const Mem32& src)	{AppendInstr(I_ADD, 0x03, 0, RW(dst), R(src));}
 #ifdef JITASM64
-	void add(const Reg64& dst, const Imm32& imm)	{AppendInstr(I_ADD, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_REXW_PREFIX | E_SPECIAL, Imm8(0), dst, detail::ImmXor8(imm));}
-	void add(const Mem64& dst, const Imm32& imm)	{AppendInstr(I_ADD, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_REXW_PREFIX, Imm8(0), dst, detail::ImmXor8(imm));}
-	void add(const Reg64& dst, const Reg64& src)	{AppendInstr(I_ADD, 0x01, E_REXW_PREFIX, src, dst);}
-	void add(const Mem64& dst, const Reg64& src)	{AppendInstr(I_ADD, 0x01, E_REXW_PREFIX, src, dst);}
-	void add(const Reg64& dst, const Mem64& src)	{AppendInstr(I_ADD, 0x03, E_REXW_PREFIX, dst, src);}
+	void add(const Reg64& dst, const Imm32& imm)	{AppendInstr(I_ADD, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_REXW_PREFIX | E_SPECIAL, Imm8(0), RW(dst), detail::ImmXor8(imm));}
+	void add(const Mem64& dst, const Imm32& imm)	{AppendInstr(I_ADD, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_REXW_PREFIX, Imm8(0), RW(dst), detail::ImmXor8(imm));}
+	void add(const Reg64& dst, const Reg64& src)	{AppendInstr(I_ADD, 0x01, E_REXW_PREFIX, R(src), RW(dst));}
+	void add(const Mem64& dst, const Reg64& src)	{AppendInstr(I_ADD, 0x01, E_REXW_PREFIX, R(src), RW(dst));}
+	void add(const Reg64& dst, const Mem64& src)	{AppendInstr(I_ADD, 0x03, E_REXW_PREFIX, RW(dst), R(src));}
 #endif
 	void and(const Reg8& dst, const Imm8& imm)		{AppendInstr(I_AND, 0x80, E_SPECIAL, Imm8(4), dst, imm);}
 	void and(const Mem8& dst, const Imm8& imm)		{AppendInstr(I_AND, 0x80, 0, Imm8(4), dst, imm);}
@@ -2463,27 +2476,27 @@ struct Frontend
 	void xchg(const Reg64& dst, const Mem64& src)	{AppendInstr(I_XCHG, 0x87, E_REXW_PREFIX, dst, src);}
 #endif
 	void xlatb()				{AppendInstr(I_XLATB, 0xD7, 0);}
-	void xor(const Reg8& dst, const Imm8& imm)		{AppendInstr(I_XOR, 0x80, E_SPECIAL, Imm8(6), dst, imm);}
-	void xor(const Mem8& dst, const Imm8& imm)		{AppendInstr(I_XOR, 0x80, 0, Imm8(6), dst, imm);}
-	void xor(const Reg16& dst, const Imm16& imm)	{AppendInstr(I_XOR, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_OPERAND_SIZE_PREFIX | E_SPECIAL, Imm8(6), dst, detail::ImmXor8(imm));}
-	void xor(const Mem16& dst, const Imm16& imm)	{AppendInstr(I_XOR, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_OPERAND_SIZE_PREFIX, Imm8(6), dst, detail::ImmXor8(imm));}
-	void xor(const Reg32& dst, const Imm32& imm)	{AppendInstr(I_XOR, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_SPECIAL, Imm8(6), dst, detail::ImmXor8(imm));}
-	void xor(const Mem32& dst, const Imm32& imm)	{AppendInstr(I_XOR, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, 0, Imm8(6), dst, detail::ImmXor8(imm));}
-	void xor(const Reg8& dst, const Reg8& src)		{AppendInstr(I_XOR, 0x30, 0, src, dst);}
-	void xor(const Mem8& dst, const Reg8& src)		{AppendInstr(I_XOR, 0x30, 0, src, dst);}
-	void xor(const Reg8& dst, const Mem8& src)		{AppendInstr(I_XOR, 0x32, 0, dst, src);}
-	void xor(const Reg16& dst, const Reg16& src)	{AppendInstr(I_XOR, 0x31, E_OPERAND_SIZE_PREFIX, src, dst);}
-	void xor(const Mem16& dst, const Reg16& src)	{AppendInstr(I_XOR, 0x31, E_OPERAND_SIZE_PREFIX, src, dst);}
-	void xor(const Reg16& dst, const Mem16& src)	{AppendInstr(I_XOR, 0x33, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void xor(const Reg32& dst, const Reg32& src)	{AppendInstr(I_XOR, 0x31, 0, src, dst);}
-	void xor(const Mem32& dst, const Reg32& src)	{AppendInstr(I_XOR, 0x31, 0, src, dst);}
-	void xor(const Reg32& dst, const Mem32& src)	{AppendInstr(I_XOR, 0x33, 0, dst, src);}
+	void xor(const Reg8& dst, const Imm8& imm)		{AppendInstr(I_XOR, 0x80, E_SPECIAL, Imm8(6), RW(dst), imm);}
+	void xor(const Mem8& dst, const Imm8& imm)		{AppendInstr(I_XOR, 0x80, 0, Imm8(6), RW(dst), imm);}
+	void xor(const Reg16& dst, const Imm16& imm)	{AppendInstr(I_XOR, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_OPERAND_SIZE_PREFIX | E_SPECIAL, Imm8(6), RW(dst), detail::ImmXor8(imm));}
+	void xor(const Mem16& dst, const Imm16& imm)	{AppendInstr(I_XOR, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_OPERAND_SIZE_PREFIX, Imm8(6), RW(dst), detail::ImmXor8(imm));}
+	void xor(const Reg32& dst, const Imm32& imm)	{AppendInstr(I_XOR, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_SPECIAL, Imm8(6), RW(dst), detail::ImmXor8(imm));}
+	void xor(const Mem32& dst, const Imm32& imm)	{AppendInstr(I_XOR, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, 0, Imm8(6), RW(dst), detail::ImmXor8(imm));}
+	void xor(const Reg8& dst, const Reg8& src)		{AppendInstr(I_XOR, 0x30, 0, R(src), RW(dst));}
+	void xor(const Mem8& dst, const Reg8& src)		{AppendInstr(I_XOR, 0x30, 0, R(src), RW(dst));}
+	void xor(const Reg8& dst, const Mem8& src)		{AppendInstr(I_XOR, 0x32, 0, RW(dst), R(src));}
+	void xor(const Reg16& dst, const Reg16& src)	{AppendInstr(I_XOR, 0x31, E_OPERAND_SIZE_PREFIX, R(src), RW(dst));}
+	void xor(const Mem16& dst, const Reg16& src)	{AppendInstr(I_XOR, 0x31, E_OPERAND_SIZE_PREFIX, R(src), RW(dst));}
+	void xor(const Reg16& dst, const Mem16& src)	{AppendInstr(I_XOR, 0x33, E_OPERAND_SIZE_PREFIX, RW(dst), R(src));}
+	void xor(const Reg32& dst, const Reg32& src)	{AppendInstr(I_XOR, 0x31, 0, R(src), RW(dst));}
+	void xor(const Mem32& dst, const Reg32& src)	{AppendInstr(I_XOR, 0x31, 0, R(src), RW(dst));}
+	void xor(const Reg32& dst, const Mem32& src)	{AppendInstr(I_XOR, 0x33, 0, RW(dst), R(src));}
 #ifdef JITASM64
-	void xor(const Reg64& dst, const Imm32& imm)	{AppendInstr(I_XOR, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_REXW_PREFIX | E_SPECIAL, Imm8(6), dst, detail::ImmXor8(imm));}
-	void xor(const Mem64& dst, const Imm32& imm)	{AppendInstr(I_XOR, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_REXW_PREFIX, Imm8(6), dst, detail::ImmXor8(imm));}
-	void xor(const Reg64& dst, const Reg64& src)	{AppendInstr(I_XOR, 0x31, E_REXW_PREFIX, src, dst);}
-	void xor(const Mem64& dst, const Reg64& src)	{AppendInstr(I_XOR, 0x31, E_REXW_PREFIX, src, dst);}
-	void xor(const Reg64& dst, const Mem64& src)	{AppendInstr(I_XOR, 0x33, E_REXW_PREFIX, dst, src);}
+	void xor(const Reg64& dst, const Imm32& imm)	{AppendInstr(I_XOR, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_REXW_PREFIX | E_SPECIAL, Imm8(6), RW(dst), detail::ImmXor8(imm));}
+	void xor(const Mem64& dst, const Imm32& imm)	{AppendInstr(I_XOR, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_REXW_PREFIX, Imm8(6), RW(dst), detail::ImmXor8(imm));}
+	void xor(const Reg64& dst, const Reg64& src)	{AppendInstr(I_XOR, 0x31, E_REXW_PREFIX, R(src), RW(dst));}
+	void xor(const Mem64& dst, const Reg64& src)	{AppendInstr(I_XOR, 0x31, E_REXW_PREFIX, R(src), RW(dst));}
+	void xor(const Reg64& dst, const Mem64& src)	{AppendInstr(I_XOR, 0x33, E_REXW_PREFIX, RW(dst), R(src));}
 #endif
 
 	// x87 Floating-Point Instructions
@@ -3837,10 +3850,12 @@ namespace compiler
 	{
 		struct Interval
 		{
-			size_t instr_idx_offset;
-			BitVector liveness;
-			size_t live_count;
-			std::vector<uint32> reg_assignables;
+			size_t instr_idx_offset;				///< Instruction index offset from basic block start point
+			size_t live_count;						///< Number of live variables that is not spilled
+			BitVector liveness;						///< The set of live variables that is not spilled
+			BitVector spill;						///< The set of spilled variables
+			std::vector<uint32> reg_assignables;	///< The constraints of register allocation
+			std::vector<int> assignment_table;		///< Register assignment table
 
 			Interval(size_t instr_idx, const std::vector<uint32>& assignables) : instr_idx_offset(instr_idx), live_count(0), reg_assignables(assignables) {}
 			Interval(size_t instr_idx, const BitVector& l, const std::vector<uint32>& assignables) : instr_idx_offset(instr_idx), liveness(l), live_count(l.count_bit()), reg_assignables(assignables) {}
@@ -3855,8 +3870,6 @@ namespace compiler
 		BitVector live_out;						///< The set of live variables at the end of this block
 		bool dirty_live_out;					///< The dirty flag of live_out
 		std::vector<Interval> intervals;		///< Lifetime intervals
-		std::vector<Interval> spill_intervals;	///< Intervals of spill target
-		std::vector<int> assignment_table;		///< Register assignment table
 
 		Lifetime() : use_points(16), dirty_live_out(true) {}
 
@@ -3893,6 +3906,7 @@ namespace compiler
 
 		void BuildIntervals()
 		{
+			// initialize use_points iterators
 			std::vector<std::vector<RegUsePoint>::iterator> iterators(use_points.size());
 			for (size_t i = 0; i < use_points.size(); ++i) {
 				iterators[i] = use_points[i].begin();
@@ -3900,6 +3914,7 @@ namespace compiler
 
 			BitVector *last_liveness = NULL;
 			std::vector<uint32> reg_assignables;
+			bool last_reg_constraints = false;
 			const size_t num_of_variables = live_in.size_bit() < use_points.size() ? use_points.size() : live_in.size_bit();
 			size_t instr_idx = 0;
 			size_t end_count;
@@ -3934,30 +3949,43 @@ namespace compiler
 					}
 				}
 
-				if (!reg_assignables.empty() || !last_liveness || !last_liveness->is_equal(liveness)) {
+				// Split interval in the following case:
+				// - The liveness is changed.
+				// - Current or last instruction has any constraints of register allocation.
+				if (!reg_assignables.empty() || last_reg_constraints || !last_liveness || !last_liveness->is_equal(liveness)) {
 					intervals.push_back(Interval(instr_idx, liveness, reg_assignables));
 					last_liveness = &intervals.back().liveness;
 				}
+				last_reg_constraints = !reg_assignables.empty();
 				instr_idx = min_instr_idx == instr_idx ? instr_idx + 1 : min_instr_idx;
 			} while (end_count < iterators.size());
-
-			// initialize spill_intervals
-			spill_intervals.reserve(intervals.size());
-			for (std::vector<Interval>::iterator it = intervals.begin(); it != intervals.end(); ++it) {
-				spill_intervals.push_back(Interval(it->instr_idx_offset, it->reg_assignables));
-			}
 		}
 
-		void AssignRegister(uint32 available_reg, size_t num_of_sym_reg)
+		void AssignRegister(uint32 available_reg)
 		{
-			std::vector<size_t> live_regs;
-			assignment_table.resize(num_of_sym_reg * intervals.size(), -1);
+			// initialize use_points iterators
+			std::vector<std::vector<RegUsePoint>::iterator> iterators(use_points.size());
+			for (size_t i = 0; i < use_points.size(); ++i) {
+				iterators[i] = use_points[i].begin();
+			}
+
+			std::vector<size_t> live_vars;
 			for (size_t i = 0; i < intervals.size(); ++i) {
 				uint32 cur_avail = available_reg;
-				intervals[i].liveness.get_bit_indexes(live_regs);
+				Interval& cur_interval = intervals[i];
+
+				// step use_points iterators
+				for (size_t j = 0; j < use_points.size(); ++j) {
+					while (iterators[j] != use_points[j].end() && iterators[j]->instr_idx < cur_interval.instr_idx_offset) ++iterators[j];
+				}
+
+				cur_interval.liveness.get_bit_indexes(live_vars);
+				if (!live_vars.empty()) {
+					cur_interval.assignment_table.resize(live_vars.back() + 1, -1);
+				}
 
 				// assign from harder constraint
-				if (!intervals[i].reg_assignables.empty()) {
+				if (!cur_interval.reg_assignables.empty()) {
 					struct LessRegAssignable {
 						std::vector<uint32> *reg_assignables;
 						LessRegAssignable(std::vector<uint32> *assignables) : reg_assignables(assignables) {}
@@ -3965,20 +3993,23 @@ namespace compiler
 							return detail::Count1Bits(reg_assignables->at(lhs)) < detail::Count1Bits(reg_assignables->at(rhs));
 						}
 					};
-					std::sort(live_regs.begin(), live_regs.end(), LessRegAssignable(&intervals[i].reg_assignables));
+					std::sort(live_vars.begin(), live_vars.end(), LessRegAssignable(&cur_interval.reg_assignables));
 				}
 
-				for (std::vector<size_t>::iterator it = live_regs.begin(); it != live_regs.end(); ++it) {
-					const uint32 reg_assignable = intervals[i].reg_assignables[*it];
+				for (size_t j = 0; j < live_vars.size(); ++j) {
+					const size_t var = live_vars[j];
+					const uint32 reg_assignable = var < cur_interval.reg_assignables.size() ? cur_interval.reg_assignables[var] : 0xFFFFFFFF;
 					ASSERT((cur_avail & reg_assignable) != 0);
-					int assigned_reg;
-					if (*it < 16) {
-						// Pysical register
-						assigned_reg = static_cast<int>(*it);
+					int assigned_reg = -1;
+					if (var < 16) {
+						// Physical register
+						ASSERT((reg_assignable & (1 << var)) != 0);		// This physical register violates the register constraint!
+						if (cur_avail & reg_assignable & (1 << var)) {
+							assigned_reg = var;
+						}
 					} else {
 						// Symbolic register
-						const size_t sym_reg = *it - 16;
-						const int last_assigned = i > 0 ? assignment_table[num_of_sym_reg * (i - 1) + sym_reg] : -1;
+						const int last_assigned = (i > 0 && var < intervals[i - 1].assignment_table.size()) ? intervals[i - 1].assignment_table[var] : -1;
 						if (last_assigned != -1 && (cur_avail & reg_assignable & (1 << last_assigned))) {
 							// select last assigned register
 							assigned_reg = last_assigned;
@@ -3986,9 +4017,15 @@ namespace compiler
 							_BitScanForward(reinterpret_cast<unsigned long *>(&assigned_reg), cur_avail & reg_assignable);
 							//assigned_reg = __builtin_ctz(cur_avail & reg_assignable);		// for gcc
 						}
-						assignment_table[num_of_sym_reg * i + sym_reg] = assigned_reg;
 					}
-					cur_avail &= ~(1 << assigned_reg);
+
+					if (assigned_reg >= 0) {
+						cur_interval.assignment_table[var] = assigned_reg;
+						cur_avail &= ~(1 << assigned_reg);
+					} else {
+						// Assign later
+						live_vars.push_back(var);
+					}
 				}
 			}
 		}
@@ -4189,7 +4226,7 @@ namespace compiler
 			for (size_t i = 0; i < depth_first_blocks_.size(); ++i) {
 				BasicBlock *block = depth_first_blocks_[i];
 				for (size_t j = 0; j < 2; ++j) {
-					if (block->successor[j] && block->depth > block->successor[j]->depth) {		// retreating edge
+					if (block->successor[j] && block->depth >= block->successor[j]->depth) {		// retreating edge
 						if (block->is_dominated(block->successor[j])) {
 							backedges.push_back(std::make_pair(block->depth, block->successor[j]->depth));
 						}
@@ -4282,24 +4319,27 @@ namespace compiler
 			printf("\tnode[shape=box];\n");
 			for (BlockSet::const_iterator it = blocks_.begin(); it != blocks_.end(); ++it) {
 				std::string live_in = "live in:";
-				for (size_t i = 0; i < it->lifetime[0].live_in.size_bit(); ++i) {
-					if (it->lifetime[0].live_in.get_bit(i)) {
-						live_in.append(" ");
-						live_in.append(Lifetime::GetRegName(R_TYPE_GP, i));
-					}
-				}
 				std::string live_out = "live out:";
-				for (size_t i = 0; i < it->lifetime[0].live_out.size_bit(); ++i) {
-					if (it->lifetime[0].live_out.get_bit(i)) {
-						live_out.append(" ");
-						live_out.append(Lifetime::GetRegName(R_TYPE_GP, i));
+				for (int reg_type = 0; reg_type < 4; ++reg_type) {
+					for (size_t i = 0; i < it->lifetime[reg_type].live_in.size_bit(); ++i) {
+						if (it->lifetime[reg_type].live_in.get_bit(i)) {
+							live_in.append(" ");
+							live_in.append(Lifetime::GetRegName(static_cast<RegType>(reg_type + (i < 16 ? R_TYPE_GP : R_TYPE_SYMBOLIC_GP)), i));
+						}
+					}
+					for (size_t i = 0; i < it->lifetime[reg_type].live_out.size_bit(); ++i) {
+						if (it->lifetime[reg_type].live_out.get_bit(i)) {
+							live_out.append(" ");
+							live_out.append(Lifetime::GetRegName(static_cast<RegType>(reg_type + (i < 16 ? R_TYPE_GP : R_TYPE_SYMBOLIC_GP)), i));
+						}
 					}
 				}
 				printf("\tnode%d[label=\"Block%d\\ninstruction %d - %d\\nloop depth %d\\n%s\\n%s\"];\n", it->instr_begin, it->depth, it->instr_begin, it->instr_end - 1, it->loop_depth, live_in.c_str(), live_out.c_str());
-				if (it->successor[0]) printf("\t\"node%d\" -> \"node%d\" [constraint=false];\n", it->instr_begin, it->successor[0]->instr_begin);
-				if (it->successor[1]) printf("\t\"node%d\" -> \"node%d\" [constraint=false];\n", it->instr_begin, it->successor[1]->instr_begin);
-				if (it->dfs_parent) printf("\t\"node%d\" -> \"node%d\" [color=\"#ff0000\"];\n", it->instr_begin, it->dfs_parent->instr_begin);
-				if (it->immediate_dominator) printf("\t\"node%d\" -> \"node%d\" [constraint=false, color=\"#0000ff\"];\n", it->instr_begin, it->immediate_dominator->instr_begin);
+				int constraint = 0;
+				if (it->successor[0]) printf("\t\"node%d\" -> \"node%d\" [constraint=%s];\n", it->instr_begin, it->successor[0]->instr_begin, constraint == 0 ? "true" : "false");
+				if (it->successor[1]) printf("\t\"node%d\" -> \"node%d\" [constraint=%s];\n", it->instr_begin, it->successor[1]->instr_begin, constraint == 0 ? "true" : "false");
+				//if (it->dfs_parent) printf("\t\"node%d\" -> \"node%d\" [color=\"#ff0000\"];\n", it->instr_begin, it->dfs_parent->instr_begin);
+				//if (it->immediate_dominator) printf("\t\"node%d\" -> \"node%d\" [constraint=false, color=\"#0000ff\"];\n", it->instr_begin, it->immediate_dominator->instr_begin);
 				//for (size_t i = 0; i < it->predecessor.size(); ++i) {
 				//	printf("\t\"node%d\" -> \"node%d\" [constraint=false, color=\"#808080\"];\n", it->instr_begin, it->predecessor[i]->instr_begin);
 				//}
@@ -4336,6 +4376,12 @@ namespace compiler
 					else {
 						const size_t jump_to = f.GetJumpTo(*it);	// jump target instruction index
 						BlockIterator jump_target = split(get_block(jump_to), jump_to);
+
+						// update cur_block if split cur_block
+						if (jump_target->instr_begin <= instr_idx && instr_idx < jump_target->instr_end) {
+							cur_block = jump_target;
+						}
+
 						if (instr_id == I_JMP) {
 							if (cur_block->successor[0])
 								cur_block->successor[0]->remove_predecessor(&*cur_block);
@@ -4372,10 +4418,7 @@ namespace compiler
 	};
 
 	/// Re-number symbolic register ID
-	/**
-	 * \return Number of symbolic registers
-	 */
-	inline int NormalizeSymbolicReg(Frontend& f)
+	inline bool NormalizeSymbolicReg(Frontend& f, int (&num_of_sym_reg)[4])
 	{
 		struct RegIDMap {
 			int next_id_;
@@ -4383,33 +4426,69 @@ namespace compiler
 			RegIDMap() : next_id_(0) {}
 			int GetNewID(int id) {
 				std::map<int, int>::iterator it = id_map_.find(id);
-				if (it != id_map_.end())
+				if (it != id_map_.end()) {
 					return it->second;
+				}
 				int new_id = next_id_++;
 				id_map_.insert(std::pair<int, int>(id, new_id));
 				return new_id;
 			}
-		} reg_id_map;
+		};
+		RegIDMap reg_id_map[4];		// GP, MMX, XMM, YMM
+
+		ASSERT(R_TYPE_SYMBOLIC_GP  - R_TYPE_SYMBOLIC_GP == R_TYPE_GP && R_TYPE_GP == 0);
+		ASSERT(R_TYPE_SYMBOLIC_MMX - R_TYPE_SYMBOLIC_GP == R_TYPE_MMX && R_TYPE_MMX == 1);
+		ASSERT(R_TYPE_SYMBOLIC_XMM - R_TYPE_SYMBOLIC_GP == R_TYPE_XMM && R_TYPE_XMM == 2);
+		ASSERT(R_TYPE_SYMBOLIC_YMM - R_TYPE_SYMBOLIC_GP == R_TYPE_YMM && R_TYPE_YMM == 3);
 
 		for (Frontend::InstrList::iterator it = f.instrs_.begin(); it != f.instrs_.end(); ++it) {
 			for (size_t i = 0; i < Instr::MAX_OPERAND_COUNT; ++i) {
 				detail::Opd& opd = it->GetOpd(i);
 				if (opd.IsReg()) {
 					RegID reg = opd.GetReg();
-					if (reg.IsSymbolic())
-						opd.reg_.id = reg_id_map.GetNewID(reg.id);
+					if (reg.IsSymbolic()) {
+						opd.reg_.id = reg_id_map[reg.type - R_TYPE_SYMBOLIC_GP].GetNewID(reg.id);
+					}
 				} else if (opd.IsMem()) {
 					RegID base = opd.GetBase();
-					if (base.IsSymbolic())
-						opd.base_.id = reg_id_map.GetNewID(base.id);
+					if (base.IsSymbolic()) {
+						opd.base_.id = reg_id_map[R_TYPE_GP].GetNewID(base.id);
+					}
 					RegID index = opd.GetIndex();
-					if (index.IsSymbolic())
-						opd.index_.id = reg_id_map.GetNewID(index.id);
+					if (index.IsSymbolic()) {
+						opd.index_.id = reg_id_map[R_TYPE_GP].GetNewID(index.id);
+					}
 				}
 			}
 		}
 
-		return reg_id_map.next_id_;		// Number of symbolic registers
+		num_of_sym_reg[R_TYPE_GP] = reg_id_map[R_TYPE_GP].next_id_;
+		num_of_sym_reg[R_TYPE_MMX] = reg_id_map[R_TYPE_MMX].next_id_;
+		num_of_sym_reg[R_TYPE_XMM] = reg_id_map[R_TYPE_XMM].next_id_;
+		num_of_sym_reg[R_TYPE_YMM] = reg_id_map[R_TYPE_YMM].next_id_;
+		return num_of_sym_reg[R_TYPE_GP] > 0 || num_of_sym_reg[R_TYPE_MMX] > 0 || num_of_sym_reg[R_TYPE_XMM] > 0 || num_of_sym_reg[R_TYPE_YMM] > 0;
+	}
+
+	/// check the instruction if it break register dependence
+	inline bool IsBreakDependenceInstr(const Instr& instr)
+	{
+		// Instructions
+		// SUB, SBB, XOR, PXOR, XORPS, XORPD, PANDN, PSUBxx, PCMPxx
+		// TODO: Add AVX instructions
+		if (instr.id_ == I_SUB || instr.id_ == I_SBB || instr.id_ == I_XOR || instr.id_ == I_PXOR || instr.id_ == I_XORPS || instr.id_ == I_XORPD || instr.id_ == I_PANDN ||
+			instr.id_ == I_PSUBB || instr.id_ == I_PSUBW || instr.id_ == I_PSUBD || instr.id_ == I_PSUBQ || instr.id_ == I_PSUBSB || instr.id_ == I_PSUBSW || instr.id_ == I_PSUBUSB || instr.id_ == I_PSUBUSW ||
+			instr.id_ == I_PCMPEQB || instr.id_ == I_PCMPEQW || instr.id_ == I_PCMPEQD || instr.id_ == I_PCMPEQQ ||
+			instr.id_ == I_PCMPGTB || instr.id_ == I_PCMPGTW || instr.id_ == I_PCMPGTD || instr.id_ == I_PCMPGTQ) {
+			// source and destination operands are the same register.
+			// 8bit or 16bit register cannot break dependence.
+			const detail::Opd& opd0 = instr.GetOpd(0);
+			const detail::Opd& opd1 = instr.GetOpd(1);
+			const OpdSize opdsize = opd0.GetSize();
+			if (opd0 == opd1 && opd0.IsReg() && opdsize != O_SIZE_8 && opdsize != O_SIZE_16) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	inline void LiveVariableAnalysis(const Frontend& f, ControlFlowGraph& cfg)
@@ -4421,23 +4500,30 @@ namespace compiler
 			// Scanning instructions of basic block and make register lifetime table
 			for (size_t i = it->instr_begin; i != it->instr_end; ++i) {
 				const size_t instr_offset = i - it->instr_begin;
-				for (size_t j = 0; j < Instr::MAX_OPERAND_COUNT; ++j) {
-					const detail::Opd& opd = f.instrs_[i].GetOpd(j);
-					if (opd.IsGpReg()) {
-						it->lifetime[0].AddUsePoint(instr_offset, opd.GetReg(), opd.opdtype_, opd.GetSize(), opd.reg_assignable_);
-					} else if (opd.IsMmxReg()) {
-						it->lifetime[1].AddUsePoint(instr_offset, opd.GetReg(), opd.opdtype_, opd.GetSize(), opd.reg_assignable_);
-					} else if (opd.IsXmmReg()) {
-						it->lifetime[2].AddUsePoint(instr_offset, opd.GetReg(), opd.opdtype_, opd.GetSize(), opd.reg_assignable_);
-					} else if (opd.IsYmmReg()) {
-						it->lifetime[3].AddUsePoint(instr_offset, opd.GetReg(), opd.opdtype_, opd.GetSize(), opd.reg_assignable_);
-					} else if (opd.IsMem()) {
-						RegID base = opd.GetBase();
-						if (!base.IsInvalid())
-							it->lifetime[0].AddUsePoint(instr_offset, base, static_cast<OpdType>(O_TYPE_REG | O_TYPE_READ), opd.GetAddressSize(), 0xFFFFFFFF);
-						RegID index = opd.GetIndex();
-						if (!index.IsInvalid())
-							it->lifetime[0].AddUsePoint(instr_offset, index, static_cast<OpdType>(O_TYPE_REG | O_TYPE_READ), opd.GetAddressSize(), 0xFFFFFFFF);
+				if (IsBreakDependenceInstr(f.instrs_[i])) {
+					// Add only 1 use point if the instruction that break register dependence
+					const detail::Opd& opd = f.instrs_[i].GetOpd(0);
+					const size_t reg_type = opd.GetReg().type - (opd.GetReg().IsSymbolic() ? R_TYPE_SYMBOLIC_GP : R_TYPE_GP);
+					it->lifetime[reg_type].AddUsePoint(instr_offset, opd.GetReg(), static_cast<OpdType>(O_TYPE_REG | O_TYPE_WRITE), opd.GetSize(), opd.reg_assignable_);
+				} else {
+					// Add each use point of all operands
+					for (size_t j = 0; j < Instr::MAX_OPERAND_COUNT; ++j) {
+						const detail::Opd& opd = f.instrs_[i].GetOpd(j);
+						if (opd.IsGpReg() || opd.IsMmxReg() || opd.IsXmmReg() || opd.IsYmmReg()) {
+							// Register operand
+							const size_t reg_type = opd.GetReg().type - (opd.GetReg().IsSymbolic() ? R_TYPE_SYMBOLIC_GP : R_TYPE_GP);
+							it->lifetime[reg_type].AddUsePoint(instr_offset, opd.GetReg(), opd.opdtype_, opd.GetSize(), opd.reg_assignable_);
+						} else if (opd.IsMem()) {
+							// Memory operand
+							RegID base = opd.GetBase();
+							if (!base.IsInvalid()) {
+								it->lifetime[0].AddUsePoint(instr_offset, base, static_cast<OpdType>(O_TYPE_REG | O_TYPE_READ), opd.GetAddressSize(), 0xFFFFFFFF);
+							}
+							RegID index = opd.GetIndex();
+							if (!index.IsInvalid()) {
+								it->lifetime[0].AddUsePoint(instr_offset, index, static_cast<OpdType>(O_TYPE_REG | O_TYPE_READ), opd.GetAddressSize(), 0xFFFFFFFF);
+							}
+						}
 					}
 				}
 			}
@@ -4497,7 +4583,7 @@ namespace compiler
 		for (ControlFlowGraph::BlockList::iterator block = cfg.dfs_begin(); block != cfg.dfs_end(); ++block) {
 			Lifetime& lifetime = (*block)->lifetime[reg_type];
 			for (size_t i = 0; i < lifetime.intervals.size(); ++i) {
-				if (lifetime.spill_intervals[i].liveness.get_bit(reg)) {
+				if (lifetime.intervals[i].spill.get_bit(reg)) {
 					if (lifetime.intervals[i].live_count >= threshold) {
 						return false;
 					}
@@ -4512,11 +4598,10 @@ namespace compiler
 		uint32 available_reg_count = detail::Count1Bits(available_reg);
 
 		std::vector<int> total_spill_cost;
-		for (ControlFlowGraph::BlockList::iterator it = cfg.dfs_begin(); it != cfg.dfs_end(); ++it) {
-			(*it)->lifetime[reg_type].BuildIntervals();
-			(*it)->lifetime[reg_type].GetSpillCost(1 + (*it)->loop_depth * 100, total_spill_cost);
+		for (ControlFlowGraph::BlockSet::iterator it = cfg.begin(); it != cfg.end(); ++it) {
+			it->lifetime[reg_type].BuildIntervals();
+			it->lifetime[reg_type].GetSpillCost(1 + it->loop_depth * 100, total_spill_cost);
 		}
-		const size_t num_of_variables = total_spill_cost.size();
 
 		// Spill identification
 		typedef std::pair<BasicBlock *, Lifetime::Interval *> SpillTargetInterval;
@@ -4556,19 +4641,19 @@ namespace compiler
 			size_t spill_count = 0;
 			for (size_t i = 0; i < live_regs.size() && spill_count < live_regs.size() - available_reg_count; ++i) {
 				const size_t reg = live_regs[i];
-				if (reg >= 16) {	// pysical register is not spill
+				if (reg >= 16) {	// physical register is not spill
 					spill.push_back(reg);
 					++spill_count;
 
-					// move interval from live_intervals to spill_intervals
+					// move variable from live set to spill set
 					for (ControlFlowGraph::BlockList::iterator block = cfg.dfs_begin(); block != cfg.dfs_end(); ++block) {
 						Lifetime& lifetime = (*block)->lifetime[reg_type];
 						for (size_t j = 0; j < lifetime.intervals.size(); ++j) {
-							if (lifetime.intervals[j].liveness.get_bit(reg)) {
-								lifetime.intervals[j].liveness.set_bit(reg, false);
-								lifetime.intervals[j].live_count--;
-								lifetime.spill_intervals[j].liveness.set_bit(reg, true);
-								lifetime.spill_intervals[j].live_count++;
+							Lifetime::Interval& interval = lifetime.intervals[j];
+							if (interval.liveness.get_bit(reg)) {
+								interval.liveness.set_bit(reg, false);
+								interval.live_count--;
+								interval.spill.set_bit(reg, true);
 							}
 						}
 					}
@@ -4582,15 +4667,15 @@ namespace compiler
 			if (IsResurrectable(cfg, reg_type, reg, available_reg_count - 1)) {
 				spill.erase(spill.begin() + i);
 
-				// move interval from spill_intervals to live_intervals
+				// move variable from spill set to live set
 				for (ControlFlowGraph::BlockList::iterator block = cfg.dfs_begin(); block != cfg.dfs_end(); ++block) {
 					Lifetime& lifetime = (*block)->lifetime[reg_type];
 					for (size_t j = 0; j < lifetime.intervals.size(); ++j) {
-						if (lifetime.spill_intervals[j].liveness.get_bit(reg)) {
-							lifetime.spill_intervals[j].liveness.set_bit(reg, false);
-							lifetime.spill_intervals[j].live_count--;
-							lifetime.intervals[j].liveness.set_bit(reg, true);
-							lifetime.intervals[j].live_count++;
+						Lifetime::Interval& interval = lifetime.intervals[j];
+						if (interval.spill.get_bit(reg)) {
+							interval.spill.set_bit(reg, false);
+							interval.liveness.set_bit(reg, true);
+							interval.live_count++;
 						}
 					}
 				}
@@ -4598,35 +4683,51 @@ namespace compiler
 		}
 
 		// Register assignment
-		ASSERT(num_of_variables > 16);
-		const size_t num_of_sym_reg = num_of_variables - 16;
 		for (ControlFlowGraph::BlockList::iterator block = cfg.dfs_begin(); block != cfg.dfs_end(); ++block) {
-			(*block)->lifetime[reg_type].AssignRegister(available_reg, num_of_sym_reg);
+			(*block)->lifetime[reg_type].AssignRegister(available_reg);
 		}
 
 		// Register move
-		for (ControlFlowGraph::BlockList::iterator block = cfg.dfs_begin(); block != cfg.dfs_end(); ++block) {
-			Lifetime& lifetime = (*block)->lifetime[reg_type];
-			for (size_t i = 0; i < lifetime.intervals.size(); ++i) {
-				Lifetime::Interval *successors[2] = {NULL, NULL};
-				if (i + 1 == lifetime.intervals.size()) {
-					for (size_t j = 0; j < 2; ++j) {
-						if ((*block)->successor[j] && !(*block)->successor[j]->lifetime[reg_type].intervals.empty()) {
-							successors[j] = &(*block)->successor[j]->lifetime[reg_type].intervals[0];
-						}
-					}
-				} else {
-					successors[0] = &lifetime.intervals[i + 1];
-				}
-			}
-		}
+		//struct IntervalPos {
+		//	BasicBlock *block;
+		//	size_t index;
+		//	IntervalPos(BasicBlock *b = NULL, size_t i = 0) : block(b), index(i) {}
+		//};
+		//struct RegMoves {
+		//	IntervalPos from;
+		//	IntervalPos to;
+		//	std::vector< std::pair<int, int> >	moves;
+		//};
+		//for (ControlFlowGraph::BlockList::iterator block = cfg.dfs_begin(); block != cfg.dfs_end(); ++block) {
+		//	Lifetime& lifetime = (*block)->lifetime[reg_type];
+		//	for (size_t i = 0; i < lifetime.intervals.size(); ++i) {
+		//		IntervalPos successors[2];
+		//		if (i + 1 == lifetime.intervals.size()) {
+		//			for (size_t j = 0; j < 2; ++j) {
+		//				if ((*block)->successor[j] && !(*block)->successor[j]->lifetime[reg_type].intervals.empty()) {
+		//					successors[j].block = (*block)->successor[j];
+		//					successors[j].index = 0;
+		//				}
+		//			}
+		//		} else {
+		//			successors[0].block = *block;
+		//			successors[0].index = i + 1;
+		//		}
+
+		//		lifetime.intervals[i].liveness.get_bit_indexes(live_regs);
+		//		for (std::vector<size_t>::iterator it = live_regs.begin(); it != live_regs.end(); ++it) {
+
+		//		}
+		//	}
+		//}
 	}
 
 	inline bool RegisterAllocation(Frontend& f)
 	{
-		int num_of_sym_reg = NormalizeSymbolicReg(f);
-		if (num_of_sym_reg == 0)
+		int num_of_sym_reg[4];
+		if (!NormalizeSymbolicReg(f, num_of_sym_reg)) {
 			return true;	// no need to register allocation
+		}
 
 		ControlFlowGraph cfg;
 		cfg.Build(f);
@@ -4635,8 +4736,53 @@ namespace compiler
 
 		cfg.DumpDot();
 
-		uint32 available = (1 << EAX) | (1 << ECX) | (1 << EDX) | (1 << EBX) | (1 << ESI) | (1 << EDI);
-		LinearScanRegisterAlloc(cfg, 0, available);
+#ifdef JITASM64
+		// rax, rcx, rdx, rbx, rsi, rdi, r8 ~ r15, mm0 ~ mm7, xmm0 ~ xmm15, ymm0 ~ ymm15
+		uint32 available[4] = {0xFFCF, 0xFF, 0xFFFF, 0xFFFF};
+#else
+		// eax, ecx, edx, ebx, esi, edi, mm0 ~ mm7, xmm0 ~ xmm7, ymm0 ~ ymm7
+		uint32 available[4] = {0xCF, 0xFF, 0xFF, 0xFF};
+#endif
+		for (int reg_type = 0; reg_type < 4; ++reg_type) {
+			if (num_of_sym_reg[reg_type] > 0) {
+				LinearScanRegisterAlloc(cfg, reg_type, available[reg_type]);
+			}
+		}
+
+		// replace symbolic register to physical register
+		for (ControlFlowGraph::BlockSet::iterator it = cfg.begin(); it != cfg.end(); ++it) {
+			size_t interval_index[4] = {0, 0, 0, 0};
+			const size_t instr_size = it->instr_end - it->instr_begin;
+			for (size_t instr_offset = 0; instr_offset < instr_size; ++instr_offset) {
+				// step interval_index
+				for (size_t i = 0; i < 4; ++i) {
+					const size_t next_interval_index = interval_index[i] + 1;
+					if (next_interval_index < it->lifetime[i].intervals.size() && it->lifetime[i].intervals[next_interval_index].instr_idx_offset == instr_offset) {
+						interval_index[i] = next_interval_index;
+					}
+				}
+
+				// replace symbolic register to physical register
+				for (size_t i = 0; i < Instr::MAX_OPERAND_COUNT; ++i) {
+					detail::Opd& opd = f.instrs_[it->instr_begin + instr_offset].GetOpd(i);
+					if (opd.IsReg()) {
+						if (opd.reg_.IsSymbolic()) {
+							opd.reg_.type = static_cast<RegType>(opd.reg_.type - R_TYPE_SYMBOLIC_GP);
+							opd.reg_.id = it->lifetime[opd.reg_.type].intervals[interval_index[opd.reg_.type]].assignment_table[opd.reg_.id + 16];
+						}
+					} else if (opd.IsMem()) {
+						if (opd.base_.IsSymbolic()) {
+							opd.base_.type = R_TYPE_GP;
+							opd.base_.id = it->lifetime[R_TYPE_GP].intervals[interval_index[R_TYPE_GP]].assignment_table[opd.base_.id + 16];
+						}
+						if (opd.index_.IsSymbolic()) {
+							opd.index_.type = R_TYPE_GP;
+							opd.index_.id = it->lifetime[R_TYPE_GP].intervals[interval_index[R_TYPE_GP]].assignment_table[opd.index_.id + 16];
+						}
+					}
+				}
+			}
+		}
 
 		return true;
 	}
