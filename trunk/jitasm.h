@@ -3933,12 +3933,14 @@ namespace compiler
 						}
 
 						if (iterators[i]->instr_idx == instr_idx) {
-							if (iterators[i]->reg_assignable != 0xFFFFFFFF) {
-								reg_assignables.resize(num_of_variables, 0xFFFFFFFF);
-								reg_assignables[i] = iterators[i]->reg_assignable;
+							while (iterators[i] != use_points[i].end() && iterators[i]->instr_idx == instr_idx) {
+								if (iterators[i]->reg_assignable != 0xFFFFFFFF) {
+									reg_assignables.resize(num_of_variables, 0xFFFFFFFF);
+									reg_assignables[i] &= iterators[i]->reg_assignable;
+								}
+								liveness.set_bit(i, true);
+								++iterators[i];
 							}
-							liveness.set_bit(i, true);
-							++iterators[i];
 						} else if (iterators[i]->type & O_TYPE_READ) {
 							liveness.set_bit(i, true);
 						} else if (iterators[i]->type & O_TYPE_WRITE) {
@@ -3970,30 +3972,52 @@ namespace compiler
 			}
 
 			std::vector<size_t> live_vars;
+			BitVector used_in_interval;
 			for (size_t i = 0; i < intervals.size(); ++i) {
 				uint32 cur_avail = available_reg;
+				used_in_interval.clear();
 				Interval& cur_interval = intervals[i];
+				Interval *next_interval = i + 1 < intervals.size() ? &intervals[i + 1] : NULL;
 
 				// step use_points iterators
 				for (size_t j = 0; j < use_points.size(); ++j) {
-					while (iterators[j] != use_points[j].end() && iterators[j]->instr_idx < cur_interval.instr_idx_offset) ++iterators[j];
+					while (iterators[j] != use_points[j].end() && iterators[j]->instr_idx < cur_interval.instr_idx_offset) {++iterators[j];}
 				}
 
 				cur_interval.liveness.get_bit_indexes(live_vars);
 				if (!live_vars.empty()) {
 					cur_interval.assignment_table.resize(live_vars.back() + 1, -1);
-				}
 
-				// assign from harder constraint
-				if (!cur_interval.reg_assignables.empty()) {
-					struct LessRegAssignable {
-						std::vector<uint32> *reg_assignables;
-						LessRegAssignable(std::vector<uint32> *assignables) : reg_assignables(assignables) {}
-						bool operator()(uint32 lhs, uint32 rhs) const {
-							return detail::Count1Bits(reg_assignables->at(lhs)) < detail::Count1Bits(reg_assignables->at(rhs));
+					// assign from harder constraint
+					if (!cur_interval.reg_assignables.empty()) {
+						std::vector<RegUsePoint *> next_use_points(live_vars.back() + 1);
+						for (size_t j = 0; j < live_vars.size(); ++j) {
+							const size_t var = live_vars[j];
+							used_in_interval.set_bit(var, iterators[var] != use_points[var].end() && (!next_interval || iterators[var]->instr_idx < next_interval->instr_idx_offset));
 						}
-					};
-					std::sort(live_vars.begin(), live_vars.end(), LessRegAssignable(&cur_interval.reg_assignables));
+
+						struct LessRegAssignable {
+							std::vector<uint32> *reg_assignables;
+							BitVector *used_in_interval;
+							LessRegAssignable(std::vector<uint32> *assignables, BitVector *used) : reg_assignables(assignables), used_in_interval(used) {}
+							bool operator()(uint32 lhs, uint32 rhs) const {
+								const uint32 lhs_constraints = reg_assignables->at(lhs);
+								const uint32 rhs_constraints = reg_assignables->at(rhs);
+								const bool lhs_has_constraints = (lhs_constraints != 0xFFFFFFFF);
+								const bool rhs_has_constraints = (rhs_constraints != 0xFFFFFFFF);
+								if (lhs_has_constraints == rhs_has_constraints) {
+									const bool lhs_used = used_in_interval->get_bit(lhs);
+									const bool rhs_used = used_in_interval->get_bit(rhs);
+									if (lhs_used == rhs_used) {
+										return detail::Count1Bits(lhs_constraints) < detail::Count1Bits(rhs_constraints);
+									}
+									return lhs_used;
+								}
+								return lhs_has_constraints;
+							}
+						};
+						std::sort(live_vars.begin(), live_vars.end(), LessRegAssignable(&cur_interval.reg_assignables, &used_in_interval));
+					}
 				}
 
 				for (size_t j = 0; j < live_vars.size(); ++j) {
