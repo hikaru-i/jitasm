@@ -1030,6 +1030,15 @@ namespace detail
 		return x & 0x0000003F;
 	}
 
+	inline uint32 bit_scan_forward(uint32 x)
+	{
+		ASSERT(x != 0);
+		unsigned long index;
+		_BitScanForward(&index, x);
+		//index = __builtin_ctz(x);		// for gcc
+		return index;
+	}
+
 	template<class It> It prior(const It &it) {
 		It i = it;
 		return --i;
@@ -1038,6 +1047,10 @@ namespace detail
 	template<class It> It next(const It &it) {
 		It i = it;
 		return ++i;
+	}
+
+	template<class It> bool empty(const std::pair<It, It>& range) {
+		return range.first == range.second;
 	}
 
 	inline void append_num(std::string& str, size_t num) {
@@ -3802,9 +3815,7 @@ namespace compiler
 			for (size_t i = 0; i < size(); ++i) {
 				uint32 m = at(i);
 				while (m != 0) {
-					unsigned long index;
-					_BitScanForward(&index, m);
-					//index = __builtin_ctz(m);		// for gcc
+					uint32 index = detail::bit_scan_forward(m);
 					indexes.push_back(i * 32 + index);
 					m &= ~(1 << index);
 				}
@@ -3830,9 +3841,9 @@ namespace compiler
 
 	struct RegUsePoint
 	{
-		size_t instr_idx;	///< Instruction index offset from basic block start point
-		OpdType type;
-		uint32 reg_assignable;
+		size_t instr_idx;		///< Instruction index offset from basic block start point
+		OpdType type;			///< Operand type
+		uint32 reg_assignable;	///< Register assignment constraint
 
 		RegUsePoint(size_t idx, OpdType t, uint32 assignable) : instr_idx(idx), type(t), reg_assignable(assignable) {}
 		bool operator<(const RegUsePoint& rhs) const {
@@ -3859,7 +3870,10 @@ namespace compiler
 
 			Interval(size_t instr_idx, const std::vector<uint32>& assignables) : instr_idx_offset(instr_idx), live_count(0), reg_assignables(assignables) {}
 			Interval(size_t instr_idx, const BitVector& l, const std::vector<uint32>& assignables) : instr_idx_offset(instr_idx), liveness(l), live_count(l.count_bit()), reg_assignables(assignables) {}
+			int GetAssignedReg(int var) const {return 0 <= var && var < static_cast<int>(assignment_table.size()) ? assignment_table[var] : -1;}
 		};
+
+		typedef std::pair<std::vector<RegUsePoint>::iterator, std::vector<RegUsePoint>::iterator>	RegUsePointRange;
 
 		//  0 ~ 15 : Physical register
 		// 16 ~    : Symbolic register
@@ -3906,10 +3920,11 @@ namespace compiler
 
 		void BuildIntervals()
 		{
-			// initialize use_points iterators
-			std::vector<std::vector<RegUsePoint>::iterator> iterators(use_points.size());
+			// initialize use_points ranges
+			std::vector<RegUsePointRange> use_points_ranges;
+			use_points_ranges.reserve(use_points.size());
 			for (size_t i = 0; i < use_points.size(); ++i) {
-				iterators[i] = use_points[i].begin();
+				use_points_ranges.push_back(std::make_pair(use_points[i].begin(), use_points[i].end()));
 			}
 
 			BitVector *last_liveness = NULL;
@@ -3923,27 +3938,27 @@ namespace compiler
 				end_count = 0;
 				reg_assignables.clear();
 				size_t min_instr_idx = (size_t)-1;
-				for (size_t i = 0; i < iterators.size(); ++i) {
-					if (iterators[i] == use_points[i].end()) {
+				for (size_t i = 0; i < use_points_ranges.size(); ++i) {
+					if (detail::empty(use_points_ranges[i])) {
 						liveness.set_bit(i, live_out.get_bit(i));
 						++end_count;
 					} else {
-						if (iterators[i]->instr_idx < min_instr_idx) {
-							min_instr_idx = iterators[i]->instr_idx;
+						if (use_points_ranges[i].first->instr_idx < min_instr_idx) {
+							min_instr_idx = use_points_ranges[i].first->instr_idx;
 						}
 
-						if (iterators[i]->instr_idx == instr_idx) {
-							while (iterators[i] != use_points[i].end() && iterators[i]->instr_idx == instr_idx) {
-								if (iterators[i]->reg_assignable != 0xFFFFFFFF) {
+						if (use_points_ranges[i].first->instr_idx == instr_idx) {
+							while (!detail::empty(use_points_ranges[i]) && use_points_ranges[i].first->instr_idx == instr_idx) {
+								if (use_points_ranges[i].first->reg_assignable != 0xFFFFFFFF) {
 									reg_assignables.resize(num_of_variables, 0xFFFFFFFF);
-									reg_assignables[i] &= iterators[i]->reg_assignable;
+									reg_assignables[i] &= use_points_ranges[i].first->reg_assignable;
 								}
 								liveness.set_bit(i, true);
-								++iterators[i];
+								++use_points_ranges[i].first;
 							}
-						} else if (iterators[i]->type & O_TYPE_READ) {
+						} else if (use_points_ranges[i].first->type & O_TYPE_READ) {
 							liveness.set_bit(i, true);
-						} else if (iterators[i]->type & O_TYPE_WRITE) {
+						} else if (use_points_ranges[i].first->type & O_TYPE_WRITE) {
 							liveness.set_bit(i, false);
 						} else {
 							ASSERT(0);
@@ -3960,96 +3975,257 @@ namespace compiler
 				}
 				last_reg_constraints = !reg_assignables.empty();
 				instr_idx = min_instr_idx == instr_idx ? instr_idx + 1 : min_instr_idx;
-			} while (end_count < iterators.size());
+			} while (end_count < use_points_ranges.size());
 		}
 
 		void AssignRegister(uint32 available_reg)
 		{
-			// initialize use_points iterators
-			std::vector<std::vector<RegUsePoint>::iterator> iterators(use_points.size());
+			// initialize use_points ranges
+			std::vector<RegUsePointRange> interval_use_points;
+			interval_use_points.reserve(use_points.size());
 			for (size_t i = 0; i < use_points.size(); ++i) {
-				iterators[i] = use_points[i].begin();
+				interval_use_points.push_back(std::make_pair(use_points[i].begin(), use_points[i].end()));
 			}
 
 			std::vector<size_t> live_vars;
+			std::vector<size_t> spilled_vars;
 			BitVector used_in_interval;
-			for (size_t i = 0; i < intervals.size(); ++i) {
-				uint32 cur_avail = available_reg;
-				used_in_interval.clear();
-				Interval& cur_interval = intervals[i];
-				Interval *next_interval = i + 1 < intervals.size() ? &intervals[i + 1] : NULL;
+			for (size_t interval_idx = 0; interval_idx < intervals.size(); ++interval_idx) {
+				Interval *prior_interval = interval_idx > 0 ? &intervals[interval_idx - 1] : NULL;
+				Interval *cur_interval = &intervals[interval_idx];
+				Interval *next_interval = interval_idx + 1 < intervals.size() ? &intervals[interval_idx + 1] : NULL;
 
-				// step use_points iterators
-				for (size_t j = 0; j < use_points.size(); ++j) {
-					while (iterators[j] != use_points[j].end() && iterators[j]->instr_idx < cur_interval.instr_idx_offset) {++iterators[j];}
+				// step interval_use_points
+				for (size_t i = 0; i < use_points.size(); ++i) {
+					while (!detail::empty(interval_use_points[i]) && interval_use_points[i].first->instr_idx < cur_interval->instr_idx_offset) {++interval_use_points[i].first;}
 				}
 
-				cur_interval.liveness.get_bit_indexes(live_vars);
-				if (!live_vars.empty()) {
-					cur_interval.assignment_table.resize(live_vars.back() + 1, -1);
+				cur_interval->liveness.get_bit_indexes(live_vars);
+				cur_interval->spill.get_bit_indexes(spilled_vars);
 
-					// assign from harder constraint
-					if (!cur_interval.reg_assignables.empty()) {
-						std::vector<RegUsePoint *> next_use_points(live_vars.back() + 1);
-						for (size_t j = 0; j < live_vars.size(); ++j) {
-							const size_t var = live_vars[j];
-							used_in_interval.set_bit(var, iterators[var] != use_points[var].end() && (!next_interval || iterators[var]->instr_idx < next_interval->instr_idx_offset));
-						}
+				// check if variables used in this interval
+				used_in_interval.clear();
+				for (size_t i = 0; i < live_vars.size(); ++i) {
+					const size_t var = live_vars[i];
+					used_in_interval.set_bit(var, var < interval_use_points.size() && !detail::empty(interval_use_points[var]) && (!next_interval || interval_use_points[var].first->instr_idx < next_interval->instr_idx_offset));
+				}
+				for (size_t i = 0; i < spilled_vars.size(); ++i) {
+					const size_t var = spilled_vars[i];
+					used_in_interval.set_bit(var, var < interval_use_points.size() && !detail::empty(interval_use_points[var]) && (!next_interval || interval_use_points[var].first->instr_idx < next_interval->instr_idx_offset));
+				}
 
-						struct LessRegAssignable {
-							std::vector<uint32> *reg_assignables;
-							BitVector *used_in_interval;
-							LessRegAssignable(std::vector<uint32> *assignables, BitVector *used) : reg_assignables(assignables), used_in_interval(used) {}
-							bool operator()(uint32 lhs, uint32 rhs) const {
-								const uint32 lhs_constraints = reg_assignables->at(lhs);
-								const uint32 rhs_constraints = reg_assignables->at(rhs);
-								const bool lhs_has_constraints = (lhs_constraints != 0xFFFFFFFF);
-								const bool rhs_has_constraints = (rhs_constraints != 0xFFFFFFFF);
-								if (lhs_has_constraints == rhs_has_constraints) {
-									const bool lhs_used = used_in_interval->get_bit(lhs);
-									const bool rhs_used = used_in_interval->get_bit(rhs);
-									if (lhs_used == rhs_used) {
-										return detail::Count1Bits(lhs_constraints) < detail::Count1Bits(rhs_constraints);
-									}
-									return lhs_used;
+				struct LessAssignOrder {
+					std::vector<uint32> *reg_assignables;
+					BitVector *used_in_interval;
+					LessAssignOrder(std::vector<uint32> *assignables, BitVector *used) : reg_assignables(assignables), used_in_interval(used) {}
+					bool operator()(uint32 lhs, uint32 rhs) const {
+						// is there any register constraints or not
+						const uint32 lhs_constraints = reg_assignables->at(lhs);
+						const uint32 rhs_constraints = reg_assignables->at(rhs);
+						const bool lhs_has_constraints = (lhs_constraints != 0xFFFFFFFF);
+						const bool rhs_has_constraints = (rhs_constraints != 0xFFFFFFFF);
+						if (lhs_has_constraints == rhs_has_constraints) {
+							// is the register used in this interval or not
+							const bool lhs_used = used_in_interval->get_bit(lhs);
+							const bool rhs_used = used_in_interval->get_bit(rhs);
+							if (lhs_used == rhs_used) {
+								// compare number of assignable registers
+								const uint32 lhs_constraints_bits = detail::Count1Bits(lhs_constraints);
+								const uint32 rhs_constraints_bits = detail::Count1Bits(rhs_constraints);
+								if (lhs_constraints_bits == rhs_constraints_bits) {
+									// compare register id
+									return lhs < rhs;
 								}
-								return lhs_has_constraints;
+								return lhs_constraints_bits < rhs_constraints_bits;
 							}
-						};
-						std::sort(live_vars.begin(), live_vars.end(), LessRegAssignable(&cur_interval.reg_assignables, &used_in_interval));
+							return lhs_used;
+						}
+						return lhs_has_constraints;
+					}
+				};
+
+				size_t assignment_table_size = 0;
+				if (!live_vars.empty()) {
+					assignment_table_size = live_vars.back() + 1;
+
+					// sort into assignment order. assign from harder constraint
+					if (!cur_interval->reg_assignables.empty()) {
+						std::sort(live_vars.begin(), live_vars.end(), LessAssignOrder(&cur_interval->reg_assignables, &used_in_interval));
 					}
 				}
+				if (!spilled_vars.empty() && assignment_table_size < spilled_vars.back() + 1) {
+					assignment_table_size = spilled_vars.back() + 1;
+				}
 
-				for (size_t j = 0; j < live_vars.size(); ++j) {
-					const size_t var = live_vars[j];
-					const uint32 reg_assignable = var < cur_interval.reg_assignables.size() ? cur_interval.reg_assignables[var] : 0xFFFFFFFF;
+				cur_interval->assignment_table.resize(assignment_table_size, -1);
+
+				// Assign register
+				uint32 cur_avail = available_reg;
+				const size_t num_of_live_vars = live_vars.size();
+				for (size_t i = 0; i < live_vars.size(); ++i) {
+					const size_t var = live_vars[i];
+					const bool first_try = (i < num_of_live_vars);	// Try to assign for the first time
+					const uint32 reg_assignable = first_try && var < cur_interval->reg_assignables.size() ? cur_interval->reg_assignables[var] : 0xFFFFFFFF;	// Ignore constraint if it is retried
 					ASSERT((cur_avail & reg_assignable) != 0);
 					int assigned_reg = -1;
-					if (var < 16) {
+					if (var < 16 && first_try) {
 						// Physical register
 						ASSERT((reg_assignable & (1 << var)) != 0);		// This physical register violates the register constraint!
 						if (cur_avail & reg_assignable & (1 << var)) {
 							assigned_reg = var;
+						} else if (!used_in_interval.get_bit(var)) {
+							// Try to assign another physical register if it is not used in this interval. But assign later.
+							live_vars.push_back(var);
+						} else {
+							// This may be false assignment but force to assign.
+							ASSERT(0);
+							assigned_reg = var;
 						}
 					} else {
-						// Symbolic register
-						const int last_assigned = (i > 0 && var < intervals[i - 1].assignment_table.size()) ? intervals[i - 1].assignment_table[var] : -1;
+						// Symbolic register or retried physical register
+						const int last_assigned = prior_interval ? prior_interval->GetAssignedReg(var) : -1;
 						if (last_assigned != -1 && (cur_avail & reg_assignable & (1 << last_assigned))) {
 							// select last assigned register
 							assigned_reg = last_assigned;
+						} else if (cur_avail & reg_assignable) {
+							assigned_reg = detail::bit_scan_forward(cur_avail & reg_assignable);
+						} else if (reg_assignable != 0xFFFFFFFF && !used_in_interval.get_bit(var)) {
+							// Try to assign register ignoring constraint if it is not used in this interval. But assign later.
+							live_vars.push_back(var);
 						} else {
-							_BitScanForward(reinterpret_cast<unsigned long *>(&assigned_reg), cur_avail & reg_assignable);
-							//assigned_reg = __builtin_ctz(cur_avail & reg_assignable);		// for gcc
+							ASSERT(0);
 						}
 					}
 
 					if (assigned_reg >= 0) {
-						cur_interval.assignment_table[var] = assigned_reg;
+						cur_interval->assignment_table[var] = assigned_reg;
 						cur_avail &= ~(1 << assigned_reg);
-					} else {
-						// Assign later
-						live_vars.push_back(var);
 					}
+				}
+
+				// Assign register to spilled variable
+				//if (!spilled_vars.empty()) {
+				//	live_vars.resize(num_of_live_vars);		// shrink to original variables
+
+				//	// Sort into use point order
+				//	struct LessUsePoint {
+				//		std::vector< std::pair<std::vector<RegUsePoint>::iterator, std::vector<RegUsePoint>::iterator> > *interval_use_points;
+				//		LessUsePoint(std::vector< std::pair<std::vector<RegUsePoint>::iterator, std::vector<RegUsePoint>::iterator> > *interval_use_points_) : interval_use_points(interval_use_points_) {}
+				//		bool operator<(size_t lhs, size_t rhs) {
+				//			const RegUsePoint *lhs_use_point = lhs < interval_use_points->size() && !detail::empty(interval_use_points->at(lhs)) ? &*interval_use_points->at(lhs).first : NULL;
+				//			const RegUsePoint *rhs_use_point = rhs < interval_use_points->size() && !detail::empty(interval_use_points->at(rhs)) ? &*interval_use_points->at(rhs).first : NULL;
+				//			const size_t lhs_instr_idx = lhs_use_point ? lhs_use_point->instr_idx : (size_t)-1;
+				//			const size_t rhs_instr_idx = rhs_use_point ? rhs_use_point->instr_idx : (size_t)-1;
+				//			if (lhs_instr_idx == rhs_instr_idx && lhs_use_point && rhs_instr_idx) {
+				//				return detail::Count1Bits(lhs_use_point->reg_assignable) < detail::Count1Bits(rhs_use_point->reg_assignable);
+				//			}
+				//			return lhs_instr_idx < rhs_instr_idx;
+				//		}
+				//	};
+				//	std::sort(spilled_vars.begin(), spilled_vars.end(), LessUsePoint(&interval_use_points));
+				//	std::sort(live_vars.begin(), live_vars.end(), LessUsePoint(&interval_use_points));
+
+				//	size_t instr_idx = interval_use_points[spilled_vars.front()].first->instr_idx;
+				//	do {
+				//		cur_avail = available_reg
+				//		size_t i = 0;
+				//		for (; i < spilled_vars.size() && interval_use_points[spilled_vars[i]].first->instr_idx == instr_idx; ++i) {
+				//			const size_t var = spilled_vars[i];
+				//			uint32 reg_assignable = 0xFFFFFFFF;
+				//			while (interval_use_points[var].first->instr_idx == instr_idx) {
+				//				reg_assignable &= interval_use_points[var].first->reg_assignable;
+				//				++interval_use_points[var].first;
+				//			}
+
+				//			if (cur_interval->assignment_table[var] == -1) {
+				//				// assign from free physical register
+				//				int assigned_var = -1;
+
+
+				//				// assign register from the farthest used live variable
+				//				for (size_t j = 0; j < live_vars.size(); ++j) {
+				//					int assigned_var = live_vars[live_vars.size() - j - 1];
+				//					int reg = cur_interval->assignment_table[assigned_var];
+				//					ASSERT(reg != -1);
+				//					if (cur_avail & reg_assignable & (1 << reg)) {
+				//						cur_interval->assignment_table[var] = assigned_var;
+				//						cur_avail &= ~(1 << reg);
+				//						break;
+				//					}
+				//				}
+
+				//				//if (ass
+				//			} else {
+				//				// already assigned
+				//				int reg = cur_interval->assignment_table[assigned_var];
+				//				ASSERT(reg != -1);
+				//				if (cur_avail & reg_assignable & (1 << reg)) {
+				//					cur_avail &= ~(1 << reg);
+				//				} else {
+				//					// assigned register does not fit to current instruction
+				//					// split interval
+				//				}
+				//			}
+				//			//if (cur_interval->assignment_table[var] == -1) {
+				//				// split interval
+				//			//}
+				//			ASSERT(cur_interval->assignment_table[var] != -1);
+				//		}
+
+				//		// sort
+				//		std::sort(spilled_vars.begin(), spilled_vars.begin() + i, LessUsePoint(&interval_use_points));	// sort only updates
+				//		std::inplace_merge(spilled_vars.begin(), spilled_vars.begin() + i, spilled_vars.end(), LessUsePoint(&interval_use_points));		// merge
+
+				//	} while (‘S‚Ä‚Ìuse_point iterator‚ªinterval‚Ì”ÍˆÍ‚±‚¦‚é‚Ü‚Å);
+				//}
+			}
+		}
+
+	//private:
+
+		/**
+		 * \return assigned physical register
+		 */
+		int AssignRegisterToSpilledVariable(size_t var, uint32 reg_assignable, uint32 free_reg, const std::vector<size_t>& live_vars, Interval *prior_interval, Interval *cur_interval)
+		{
+			int assigned_var = cur_interval->assignment_table[var];
+			if (assigned_var == -1) {
+				if (free_reg & reg_assignable) {
+					// assign from free physical register
+					int assigned_reg;
+					const int last_assigned = prior_interval ? prior_interval->GetAssignedReg(prior_interval->GetAssignedReg(var)) : -1;
+					if (last_assigned != -1 && (free_reg & reg_assignable & (1 << last_assigned))) {
+						// select last assigned register
+						assigned_reg = last_assigned;
+						return last_assigned;
+					} else {
+						assigned_reg = detail::bit_scan_forward(free_reg & reg_assignable);
+					}
+
+					cur_interval->assignment_table[assigned_reg] = assigned_reg;
+					return assigned_reg;
+				} else {
+					// assign register from the farthest used live variable
+					for (size_t j = 0; j < live_vars.size(); ++j) {
+						int assigned_var = live_vars[live_vars.size() - j - 1];
+						int reg = cur_interval->assignment_table[assigned_var];
+						ASSERT(reg != -1);
+						if (free_reg & reg_assignable & (1 << reg)) {
+							return assigned_var;
+						}
+					}
+
+					return -1;
+				}
+			} else {
+				// already assigned
+				int reg = cur_interval->assignment_table[assigned_var];
+				ASSERT(reg != -1);
+				if (free_reg & reg_assignable & (1 << reg)) {
+					return assigned_var;
+				} else {
+					// assigned register does not fit to current instruction
+					return -1;
 				}
 			}
 		}
