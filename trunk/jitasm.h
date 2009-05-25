@@ -3885,6 +3885,10 @@ namespace compiler
 		bool dirty_live_out;					///< The dirty flag of live_out
 		std::vector<Interval> intervals;		///< Lifetime intervals
 
+		static const int SpillCost_Loop = 100;
+		static const int SpillCost_Read = 2;
+		static const int SpillCost_Write = 3;
+
 		Lifetime() : use_points(16), dirty_live_out(true) {}
 
 		void AddUsePoint(size_t instr_idx, const RegID& reg, OpdType opd_type, OpdSize opd_size, uint32 reg_assignable)
@@ -3911,8 +3915,8 @@ namespace compiler
 			for(size_t i = 0; i < use_points.size(); ++i) {
 				int cost = 0;
 				for (std::vector<RegUsePoint>::const_iterator it = use_points[i].begin(); it != use_points[i].end(); ++it) {
-					if (it->type & O_TYPE_READ)  cost += 2;
-					if (it->type & O_TYPE_WRITE) cost += 3;
+					if (it->type & O_TYPE_READ)  cost += SpillCost_Read;
+					if (it->type & O_TYPE_WRITE) cost += SpillCost_Write;
 				}
 				spill_cost[i] += cost * freq;
 			}
@@ -4226,6 +4230,74 @@ namespace compiler
 				} else {
 					// assigned register does not fit to current instruction
 					return -1;
+				}
+			}
+		}
+
+		void SpillIdentification(uint32 available_reg_count, const std::vector<int>& total_spill_cost, int freq)
+		{
+			// initialize use_points ranges
+			std::vector<RegUsePointRange> interval_use_points;
+			interval_use_points.reserve(use_points.size());
+			for (size_t i = 0; i < use_points.size(); ++i) {
+				interval_use_points.push_back(std::make_pair(use_points[i].begin(), use_points[i].end()));
+			}
+
+			std::vector<size_t> live_vars;
+			BitVector used_in_interval;
+			std::vector<int> cur_spill_cost;
+			for (size_t interval_idx = 0; interval_idx < intervals.size(); ++interval_idx) {
+				Interval *prior_interval = interval_idx > 0 ? &intervals[interval_idx - 1] : NULL;
+				Interval *cur_interval = &intervals[interval_idx];
+				Interval *next_interval = interval_idx + 1 < intervals.size() ? &intervals[interval_idx + 1] : NULL;
+
+				if (cur_interval->live_count > available_reg_count) {
+					// step interval_use_points
+					for (size_t i = 0; i < use_points.size(); ++i) {
+						while (!detail::empty(interval_use_points[i]) && interval_use_points[i].first->instr_idx < cur_interval->instr_idx_offset) {++interval_use_points[i].first;}
+					}
+
+					cur_interval->liveness.get_bit_indexes(live_vars);
+
+					size_t num_of_used_in_interval = 0;
+					used_in_interval.clear();
+					cur_spill_cost.resize(live_vars.back() + 1);
+					for (size_t i = 0; i < live_vars.size(); ++i) {
+						const size_t var = live_vars[i];
+
+						// check if variables used in this interval
+						const bool used = var < interval_use_points.size() && !detail::empty(interval_use_points[var]) && (!next_interval || interval_use_points[var].first->instr_idx < next_interval->instr_idx_offset);
+						used_in_interval.set_bit(var, used);
+						if (used) {++num_of_used_in_interval;}
+
+						// calculate spill cost of this interval
+						if (used && interval_use_points[var].first->instr_idx == cur_interval->instr_idx_offset) {
+							// special low spill cost if this variable is used at first instruction of this interval
+							// because it must not be spilled.
+							cur_spill_cost[var] = -1;
+						} else {
+							cur_spill_cost[var] = total_spill_cost[var];
+							if (prior_interval && !prior_interval->spill.get_bit(var)) {
+								cur_spill_cost[var] += (SpillCost_Read + SpillCost_Write) * freq;
+							}
+						}
+					}
+
+					if (num_of_used_in_interval < available_reg_count) {
+						// Spill from the smallest cost
+						struct LessSpillCost {
+							const std::vector<int> *spill_cost_;
+							LessSpillCost(const std::vector<int> *spill_cost) : spill_cost_(spill_cost) {}
+							bool operator()(size_t lhs, size_t rhs) const {
+								const int lhs_cost = lhs < spill_cost_->size() ? spill_cost_->at(lhs) : 0;
+								const int rhs_cost = rhs < spill_cost_->size() ? spill_cost_->at(rhs) : 0;
+								return lhs_cost < rhs_cost;
+							}
+						};
+						std::sort(live_vars.begin(), live_vars.end(), LessSpillCost(&cur_spill_cost));
+					}
+
+					//for (size_t i = 0; i < live_regs
 				}
 			}
 		}
@@ -4792,7 +4864,7 @@ namespace compiler
 		}
 		return true;
 	}
-
+#if 0
 	inline void LinearScanRegisterAlloc(ControlFlowGraph& cfg, int reg_type, uint32 available_reg)
 	{
 		uint32 available_reg_count = detail::Count1Bits(available_reg);
@@ -4800,7 +4872,7 @@ namespace compiler
 		std::vector<int> total_spill_cost;
 		for (ControlFlowGraph::BlockSet::iterator it = cfg.begin(); it != cfg.end(); ++it) {
 			it->lifetime[reg_type].BuildIntervals();
-			it->lifetime[reg_type].GetSpillCost(1 + it->loop_depth * 100, total_spill_cost);
+			it->lifetime[reg_type].GetSpillCost(1 + it->loop_depth * Lifetime::SpillCost_Loop, total_spill_cost);
 		}
 
 		// Spill identification
@@ -4882,6 +4954,9 @@ namespace compiler
 			}
 		}
 
+		
+
+
 		// Register assignment
 		for (ControlFlowGraph::BlockList::iterator block = cfg.dfs_begin(); block != cfg.dfs_end(); ++block) {
 			(*block)->lifetime[reg_type].AssignRegister(available_reg);
@@ -4921,6 +4996,24 @@ namespace compiler
 		//	}
 		//}
 	}
+#else
+	inline void LinearScanRegisterAlloc(ControlFlowGraph& cfg, int reg_type, uint32 available_reg)
+	{
+		uint32 available_reg_count = detail::Count1Bits(available_reg);
+
+		std::vector<int> total_spill_cost;
+		for (ControlFlowGraph::BlockSet::iterator it = cfg.begin(); it != cfg.end(); ++it) {
+			it->lifetime[reg_type].BuildIntervals();
+			it->lifetime[reg_type].GetSpillCost(1 + it->loop_depth * 100, total_spill_cost);
+		}
+
+		// Spill identification
+		for (ControlFlowGraph::BlockList::iterator block = cfg.dfs_begin(); block != cfg.dfs_end(); ++block) {
+			Lifetime& lifetime = (*block)->lifetime[reg_type];
+
+		}
+	}
+#endif
 
 	inline bool RegisterAllocation(Frontend& f)
 	{
