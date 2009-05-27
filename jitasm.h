@@ -89,6 +89,18 @@ enum PhysicalRegID
 	YMM0=0, YMM1, YMM2, YMM3, YMM4, YMM5, YMM6, YMM7, YMM8, YMM9, YMM10, YMM11, YMM12, YMM13, YMM14, YMM15,
 };
 
+enum
+{
+	/** \var NUM_OF_PHYSICAL_REG
+	 * Number of physical register
+	 */
+#ifdef JITASM64
+	NUM_OF_PHYSICAL_REG = 16
+#else
+	NUM_OF_PHYSICAL_REG = 8
+#endif
+};
+
 /// Register type
 enum RegType
 {
@@ -3822,6 +3834,19 @@ namespace compiler
 			}
 		}
 
+		template<class Fn>
+		void query_bit_indexes(Fn& fn) const
+		{
+			for (size_t i = 0; i < size(); ++i) {
+				uint32 m = at(i);
+				while (m != 0) {
+					uint32 index = detail::bit_scan_forward(m);
+					fn(i * 32 + index);
+					m &= ~(1 << index);
+				}
+			}
+		}
+
 		void set_union(const BitVector& rhs)
 		{
 			if (size() < rhs.size()) resize(rhs.size());
@@ -3837,6 +3862,29 @@ namespace compiler
 				at(i) &= ~rhs[i];
 			}
 		}
+	};
+
+	template<class T, size_t N>
+	class FixedStack
+	{
+	private:
+		T data_[N];
+		size_t size_;
+
+	public:
+		FixedStack() : size_(0) {}
+		bool empty() const {return size_ == 0;}
+		size_t size() const {return size_;}
+		void clear() {size_ = 0;}
+
+		void push_back(const T& v) {data_[size_++] = v;}
+		void pop_back() {--size_;}
+
+		const T& back() const {return data_[size_ - 1];}
+		T& back() {return data_[size_ - 1];}
+
+		const T& operator[](size_t i) const {return data_[i];}
+		T& operator[](size_t i) {return data_[i];}
 	};
 
 	struct RegUsePoint
@@ -3886,8 +3934,8 @@ namespace compiler
 			}
 		};
 
-		//  0 ~ 15 : Physical register
-		// 16 ~    : Symbolic register
+		// 0 ~ NUM_OF_PHYSICAL_REG-1 : Physical register
+		// NUM_OF_PHYSICAL_REG ~     : Symbolic register
 		std::vector< std::vector<RegUsePoint> > use_points;
 		BitVector gen;							///< The set of variables used before any assignment
 		BitVector kill;							///< The set of variables assigned a value before any use
@@ -3899,21 +3947,23 @@ namespace compiler
 		static const int SpillCost_Read = 2;
 		static const int SpillCost_Write = 3;
 
-		Lifetime() : use_points(16), dirty_live_out(true) {}
+		Lifetime() : use_points(NUM_OF_PHYSICAL_REG), dirty_live_out(true) {}
 
 		void AddUsePoint(size_t instr_idx, const RegID& reg, OpdType opd_type, OpdSize opd_size, uint32 reg_assignable)
 		{
-			const size_t reg_idx = reg.IsSymbolic() ? reg.id + 16 : reg.id;
-			if (use_points.size() <= reg_idx)
+			const size_t reg_idx = reg.IsSymbolic() ? reg.id + NUM_OF_PHYSICAL_REG : reg.id;
+			if (use_points.size() <= reg_idx) {
 				use_points.resize(reg_idx + 1);
+			}
 
 			// add read attribute when writing to 8/16bit register because it is partial write
-			if ((opd_type & O_TYPE_WRITE) && (opd_size == O_SIZE_8 || opd_size == O_SIZE_16))
+			if ((opd_type & O_TYPE_WRITE) && (opd_size == O_SIZE_8 || opd_size == O_SIZE_16)) {
 				opd_type = static_cast<OpdType>(static_cast<int>(opd_type) | O_TYPE_READ);
+			}
 
 			RegUsePoint use_point(instr_idx, opd_type, reg_assignable);
 			std::vector<RegUsePoint>::reverse_iterator it = use_points[reg_idx].rbegin();
-			while (it != use_points[reg_idx].rend() && use_point < *it) ++it;
+			while (it != use_points[reg_idx].rend() && use_point < *it) {++it;}
 			use_points[reg_idx].insert(it.base(), use_point);
 		}
 
@@ -4166,7 +4216,7 @@ namespace compiler
 					const uint32 reg_assignable = first_try && var < cur_interval->reg_assignables.size() ? cur_interval->reg_assignables[var] : 0xFFFFFFFF;	// Ignore constraint if it is retried
 					ASSERT((cur_avail & reg_assignable) != 0);
 					int assigned_reg = -1;
-					if (var < 16 && first_try) {
+					if (var < NUM_OF_PHYSICAL_REG && first_try) {
 						// Physical register
 						ASSERT((reg_assignable & (1 << var)) != 0);		// This physical register violates the register constraint!
 						if (cur_avail & reg_assignable & (1 << var)) {
@@ -4246,10 +4296,10 @@ namespace compiler
 			else if (type == R_TYPE_MMX)			{name.assign("mm");}
 			else if (type == R_TYPE_XMM)			{name.assign("xmm");}
 			else if (type == R_TYPE_YMM)			{name.assign("ymm");}
-			else if (type == R_TYPE_SYMBOLIC_GP)	{name.assign("gpsym"); reg_idx -= 16;}
-			else if (type == R_TYPE_SYMBOLIC_MMX)	{name.assign("mmsym"); reg_idx -= 16;}
-			else if (type == R_TYPE_SYMBOLIC_XMM)	{name.assign("xmmsym"); reg_idx -= 16;}
-			else if (type == R_TYPE_SYMBOLIC_YMM)	{name.assign("ymmsym"); reg_idx -= 16;}
+			else if (type == R_TYPE_SYMBOLIC_GP)	{name.assign("gpsym"); reg_idx -= NUM_OF_PHYSICAL_REG;}
+			else if (type == R_TYPE_SYMBOLIC_MMX)	{name.assign("mmsym"); reg_idx -= NUM_OF_PHYSICAL_REG;}
+			else if (type == R_TYPE_SYMBOLIC_XMM)	{name.assign("xmmsym"); reg_idx -= NUM_OF_PHYSICAL_REG;}
+			else if (type == R_TYPE_SYMBOLIC_YMM)	{name.assign("ymmsym"); reg_idx -= NUM_OF_PHYSICAL_REG;}
 			detail::append_num(name, reg_idx);
 			return name;
 		}
@@ -4275,13 +4325,13 @@ namespace compiler
 
 		bool operator<(const BasicBlock& rhs) const { return instr_begin < rhs.instr_begin; }
 
-		void remove_predecessor(BasicBlock *block) {
+		void RemovePredecessor(BasicBlock *block) {
 			std::vector<BasicBlock *>::iterator it = std::find(predecessor.begin(), predecessor.end(), block);
 			if (it != predecessor.end())
 				predecessor.erase(it);
 		}
 
-		bool replace_predecessor(BasicBlock *old_pred, BasicBlock *new_pred) {
+		bool ReplacePredecessor(BasicBlock *old_pred, BasicBlock *new_pred) {
 			std::vector<BasicBlock *>::iterator it = std::find(predecessor.begin(), predecessor.end(), old_pred);
 			if (it != predecessor.end()) {
 				*it = new_pred;
@@ -4290,19 +4340,16 @@ namespace compiler
 			return false;
 		}
 
-		bool is_dominated(BasicBlock *block) const {
+		/// Check if the specified block is dominator of this block
+		bool IsDominated(BasicBlock *block) const {
 			if (block == this) return true;
-			return immediate_dominator ? immediate_dominator->is_dominated(block) : false;
+			return immediate_dominator ? immediate_dominator->IsDominated(block) : false;
 		}
 
 		/// Get estimated frequency of basic block
-		int get_frequency() const {
-			// 1, 128, 16384, 65536, 262144, 1048576
-			int freq = 1;
-			for (size_t n = 0; n < loop_depth && n < 6; ++n) {
-				freq *= n < 2 ? 128 : 4;
-			}
-			return freq;
+		int GetFrequency() const {
+			const static int freq[] = {1, 100, 10000, 40000, 160000, 640000};
+			return freq[loop_depth < sizeof(freq) / sizeof(int) ? loop_depth : sizeof(freq) / sizeof(int) - 1];
 		}
 	};
 
@@ -4441,7 +4488,7 @@ namespace compiler
 				BasicBlock *block = depth_first_blocks_[i];
 				for (size_t j = 0; j < 2; ++j) {
 					if (block->successor[j] && block->depth >= block->successor[j]->depth) {		// retreating edge
-						if (block->is_dominated(block->successor[j])) {
+						if (block->IsDominated(block->successor[j])) {
 							backedges.push_back(std::make_pair(block->depth, block->successor[j]->depth));
 						}
 					}
@@ -4504,8 +4551,8 @@ namespace compiler
 			target_block->instr_end = instr_idx;
 
 			// replace predecessor of successors
-			if (new_block->successor[0]) new_block->successor[0]->replace_predecessor(&*target_block, &*new_block);
-			if (new_block->successor[1]) new_block->successor[1]->replace_predecessor(&*target_block, &*new_block);
+			if (new_block->successor[0]) new_block->successor[0]->ReplacePredecessor(&*target_block, &*new_block);
+			if (new_block->successor[1]) new_block->successor[1]->ReplacePredecessor(&*target_block, &*new_block);
 
 			return new_block;
 		}
@@ -4538,13 +4585,13 @@ namespace compiler
 					for (size_t i = 0; i < it->lifetime[reg_type].live_in.size_bit(); ++i) {
 						if (it->lifetime[reg_type].live_in.get_bit(i)) {
 							live_in.append(" ");
-							live_in.append(Lifetime::GetRegName(static_cast<RegType>(reg_type + (i < 16 ? R_TYPE_GP : R_TYPE_SYMBOLIC_GP)), i));
+							live_in.append(Lifetime::GetRegName(static_cast<RegType>(reg_type + (i < NUM_OF_PHYSICAL_REG ? R_TYPE_GP : R_TYPE_SYMBOLIC_GP)), i));
 						}
 					}
 					for (size_t i = 0; i < it->lifetime[reg_type].live_out.size_bit(); ++i) {
 						if (it->lifetime[reg_type].live_out.get_bit(i)) {
 							live_out.append(" ");
-							live_out.append(Lifetime::GetRegName(static_cast<RegType>(reg_type + (i < 16 ? R_TYPE_GP : R_TYPE_SYMBOLIC_GP)), i));
+							live_out.append(Lifetime::GetRegName(static_cast<RegType>(reg_type + (i < NUM_OF_PHYSICAL_REG ? R_TYPE_GP : R_TYPE_SYMBOLIC_GP)), i));
 						}
 					}
 				}
@@ -4583,7 +4630,7 @@ namespace compiler
 					// set successors of current block
 					if (instr_id == I_RET || instr_id == I_IRET) {
 						if (cur_block->successor[0])
-							cur_block->successor[0]->remove_predecessor(&*cur_block);
+							cur_block->successor[0]->RemovePredecessor(&*cur_block);
 						cur_block->successor[0] = &*get_exit_block();
 						get_exit_block()->predecessor.push_back(&*cur_block);
 					}
@@ -4598,14 +4645,14 @@ namespace compiler
 
 						if (instr_id == I_JMP) {
 							if (cur_block->successor[0])
-								cur_block->successor[0]->remove_predecessor(&*cur_block);
+								cur_block->successor[0]->RemovePredecessor(&*cur_block);
 							cur_block->successor[0] = &*jump_target;
 							jump_target->predecessor.push_back(&*cur_block);
 						}
 						else {
 							ASSERT(instr_id == I_JCC || instr_id == I_LOOP);
 							if (cur_block->successor[1])
-								cur_block->successor[1]->remove_predecessor(&*cur_block);
+								cur_block->successor[1]->RemovePredecessor(&*cur_block);
 							cur_block->successor[1] = &*jump_target;
 							jump_target->predecessor.push_back(&*cur_block);
 						}
@@ -4799,23 +4846,168 @@ namespace compiler
 		std::vector<int> total_spill_cost;
 		for (ControlFlowGraph::BlockSet::iterator block = cfg.begin(); block != cfg.end(); ++block) {
 			block->lifetime[reg_type].BuildIntervals();
-			block->lifetime[reg_type].GetSpillCost(block->get_frequency(), total_spill_cost);
+			block->lifetime[reg_type].GetSpillCost(block->GetFrequency(), total_spill_cost);
 		}
 
-		// Spill identification & Register assignment
 		const Lifetime::Interval *last_interval = NULL;
 		size_t last_loop_depth = 0;
 		for (ControlFlowGraph::BlockList::iterator block = cfg.dfs_begin(); block != cfg.dfs_end(); ++block) {
 			Lifetime& lifetime = (*block)->lifetime[reg_type];
 			const size_t loop_depth = (*block)->loop_depth;
-			lifetime.SpillIdentification(available_reg_count, total_spill_cost, (*block)->get_frequency(), last_loop_depth == loop_depth ? last_interval : NULL);
+
+			// Spill identification
+			lifetime.SpillIdentification(available_reg_count, total_spill_cost, (*block)->GetFrequency(), last_loop_depth == loop_depth ? last_interval : NULL);
+
+			// Register assignment
 			lifetime.AssignRegister(available_reg, last_interval);
+
 			lifetime.DumpIntervals((*block)->depth, true);
 			if (!lifetime.intervals.empty()) {
 				last_interval = &lifetime.intervals.back();
 				last_loop_depth = loop_depth;
 			}
 		}
+	}
+
+	/// Strongly connected components finder
+	/**
+	 * Tarjan's algorithm
+	 */
+	class SCCFinder {
+	private:
+		struct Node {
+			int index;
+			int lowlink;
+			Node() : index(-1) {}
+		};
+		Node nodes_[NUM_OF_PHYSICAL_REG];
+		int *successors_;
+		int index;
+		FixedStack<int, NUM_OF_PHYSICAL_REG> scc_;
+
+		/// Is v in scc_?
+		bool IsInsideSCC(int v) const
+		{
+			for (size_t i = 0; i < scc_.size(); ++i) {
+				if (scc_[i] == v) {return true;}
+			}
+			return false;
+		}
+
+		template<class Fn> void Find(int v, Fn &fn)
+		{
+			nodes_[v].index = index;
+			nodes_[v].lowlink = index;
+			++index;
+			scc_.push_back(v);
+			const int w = successors_[v];
+			if (nodes_[w].index == -1) {
+				// successor w has not been visited yet
+				Find(w, fn);
+				if (nodes_[w].lowlink < nodes_[v].lowlink) {
+					nodes_[v].lowlink = nodes_[w].lowlink;
+				}
+			} else if (IsInsideSCC(w)) {
+				// successor w is in scc_
+				if (nodes_[w].index < nodes_[v].lowlink) {
+					nodes_[v].lowlink = nodes_[w].index;
+				}
+			}
+			if (nodes_[v].lowlink == nodes_[v].index && !scc_.empty()) {
+				// v is the root of scc_.
+				fn(&scc_[0], scc_.size());
+				scc_.clear();
+			}
+		}
+
+	public:
+		SCCFinder(int *successors) : successors_(successors), index(0) {}
+
+		template<class Fn> void operator()(Fn &fn)
+		{
+			for (size_t v = 0; v < NUM_OF_PHYSICAL_REG; ++v) {
+				if (successors_[v] != -1 && nodes_[v].index != -1) {
+					Find(v, fn);
+				}
+			}
+		}
+	};
+
+	/// Generate inter-interval instructions
+	/**
+	 * - Move register
+	 * - Load from stack slot
+	 * - Store to stack slot
+	 */
+	template<class InstrGen>
+	inline void GenerateInterIntervalInstr(const Lifetime::Interval *first_interval, const Lifetime::Interval *second_interval, InstrGen& instr_generator)
+	{
+		struct Operations {
+			int move[NUM_OF_PHYSICAL_REG];
+			int load[NUM_OF_PHYSICAL_REG];
+			int store[NUM_OF_PHYSICAL_REG];
+			std::pair<const Lifetime::Interval *, const Lifetime::Interval *> interval;
+
+			Operations(const Lifetime::Interval *first, const Lifetime::Interval *second) : interval(first, second) {
+				for (size_t i = 0; i < NUM_OF_PHYSICAL_REG; ++i) {move[i] = load[i] = store[i] = -1;}
+			}
+
+			void operator()(uint32 var) {
+				if (interval.second->liveness.get_bit(var)) {
+					const bool first_spill = interval.first->spill.get_bit(var);
+					const bool second_spill = interval.second->spill.get_bit(var);
+					if (!first_spill) {
+						const int first_reg = interval.first->assignment_table[var];
+						if (!second_spill) {
+							// register -> register
+							move[first_reg] = interval.second->assignment_table[var];
+						} else {
+							// register -> stack
+							store[first_reg] = var;
+						}
+					} else {
+						if (!second_spill) {
+							// stack -> register
+							load[interval.second->assignment_table[var]] = var;
+						} else {
+							// stack -> stack
+							// do nothing
+						}
+					}
+				}
+			}
+		};
+
+		Operations ops(first_interval, second_interval);
+		first_interval->liveness.query_bit_indexes(ops);
+
+		// Store instructions
+		for (size_t r = 0; r < NUM_OF_PHYSICAL_REG; ++r) {
+			if (ops.store[r] != -1) {
+				instr_generator.Store(ops.store[r], r);
+			}
+		}
+
+		// Move instructions
+		struct MoveGenerator {
+			InstrGen *instr_generator;
+			int *moves;
+			void operator()(const int *scc, size_t count) {
+				if (count > 1) {
+					for (size_t i = 0; i < count - 1; ++i) {
+						const int r = scc[i];
+						instr_generator->Swap(moves[r], r);
+					}
+				} else {
+					const int r = scc[0];
+					instr_generator->Move(moves[r], r);
+				}
+			}
+		};
+		SCCFinder scc_finder(ops.move);
+
+
+		// Load instructions
 	}
 
 	inline bool RegisterAllocation(Frontend& f)
@@ -4864,16 +5056,16 @@ namespace compiler
 					if (opd.IsReg()) {
 						if (opd.reg_.IsSymbolic()) {
 							opd.reg_.type = static_cast<RegType>(opd.reg_.type - R_TYPE_SYMBOLIC_GP);
-							opd.reg_.id = it->lifetime[opd.reg_.type].intervals[interval_index[opd.reg_.type]].assignment_table[opd.reg_.id + 16];
+							opd.reg_.id = it->lifetime[opd.reg_.type].intervals[interval_index[opd.reg_.type]].assignment_table[opd.reg_.id + NUM_OF_PHYSICAL_REG];
 						}
 					} else if (opd.IsMem()) {
 						if (opd.base_.IsSymbolic()) {
 							opd.base_.type = R_TYPE_GP;
-							opd.base_.id = it->lifetime[R_TYPE_GP].intervals[interval_index[R_TYPE_GP]].assignment_table[opd.base_.id + 16];
+							opd.base_.id = it->lifetime[R_TYPE_GP].intervals[interval_index[R_TYPE_GP]].assignment_table[opd.base_.id + NUM_OF_PHYSICAL_REG];
 						}
 						if (opd.index_.IsSymbolic()) {
 							opd.index_.type = R_TYPE_GP;
-							opd.index_.id = it->lifetime[R_TYPE_GP].intervals[interval_index[R_TYPE_GP]].assignment_table[opd.index_.id + 16];
+							opd.index_.id = it->lifetime[R_TYPE_GP].intervals[interval_index[R_TYPE_GP]].assignment_table[opd.index_.id + NUM_OF_PHYSICAL_REG];
 						}
 					}
 				}
