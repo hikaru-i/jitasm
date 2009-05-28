@@ -2750,8 +2750,8 @@ struct Frontend
 	void movq(const MmxReg& dst, const MmxReg& src)	{AppendInstr(I_MOVQ, 0x0F7F, 0, R(src), W(dst));}
 	void movq(const Mem64& dst, const MmxReg& src)	{AppendInstr(I_MOVQ, 0x0F7F, 0, R(src), W(dst));}
 #ifdef JITASM64
-	void movq(const MmxReg& dst, const Reg64& src)	{movd(W(dst), R(src));}
-	void movq(const Reg64& dst, const MmxReg& src)	{movd(W(dst), R(src));}
+	void movq(const MmxReg& dst, const Reg64& src)	{movd(dst, src);}
+	void movq(const Reg64& dst, const MmxReg& src)	{movd(dst, src);}
 #endif
 	void packsswb(const MmxReg& dst, const MmxReg& src)	{AppendInstr(I_PACKSSWB, 0x0F63, 0, RW(dst), R(src));}
 	void packsswb(const MmxReg& dst, const Mem64& src)	{AppendInstr(I_PACKSSWB, 0x0F63, 0, RW(dst), R(src));}
@@ -4273,9 +4273,9 @@ namespace compiler
 					Interval *interval;
 					const Interval *prior_interval;
 					LessAssignOrder(Interval *cur, const Interval *prior) : interval(cur), prior_interval(prior) {}
-					bool has_constraints(uint32 v) const {return v < interval->reg_assignables.size() ? interval->reg_assignables[v] != 0xFFFFFFFF : false;}
-					uint32 num_of_assignable(uint32 v) const {return v < interval->reg_assignables.size() ? detail::Count1Bits(interval->reg_assignables[v]) : 32;}
-					bool operator()(uint32 lhs, uint32 rhs) const {
+					bool has_constraints(size_t v) const {return v < interval->reg_assignables.size() ? interval->reg_assignables[v] != 0xFFFFFFFF : false;}
+					uint32 num_of_assignable(size_t v) const {return v < interval->reg_assignables.size() ? detail::Count1Bits(interval->reg_assignables[v]) : 32;}
+					bool operator()(size_t lhs, size_t rhs) const {
 						// is there any register constraints or not
 						const bool lhs_has_constraints = has_constraints(lhs);
 						const bool rhs_has_constraints = has_constraints(rhs);
@@ -4333,14 +4333,14 @@ namespace compiler
 						// Physical register
 						ASSERT((reg_assignable & (1 << var)) != 0);		// This physical register violates the register constraint!
 						if (cur_avail & reg_assignable & (1 << var)) {
-							assigned_reg = var;
+							assigned_reg = static_cast<int>(var);
 						} else if (!cur_interval->use.get_bit(var)) {
 							// Try to assign another physical register if it is not used in this interval. But assign later.
 							live_vars.push_back(var);
 						} else {
 							// This may be false assignment but force to assign.
 							ASSERT(0);
-							assigned_reg = var;
+							assigned_reg = static_cast<int>(var);
 						}
 					} else {
 						// Symbolic register or retried physical register
@@ -4366,7 +4366,7 @@ namespace compiler
 			}
 		}
 
-		void DumpIntervals(unsigned int block_id, bool dump_assigned_reg) const
+		void DumpIntervals(size_t block_id, bool dump_assigned_reg) const
 		{
 			JITASM_TRACE("---- Block%d ----\n", block_id);
 			for (size_t i = 0; i < intervals.size(); ++i) {
@@ -5160,7 +5160,7 @@ namespace compiler
 
 		template<class Fn> void operator()(Fn fn)
 		{
-			for (size_t v = 0; v < NUM_OF_PHYSICAL_REG; ++v) {
+			for (int v = 0; v < NUM_OF_PHYSICAL_REG; ++v) {
 				if (successors_[v] != -1 && nodes_[v].index == -1) {
 					Find(v, fn);
 				}
@@ -5189,7 +5189,7 @@ namespace compiler
 				for (size_t i = 0; i < NUM_OF_PHYSICAL_REG; ++i) {move[i] = load[i] = store[i] = -1;}
 			}
 
-			void operator()(uint32 var) {
+			void operator()(size_t var) {
 				if (interval.second->liveness.get_bit(var)) {
 					const bool first_spill = interval.first->spill.get_bit(var);
 					const bool second_spill = interval.second->spill.get_bit(var);
@@ -5200,12 +5200,12 @@ namespace compiler
 							move[first_reg] = interval.second->assignment_table[var];
 						} else {
 							// register -> stack
-							store[first_reg] = var;
+							store[first_reg] = static_cast<int>(var);
 						}
 					} else {
 						if (!second_spill) {
 							// stack -> register
-							load[interval.second->assignment_table[var]] = var;
+							load[interval.second->assignment_table[var]] = static_cast<int>(var);
 						} else {
 							// stack -> stack
 							// do nothing
