@@ -49,6 +49,12 @@
 #define ASSERT assert
 #endif
 
+#if 1
+#define JITASM_TRACE	jitasm::detail::Trace
+#else
+#define JITASM_TRACE	__noop
+#endif
+
 #if defined(_WIN64) && (defined(_M_AMD64) || defined(_M_X64))
 #define JITASM64
 #endif
@@ -338,6 +344,9 @@ struct Reg64 : Opd64 {
 	Reg64() : Opd64(RegID::CreateSymbolicRegID(R_TYPE_SYMBOLIC_GP)) {}
 	explicit Reg64(PhysicalRegID id) : Opd64(RegID::CreatePhysicalRegID(R_TYPE_GP, id)) {}
 };
+typedef Reg64 RegZ;
+#else
+typedef Reg32 RegZ;
 #endif
 /// FPU register
 struct FpuReg : Opd80 {
@@ -522,6 +531,16 @@ inline Reg64ExprSIB operator+(const Reg64ExprSI& lhs, const Reg64Expr& rhs) {ret
 inline Reg64ExprSIB operator+(const Reg64ExprSIB& lhs, sint64 rhs) {return Reg64ExprSIB(lhs.base_, lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
 inline Reg64ExprSIB operator+(sint64 lhs, const Reg64ExprSIB& rhs) {return rhs + lhs;}
 inline Reg64ExprSIB operator-(const Reg64ExprSIB& lhs, sint64 rhs) {return lhs + -rhs;}
+
+typedef Reg64Expr		RegZExpr;
+typedef Reg64ExprBI		RegZExprBI;
+typedef Reg64ExprSI		RegZExprSI;
+typedef Reg64ExprSIB	RegZExprSIB;
+#else
+typedef Reg32Expr		RegZExpr;
+typedef Reg32ExprBI		RegZExprBI;
+typedef Reg32ExprSI		RegZExprSI;
+typedef Reg32ExprSIB	RegZExprSIB;
 #endif
 
 template<typename OpdN>
@@ -666,9 +685,9 @@ struct Instr
 {
 	static const size_t MAX_OPERAND_COUNT = 4;
 
-	InstrID	id_;
-	uint32  opcode_;					///< Opcode
-	uint32  encoding_flag_;				///< EncodingFlags
+	InstrID	id_;							///< Instruction ID
+	uint32  opcode_;						///< Opcode
+	uint32  encoding_flag_;					///< EncodingFlags
 	detail::Opd	opd_[MAX_OPERAND_COUNT];	///< Operands
 
 	Instr(InstrID id, uint32 opcode, uint32 encoding_flag, const detail::Opd& opd1 = detail::Opd(), const detail::Opd& opd2 = detail::Opd(), const detail::Opd& opd3 = detail::Opd(), const detail::Opd& opd4 = detail::Opd())
@@ -1042,6 +1061,7 @@ namespace detail
 		return x & 0x0000003F;
 	}
 
+	/// The bit position of the first bit 1.
 	inline uint32 bit_scan_forward(uint32 x)
 	{
 		ASSERT(x != 0);
@@ -1051,26 +1071,54 @@ namespace detail
 		return index;
 	}
 
+	/// Prior iterator
 	template<class It> It prior(const It &it) {
 		It i = it;
 		return --i;
 	}
 
+	/// Next iterator
 	template<class It> It next(const It &it) {
 		It i = it;
 		return ++i;
 	}
 
-	template<class It> bool empty(const std::pair<It, It>& range) {
-		return range.first == range.second;
-	}
+	/// Iterator range
+	template<class T, class It = typename T::iterator> struct Range : std::pair<It, It> {
+		typedef It Iterator;
+		Range() : std::pair<It, It>() {}
+		Range(const It& f, const It& s) : std::pair<It, It>(f, s) {}
+		Range(T& container) : std::pair<It, It>(container.begin(), container.end()) {}
+		bool empty() const {return first == second;}
+		size_t size() const {return std::distance(first, second);}
+	};
 
-	inline void append_num(std::string& str, size_t num) {
+	/// Const iterator range
+	template<class T> struct ConstRange : Range<T, typename T::const_iterator> {
+		ConstRange() : Range<T, Iterator>() {}
+		ConstRange(const Iterator& f, const Iterator& s) : Range<T, Iterator>(f, s) {}
+		ConstRange(const T& container) : Range<T, Iterator>(container.begin(), container.end()) {}
+	};
+
+	inline void append_num(std::string& str, size_t num)
+	{
 		if (num >= 10)
 			append_num(str, num / 10);
 		str.append(1, '0' + num % 10);
 	}
 
+	/// Debug trace
+	inline void Trace(const char *format, ...)
+	{
+		char szBuf[256];
+		va_list args;
+		va_start(args, format);
+		_vsnprintf_s(szBuf, sizeof(szBuf) / sizeof(char), format, args);
+		va_end(args);
+		::OutputDebugStringA(szBuf);
+	}
+
+	/// Executable code buffer
 	class CodeBuffer
 	{
 		void*	pbuff_;
@@ -1302,6 +1350,7 @@ struct Frontend
 	size_t GetJumpTo(const Instr& instr) const
 	{
 		size_t label_id = (size_t) instr.GetOpd(0).GetImm();
+		ASSERT(labels_[label_id].instr_number != (size_t)-1);	// invalid label
 		return labels_[label_id].instr_number;
 	}
 
@@ -1437,6 +1486,13 @@ struct Frontend
 		AppendInstr(I_JCC, jcc, E_SPECIAL, Imm64(label_id));
 	}
 
+	/// Change label id of jump instruction
+	static void ChangeLabelID(Instr& instr, size_t label_id)
+	{
+		ASSERT(IsJump(instr.id_) && instr.GetOpd(0).IsImm());
+		instr.GetOpd(0).imm_ = label_id;
+	}
+
 	size_t NewLabelID(const std::string& label_name)
 	{
 		labels_.push_back(Label(label_name));
@@ -1461,6 +1517,7 @@ struct Frontend
 	// Label
 	void L(const std::string& label_name)
 	{
+		ASSERT(!label_name.empty());
 		L(GetLabelID(label_name));
 	}
 
@@ -2907,9 +2964,9 @@ struct Frontend
 	void minps(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_MINPS,	0x0F5D, 0, dst, src);}
 	void minss(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MINSS,	0x0F5D, E_MANDATORY_PREFIX_F3, dst, src);}
 	void minss(const XmmReg& dst, const Mem32& src)		{AppendInstr(I_MINSS,	0x0F5D, E_MANDATORY_PREFIX_F3, dst, src);}
-	void movaps(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MOVAPS,	0x0F28, 0, dst, src);}
-	void movaps(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_MOVAPS,	0x0F28, 0, dst, src);}
-	void movaps(const Mem128& dst, const XmmReg& src)	{AppendInstr(I_MOVAPS,	0x0F29, 0, src, dst);}
+	void movaps(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MOVAPS,	0x0F28, 0, W(dst), R(src));}
+	void movaps(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_MOVAPS,	0x0F28, 0, W(dst), R(src));}
+	void movaps(const Mem128& dst, const XmmReg& src)	{AppendInstr(I_MOVAPS,	0x0F29, 0, R(src), W(dst));}
 	void movhlps(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MOVHLPS,	0x0F12, 0, dst, src);}
 	void movhps(const XmmReg& dst, const Mem64& src)	{AppendInstr(I_MOVHPS,	0x0F16, 0, dst, src);}
 	void movhps(const Mem64& dst, const XmmReg& src)	{AppendInstr(I_MOVHPS,	0x0F17, 0, src, dst);}
@@ -2920,7 +2977,7 @@ struct Frontend
 #ifdef JITASM64
 	void movmskps(const Reg64& dst, const XmmReg& src)	{AppendInstr(I_MOVMSKPS, 0x0F50, E_REXW_PREFIX, dst, src);}
 #endif
-	void movntps(const Mem128& dst, const XmmReg& src)	{AppendInstr(I_MOVNTPS,	0x0F2B, 0, src, dst);}
+	void movntps(const Mem128& dst, const XmmReg& src)	{AppendInstr(I_MOVNTPS,	0x0F2B, 0, R(src), W(dst));}
 	void movntq(const Mem64& dst, const MmxReg& src)	{AppendInstr(I_MOVNTQ,	0x0FE7, 0, src, dst);}
 	void movss(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MOVSS,	0x0F10, E_MANDATORY_PREFIX_F3, dst, src);}
 	void movss(const XmmReg& dst, const Mem32& src)		{AppendInstr(I_MOVSS,	0x0F10, E_MANDATORY_PREFIX_F3, dst, src);}
@@ -3689,6 +3746,18 @@ struct Frontend
 	void vcvttss2si(const Reg64& dst, const Mem32& src)		{AppendInstr(I_CVTSS2SI, 0x2C, E_VEX_128 | E_VEX_F3_0F | E_VEX_W1, dst, src);}
 #endif
 
+	void vmovaps(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_MOVAPS, 0x28, E_VEX_128 | E_VEX_0F, W(dst), R(src));}
+	void vmovaps(const XmmReg& dst, const Mem128& src)		{AppendInstr(I_MOVAPS, 0x28, E_VEX_128 | E_VEX_0F, W(dst), R(src));}
+	void vmovaps(const Mem128& dst, const XmmReg& src)		{AppendInstr(I_MOVAPS, 0x29, E_VEX_128 | E_VEX_0F, R(src), W(dst));}
+	void vmovaps(const YmmReg& dst, const YmmReg& src)		{AppendInstr(I_MOVAPS, 0x28, E_VEX_256 | E_VEX_0F, W(dst), R(src));}
+	void vmovaps(const YmmReg& dst, const Mem256& src)		{AppendInstr(I_MOVAPS, 0x28, E_VEX_256 | E_VEX_0F, W(dst), R(src));}
+	void vmovaps(const Mem256& dst, const YmmReg& src)		{AppendInstr(I_MOVAPS, 0x29, E_VEX_256 | E_VEX_0F, R(src), W(dst));}
+
+	void vxorps(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_XORPS, 0x57, E_VEX_128 | E_VEX_0F, W(dst), R(src2), R(src1));}
+	void vxorps(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_XORPS, 0x57, E_VEX_128 | E_VEX_0F, W(dst), R(src2), R(src1));}
+	void vxorps(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2)	{AppendInstr(I_XORPS, 0x57, E_VEX_256 | E_VEX_0F, W(dst), R(src2), R(src1));}
+	void vxorps(const YmmReg& dst, const YmmReg& src1, const Mem256& src2)	{AppendInstr(I_XORPS, 0x57, E_VEX_256 | E_VEX_0F, W(dst), R(src2), R(src1));}
+
 	struct ControlState
 	{
 		size_t label1;
@@ -3865,14 +3934,14 @@ namespace compiler
 	};
 
 	template<class T, size_t N>
-	class FixedStack
+	class FixedArray
 	{
 	private:
 		T data_[N];
 		size_t size_;
 
 	public:
-		FixedStack() : size_(0) {}
+		FixedArray() : size_(0) {}
 		bool empty() const {return size_ == 0;}
 		size_t size() const {return size_;}
 		void clear() {size_ = 0;}
@@ -3880,12 +3949,29 @@ namespace compiler
 		void push_back(const T& v) {data_[size_++] = v;}
 		void pop_back() {--size_;}
 
-		const T& back() const {return data_[size_ - 1];}
-		T& back() {return data_[size_ - 1];}
-
 		const T& operator[](size_t i) const {return data_[i];}
 		T& operator[](size_t i) {return data_[i];}
 	};
+
+	inline std::string GetRegName(RegType type, size_t reg_idx)
+	{
+#ifdef JITASM64
+		const static std::string s_gp_reg_name[] = {"rax", "rcx", "rdx", "rbx", "rsp", "rbp", "rsi", "rdi", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"};
+#else
+		const static std::string s_gp_reg_name[] = {"eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi"};
+#endif
+		std::string name;
+		if (type == R_TYPE_GP)					{return s_gp_reg_name[reg_idx];}
+		else if (type == R_TYPE_MMX)			{name.assign("mm");}
+		else if (type == R_TYPE_XMM)			{name.assign("xmm");}
+		else if (type == R_TYPE_YMM)			{name.assign("ymm");}
+		else if (type == R_TYPE_SYMBOLIC_GP)	{name.assign("gpsym"); reg_idx -= NUM_OF_PHYSICAL_REG;}
+		else if (type == R_TYPE_SYMBOLIC_MMX)	{name.assign("mmsym"); reg_idx -= NUM_OF_PHYSICAL_REG;}
+		else if (type == R_TYPE_SYMBOLIC_XMM)	{name.assign("xmmsym"); reg_idx -= NUM_OF_PHYSICAL_REG;}
+		else if (type == R_TYPE_SYMBOLIC_YMM)	{name.assign("ymmsym"); reg_idx -= NUM_OF_PHYSICAL_REG;}
+		detail::append_num(name, reg_idx);
+		return name;
+	}
 
 	struct RegUsePoint
 	{
@@ -3907,8 +3993,8 @@ namespace compiler
 
 	struct Lifetime
 	{
-		typedef std::pair<std::vector<RegUsePoint>::iterator, std::vector<RegUsePoint>::iterator>				RegUsePointRange;
-		typedef std::pair<std::vector<RegUsePoint>::const_iterator, std::vector<RegUsePoint>::const_iterator>	ConstRegUsePointRange;
+		typedef detail::Range< std::vector<RegUsePoint> >		RegUsePointRange;
+		typedef detail::ConstRange< std::vector<RegUsePoint> >	ConstRegUsePointRange;
 
 		struct Interval
 		{
@@ -3922,15 +4008,39 @@ namespace compiler
 
 			Interval(size_t instr_idx, const std::vector<uint32>& assignables) : instr_idx_offset(instr_idx), live_count(0), reg_assignables(assignables) {}
 			Interval(size_t instr_idx, const BitVector& l, const std::vector<uint32>& assignables) : instr_idx_offset(instr_idx), liveness(l), live_count(l.count_bit()), reg_assignables(assignables) {}
-			int GetAssignedReg(int var) const {return 0 <= var && var < static_cast<int>(assignment_table.size()) ? assignment_table[var] : -1;}
+
 			void UpdateUse(size_t var, RegUsePointRange& range, const Interval *next_interval)
 			{
 				// step range
-				while (!detail::empty(range) && range.first->instr_idx < instr_idx_offset) {++range.first;}
+				while (!range.empty() && range.first->instr_idx < instr_idx_offset) {++range.first;}
 
 				// check if variables used in this interval
-				const bool used = !detail::empty(range) && (!next_interval || range.first->instr_idx < next_interval->instr_idx_offset);
+				const bool used = !range.empty() && (!next_interval || range.first->instr_idx < next_interval->instr_idx_offset);
 				use.set_bit(var, used);
+			}
+
+			void Dump(bool dump_assigned_reg) const
+			{
+				std::vector<char> liveness_str;
+				for (size_t v = 0; v < liveness.size_bit(); ++v) {
+					if (liveness.get_bit(v)) {
+						const bool used = use.get_bit(v);
+						char c;
+						if (spill.get_bit(v))	{
+							c = used ? 'S' : 's';
+						} else if (dump_assigned_reg) {
+							int reg = assignment_table[v];
+							c = static_cast<char>(reg < 0xA ? '0' + reg : 'A' + reg);
+						} else {
+							c = used ? 'R' : 'r';
+						}
+						liveness_str.push_back(c);
+					} else {
+						liveness_str.push_back('.');
+					}
+				}
+				liveness_str.push_back('\0');
+				JITASM_TRACE("[%03d] %s\n", instr_idx_offset, &liveness_str[0]);
 			}
 		};
 
@@ -3988,7 +4098,7 @@ namespace compiler
 			std::vector<RegUsePointRange> use_points_ranges;
 			use_points_ranges.reserve(use_points.size());
 			for (size_t i = 0; i < use_points.size(); ++i) {
-				use_points_ranges.push_back(std::make_pair(use_points[i].begin(), use_points[i].end()));
+				use_points_ranges.push_back(RegUsePointRange(use_points[i]));
 			}
 
 			// build interval
@@ -4004,7 +4114,7 @@ namespace compiler
 				reg_assignables.clear();
 				size_t min_instr_idx = (size_t)-1;
 				for (size_t i = 0; i < use_points_ranges.size(); ++i) {
-					if (detail::empty(use_points_ranges[i])) {
+					if (use_points_ranges[i].empty()) {
 						liveness.set_bit(i, live_out.get_bit(i));
 						++end_count;
 					} else {
@@ -4013,7 +4123,7 @@ namespace compiler
 						}
 
 						if (use_points_ranges[i].first->instr_idx == instr_idx) {
-							while (!detail::empty(use_points_ranges[i]) && use_points_ranges[i].first->instr_idx == instr_idx) {
+							while (!use_points_ranges[i].empty() && use_points_ranges[i].first->instr_idx == instr_idx) {
 								if (use_points_ranges[i].first->reg_assignable != 0xFFFFFFFF) {
 									reg_assignables.resize(num_of_variables, 0xFFFFFFFF);
 									reg_assignables[i] &= use_points_ranges[i].first->reg_assignable;
@@ -4044,7 +4154,7 @@ namespace compiler
 
 			// check use
 			for (size_t v = 0; v < use_points.size(); ++v) {
-				RegUsePointRange range(use_points[v].begin(), use_points[v].end());
+				RegUsePointRange range(use_points[v]);
 				for (size_t i = 0; i < intervals.size(); ++i) {
 					const Interval *next_interval  = i + 1 < intervals.size() ? &intervals[i + 1] : NULL;
 					intervals[i].UpdateUse(v, range, next_interval);
@@ -4060,7 +4170,7 @@ namespace compiler
 
 			// update use
 			for (size_t v = 0; v < use_points.size(); ++v) {
-				RegUsePointRange range(use_points[v].begin(), use_points[v].end());
+				RegUsePointRange range(use_points[v]);
 				for (size_t i = interval_idx; i < interval_idx + 2; ++i) {
 					const Interval *next_interval  = i + 1 < intervals.size() ? &intervals[i + 1] : NULL;
 					intervals[i].UpdateUse(v, range, next_interval);
@@ -4068,13 +4178,14 @@ namespace compiler
 			}
 		}
 
-		void SpillIdentification(uint32 available_reg_count, const std::vector<int>& total_spill_cost, int freq, const Interval *last_interval)
+		/// Spill identification
+		void SpillIdentification(uint32 available_reg_count, const std::vector<int>& total_spill_cost, int freq, const Interval *last_interval, BitVector& spills)
 		{
 			// initialize use_points ranges
 			std::vector<RegUsePointRange> interval_use_points;
 			interval_use_points.reserve(use_points.size());
 			for (size_t i = 0; i < use_points.size(); ++i) {
-				interval_use_points.push_back(std::make_pair(use_points[i].begin(), use_points[i].end()));
+				interval_use_points.push_back(RegUsePointRange(use_points[i]));
 			}
 
 			std::vector<size_t> live_vars;
@@ -4092,7 +4203,7 @@ namespace compiler
 
 						// step interval_use_points
 						if (var < interval_use_points.size()) {
-							while (!detail::empty(interval_use_points[var]) && interval_use_points[var].first->instr_idx < cur_interval->instr_idx_offset) {++interval_use_points[var].first;}
+							while (!interval_use_points[var].empty() && interval_use_points[var].first->instr_idx < cur_interval->instr_idx_offset) {++interval_use_points[var].first;}
 						}
 
 						// calculate spill cost of this interval
@@ -4129,6 +4240,8 @@ namespace compiler
 							split_interval_instr = interval_use_points[var].first->instr_idx;
 						}
 					}
+
+					spills.set_union(cur_interval->spill);
 
 					if (split_interval_instr != (size_t)-1) {
 						SplitInterval(split_interval_instr, interval_idx);
@@ -4231,7 +4344,7 @@ namespace compiler
 						}
 					} else {
 						// Symbolic register or retried physical register
-						const int last_assigned = prior_interval ? prior_interval->GetAssignedReg(var) : -1;
+						const int last_assigned = prior_interval && var < prior_interval->assignment_table.size() ? prior_interval->assignment_table[var] : -1;
 						if (last_assigned != -1 && (cur_avail & reg_assignable & (1 << last_assigned))) {
 							// select last assigned register
 							assigned_reg = last_assigned;
@@ -4255,53 +4368,10 @@ namespace compiler
 
 		void DumpIntervals(unsigned int block_id, bool dump_assigned_reg) const
 		{
-			printf("---- Block%d ----\n", block_id);
-
-			std::vector<char> liveness;
+			JITASM_TRACE("---- Block%d ----\n", block_id);
 			for (size_t i = 0; i < intervals.size(); ++i) {
-				const Interval *cur_interval   = &intervals[i];
-
-				liveness.clear();
-				for (size_t v = 0; v < cur_interval->liveness.size_bit(); ++v) {
-					if (cur_interval->liveness.get_bit(v)) {
-						const bool used = cur_interval->use.get_bit(v);
-						char c;
-						if (cur_interval->spill.get_bit(v))	{
-							c = used ? 'S' : 's';
-						} else if (dump_assigned_reg) {
-							int reg = cur_interval->assignment_table[v];
-							c = static_cast<char>(reg < 0xA ? '0' + reg : 'A' + reg);
-						} else {
-							c = used ? 'R' : 'r';
-						}
-						liveness.push_back(c);
-					} else {
-						liveness.push_back('.');
-					}
-				}
-				liveness.push_back('\0');
-				printf("[%02d] %s\n", cur_interval->instr_idx_offset, &liveness[0]);
+				intervals[i].Dump(dump_assigned_reg);
 			}
-		}
-
-		static std::string GetRegName(RegType type, size_t reg_idx)
-		{
-#ifdef JITASM64
-			const static std::string s_gp_reg_name[] = {"rax", "rcx", "rdx", "rbx", "rsp", "rbp", "rsi", "rdi", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"};
-#else
-			const static std::string s_gp_reg_name[] = {"eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi"};
-#endif
-			std::string name;
-			if (type == R_TYPE_GP)					{return s_gp_reg_name[reg_idx];}
-			else if (type == R_TYPE_MMX)			{name.assign("mm");}
-			else if (type == R_TYPE_XMM)			{name.assign("xmm");}
-			else if (type == R_TYPE_YMM)			{name.assign("ymm");}
-			else if (type == R_TYPE_SYMBOLIC_GP)	{name.assign("gpsym"); reg_idx -= NUM_OF_PHYSICAL_REG;}
-			else if (type == R_TYPE_SYMBOLIC_MMX)	{name.assign("mmsym"); reg_idx -= NUM_OF_PHYSICAL_REG;}
-			else if (type == R_TYPE_SYMBOLIC_XMM)	{name.assign("xmmsym"); reg_idx -= NUM_OF_PHYSICAL_REG;}
-			else if (type == R_TYPE_SYMBOLIC_YMM)	{name.assign("ymmsym"); reg_idx -= NUM_OF_PHYSICAL_REG;}
-			detail::append_num(name, reg_idx);
-			return name;
 		}
 	};
 
@@ -4571,6 +4641,8 @@ namespace compiler
 
 		BlockSet::iterator begin() { return blocks_.begin(); }
 		BlockSet::iterator end() { return blocks_.end(); }
+		BlockSet::const_iterator begin() const { return blocks_.begin(); }
+		BlockSet::const_iterator end() const { return blocks_.end(); }
 		BlockList::iterator dfs_begin() { return depth_first_blocks_.begin(); }
 		BlockList::iterator dfs_end() { return depth_first_blocks_.end(); }
 
@@ -4585,13 +4657,13 @@ namespace compiler
 					for (size_t i = 0; i < it->lifetime[reg_type].live_in.size_bit(); ++i) {
 						if (it->lifetime[reg_type].live_in.get_bit(i)) {
 							live_in.append(" ");
-							live_in.append(Lifetime::GetRegName(static_cast<RegType>(reg_type + (i < NUM_OF_PHYSICAL_REG ? R_TYPE_GP : R_TYPE_SYMBOLIC_GP)), i));
+							live_in.append(GetRegName(static_cast<RegType>(reg_type + (i < NUM_OF_PHYSICAL_REG ? R_TYPE_GP : R_TYPE_SYMBOLIC_GP)), i));
 						}
 					}
 					for (size_t i = 0; i < it->lifetime[reg_type].live_out.size_bit(); ++i) {
 						if (it->lifetime[reg_type].live_out.get_bit(i)) {
 							live_out.append(" ");
-							live_out.append(Lifetime::GetRegName(static_cast<RegType>(reg_type + (i < NUM_OF_PHYSICAL_REG ? R_TYPE_GP : R_TYPE_SYMBOLIC_GP)), i));
+							live_out.append(GetRegName(static_cast<RegType>(reg_type + (i < NUM_OF_PHYSICAL_REG ? R_TYPE_GP : R_TYPE_SYMBOLIC_GP)), i));
 						}
 					}
 				}
@@ -4839,7 +4911,7 @@ namespace compiler
 		}
 	}
 
-	inline void LinearScanRegisterAlloc(ControlFlowGraph& cfg, int reg_type, uint32 available_reg)
+	inline void LinearScanRegisterAlloc(ControlFlowGraph& cfg, int reg_type, uint32 available_reg, BitVector& spills)
 	{
 		uint32 available_reg_count = detail::Count1Bits(available_reg);
 
@@ -4856,7 +4928,7 @@ namespace compiler
 			const size_t loop_depth = (*block)->loop_depth;
 
 			// Spill identification
-			lifetime.SpillIdentification(available_reg_count, total_spill_cost, (*block)->GetFrequency(), last_loop_depth == loop_depth ? last_interval : NULL);
+			lifetime.SpillIdentification(available_reg_count, total_spill_cost, (*block)->GetFrequency(), last_loop_depth == loop_depth ? last_interval : NULL, spills);
 
 			// Register assignment
 			lifetime.AssignRegister(available_reg, last_interval);
@@ -4868,6 +4940,165 @@ namespace compiler
 			}
 		}
 	}
+
+	/// Stack manager
+	class StackManager
+	{
+	private:
+		struct Slot : RegZExpr {
+			Slot() : RegZExpr(RegID::Invalid(), 0) {}
+		};
+		std::vector<Slot> spill_slots_[4];
+		size_t stack_size_;
+
+	public:
+		StackManager() : stack_size_(0) {}
+
+		/// Allocate stack slot for spill register
+		void AllocSpillSlots(size_t var_size, int reg_type, const std::vector<size_t>& spill_vars)
+		{
+			std::vector<Slot>& slots = spill_slots_[reg_type];
+			if (spill_vars.back() >= slots.size()) {
+				slots.resize(spill_vars.back() + 1);
+			}
+
+			for (size_t i = 0; i < spill_vars.size(); ++i) {
+				size_t var = spill_vars[i];
+				ASSERT(slots[var].reg_.id == INVALID);
+				slots[var].reg_  = RegID::CreatePhysicalRegID(R_TYPE_GP, EBP);
+				slots[var].disp_ = stack_size_;
+				stack_size_ += var_size;
+			}
+		}
+
+		/// Get stack slot for spill register
+		RegZExpr GetSpillSlot(int reg_type, int var) const
+		{
+			return spill_slots_[reg_type][var];
+		}
+	};
+
+	/// General purpose register operator
+	struct GpRegOperator
+	{
+		Frontend *f_;
+		const StackManager *stack_manager_;
+
+		GpRegOperator(Frontend *f, const StackManager *stack_manager) : f_(f), stack_manager_(stack_manager) {}
+
+		void Move(PhysicalRegID dst_reg, PhysicalRegID src_reg)
+		{
+			f_->mov(RegZ(dst_reg), RegZ(src_reg));
+		}
+
+		void Swap(PhysicalRegID reg1, PhysicalRegID reg2)
+		{
+			f_->xchg(RegZ(reg1), RegZ(reg2));
+		}
+
+		void Load(PhysicalRegID dst_reg, int var)
+		{
+			f_->mov(RegZ(dst_reg), f_->zword_ptr[stack_manager_->GetSpillSlot(R_TYPE_GP, var)]);
+		}
+
+		void Store(int var, PhysicalRegID src_reg)
+		{
+			f_->mov(f_->zword_ptr[stack_manager_->GetSpillSlot(R_TYPE_GP, var)], RegZ(src_reg));
+		}
+	};
+
+	/// MMX register operator
+	struct MmxRegOperator
+	{
+		Frontend *f_;
+		const StackManager *stack_manager_;
+
+		MmxRegOperator(Frontend *f, const StackManager *stack_manager) : f_(f), stack_manager_(stack_manager) {}
+
+		void Move(PhysicalRegID dst_reg, PhysicalRegID src_reg)
+		{
+			f_->movq(MmxReg(dst_reg), MmxReg(src_reg));
+		}
+
+		void Swap(PhysicalRegID reg1, PhysicalRegID reg2)
+		{
+			f_->pxor(MmxReg(reg1), MmxReg(reg2));
+			f_->pxor(MmxReg(reg2), MmxReg(reg1));
+			f_->pxor(MmxReg(reg1), MmxReg(reg2));
+		}
+
+		void Load(PhysicalRegID dst_reg, int var)
+		{
+			f_->movq(MmxReg(dst_reg), f_->mmword_ptr[stack_manager_->GetSpillSlot(R_TYPE_MMX, var)]);
+		}
+
+		void Store(int var, PhysicalRegID src_reg)
+		{
+			f_->movq(f_->mmword_ptr[stack_manager_->GetSpillSlot(R_TYPE_MMX, var)], MmxReg(src_reg));
+		}
+	};
+
+	/// XMM register operator
+	struct XmmRegOperator
+	{
+		Frontend *f_;
+		const StackManager *stack_manager_;
+
+		XmmRegOperator(Frontend *f, const StackManager *stack_manager) : f_(f), stack_manager_(stack_manager) {}
+
+		void Move(PhysicalRegID dst_reg, PhysicalRegID src_reg)
+		{
+			f_->movaps(XmmReg(dst_reg), XmmReg(src_reg));
+		}
+
+		void Swap(PhysicalRegID reg1, PhysicalRegID reg2)
+		{
+			f_->xorps(XmmReg(reg1), XmmReg(reg2));
+			f_->xorps(XmmReg(reg2), XmmReg(reg1));
+			f_->xorps(XmmReg(reg1), XmmReg(reg2));
+		}
+
+		void Load(PhysicalRegID dst_reg, int var)
+		{
+			f_->movaps(XmmReg(dst_reg), f_->xmmword_ptr[stack_manager_->GetSpillSlot(R_TYPE_XMM, var)]);
+		}
+
+		void Store(int var, PhysicalRegID src_reg)
+		{
+			f_->movaps(f_->xmmword_ptr[stack_manager_->GetSpillSlot(R_TYPE_XMM, var)], XmmReg(src_reg));
+		}
+	};
+
+	/// YMM register operator
+	struct YmmRegOperator
+	{
+		Frontend *f_;
+		const StackManager *stack_manager_;
+
+		YmmRegOperator(Frontend *f, const StackManager *stack_manager) : f_(f), stack_manager_(stack_manager) {}
+
+		void Move(PhysicalRegID dst_reg, PhysicalRegID src_reg)
+		{
+			f_->vmovaps(YmmReg(dst_reg), YmmReg(src_reg));
+		}
+
+		void Swap(PhysicalRegID reg1, PhysicalRegID reg2)
+		{
+			f_->vxorps(YmmReg(reg1), YmmReg(reg1), YmmReg(reg2));
+			f_->vxorps(YmmReg(reg2), YmmReg(reg1), YmmReg(reg2));
+			f_->vxorps(YmmReg(reg1), YmmReg(reg1), YmmReg(reg2));
+		}
+
+		void Load(PhysicalRegID dst_reg, int var)
+		{
+			f_->vmovaps(YmmReg(dst_reg), f_->ymmword_ptr[stack_manager_->GetSpillSlot(R_TYPE_YMM, var)]);
+		}
+
+		void Store(int var, PhysicalRegID src_reg)
+		{
+			f_->vmovaps(f_->ymmword_ptr[stack_manager_->GetSpillSlot(R_TYPE_YMM, var)], YmmReg(src_reg));
+		}
+	};
 
 	/// Strongly connected components finder
 	/**
@@ -4883,7 +5114,7 @@ namespace compiler
 		Node nodes_[NUM_OF_PHYSICAL_REG];
 		int *successors_;
 		int index;
-		FixedStack<int, NUM_OF_PHYSICAL_REG> scc_;
+		FixedArray<int, NUM_OF_PHYSICAL_REG> scc_;
 
 		/// Is v in scc_?
 		bool IsInsideSCC(int v) const
@@ -4894,39 +5125,43 @@ namespace compiler
 			return false;
 		}
 
-		template<class Fn> void Find(int v, Fn &fn)
+		template<class Fn> void Find(int v, Fn& fn)
 		{
 			nodes_[v].index = index;
 			nodes_[v].lowlink = index;
 			++index;
 			scc_.push_back(v);
 			const int w = successors_[v];
-			if (nodes_[w].index == -1) {
-				// successor w has not been visited yet
-				Find(w, fn);
-				if (nodes_[w].lowlink < nodes_[v].lowlink) {
-					nodes_[v].lowlink = nodes_[w].lowlink;
-				}
-			} else if (IsInsideSCC(w)) {
-				// successor w is in scc_
-				if (nodes_[w].index < nodes_[v].lowlink) {
-					nodes_[v].lowlink = nodes_[w].index;
+			if (w != -1) {
+				if (nodes_[w].index == -1) {
+					// successor w has not been visited yet
+					Find(w, fn);
+					if (nodes_[w].lowlink < nodes_[v].lowlink) {
+						nodes_[v].lowlink = nodes_[w].lowlink;
+					}
+				} else if (IsInsideSCC(w)) {
+					// successor w is in scc_
+					if (nodes_[w].index < nodes_[v].lowlink) {
+						nodes_[v].lowlink = nodes_[w].index;
+					}
 				}
 			}
 			if (nodes_[v].lowlink == nodes_[v].index && !scc_.empty()) {
-				// v is the root of scc_.
-				fn(&scc_[0], scc_.size());
-				scc_.clear();
+				// v is the root of scc_
+				size_t i = 0;
+				while (scc_[i] != v) {++i;}
+				fn(&scc_[i], scc_.size() - i);
+				while (i < scc_.size()) {scc_.pop_back();}
 			}
 		}
 
 	public:
 		SCCFinder(int *successors) : successors_(successors), index(0) {}
 
-		template<class Fn> void operator()(Fn &fn)
+		template<class Fn> void operator()(Fn fn)
 		{
 			for (size_t v = 0; v < NUM_OF_PHYSICAL_REG; ++v) {
-				if (successors_[v] != -1 && nodes_[v].index != -1) {
+				if (successors_[v] != -1 && nodes_[v].index == -1) {
 					Find(v, fn);
 				}
 			}
@@ -4939,9 +5174,11 @@ namespace compiler
 	 * - Load from stack slot
 	 * - Store to stack slot
 	 */
-	template<class InstrGen>
-	inline void GenerateInterIntervalInstr(const Lifetime::Interval *first_interval, const Lifetime::Interval *second_interval, InstrGen& instr_generator)
+	template<class RegOp>
+	inline void GenerateInterIntervalInstr(const Lifetime::Interval& first_interval, const Lifetime::Interval& second_interval, RegOp reg_operator)
 	{
+		first_interval.Dump(true);
+
 		struct Operations {
 			int move[NUM_OF_PHYSICAL_REG];
 			int load[NUM_OF_PHYSICAL_REG];
@@ -4978,36 +5215,237 @@ namespace compiler
 			}
 		};
 
-		Operations ops(first_interval, second_interval);
-		first_interval->liveness.query_bit_indexes(ops);
+		Operations ops(&first_interval, &second_interval);
+		first_interval.liveness.query_bit_indexes(ops);
 
 		// Store instructions
 		for (size_t r = 0; r < NUM_OF_PHYSICAL_REG; ++r) {
 			if (ops.store[r] != -1) {
-				instr_generator.Store(ops.store[r], r);
+				reg_operator.Store(ops.store[r], static_cast<PhysicalRegID>(r));
+				JITASM_TRACE("Store %d (physical reg %d)\n", ops.store[r], r);
 			}
 		}
 
 		// Move instructions
 		struct MoveGenerator {
-			InstrGen *instr_generator;
-			int *moves;
+			int *moves_;
+			RegOp *reg_operator_;
+			MoveGenerator(int *moves, RegOp *reg_operator) : moves_(moves), reg_operator_(reg_operator) {}
 			void operator()(const int *scc, size_t count) {
 				if (count > 1) {
 					for (size_t i = 0; i < count - 1; ++i) {
 						const int r = scc[i];
-						instr_generator->Swap(moves[r], r);
+						ASSERT(r != moves_[r] && moves_[r] != -1);
+						reg_operator_->Swap(static_cast<PhysicalRegID>(moves_[r]), static_cast<PhysicalRegID>(r));
+						JITASM_TRACE("Swap %d <-> %d\n", moves_[r], r);
 					}
-				} else {
+				} else if (moves_[scc[0]] != scc[0] && moves_[scc[0]] != -1) {
 					const int r = scc[0];
-					instr_generator->Move(moves[r], r);
+					reg_operator_->Move(static_cast<PhysicalRegID>(moves_[r]), static_cast<PhysicalRegID>(r));
+					JITASM_TRACE("Move %d -> %d\n", r, moves_[r]);
 				}
 			}
 		};
 		SCCFinder scc_finder(ops.move);
-
+		scc_finder(MoveGenerator(ops.move, &reg_operator));
 
 		// Load instructions
+		for (size_t r = 0; r < NUM_OF_PHYSICAL_REG; ++r) {
+			if (ops.load[r] != -1) {
+				reg_operator.Load(static_cast<PhysicalRegID>(r), ops.load[r]);
+				JITASM_TRACE("Load %d (physical reg %d)\n", ops.load[r], r);
+			}
+		}
+
+		second_interval.Dump(true);
+	}
+
+	/// Generate inter-block instructions
+	inline void GenerateInterBlockInstr(const BasicBlock *first_block, const BasicBlock *second_block, Frontend& f, const StackManager& stack_manager)
+	{
+		if (!first_block->lifetime[R_TYPE_GP].intervals.empty() && !second_block->lifetime[R_TYPE_GP].intervals.empty()) {
+			JITASM_TRACE("---- General purpose register ----\n");
+			GenerateInterIntervalInstr(first_block->lifetime[R_TYPE_GP].intervals.back(), second_block->lifetime[R_TYPE_GP].intervals.front(), GpRegOperator(&f, &stack_manager));
+		}
+		if (!first_block->lifetime[R_TYPE_MMX].intervals.empty() && !second_block->lifetime[R_TYPE_MMX].intervals.empty()) {
+			JITASM_TRACE("---- MMX register ----\n");
+			GenerateInterIntervalInstr(first_block->lifetime[R_TYPE_MMX].intervals.back(), second_block->lifetime[R_TYPE_MMX].intervals.front(), MmxRegOperator(&f, &stack_manager));
+		}
+		if (!first_block->lifetime[R_TYPE_XMM].intervals.empty() && !second_block->lifetime[R_TYPE_XMM].intervals.empty()) {
+			JITASM_TRACE("---- XMM register ----\n");
+			GenerateInterIntervalInstr(first_block->lifetime[R_TYPE_XMM].intervals.back(), second_block->lifetime[R_TYPE_XMM].intervals.front(), XmmRegOperator(&f, &stack_manager));
+		}
+		if (!first_block->lifetime[R_TYPE_YMM].intervals.empty() && !second_block->lifetime[R_TYPE_YMM].intervals.empty()) {
+			JITASM_TRACE("---- YMM register ----\n");
+			GenerateInterIntervalInstr(first_block->lifetime[R_TYPE_YMM].intervals.back(), second_block->lifetime[R_TYPE_YMM].intervals.front(), YmmRegOperator(&f, &stack_manager));
+		}
+	}
+
+	/// Rewrite instructions
+	/**
+	 * - Replace symbolic register to physical register
+	 * - Generate instructions for register move and spill
+	 */
+	inline void RewriteInstructions(Frontend& f, const ControlFlowGraph& cfg, const StackManager& stack_manager)
+	{
+		// Prepare instruction number ordered labels for adjusting label position
+		struct OrderedLabel {
+			size_t id;
+			size_t instr_idx;
+			OrderedLabel(size_t id_, size_t instr_idx_) : id(id_), instr_idx(instr_idx_) {}
+			bool operator<(const OrderedLabel& rhs) const {return instr_idx < rhs.instr_idx;}
+		};
+		std::vector<OrderedLabel> orderd_labels;	// instruction number order
+		orderd_labels.reserve(f.labels_.size());
+		for (size_t i = 0; i < f.labels_.size(); ++i) {
+			orderd_labels.push_back(OrderedLabel(i, f.labels_[i].instr_number));
+		}
+		std::sort(orderd_labels.begin(), orderd_labels.end());
+		std::vector<OrderedLabel>::iterator cur_label = orderd_labels.begin();
+
+		// Move original instruction list
+		// Now the instruction list in Frontend is empty!
+		Frontend::InstrList org_instrs;
+		org_instrs.swap(f.instrs_);
+		f.instrs_.reserve(org_instrs.size());
+
+		for (ControlFlowGraph::BlockSet::const_iterator block = cfg.begin(); block != cfg.end(); ++block) {
+			JITASM_TRACE("\n==== Block%d ====\n", block->depth);
+			if (block->depth == (size_t)-1) {
+				// Eliminate unreachable code block
+				JITASM_TRACE("Unreachable block!\n");
+
+				// Invalidate labels in this block
+				while (cur_label != orderd_labels.end() && cur_label->instr_idx < block->instr_end) {
+					f.labels_[cur_label->id].instr_number = (size_t)-1;
+					++cur_label;
+				}
+
+				continue;
+			}
+
+			// initialize interval_range
+			detail::ConstRange< std::vector<Lifetime::Interval> > interval_range[4];
+			for (size_t i = 0; i < 4; ++i) {
+				interval_range[i].first = block->lifetime[i].intervals.begin();
+				interval_range[i].second = block->lifetime[i].intervals.end();
+			}
+
+			const size_t instr_size = block->instr_end - block->instr_begin;
+			for (size_t instr_offset = 0; instr_offset < instr_size; ++instr_offset) {
+				const size_t org_instr_index = block->instr_begin + instr_offset;
+
+				// Step each intervals and insert inter-interval instructions
+				if (interval_range[R_TYPE_GP].size() > 1 && detail::next(interval_range[R_TYPE_GP].first)->instr_idx_offset == instr_offset) {
+					JITASM_TRACE("---- General purpose register ----\n");
+					const Lifetime::Interval& first_interval = *interval_range[R_TYPE_GP].first;
+					GenerateInterIntervalInstr(first_interval, *++interval_range[R_TYPE_GP].first, GpRegOperator(&f, &stack_manager));
+				}
+				if (interval_range[R_TYPE_MMX].size() > 1 && detail::next(interval_range[R_TYPE_MMX].first)->instr_idx_offset == instr_offset) {
+					JITASM_TRACE("---- MMX register ----\n");
+					const Lifetime::Interval& first_interval = *interval_range[R_TYPE_MMX].first;
+					GenerateInterIntervalInstr(first_interval, *++interval_range[R_TYPE_MMX].first, MmxRegOperator(&f, &stack_manager));
+				}
+				if (interval_range[R_TYPE_XMM].size() > 1 && detail::next(interval_range[R_TYPE_XMM].first)->instr_idx_offset == instr_offset) {
+					JITASM_TRACE("---- XMM register ----\n");
+					const Lifetime::Interval& first_interval = *interval_range[R_TYPE_XMM].first;
+					GenerateInterIntervalInstr(first_interval, *++interval_range[R_TYPE_XMM].first, XmmRegOperator(&f, &stack_manager));
+				}
+				if (interval_range[R_TYPE_YMM].size() > 1 && detail::next(interval_range[R_TYPE_YMM].first)->instr_idx_offset == instr_offset) {
+					JITASM_TRACE("---- YMM register ----\n");
+					const Lifetime::Interval& first_interval = *interval_range[R_TYPE_YMM].first;
+					GenerateInterIntervalInstr(first_interval, *++interval_range[R_TYPE_YMM].first, YmmRegOperator(&f, &stack_manager));
+				}
+
+				// copy instruction
+				const size_t cur_instr_index = f.instrs_.size();
+				f.instrs_.push_back(org_instrs[org_instr_index]);
+				Instr &instr = f.instrs_.back();
+
+				// adjust label position
+				while (cur_label != orderd_labels.end() && cur_label->instr_idx == org_instr_index) {
+					f.labels_[cur_label->id].instr_number += cur_instr_index - org_instr_index;
+					++cur_label;
+				}
+
+				// replace symbolic register to physical register
+				for (size_t i = 0; i < Instr::MAX_OPERAND_COUNT; ++i) {
+					detail::Opd& opd = instr.GetOpd(i);
+					if (opd.IsReg()) {
+						if (opd.reg_.IsSymbolic()) {
+							opd.reg_.type = static_cast<RegType>(opd.reg_.type - R_TYPE_SYMBOLIC_GP);
+							opd.reg_.id = interval_range[opd.reg_.type].first->assignment_table[opd.reg_.id + NUM_OF_PHYSICAL_REG];
+						}
+					} else if (opd.IsMem()) {
+						if (opd.base_.IsSymbolic()) {
+							opd.base_.type = R_TYPE_GP;
+							opd.base_.id = interval_range[R_TYPE_GP].first->assignment_table[opd.base_.id + NUM_OF_PHYSICAL_REG];
+						}
+						if (opd.index_.IsSymbolic()) {
+							opd.index_.type = R_TYPE_GP;
+							opd.index_.id = interval_range[R_TYPE_GP].first->assignment_table[opd.index_.id + NUM_OF_PHYSICAL_REG];
+						}
+					}
+				}
+			}
+
+			// Generate inter-block instructions
+			ASSERT(!(!block->successor[0] && block->successor[1]));
+			if (block->successor[0] && !block->successor[1]) {
+				// 1 successor
+
+				// remove last instruction if it is jump
+				Instr jump_instr(I_NOP, 0, 0);
+				if (Frontend::IsJump(f.instrs_.back().GetID())) {
+					jump_instr = f.instrs_.back();
+					f.instrs_.pop_back();
+				}
+
+				JITASM_TRACE("==== Edge to Block%d\n", block->successor[0]->depth);
+				GenerateInterBlockInstr(&*block, block->successor[0], f, stack_manager);
+
+				// add last instruction if it is jump
+				if (Frontend::IsJump(jump_instr.GetID())) {
+					f.instrs_.push_back(jump_instr);
+				}
+			} else if (block->successor[0] && block->successor[1]) {
+				// 2 successors
+				ASSERT(Frontend::IsJump(f.instrs_.back().GetID()) && f.instrs_.back().GetOpd(0).IsImm());	// the last instruction must be jump
+				const size_t jump_instr_idx = f.instrs_.size() - 1;
+				const size_t label_successor1 = static_cast<size_t>(f.instrs_.back().GetOpd(0).GetImm());
+
+				// generate inter-block instructions between current block and successor 1 separately
+				Frontend::InstrList temp_instrs;
+				temp_instrs.swap(f.instrs_);
+				JITASM_TRACE("==== Edge to Block%d\n", block->successor[1]->depth);
+				GenerateInterBlockInstr(&*block, block->successor[1], f, stack_manager);
+				temp_instrs.swap(f.instrs_);
+
+				// insert inter-block instructions between current block and successor 0
+				JITASM_TRACE("==== Edge to Block%d\n", block->successor[0]->depth);
+				GenerateInterBlockInstr(&*block, block->successor[0], f, stack_manager);
+
+				if (!temp_instrs.empty()) {
+					// insert inter-block instructions between current block and successor 1 and change jump flow
+
+					// jump to successor0
+					const size_t label_successor0 = f.NewLabelID("");
+					f.AppendJmp(label_successor0);
+
+					// change conditional jump to successor1_edge instead of successor1
+					const size_t label_successor1_edge = f.NewLabelID("");
+					f.L(label_successor1_edge);
+					Frontend::ChangeLabelID(f.instrs_[jump_instr_idx], label_successor1_edge);
+
+					// insert instructions
+					f.instrs_.insert(f.instrs_.end(), temp_instrs.begin(), temp_instrs.end());
+					f.AppendJmp(label_successor1);
+
+					// label of successor0 block
+					f.L(label_successor0);
+				}
+			}
+		}
 	}
 
 	inline bool RegisterAllocation(Frontend& f)
@@ -5031,46 +5469,31 @@ namespace compiler
 		// eax, ecx, edx, ebx, esi, edi, mm0 ~ mm7, xmm0 ~ xmm7, ymm0 ~ ymm7
 		uint32 available[4] = {0xCF, 0xFF, 0xFF, 0xFF};
 #endif
+		BitVector spills[4];
 		for (int reg_type = 0; reg_type < 4; ++reg_type) {
 			if (num_of_sym_reg[reg_type] > 0) {
-				LinearScanRegisterAlloc(cfg, reg_type, available[reg_type]);
+				LinearScanRegisterAlloc(cfg, reg_type, available[reg_type], spills[reg_type]);
 			}
 		}
 
-		// replace symbolic register to physical register
-		for (ControlFlowGraph::BlockSet::iterator it = cfg.begin(); it != cfg.end(); ++it) {
-			size_t interval_index[4] = {0, 0, 0, 0};
-			const size_t instr_size = it->instr_end - it->instr_begin;
-			for (size_t instr_offset = 0; instr_offset < instr_size; ++instr_offset) {
-				// step interval_index
-				for (size_t i = 0; i < 4; ++i) {
-					const size_t next_interval_index = interval_index[i] + 1;
-					if (next_interval_index < it->lifetime[i].intervals.size() && it->lifetime[i].intervals[next_interval_index].instr_idx_offset == instr_offset) {
-						interval_index[i] = next_interval_index;
-					}
-				}
+		StackManager stack_manager;
 
-				// replace symbolic register to physical register
-				for (size_t i = 0; i < Instr::MAX_OPERAND_COUNT; ++i) {
-					detail::Opd& opd = f.instrs_[it->instr_begin + instr_offset].GetOpd(i);
-					if (opd.IsReg()) {
-						if (opd.reg_.IsSymbolic()) {
-							opd.reg_.type = static_cast<RegType>(opd.reg_.type - R_TYPE_SYMBOLIC_GP);
-							opd.reg_.id = it->lifetime[opd.reg_.type].intervals[interval_index[opd.reg_.type]].assignment_table[opd.reg_.id + NUM_OF_PHYSICAL_REG];
-						}
-					} else if (opd.IsMem()) {
-						if (opd.base_.IsSymbolic()) {
-							opd.base_.type = R_TYPE_GP;
-							opd.base_.id = it->lifetime[R_TYPE_GP].intervals[interval_index[R_TYPE_GP]].assignment_table[opd.base_.id + NUM_OF_PHYSICAL_REG];
-						}
-						if (opd.index_.IsSymbolic()) {
-							opd.index_.type = R_TYPE_GP;
-							opd.index_.id = it->lifetime[R_TYPE_GP].intervals[interval_index[R_TYPE_GP]].assignment_table[opd.index_.id + NUM_OF_PHYSICAL_REG];
-						}
-					}
-				}
+		// Alloc stack slots from large variables
+		const int reg_type[4] = {R_TYPE_YMM, R_TYPE_XMM, R_TYPE_MMX, R_TYPE_GP};
+#ifdef JITASM64
+		const size_t var_size[4] = {256 / 8, 128 / 8, 64 / 8, 64 / 8};
+#else
+		const size_t var_size[4] = {256 / 8, 128 / 8, 64 / 8, 32 / 8};
+#endif
+		std::vector<size_t> spilled_vars;
+		for (size_t i = 0; i < 4; ++i) {
+			spills[reg_type[i]].get_bit_indexes(spilled_vars);
+			if (!spilled_vars.empty()) {
+				stack_manager.AllocSpillSlots(var_size[i], reg_type[i], spilled_vars);
 			}
 		}
+
+		RewriteInstructions(f, cfg, stack_manager);
 
 		return true;
 	}
@@ -5780,12 +6203,11 @@ namespace detail {
 	class Function_cdecl : public Frontend
 	{
 	public:
+		typedef RegZExpr Arg;		///< main function argument type
 #ifdef JITASM64
-		typedef Reg64Expr Arg;		///< main function argument type
 		template<int N, class T, int Size = sizeof(T)> struct ArgTraits : ArgumentTraits_win64<N, T, Size> {};
 		bool dump_regarg_x64_;
 #else
-		typedef Reg32Expr Arg;		///< main function argument type
 		template<int N, class T, int Size = sizeof(T)> struct ArgTraits : ArgumentTraits_cdecl<N, T, Size> {};
 #endif
 
