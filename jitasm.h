@@ -344,9 +344,9 @@ struct Reg64 : Opd64 {
 	Reg64() : Opd64(RegID::CreateSymbolicRegID(R_TYPE_SYMBOLIC_GP)) {}
 	explicit Reg64(PhysicalRegID id) : Opd64(RegID::CreatePhysicalRegID(R_TYPE_GP, id)) {}
 };
-typedef Reg64 RegZ;
+typedef Reg64 Reg;
 #else
-typedef Reg32 RegZ;
+typedef Reg32 Reg;
 #endif
 /// FPU register
 struct FpuReg : Opd80 {
@@ -406,10 +406,10 @@ struct ImmT : OpdN
 {
 	ImmT(U imm) : OpdN((S) imm) {}
 };
-typedef ImmT<Opd8, uint8, sint8>	Imm8;
-typedef ImmT<Opd16, uint16, sint16>	Imm16;
-typedef ImmT<Opd32, uint32, sint32>	Imm32;
-typedef ImmT<Opd64, uint64, sint64>	Imm64;
+typedef ImmT<Opd8, uint8, sint8>	Imm8;	///< 1 byte immediate
+typedef ImmT<Opd16, uint16, sint16>	Imm16;	///< 2 byte immediate
+typedef ImmT<Opd32, uint32, sint32>	Imm32;	///< 4 byte immediate
+typedef ImmT<Opd64, uint64, sint64>	Imm64;	///< 8 byte immediate
 
 namespace detail
 {
@@ -421,152 +421,161 @@ namespace detail
 	inline Opd ImmXor8(const Imm64& imm)	{return IsInt8(imm.GetImm()) ? (Opd) Imm8((sint8) imm.GetImm()) : (Opd) imm;}
 }	// namespace detail
 
-struct Reg32Expr
+
+/// 32bit address (base, displacement)
+struct Addr32
 {
 	RegID reg_;
 	sint64 disp_;
-	Reg32Expr(const Reg32& obj) : reg_(obj.reg_), disp_(0) {}	// implicit
-	Reg32Expr(const RegID& reg, sint64 disp) : reg_(reg), disp_(disp) {}
+	Addr32(const Reg32& obj) : reg_(obj.reg_), disp_(0) {}	// implicit
+	Addr32(const RegID& reg, sint64 disp) : reg_(reg), disp_(disp) {}
 };
-inline Reg32Expr operator+(const Reg32& lhs, sint64 rhs) {return Reg32Expr(lhs.reg_, rhs);}
-inline Reg32Expr operator+(sint64 lhs, const Reg32& rhs) {return rhs + lhs;}
-inline Reg32Expr operator-(const Reg32& lhs, sint64 rhs) {return lhs + -rhs;}
-inline Reg32Expr operator+(const Reg32Expr& lhs, sint64 rhs) {return Reg32Expr(lhs.reg_, lhs.disp_ + rhs);}
-inline Reg32Expr operator+(sint64 lhs, const Reg32Expr& rhs) {return rhs + lhs;}
-inline Reg32Expr operator-(const Reg32Expr& lhs, sint64 rhs) {return lhs + -rhs;}
+inline Addr32 operator+(const Reg32& lhs, sint64 rhs) {return Addr32(lhs.reg_, rhs);}
+inline Addr32 operator+(sint64 lhs, const Reg32& rhs) {return rhs + lhs;}
+inline Addr32 operator-(const Reg32& lhs, sint64 rhs) {return lhs + -rhs;}
+inline Addr32 operator+(const Addr32& lhs, sint64 rhs) {return Addr32(lhs.reg_, lhs.disp_ + rhs);}
+inline Addr32 operator+(sint64 lhs, const Addr32& rhs) {return rhs + lhs;}
+inline Addr32 operator-(const Addr32& lhs, sint64 rhs) {return lhs + -rhs;}
 
-struct Reg32ExprBI
+/// 32bit address (base, index, displacement)
+struct Addr32BI
 {
 	RegID base_;
 	RegID index_;
 	sint64 disp_;
-	Reg32ExprBI(const RegID& base, const RegID& index, sint64 disp) : base_(base), index_(index), disp_(disp) {}
+	Addr32BI(const RegID& base, const RegID& index, sint64 disp) : base_(base), index_(index), disp_(disp) {}
 };
-inline Reg32ExprBI operator+(const Reg32Expr& lhs, const Reg32Expr& rhs) {return Reg32ExprBI(rhs.reg_, lhs.reg_, lhs.disp_ + rhs.disp_);}
-inline Reg32ExprBI operator+(const Reg32ExprBI& lhs, sint64 rhs) {return Reg32ExprBI(lhs.base_, lhs.index_, lhs.disp_ + rhs);}
-inline Reg32ExprBI operator+(sint64 lhs, const Reg32ExprBI& rhs) {return rhs + lhs;}
-inline Reg32ExprBI operator-(const Reg32ExprBI& lhs, sint64 rhs) {return lhs + -rhs;}
+inline Addr32BI operator+(const Addr32& lhs, const Addr32& rhs) {return Addr32BI(rhs.reg_, lhs.reg_, lhs.disp_ + rhs.disp_);}
+inline Addr32BI operator+(const Addr32BI& lhs, sint64 rhs) {return Addr32BI(lhs.base_, lhs.index_, lhs.disp_ + rhs);}
+inline Addr32BI operator+(sint64 lhs, const Addr32BI& rhs) {return rhs + lhs;}
+inline Addr32BI operator-(const Addr32BI& lhs, sint64 rhs) {return lhs + -rhs;}
 
-struct Reg32ExprSI
+/// 32bit address (index, scale, displacement)
+struct Addr32SI
 {
 	RegID index_;
 	sint64 scale_;
 	sint64 disp_;
-	Reg32ExprSI(const RegID& index, sint64 scale, sint64 disp) : index_(index), scale_(scale), disp_(disp) {}
+	Addr32SI(const RegID& index, sint64 scale, sint64 disp) : index_(index), scale_(scale), disp_(disp) {}
 };
-inline Reg32ExprSI operator*(const Reg32& lhs, sint64 rhs) {return Reg32ExprSI(lhs.reg_, rhs, 0);}
-inline Reg32ExprSI operator*(sint64 lhs, const Reg32& rhs) {return rhs * lhs;}
-inline Reg32ExprSI operator*(const Reg32ExprSI& lhs, sint64 rhs) {return Reg32ExprSI(lhs.index_, lhs.scale_ * rhs, lhs.disp_);}
-inline Reg32ExprSI operator*(sint64 lhs, const Reg32ExprSI& rhs) {return rhs * lhs;}
-inline Reg32ExprSI operator+(const Reg32ExprSI& lhs, sint64 rhs) {return Reg32ExprSI(lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
-inline Reg32ExprSI operator+(sint64 lhs, const Reg32ExprSI& rhs) {return rhs + lhs;}
-inline Reg32ExprSI operator-(const Reg32ExprSI& lhs, sint64 rhs) {return lhs + -rhs;}
+inline Addr32SI operator*(const Reg32& lhs, sint64 rhs) {return Addr32SI(lhs.reg_, rhs, 0);}
+inline Addr32SI operator*(sint64 lhs, const Reg32& rhs) {return rhs * lhs;}
+inline Addr32SI operator*(const Addr32SI& lhs, sint64 rhs) {return Addr32SI(lhs.index_, lhs.scale_ * rhs, lhs.disp_);}
+inline Addr32SI operator*(sint64 lhs, const Addr32SI& rhs) {return rhs * lhs;}
+inline Addr32SI operator+(const Addr32SI& lhs, sint64 rhs) {return Addr32SI(lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
+inline Addr32SI operator+(sint64 lhs, const Addr32SI& rhs) {return rhs + lhs;}
+inline Addr32SI operator-(const Addr32SI& lhs, sint64 rhs) {return lhs + -rhs;}
 
-struct Reg32ExprSIB
+/// 32bit address (base, index, scale, displacement)
+struct Addr32SIB
 {
 	RegID base_;
 	RegID index_;
 	sint64 scale_;
 	sint64 disp_;
-	Reg32ExprSIB(const RegID& base, const RegID& index, sint64 scale, sint64 disp) : base_(base), index_(index), scale_(scale), disp_(disp) {}
+	Addr32SIB(const RegID& base, const RegID& index, sint64 scale, sint64 disp) : base_(base), index_(index), scale_(scale), disp_(disp) {}
 };
-inline Reg32ExprSIB operator+(const Reg32Expr& lhs, const Reg32ExprSI& rhs) {return Reg32ExprSIB(lhs.reg_, rhs.index_, rhs.scale_, lhs.disp_ + rhs.disp_);}
-inline Reg32ExprSIB operator+(const Reg32ExprSI& lhs, const Reg32Expr& rhs) {return rhs + lhs;}
-inline Reg32ExprSIB operator+(const Reg32ExprSIB& lhs, sint64 rhs) {return Reg32ExprSIB(lhs.base_, lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
-inline Reg32ExprSIB operator+(sint64 lhs, const Reg32ExprSIB& rhs) {return rhs + lhs;}
-inline Reg32ExprSIB operator-(const Reg32ExprSIB& lhs, sint64 rhs) {return lhs + -rhs;}
+inline Addr32SIB operator+(const Addr32& lhs, const Addr32SI& rhs) {return Addr32SIB(lhs.reg_, rhs.index_, rhs.scale_, lhs.disp_ + rhs.disp_);}
+inline Addr32SIB operator+(const Addr32SI& lhs, const Addr32& rhs) {return rhs + lhs;}
+inline Addr32SIB operator+(const Addr32SIB& lhs, sint64 rhs) {return Addr32SIB(lhs.base_, lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
+inline Addr32SIB operator+(sint64 lhs, const Addr32SIB& rhs) {return rhs + lhs;}
+inline Addr32SIB operator-(const Addr32SIB& lhs, sint64 rhs) {return lhs + -rhs;}
 
 #ifdef JITASM64
-struct Reg64Expr
+/// 64bit address (base, displacement)
+struct Addr64
 {
 	RegID reg_;
 	sint64 disp_;
-	Reg64Expr(const Reg64& obj) : reg_(obj.reg_), disp_(0) {}	// implicit
-	Reg64Expr(const RegID& reg, sint64 disp) : reg_(reg), disp_(disp) {}
+	Addr64(const Reg64& obj) : reg_(obj.reg_), disp_(0) {}	// implicit
+	Addr64(const RegID& reg, sint64 disp) : reg_(reg), disp_(disp) {}
 };
-inline Reg64Expr operator+(const Reg64& lhs, sint64 rhs) {return Reg64Expr(lhs.reg_, rhs);}
-inline Reg64Expr operator+(sint64 lhs, const Reg64& rhs) {return rhs + lhs;}
-inline Reg64Expr operator-(const Reg64& lhs, sint64 rhs) {return lhs + -rhs;}
-inline Reg64Expr operator+(const Reg64Expr& lhs, sint64 rhs) {return Reg64Expr(lhs.reg_, lhs.disp_ + rhs);}
-inline Reg64Expr operator+(sint64 lhs, const Reg64Expr& rhs) {return rhs + lhs;}
-inline Reg64Expr operator-(const Reg64Expr& lhs, sint64 rhs) {return lhs + -rhs;}
+inline Addr64 operator+(const Reg64& lhs, sint64 rhs) {return Addr64(lhs.reg_, rhs);}
+inline Addr64 operator+(sint64 lhs, const Reg64& rhs) {return rhs + lhs;}
+inline Addr64 operator-(const Reg64& lhs, sint64 rhs) {return lhs + -rhs;}
+inline Addr64 operator+(const Addr64& lhs, sint64 rhs) {return Addr64(lhs.reg_, lhs.disp_ + rhs);}
+inline Addr64 operator+(sint64 lhs, const Addr64& rhs) {return rhs + lhs;}
+inline Addr64 operator-(const Addr64& lhs, sint64 rhs) {return lhs + -rhs;}
 
-struct Reg64ExprBI
+/// 64bit address (base, index, displacement)
+struct Addr64BI
 {
 	RegID base_;
 	RegID index_;
 	sint64 disp_;
-	Reg64ExprBI(const RegID& base, const RegID& index, sint64 disp) : base_(base), index_(index), disp_(disp) {}
+	Addr64BI(const RegID& base, const RegID& index, sint64 disp) : base_(base), index_(index), disp_(disp) {}
 };
-inline Reg64ExprBI operator+(const Reg64Expr& lhs, const Reg64Expr& rhs) {return Reg64ExprBI(rhs.reg_, lhs.reg_, lhs.disp_ + rhs.disp_);}
-inline Reg64ExprBI operator+(const Reg64ExprBI& lhs, sint64 rhs) {return Reg64ExprBI(lhs.base_, lhs.index_, lhs.disp_ + rhs);}
-inline Reg64ExprBI operator+(sint64 lhs, const Reg64ExprBI& rhs) {return rhs + lhs;}
-inline Reg64ExprBI operator-(const Reg64ExprBI& lhs, sint64 rhs) {return lhs + -rhs;}
+inline Addr64BI operator+(const Addr64& lhs, const Addr64& rhs) {return Addr64BI(rhs.reg_, lhs.reg_, lhs.disp_ + rhs.disp_);}
+inline Addr64BI operator+(const Addr64BI& lhs, sint64 rhs) {return Addr64BI(lhs.base_, lhs.index_, lhs.disp_ + rhs);}
+inline Addr64BI operator+(sint64 lhs, const Addr64BI& rhs) {return rhs + lhs;}
+inline Addr64BI operator-(const Addr64BI& lhs, sint64 rhs) {return lhs + -rhs;}
 
-struct Reg64ExprSI
+/// 64bit address (index, scale, displacement)
+struct Addr64SI
 {
 	RegID index_;
 	sint64 scale_;
 	sint64 disp_;
-	Reg64ExprSI(const RegID& index, sint64 scale, sint64 disp) : index_(index), scale_(scale), disp_(disp) {}
+	Addr64SI(const RegID& index, sint64 scale, sint64 disp) : index_(index), scale_(scale), disp_(disp) {}
 };
-inline Reg64ExprSI operator*(const Reg64& lhs, sint64 rhs) {return Reg64ExprSI(lhs.reg_, rhs, 0);}
-inline Reg64ExprSI operator*(sint64 lhs, const Reg64& rhs) {return rhs * lhs;}
-inline Reg64ExprSI operator*(const Reg64ExprSI& lhs, sint64 rhs) {return Reg64ExprSI(lhs.index_, lhs.scale_ * rhs, lhs.disp_);}
-inline Reg64ExprSI operator*(sint64 lhs, const Reg64ExprSI& rhs) {return rhs * lhs;}
-inline Reg64ExprSI operator+(const Reg64ExprSI& lhs, sint64 rhs) {return Reg64ExprSI(lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
-inline Reg64ExprSI operator+(sint64 lhs, const Reg64ExprSI& rhs) {return rhs + lhs;}
-inline Reg64ExprSI operator-(const Reg64ExprSI& lhs, sint64 rhs) {return lhs + -rhs;}
+inline Addr64SI operator*(const Reg64& lhs, sint64 rhs) {return Addr64SI(lhs.reg_, rhs, 0);}
+inline Addr64SI operator*(sint64 lhs, const Reg64& rhs) {return rhs * lhs;}
+inline Addr64SI operator*(const Addr64SI& lhs, sint64 rhs) {return Addr64SI(lhs.index_, lhs.scale_ * rhs, lhs.disp_);}
+inline Addr64SI operator*(sint64 lhs, const Addr64SI& rhs) {return rhs * lhs;}
+inline Addr64SI operator+(const Addr64SI& lhs, sint64 rhs) {return Addr64SI(lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
+inline Addr64SI operator+(sint64 lhs, const Addr64SI& rhs) {return rhs + lhs;}
+inline Addr64SI operator-(const Addr64SI& lhs, sint64 rhs) {return lhs + -rhs;}
 
-struct Reg64ExprSIB
+/// 64bit address (base, index, scale, displacement)
+struct Addr64SIB
 {
 	RegID base_;
 	RegID index_;
 	sint64 scale_;
 	sint64 disp_;
-	Reg64ExprSIB(const RegID& base, const RegID& index, sint64 scale, sint64 disp) : base_(base), index_(index), scale_(scale), disp_(disp) {}
+	Addr64SIB(const RegID& base, const RegID& index, sint64 scale, sint64 disp) : base_(base), index_(index), scale_(scale), disp_(disp) {}
 };
-inline Reg64ExprSIB operator+(const Reg64Expr& lhs, const Reg64ExprSI& rhs) {return Reg64ExprSIB(lhs.reg_, rhs.index_, rhs.scale_, lhs.disp_ + rhs.disp_);}
-inline Reg64ExprSIB operator+(const Reg64ExprSI& lhs, const Reg64Expr& rhs) {return rhs + lhs;}
-inline Reg64ExprSIB operator+(const Reg64ExprSIB& lhs, sint64 rhs) {return Reg64ExprSIB(lhs.base_, lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
-inline Reg64ExprSIB operator+(sint64 lhs, const Reg64ExprSIB& rhs) {return rhs + lhs;}
-inline Reg64ExprSIB operator-(const Reg64ExprSIB& lhs, sint64 rhs) {return lhs + -rhs;}
+inline Addr64SIB operator+(const Addr64& lhs, const Addr64SI& rhs) {return Addr64SIB(lhs.reg_, rhs.index_, rhs.scale_, lhs.disp_ + rhs.disp_);}
+inline Addr64SIB operator+(const Addr64SI& lhs, const Addr64& rhs) {return rhs + lhs;}
+inline Addr64SIB operator+(const Addr64SIB& lhs, sint64 rhs) {return Addr64SIB(lhs.base_, lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
+inline Addr64SIB operator+(sint64 lhs, const Addr64SIB& rhs) {return rhs + lhs;}
+inline Addr64SIB operator-(const Addr64SIB& lhs, sint64 rhs) {return lhs + -rhs;}
 
-typedef Reg64Expr		RegZExpr;
-typedef Reg64ExprBI		RegZExprBI;
-typedef Reg64ExprSI		RegZExprSI;
-typedef Reg64ExprSIB	RegZExprSIB;
+typedef Addr64		Addr;
+typedef Addr64BI	AddrBI;
+typedef Addr64SI	AddrSI;
+typedef Addr64SIB	AddrSIB;
 #else
-typedef Reg32Expr		RegZExpr;
-typedef Reg32ExprBI		RegZExprBI;
-typedef Reg32ExprSI		RegZExprSI;
-typedef Reg32ExprSIB	RegZExprSIB;
+typedef Addr32		Addr;
+typedef Addr32BI	AddrBI;
+typedef Addr32SI	AddrSI;
+typedef Addr32SIB	AddrSIB;
 #endif
 
 template<typename OpdN>
 struct AddressingPtr
 {
 	// 32bit-Addressing
-	MemT<OpdN> operator[](const Reg32Expr& obj)		{return MemT<OpdN>(O_SIZE_32, obj.reg_, RegID::Invalid(), 0, obj.disp_);}
-	MemT<OpdN> operator[](const Reg32ExprBI& obj)	{return MemT<OpdN>(O_SIZE_32, obj.base_, obj.index_, 0, obj.disp_);}
-	MemT<OpdN> operator[](const Reg32ExprSI& obj)	{return MemT<OpdN>(O_SIZE_32, RegID::Invalid(), obj.index_, obj.scale_, obj.disp_);}
-	MemT<OpdN> operator[](const Reg32ExprSIB& obj)	{return MemT<OpdN>(O_SIZE_32, obj.base_, obj.index_, obj.scale_, obj.disp_);}
+	MemT<OpdN> operator[](const Addr32& obj)	{return MemT<OpdN>(O_SIZE_32, obj.reg_, RegID::Invalid(), 0, obj.disp_);}
+	MemT<OpdN> operator[](const Addr32BI& obj)	{return MemT<OpdN>(O_SIZE_32, obj.base_, obj.index_, 0, obj.disp_);}
+	MemT<OpdN> operator[](const Addr32SI& obj)	{return MemT<OpdN>(O_SIZE_32, RegID::Invalid(), obj.index_, obj.scale_, obj.disp_);}
+	MemT<OpdN> operator[](const Addr32SIB& obj)	{return MemT<OpdN>(O_SIZE_32, obj.base_, obj.index_, obj.scale_, obj.disp_);}
 #ifdef JITASM64
-	MemT<OpdN> operator[](sint32 disp)				{return MemT<OpdN>(O_SIZE_64, RegID::Invalid(), RegID::Invalid(), 0, disp);}
-	MemT<OpdN> operator[](uint32 disp)				{return MemT<OpdN>(O_SIZE_64, RegID::Invalid(), RegID::Invalid(), 0, (sint32) disp);}
+	MemT<OpdN> operator[](sint32 disp)			{return MemT<OpdN>(O_SIZE_64, RegID::Invalid(), RegID::Invalid(), 0, disp);}
+	MemT<OpdN> operator[](uint32 disp)			{return MemT<OpdN>(O_SIZE_64, RegID::Invalid(), RegID::Invalid(), 0, (sint32) disp);}
 #else
-	MemT<OpdN> operator[](sint32 disp)				{return MemT<OpdN>(O_SIZE_32, RegID::Invalid(), RegID::Invalid(), 0, disp);}
-	MemT<OpdN> operator[](uint32 disp)				{return MemT<OpdN>(O_SIZE_32, RegID::Invalid(), RegID::Invalid(), 0, (sint32) disp);}
+	MemT<OpdN> operator[](sint32 disp)			{return MemT<OpdN>(O_SIZE_32, RegID::Invalid(), RegID::Invalid(), 0, disp);}
+	MemT<OpdN> operator[](uint32 disp)			{return MemT<OpdN>(O_SIZE_32, RegID::Invalid(), RegID::Invalid(), 0, (sint32) disp);}
 #endif
 
 #ifdef JITASM64
 	// 64bit-Addressing
-	MemT<OpdN> operator[](const Reg64Expr& obj)		{return MemT<OpdN>(O_SIZE_64, obj.reg_, RegID::Invalid(), 0, obj.disp_);}
-	MemT<OpdN> operator[](const Reg64ExprBI& obj)	{return MemT<OpdN>(O_SIZE_64, obj.base_, obj.index_, 0, obj.disp_);}
-	MemT<OpdN> operator[](const Reg64ExprSI& obj)	{return MemT<OpdN>(O_SIZE_64, RegID::Invalid(), obj.index_, obj.scale_, obj.disp_);}
-	MemT<OpdN> operator[](const Reg64ExprSIB& obj)	{return MemT<OpdN>(O_SIZE_64, obj.base_, obj.index_, obj.scale_, obj.disp_);}
-	MemOffset64 operator[](sint64 offset)			{return MemOffset64(offset);}
-	MemOffset64 operator[](uint64 offset)			{return MemOffset64((sint64) offset);}
+	MemT<OpdN> operator[](const Addr64& obj)	{return MemT<OpdN>(O_SIZE_64, obj.reg_, RegID::Invalid(), 0, obj.disp_);}
+	MemT<OpdN> operator[](const Addr64BI& obj)	{return MemT<OpdN>(O_SIZE_64, obj.base_, obj.index_, 0, obj.disp_);}
+	MemT<OpdN> operator[](const Addr64SI& obj)	{return MemT<OpdN>(O_SIZE_64, RegID::Invalid(), obj.index_, obj.scale_, obj.disp_);}
+	MemT<OpdN> operator[](const Addr64SIB& obj)	{return MemT<OpdN>(O_SIZE_64, obj.base_, obj.index_, obj.scale_, obj.disp_);}
+	MemOffset64 operator[](sint64 offset)		{return MemOffset64(offset);}
+	MemOffset64 operator[](uint64 offset)		{return MemOffset64((sint64) offset);}
 #endif
 };
 
@@ -638,6 +647,8 @@ enum InstrID
 	I_VBROADCASTSS, I_VBROADCASTSD, I_VBROADCASTF128,
 
 	I_AESENC, I_AESENCLAST, I_AESDEC, I_AESDECLAST, I_AESIMC, I_AESKEYGENASSIST,
+
+	I_PSEUDO_DECL_ARG
 };
 
 enum JumpCondition
@@ -1154,6 +1165,7 @@ namespace detail
 		}
 	};
 
+	/// Spin lock
 	class SpinLock
 	{
 		long lock_;
@@ -1214,14 +1226,13 @@ struct Frontend
 	AddressingPtr<Opd864>	m108byte_ptr;
 	AddressingPtr<Opd4096>	m512byte_ptr;
 
+	Reg			zcx, zdx, zbx, zsp, zbp, zsi, zdi;
 #ifdef JITASM64
 	Reg64_rax	zax;
-	Reg64		zcx, zdx, zbx, zsp, zbp, zsi, zdi;
-	AddressingPtr<Opd64>	zword_ptr;
+	AddressingPtr<Opd64>	ptr;
 #else
 	Reg32_eax	zax;
-	Reg32		zcx, zdx, zbx, zsp, zbp, zsi, zdi;
-	AddressingPtr<Opd32>	zword_ptr;
+	AddressingPtr<Opd32>	ptr;
 #endif
 
 	Frontend()
@@ -1340,6 +1351,13 @@ struct Frontend
 		if (gpreg & (1 << (EBX - EAX))) pop(zbx);
 		leave();
 		ret();
+	}
+
+	/// Declare variable of the function argument
+	void DeclareArg(const detail::Opd& var, const detail::Opd& arg, const detail::Opd& spill_slot = detail::Opd())
+	{
+		ASSERT(var.IsReg());
+		AppendInstr(I_PSEUDO_DECL_ARG, 0, E_SPECIAL, var, arg, spill_slot);
 	}
 
 	static bool IsJump(InstrID id)
@@ -4002,11 +4020,11 @@ namespace compiler
 		StackManager() : stack_size_(0) {}
 
 		/// Allocate stack
-		RegZExpr Alloc(size_t size)
+		Addr Alloc(size_t size)
 		{
 			size_t offset = stack_size_;
 			stack_size_ += size;
-			return RegZExpr(RegID::CreatePhysicalRegID(R_TYPE_GP, EBP), offset);
+			return Addr(RegID::CreatePhysicalRegID(R_TYPE_GP, EBP), offset);
 		}
 	};
 
@@ -4015,7 +4033,7 @@ namespace compiler
 	{
 		uint8 size : 7;
 		bool spill : 1;
-		RegZExpr stack_slot;
+		Addr stack_slot;
 		VarAttribute() : size(0), spill(false), stack_slot(RegID::Invalid(), 0) {}
 	};
 
@@ -4049,7 +4067,7 @@ namespace compiler
 		}
 
 		/// Get stack slot for spill register
-		RegZExpr GetSpillSlot(size_t reg_family, int var) const
+		Addr GetSpillSlot(size_t reg_family, int var) const
 		{
 			return attributes_[reg_family][var].stack_slot;
 		}
@@ -5083,22 +5101,22 @@ namespace compiler
 
 		void Move(PhysicalRegID dst_reg, PhysicalRegID src_reg, size_t /*size*/)
 		{
-			f_->mov(RegZ(dst_reg), RegZ(src_reg));
+			f_->mov(Reg(dst_reg), Reg(src_reg));
 		}
 
 		void Swap(PhysicalRegID reg1, PhysicalRegID reg2, size_t /*size*/)
 		{
-			f_->xchg(RegZ(reg1), RegZ(reg2));
+			f_->xchg(Reg(reg1), Reg(reg2));
 		}
 
 		void Load(PhysicalRegID dst_reg, int var)
 		{
-			f_->mov(RegZ(dst_reg), f_->zword_ptr[var_manager_->GetSpillSlot(0, var)]);
+			f_->mov(Reg(dst_reg), f_->ptr[var_manager_->GetSpillSlot(0, var)]);
 		}
 
 		void Store(int var, PhysicalRegID src_reg)
 		{
-			f_->mov(f_->zword_ptr[var_manager_->GetSpillSlot(0, var)], RegZ(src_reg));
+			f_->mov(f_->ptr[var_manager_->GetSpillSlot(0, var)], Reg(src_reg));
 		}
 	};
 
@@ -5750,7 +5768,7 @@ namespace detail {
 	};
 
 	/// cdecl argument type traits
-	template<int N, class T, int Size>
+	template<int N, class T, int Size = sizeof(T)>
 	struct ArgumentTraits_cdecl {
 		enum {
 			stack_size = (Size + 4 - 1) / 4 * 4,
@@ -5760,7 +5778,7 @@ namespace detail {
 	};
 
 	/// Microsoft x64 fastcall argument type traits
-	template<int N, class T, int Size>
+	template<int N, class T, int Size = sizeof(T)>
 	struct ArgumentTraits_win64 {
 		enum {
 			stack_size = 8,
@@ -5874,7 +5892,7 @@ namespace detail {
 			if (val_.IsMem()) {
 				f.mov(f.zcx, Size);
 				f.lea(f.zsi, static_cast<MemT<OpdR>&>(val_));
-				f.mov(f.zdi, f.zword_ptr[f.zbp + sizeof(void *) * 2]);
+				f.mov(f.zdi, f.ptr[f.zbp + sizeof(void *) * 2]);
 				f.mov(f.zax, f.zdi);
 				f.rep_movsb();
 			}
@@ -6126,7 +6144,7 @@ namespace detail {
 		ResultT(const Mem128& mem) : val_(mem) {}
 		void Store(Frontend& f)
 		{
-			f.mov(f.zax, f.zword_ptr[f.zbp + sizeof(void *) * 2]);
+			f.mov(f.zax, f.ptr[f.zbp + sizeof(void *) * 2]);
 			if (val_.IsXmmReg()) {
 				f.movaps(f.xmmword_ptr[f.zax], static_cast<const XmmReg&>(val_));
 			}
@@ -6149,7 +6167,7 @@ namespace detail {
 		ResultT(const Mem128& mem) : val_(mem) {}
 		void Store(Frontend& f)
 		{
-			f.mov(f.zax, f.zword_ptr[f.zbp + sizeof(void *) * 2]);
+			f.mov(f.zax, f.ptr[f.zbp + sizeof(void *) * 2]);
 			if (val_.IsXmmReg()) {
 				f.movapd(f.xmmword_ptr[f.zax], static_cast<const XmmReg&>(val_));
 			}
@@ -6170,7 +6188,7 @@ namespace detail {
 		ResultT(const Mem128& mem) : val_(mem) {}
 		void Store(Frontend& f)
 		{
-			f.mov(f.zax, f.zword_ptr[f.zbp + sizeof(void *) * 2]);
+			f.mov(f.zax, f.ptr[f.zbp + sizeof(void *) * 2]);
 			if (val_.IsXmmReg()) {
 				f.movdqa(f.xmmword_ptr[f.zax], static_cast<const XmmReg&>(val_));
 			}
@@ -6277,7 +6295,7 @@ namespace detail {
 	class Function_cdecl : public Frontend
 	{
 	public:
-		typedef RegZExpr Arg;		///< main function argument type
+		typedef Addr Arg;		///< main function argument type
 #ifdef JITASM64
 		template<int N, class T, int Size = sizeof(T)> struct ArgTraits : ArgumentTraits_win64<N, T, Size> {};
 		bool dump_regarg_x64_;
@@ -6388,6 +6406,276 @@ namespace detail {
 	{
 		return Arg(zbp + sizeof(void *) * 2);
 	}
+
+	namespace cdecl
+	{
+		template<class R>
+		inline Addr32 AddrArg1()  { return Addr32(RegID::CreatePhysicalRegID(R_TYPE_GP, EBP), sizeof(void *) * (2 + ResultT<R>::ArgR)); }
+		template<class R, class A1>
+		inline Addr32 AddrArg2()  { return AddrArg1<R>() + ArgumentTraits_cdecl<0, A1>::stack_size; }
+		template<class R, class A1, class A2>
+		inline Addr32 AddrArg3()  { return AddrArg2<R, A1>() + ArgumentTraits_cdecl<1, A2>::stack_size; }
+		template<class R, class A1, class A2, class A3>
+		inline Addr32 AddrArg4()  { return AddrArg3<R, A1, A2>() + ArgumentTraits_cdecl<2, A3>::stack_size; }
+		template<class R, class A1, class A2, class A3, class A4>
+		inline Addr32 AddrArg5()  { return AddrArg4<R, A1, A2, A3>() + ArgumentTraits_cdecl<3, A4>::stack_size; }
+		template<class R, class A1, class A2, class A3, class A4, class A5>
+		inline Addr32 AddrArg6()  { return AddrArg5<R, A1, A2, A3, A4>() + ArgumentTraits_cdecl<4, A5>::stack_size; }
+		template<class R, class A1, class A2, class A3, class A4, class A5, class A6>
+		inline Addr32 AddrArg7()  { return AddrArg6<R, A1, A2, A3, A4, A5>() + ArgumentTraits_cdecl<5, A6>::stack_size; }
+		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7>
+		inline Addr32 AddrArg8()  { return AddrArg7<R, A1, A2, A3, A4, A5, A6>() + ArgumentTraits_cdecl<6, A7>::stack_size; }
+		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8>
+		inline Addr32 AddrArg9()  { return AddrArg8<R, A1, A2, A3, A4, A5, A6, A7>() + ArgumentTraits_cdecl<7, A8>::stack_size; }
+		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9>
+		inline Addr32 AddrArg10() { return AddrArg9<R, A1, A2, A3, A4, A5, A6, A7, A8>() + ArgumentTraits_cdecl<8, A9>::stack_size; }
+
+		/// Function argument
+		template<class T, size_t Size = sizeof(T)>
+		struct Arg
+		{
+			Addr addr_;
+#ifdef JITASM64
+			Arg(Frontend& f, const Addr& addr) : addr_(Reg64()) {
+				f.DeclareArg(addr_.reg_, f.ptr[addr]);
+			}
+#else
+			Arg(Frontend& f, const Addr& addr) : addr_(addr) {}
+#endif
+			Arg(Frontend& f, const PhysicalRegID reg, const Addr& shadow) : addr_(Reg()) {
+				f.DeclareArg(addr_.reg_, Reg(reg), f.qword_ptr[shadow]);
+			}
+			operator Addr () {return addr_;}
+		};
+
+		// specialization for 1byte type
+		template<class T>
+		struct Arg<T, 1>
+		{
+			Frontend *f_;
+			Addr addr_;
+			PhysicalRegID reg_id_;
+
+			Arg(Frontend& f, const Addr& addr) : f_(&f), addr_(addr), reg_id_(INVALID) {}
+			Arg(Frontend& f, const PhysicalRegID reg, const Addr& shadow) : f_(&f), addr_(shadow), reg_id_(reg) {}
+
+			operator Addr () {
+#ifdef JITASM64
+				// Dump to shadow space when x64 argument on register
+				if (reg_id_ != INVALID) {
+					f_->movzx(f_->qword_ptr[addr_], Reg8(reg_id_));
+				}
+#endif
+				return addr_;
+			}
+			operator Reg8 () {
+				Reg8 reg;
+				if (reg_id_ == INVALID) {
+					f_->DeclareArg(reg, f_->byte_ptr[addr_]);					// argument on stack
+				} else {
+					f_->DeclareArg(reg, Reg8(reg_id_), f_->byte_ptr[addr_]);	// argument on register
+				}
+				return reg;
+			}
+		};
+
+		// specialization for 2byte type
+		template<class T>
+		struct Arg<T, 2>
+		{
+			Frontend *f_;
+			Addr addr_;
+			PhysicalRegID reg_id_;
+
+			Arg(Frontend& f, const Addr& addr) : f_(&f), addr_(addr), reg_id_(INVALID) {}
+			Arg(Frontend& f, const PhysicalRegID reg, const Addr& shadow) : f_(&f), addr_(shadow), reg_id_(reg) {}
+
+			operator Addr () {
+#ifdef JITASM64
+				// Dump to shadow space when x64 argument on register
+				if (reg_id_ != INVALID) {
+					f_->movzx(f_->qword_ptr[addr_], Reg16(reg_id_));
+				}
+#endif
+				return addr_;
+			}
+			operator Reg16 () {
+				Reg16 reg;
+				if (reg_id_ == INVALID) {
+					f_->DeclareArg(reg, f_->word_ptr[addr_]);					// argument on stack
+				} else {
+					f_->DeclareArg(reg, Reg16(reg_id_), f_->word_ptr[addr_]);	// argument on register
+				}
+				return reg;
+			}
+		};
+
+		// specialization for 4byte type
+		template<class T>
+		struct Arg<T, 4>
+		{
+			Frontend *f_;
+			Addr addr_;
+			PhysicalRegID reg_id_;
+
+			Arg(Frontend& f, const Addr& addr) : f_(&f), addr_(addr), reg_id_(INVALID) {}
+			Arg(Frontend& f, const PhysicalRegID reg, const Addr& shadow) : f_(&f), addr_(shadow), reg_id_(reg) {}
+
+			operator Addr () {
+#ifdef JITASM64
+				// Dump to shadow space when x64 argument on register
+				if (reg_id_ != INVALID) {
+					f_->movzx(f_->qword_ptr[addr_], Reg32(reg_id_));
+				}
+#endif
+				return addr_;
+			}
+			operator Reg32 () {
+				Reg32 reg;
+				if (reg_id_ == INVALID) {
+					f_->DeclareArg(reg, f_->dword_ptr[addr_]);					// argument on stack
+				} else {
+					f_->DeclareArg(reg, Reg32(reg_id_), f_->dword_ptr[addr_]);	// argument on register
+				}
+				return reg;
+			}
+		};
+
+#ifdef JITASM64
+		// specialization for 8byte type
+		template<class T>
+		struct Arg<T, 8>
+		{
+			Frontend *f_;
+			Addr addr_;
+			PhysicalRegID reg_id_;
+
+			Arg(Frontend& f, const Addr& addr) : f_(&f), addr_(addr), reg_id_(INVALID) {}
+			Arg(Frontend& f, const PhysicalRegID reg, const Addr& shadow) : f_(&f), addr_(shadow), reg_id_(reg) {}
+
+			operator Addr () {
+				// Dump to shadow space when x64 argument on register
+				if (reg_id_ != INVALID) {
+					f_->mov(f_->qword_ptr[addr_], Reg64(reg_id_));
+				}
+				return addr_;
+			}
+			operator Reg64 () {
+				Reg64 reg;
+				if (reg_id_ == INVALID) {
+					f_->DeclareArg(reg, f_->qword_ptr[addr_]);					// argument on stack
+				} else {
+					f_->DeclareArg(reg, Reg64(reg_id_), f_->qword_ptr[addr_]);	// argument on register
+				}
+				return reg;
+			}
+		};
+#endif
+
+		// specialization for float
+		template<>
+		struct Arg<float, 4>
+		{
+			Frontend *f_;
+			Addr addr_;
+			PhysicalRegID reg_id_;
+
+			Arg(Frontend& f, const Addr& addr) : f_(&f), addr_(addr), reg_id_(INVALID) {}
+			Arg(Frontend& f, const PhysicalRegID reg, const Addr& shadow) : f_(&f), addr_(shadow), reg_id_(reg) {}
+
+			operator Addr () {
+#ifdef JITASM64
+				// Dump to shadow space when x64 argument on register
+				if (reg_id_ != INVALID) {
+					f_->movss(f_->dword_ptr[addr_], XmmReg(reg_id_));
+				}
+#endif
+				return addr_;
+			}
+			operator XmmReg () {
+				XmmReg reg;
+				if (reg_id_ == INVALID) {
+					f_->DeclareArg(reg, f_->dword_ptr[addr_]);	// argument on stack
+				} else {
+					f_->DeclareArg(reg, XmmReg(reg_id_));		// argument on register
+				}
+				return reg;
+			}
+		};
+
+		// specialization for double
+		template<>
+		struct Arg<double, 8>
+		{
+			Frontend *f_;
+			Addr addr_;
+			PhysicalRegID reg_id_;
+
+			Arg(Frontend& f, const Addr& addr) : f_(&f), addr_(addr), reg_id_(INVALID) {}
+			Arg(Frontend& f, const PhysicalRegID reg, const Addr& shadow) : f_(&f), addr_(shadow), reg_id_(reg) {}
+
+			operator Addr () {
+#ifdef JITASM64
+				// Dump to shadow space when x64 argument on register
+				if (reg_id_ != INVALID) {
+					f_->movsd(f_->qword_ptr[addr_], XmmReg(reg_id_));
+				}
+#endif
+				return addr_;
+			}
+			operator XmmReg () {
+				XmmReg reg;
+				if (reg_id_ == INVALID) {
+					f_->DeclareArg(reg, f_->qword_ptr[addr_]);	// argument on stack
+				} else {
+					f_->DeclareArg(reg, XmmReg(reg_id_));		// argument on register
+				}
+				return reg;
+			}
+		};
+//
+//#ifdef _MMINTRIN_H_INCLUDED
+//		// specialization for __m64
+//		template<> struct Arg<__m64, 8> {};
+//#endif	// _MMINTRIN_H_INCLUDED
+//
+//#ifdef _INCLUDED_MM2
+//		// specialization for __m128
+//		template<> struct Arg<__m128, 16> {};
+//#endif	// _INCLUDED_MM2
+//
+//#ifdef _INCLUDED_EMM
+//		// specialization for __m128d, __m128i
+//		template<> struct Arg<__m128d, 16> {};
+//		template<> struct Arg<__m128i, 16> {};
+//#endif	// _INCLUDED_EMM
+	}	// namespace cdecl
+
+	/// cdecl function base class
+	class Function_cdecl2 : public Frontend
+	{
+	protected:
+		template<class R, class A1>
+		Arg<A1> Arg1() { return Arg(zbp + sizeof(void *) * (2 + ResultT<R>::ArgR)); }
+		template<class R, class A1, class A2>
+		Arg<A2> Arg2() { return Arg1<R>() + ArgTraits<0, A1>::stack_size; }
+		template<class R, class A1, class A2, class A3>
+		Arg<A3> Arg3() { return Arg2<R, A1>() + ArgTraits<1, A2>::stack_size; }
+		template<class R, class A1, class A2, class A3, class A4>
+		Arg<A4> Arg4() { return Arg3<R, A1, A2>() + ArgTraits<2, A3>::stack_size; }
+		template<class R, class A1, class A2, class A3, class A4, class A5>
+		Arg<A5> Arg5() { return Arg4<R, A1, A2, A3>() + ArgTraits<3, A4>::stack_size; }
+		template<class R, class A1, class A2, class A3, class A4, class A5, class A6>
+		Arg<A6> Arg6() { return Arg5<R, A1, A2, A3, A4>() + ArgTraits<4, A5>::stack_size; }
+		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7>
+		Arg<A7> Arg7() { return Arg6<R, A1, A2, A3, A4, A5>() + ArgTraits<5, A6>::stack_size; }
+		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8>
+		Arg<A8> Arg8() { return Arg7<R, A1, A2, A3, A4, A5, A6>() + ArgTraits<6, A7>::stack_size; }
+		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9>
+		Arg<A9> Arg9() { return Arg8<R, A1, A2, A3, A4, A5, A6, A7>() + ArgTraits<7, A8>::stack_size; }
+		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9, class A10>
+		Arg<A10> Arg10() { return Arg9<R, A1, A2, A3, A4, A5, A6, A7, A8>() + ArgTraits<8, A9>::stack_size; }
+	};
 
 }	// namespace detail
 
