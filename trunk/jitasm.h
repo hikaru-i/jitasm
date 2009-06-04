@@ -5761,10 +5761,11 @@ namespace detail {
 	enum {
 		ARG_IN_REG		= (1<<0),	///< Argument is stored in general purpose register.
 		ARG_IN_STACK	= (1<<1),	///< Argument is stored on stack.
-		ARG_IN_XMM_SP	= (1<<2),	///< Argument is stored in xmm register as single precision.
-		ARG_IN_XMM_DP	= (1<<3),	///< Argument is stored in xmm register as double precision.
-		ARG_TYPE_VALUE	= (1<<4),	///< Argument is value which is passed.
-		ARG_TYPE_PTR	= (1<<5)	///< Argument is pointer which is passed to.
+		ARG_IN_MMX		= (1<<2),	///< Argument is stored in mmx register.
+		ARG_IN_XMM_SP	= (1<<3),	///< Argument is stored in xmm register as single precision.
+		ARG_IN_XMM_DP	= (1<<4),	///< Argument is stored in xmm register as double precision.
+		ARG_TYPE_VALUE	= (1<<5),	///< Argument is value which is passed.
+		ARG_TYPE_PTR	= (1<<6)	///< Argument is pointer which is passed to.
 	};
 
 	/// cdecl argument type traits
@@ -5776,6 +5777,33 @@ namespace detail {
 			reg_id = INVALID
 		};
 	};
+
+#ifdef _MMINTRIN_H_INCLUDED
+	// specialization for __m64
+	template<> struct ArgumentTraits_cdecl<0, __m64, 8> {enum {stack_size = 0, flag = ARG_IN_MMX | ARG_TYPE_VALUE, reg_id = MM0};};
+	template<> struct ArgumentTraits_cdecl<1, __m64, 8> {enum {stack_size = 0, flag = ARG_IN_MMX | ARG_TYPE_VALUE, reg_id = MM1};};
+	template<> struct ArgumentTraits_cdecl<2, __m64, 8> {enum {stack_size = 0, flag = ARG_IN_MMX | ARG_TYPE_VALUE, reg_id = MM2};};
+#endif
+
+#ifdef _INCLUDED_MM2
+	// specialization for __m128
+	template<> struct ArgumentTraits_cdecl<0, __m128, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_SP | ARG_TYPE_VALUE, reg_id = XMM0};};
+	template<> struct ArgumentTraits_cdecl<1, __m128, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_SP | ARG_TYPE_VALUE, reg_id = XMM1};};
+	template<> struct ArgumentTraits_cdecl<2, __m128, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_SP | ARG_TYPE_VALUE, reg_id = XMM2};};
+#endif
+
+#ifdef _INCLUDED_EMM
+	// specialization for __m128d
+	template<> struct ArgumentTraits_cdecl<0, __m128d, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_DP | ARG_TYPE_VALUE, reg_id = XMM0};};
+	template<> struct ArgumentTraits_cdecl<1, __m128d, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_DP | ARG_TYPE_VALUE, reg_id = XMM1};};
+	template<> struct ArgumentTraits_cdecl<2, __m128d, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_DP | ARG_TYPE_VALUE, reg_id = XMM2};};
+
+	// specialization for __m128i
+	template<> struct ArgumentTraits_cdecl<0, __m128i, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_DP | ARG_TYPE_VALUE, reg_id = XMM0};};
+	template<> struct ArgumentTraits_cdecl<1, __m128i, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_DP | ARG_TYPE_VALUE, reg_id = XMM1};};
+	template<> struct ArgumentTraits_cdecl<2, __m128i, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_DP | ARG_TYPE_VALUE, reg_id = XMM2};};
+#endif
+
 
 	/// Microsoft x64 fastcall argument type traits
 	template<int N, class T, int Size = sizeof(T)>
@@ -5790,74 +5818,63 @@ namespace detail {
 	/**
 	 * Base class for argument which is stored in general purpose register.
 	 */
-	template<int GpRegID, int Flag> struct ArgumentTraits_win64_reg {
+	template<int RegID, int Flag> struct ArgumentTraits_win64_reg {
 		enum {
 			stack_size = 8,
-			flag = ARG_IN_REG | Flag,
-			reg_id = GpRegID
+			flag = Flag,
+			reg_id = RegID
 		};
 	};
 
 	// specialization for argument pointer stored in register
-	template<class T, int Size> struct ArgumentTraits_win64<0, T, Size> : ArgumentTraits_win64_reg<RCX, ARG_TYPE_PTR> {};
-	template<class T, int Size> struct ArgumentTraits_win64<1, T, Size> : ArgumentTraits_win64_reg<RDX, ARG_TYPE_PTR> {};
-	template<class T, int Size> struct ArgumentTraits_win64<2, T, Size> : ArgumentTraits_win64_reg<R8, ARG_TYPE_PTR> {};
-	template<class T, int Size> struct ArgumentTraits_win64<3, T, Size> : ArgumentTraits_win64_reg<R9, ARG_TYPE_PTR> {};
+	template<class T, int Size> struct ArgumentTraits_win64<0, T, Size> : ArgumentTraits_win64_reg<RCX, ARG_IN_REG | ARG_TYPE_PTR> {};
+	template<class T, int Size> struct ArgumentTraits_win64<1, T, Size> : ArgumentTraits_win64_reg<RDX, ARG_IN_REG | ARG_TYPE_PTR> {};
+	template<class T, int Size> struct ArgumentTraits_win64<2, T, Size> : ArgumentTraits_win64_reg<R8, ARG_IN_REG | ARG_TYPE_PTR> {};
+	template<class T, int Size> struct ArgumentTraits_win64<3, T, Size> : ArgumentTraits_win64_reg<R9, ARG_IN_REG | ARG_TYPE_PTR> {};
 
 	// specialization for 1 byte type
-	template<class T> struct ArgumentTraits_win64<0, T, 1> : ArgumentTraits_win64_reg<RCX, ARG_TYPE_VALUE> {};
-	template<class T> struct ArgumentTraits_win64<1, T, 1> : ArgumentTraits_win64_reg<RDX, ARG_TYPE_VALUE> {};
-	template<class T> struct ArgumentTraits_win64<2, T, 1> : ArgumentTraits_win64_reg<R8, ARG_TYPE_VALUE> {};
-	template<class T> struct ArgumentTraits_win64<3, T, 1> : ArgumentTraits_win64_reg<R9, ARG_TYPE_VALUE> {};
+	template<class T> struct ArgumentTraits_win64<0, T, 1> : ArgumentTraits_win64_reg<RCX, ARG_IN_REG | ARG_TYPE_VALUE> {};
+	template<class T> struct ArgumentTraits_win64<1, T, 1> : ArgumentTraits_win64_reg<RDX, ARG_IN_REG | ARG_TYPE_VALUE> {};
+	template<class T> struct ArgumentTraits_win64<2, T, 1> : ArgumentTraits_win64_reg<R8, ARG_IN_REG | ARG_TYPE_VALUE> {};
+	template<class T> struct ArgumentTraits_win64<3, T, 1> : ArgumentTraits_win64_reg<R9, ARG_IN_REG | ARG_TYPE_VALUE> {};
 
 	// specialization for 2 bytes type
-	template<class T> struct ArgumentTraits_win64<0, T, 2> : ArgumentTraits_win64_reg<RCX, ARG_TYPE_VALUE> {};
-	template<class T> struct ArgumentTraits_win64<1, T, 2> : ArgumentTraits_win64_reg<RDX, ARG_TYPE_VALUE> {};
-	template<class T> struct ArgumentTraits_win64<2, T, 2> : ArgumentTraits_win64_reg<R8, ARG_TYPE_VALUE> {};
-	template<class T> struct ArgumentTraits_win64<3, T, 2> : ArgumentTraits_win64_reg<R9, ARG_TYPE_VALUE> {};
+	template<class T> struct ArgumentTraits_win64<0, T, 2> : ArgumentTraits_win64_reg<RCX, ARG_IN_REG | ARG_TYPE_VALUE> {};
+	template<class T> struct ArgumentTraits_win64<1, T, 2> : ArgumentTraits_win64_reg<RDX, ARG_IN_REG | ARG_TYPE_VALUE> {};
+	template<class T> struct ArgumentTraits_win64<2, T, 2> : ArgumentTraits_win64_reg<R8, ARG_IN_REG | ARG_TYPE_VALUE> {};
+	template<class T> struct ArgumentTraits_win64<3, T, 2> : ArgumentTraits_win64_reg<R9, ARG_IN_REG | ARG_TYPE_VALUE> {};
 
 	// specialization for 4 bytes type
-	template<class T> struct ArgumentTraits_win64<0, T, 4> : ArgumentTraits_win64_reg<RCX, ARG_TYPE_VALUE> {};
-	template<class T> struct ArgumentTraits_win64<1, T, 4> : ArgumentTraits_win64_reg<RDX, ARG_TYPE_VALUE> {};
-	template<class T> struct ArgumentTraits_win64<2, T, 4> : ArgumentTraits_win64_reg<R8, ARG_TYPE_VALUE> {};
-	template<class T> struct ArgumentTraits_win64<3, T, 4> : ArgumentTraits_win64_reg<R9, ARG_TYPE_VALUE> {};
+	template<class T> struct ArgumentTraits_win64<0, T, 4> : ArgumentTraits_win64_reg<RCX, ARG_IN_REG | ARG_TYPE_VALUE> {};
+	template<class T> struct ArgumentTraits_win64<1, T, 4> : ArgumentTraits_win64_reg<RDX, ARG_IN_REG | ARG_TYPE_VALUE> {};
+	template<class T> struct ArgumentTraits_win64<2, T, 4> : ArgumentTraits_win64_reg<R8, ARG_IN_REG | ARG_TYPE_VALUE> {};
+	template<class T> struct ArgumentTraits_win64<3, T, 4> : ArgumentTraits_win64_reg<R9, ARG_IN_REG | ARG_TYPE_VALUE> {};
 
 	// specialization for 8 bytes type
-	template<class T> struct ArgumentTraits_win64<0, T, 8> : ArgumentTraits_win64_reg<RCX, ARG_TYPE_VALUE> {};
-	template<class T> struct ArgumentTraits_win64<1, T, 8> : ArgumentTraits_win64_reg<RDX, ARG_TYPE_VALUE> {};
-	template<class T> struct ArgumentTraits_win64<2, T, 8> : ArgumentTraits_win64_reg<R8, ARG_TYPE_VALUE> {};
-	template<class T> struct ArgumentTraits_win64<3, T, 8> : ArgumentTraits_win64_reg<R9, ARG_TYPE_VALUE> {};
+	template<class T> struct ArgumentTraits_win64<0, T, 8> : ArgumentTraits_win64_reg<RCX, ARG_IN_REG | ARG_TYPE_VALUE> {};
+	template<class T> struct ArgumentTraits_win64<1, T, 8> : ArgumentTraits_win64_reg<RDX, ARG_IN_REG | ARG_TYPE_VALUE> {};
+	template<class T> struct ArgumentTraits_win64<2, T, 8> : ArgumentTraits_win64_reg<R8, ARG_IN_REG | ARG_TYPE_VALUE> {};
+	template<class T> struct ArgumentTraits_win64<3, T, 8> : ArgumentTraits_win64_reg<R9, ARG_IN_REG | ARG_TYPE_VALUE> {};
 
 #ifdef _MMINTRIN_H_INCLUDED
 	// specialization for __m64
-	template<> struct ArgumentTraits_win64<0, __m64, 8> : ArgumentTraits_win64_reg<RCX, ARG_TYPE_VALUE> {};
-	template<> struct ArgumentTraits_win64<1, __m64, 8> : ArgumentTraits_win64_reg<RDX, ARG_TYPE_VALUE> {};
-	template<> struct ArgumentTraits_win64<2, __m64, 8> : ArgumentTraits_win64_reg<R8, ARG_TYPE_VALUE> {};
-	template<> struct ArgumentTraits_win64<3, __m64, 8> : ArgumentTraits_win64_reg<R9, ARG_TYPE_VALUE> {};
+	template<> struct ArgumentTraits_win64<0, __m64, 8> : ArgumentTraits_win64_reg<RCX, ARG_IN_REG | ARG_TYPE_VALUE> {};
+	template<> struct ArgumentTraits_win64<1, __m64, 8> : ArgumentTraits_win64_reg<RDX, ARG_IN_REG | ARG_TYPE_VALUE> {};
+	template<> struct ArgumentTraits_win64<2, __m64, 8> : ArgumentTraits_win64_reg<R8, ARG_IN_REG | ARG_TYPE_VALUE> {};
+	template<> struct ArgumentTraits_win64<3, __m64, 8> : ArgumentTraits_win64_reg<R9, ARG_IN_REG | ARG_TYPE_VALUE> {};
 #endif
 
-	/**
-	 * Base class for argument which is stored in xmm register.
-	 */
-	template<int XmmRegID, int Flag> struct ArgumentTraits_win64_xmm {
-		enum {
-			stack_size = 8,
-			flag = Flag | ARG_TYPE_VALUE,
-			reg_id = XmmRegID
-		};
-	};
-
 	// specialization for float
-	template<> struct ArgumentTraits_win64<0, float, 4> : ArgumentTraits_win64_xmm<XMM0, ARG_IN_XMM_SP> {};
-	template<> struct ArgumentTraits_win64<1, float, 4> : ArgumentTraits_win64_xmm<XMM1, ARG_IN_XMM_SP> {};
-	template<> struct ArgumentTraits_win64<2, float, 4> : ArgumentTraits_win64_xmm<XMM2, ARG_IN_XMM_SP> {};
-	template<> struct ArgumentTraits_win64<3, float, 4> : ArgumentTraits_win64_xmm<XMM3, ARG_IN_XMM_SP> {};
+	template<> struct ArgumentTraits_win64<0, float, 4> : ArgumentTraits_win64_reg<XMM0, ARG_IN_XMM_SP | ARG_TYPE_VALUE> {};
+	template<> struct ArgumentTraits_win64<1, float, 4> : ArgumentTraits_win64_reg<XMM1, ARG_IN_XMM_SP | ARG_TYPE_VALUE> {};
+	template<> struct ArgumentTraits_win64<2, float, 4> : ArgumentTraits_win64_reg<XMM2, ARG_IN_XMM_SP | ARG_TYPE_VALUE> {};
+	template<> struct ArgumentTraits_win64<3, float, 4> : ArgumentTraits_win64_reg<XMM3, ARG_IN_XMM_SP | ARG_TYPE_VALUE> {};
 
 	// specialization for double
-	template<> struct ArgumentTraits_win64<0, double, 8> : ArgumentTraits_win64_xmm<XMM0, ARG_IN_XMM_DP> {};
-	template<> struct ArgumentTraits_win64<1, double, 8> : ArgumentTraits_win64_xmm<XMM1, ARG_IN_XMM_DP> {};
-	template<> struct ArgumentTraits_win64<2, double, 8> : ArgumentTraits_win64_xmm<XMM2, ARG_IN_XMM_DP> {};
-	template<> struct ArgumentTraits_win64<3, double, 8> : ArgumentTraits_win64_xmm<XMM3, ARG_IN_XMM_DP> {};
+	template<> struct ArgumentTraits_win64<0, double, 8> : ArgumentTraits_win64_reg<XMM0, ARG_IN_XMM_DP | ARG_TYPE_VALUE> {};
+	template<> struct ArgumentTraits_win64<1, double, 8> : ArgumentTraits_win64_reg<XMM1, ARG_IN_XMM_DP | ARG_TYPE_VALUE> {};
+	template<> struct ArgumentTraits_win64<2, double, 8> : ArgumentTraits_win64_reg<XMM2, ARG_IN_XMM_DP | ARG_TYPE_VALUE> {};
+	template<> struct ArgumentTraits_win64<3, double, 8> : ArgumentTraits_win64_reg<XMM3, ARG_IN_XMM_DP | ARG_TYPE_VALUE> {};
 
 
 	/// Special argument type
@@ -6409,6 +6426,14 @@ namespace detail {
 
 	namespace cdecl
 	{
+		/// Argument information
+		struct ArgInfo
+		{
+			Addr addr;
+			uint32 count_mmx;
+			uint32 count_xmm;
+		};
+
 		template<class R>
 		inline Addr32 AddrArg1()  { return Addr32(RegID::CreatePhysicalRegID(R_TYPE_GP, EBP), sizeof(void *) * (2 + ResultT<R>::ArgR)); }
 		template<class R, class A1>
@@ -6633,22 +6658,25 @@ namespace detail {
 				return reg;
 			}
 		};
-//
-//#ifdef _MMINTRIN_H_INCLUDED
-//		// specialization for __m64
-//		template<> struct Arg<__m64, 8> {};
-//#endif	// _MMINTRIN_H_INCLUDED
-//
-//#ifdef _INCLUDED_MM2
-//		// specialization for __m128
-//		template<> struct Arg<__m128, 16> {};
-//#endif	// _INCLUDED_MM2
-//
-//#ifdef _INCLUDED_EMM
-//		// specialization for __m128d, __m128i
-//		template<> struct Arg<__m128d, 16> {};
-//		template<> struct Arg<__m128i, 16> {};
-//#endif	// _INCLUDED_EMM
+
+#ifdef _MMINTRIN_H_INCLUDED
+		// specialization for __m64
+		//template<>
+		//struct Arg<__m64, 8>
+		//{
+		//};
+#endif	// _MMINTRIN_H_INCLUDED
+
+#ifdef _INCLUDED_MM2
+		// specialization for __m128
+		//template<> struct Arg<__m128, 16> {};
+#endif	// _INCLUDED_MM2
+
+#ifdef _INCLUDED_EMM
+		// specialization for __m128d, __m128i
+		//template<> struct Arg<__m128d, 16> {};
+		//template<> struct Arg<__m128i, 16> {};
+#endif	// _INCLUDED_EMM
 	}	// namespace cdecl
 
 	/// cdecl function base class
