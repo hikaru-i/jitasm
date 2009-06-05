@@ -1165,6 +1165,24 @@ namespace detail
 		}
 	};
 
+	/// Stack manager
+	class StackManager
+	{
+	private:
+		size_t stack_size_;
+
+	public:
+		StackManager() : stack_size_(0) {}
+
+		/// Allocate stack
+		Addr Alloc(size_t size)
+		{
+			size_t offset = stack_size_;
+			stack_size_ += size;
+			return Addr(RegID::CreatePhysicalRegID(R_TYPE_GP, EBP), offset);
+		}
+	};
+
 	/// Spin lock
 	class SpinLock
 	{
@@ -1260,10 +1278,11 @@ struct Frontend
 	}
 
 	typedef std::vector<Instr> InstrList;
-	InstrList			instrs_;
-	bool				assembled_;
-	detail::CodeBuffer	codebuff_;
-	detail::SpinLock	codelock_;
+	InstrList				instrs_;
+	bool					assembled_;
+	detail::CodeBuffer		codebuff_;
+	detail::SpinLock		codelock_;
+	detail::StackManager	stack_manager_;
 
 	struct Label
 	{
@@ -4010,24 +4029,6 @@ namespace compiler
 		return name;
 	}
 
-	/// Stack manager
-	class StackManager
-	{
-	private:
-		size_t stack_size_;
-
-	public:
-		StackManager() : stack_size_(0) {}
-
-		/// Allocate stack
-		Addr Alloc(size_t size)
-		{
-			size_t offset = stack_size_;
-			stack_size_ += size;
-			return Addr(RegID::CreatePhysicalRegID(R_TYPE_GP, EBP), offset);
-		}
-	};
-
 	/// Variable attribute
 	struct VarAttribute
 	{
@@ -4073,7 +4074,7 @@ namespace compiler
 		}
 
 		/// Allocate stack of spill slots
-		void AllocSpillSlots(StackManager& stack_manager)
+		void AllocSpillSlots(detail::StackManager& stack_manager)
 		{
 			// YMM
 			for (size_t i = 0; i < attributes_[2].size(); ++i) {
@@ -5582,8 +5583,7 @@ namespace compiler
 			}
 		}
 
-		StackManager stack_manager;
-		var_manager.AllocSpillSlots(stack_manager);
+		var_manager.AllocSpillSlots(f.stack_manager_);
 
 		RewriteInstructions(f, cfg, var_manager);
 
@@ -5770,7 +5770,7 @@ namespace detail {
 
 	/// cdecl argument type traits
 	template<int N, class T, int Size = sizeof(T)>
-	struct ArgumentTraits_cdecl {
+	struct ArgTraits_cdecl {
 		enum {
 			stack_size = (Size + 4 - 1) / 4 * 4,
 			flag = ARG_IN_STACK | ARG_TYPE_VALUE,
@@ -5780,34 +5780,34 @@ namespace detail {
 
 #ifdef _MMINTRIN_H_INCLUDED
 	// specialization for __m64
-	template<> struct ArgumentTraits_cdecl<0, __m64, 8> {enum {stack_size = 0, flag = ARG_IN_MMX | ARG_TYPE_VALUE, reg_id = MM0};};
-	template<> struct ArgumentTraits_cdecl<1, __m64, 8> {enum {stack_size = 0, flag = ARG_IN_MMX | ARG_TYPE_VALUE, reg_id = MM1};};
-	template<> struct ArgumentTraits_cdecl<2, __m64, 8> {enum {stack_size = 0, flag = ARG_IN_MMX | ARG_TYPE_VALUE, reg_id = MM2};};
+	template<> struct ArgTraits_cdecl<0, __m64, 8> {enum {stack_size = 0, flag = ARG_IN_MMX | ARG_TYPE_VALUE, reg_id = MM0};};
+	template<> struct ArgTraits_cdecl<1, __m64, 8> {enum {stack_size = 0, flag = ARG_IN_MMX | ARG_TYPE_VALUE, reg_id = MM1};};
+	template<> struct ArgTraits_cdecl<2, __m64, 8> {enum {stack_size = 0, flag = ARG_IN_MMX | ARG_TYPE_VALUE, reg_id = MM2};};
 #endif
 
 #ifdef _INCLUDED_MM2
 	// specialization for __m128
-	template<> struct ArgumentTraits_cdecl<0, __m128, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_SP | ARG_TYPE_VALUE, reg_id = XMM0};};
-	template<> struct ArgumentTraits_cdecl<1, __m128, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_SP | ARG_TYPE_VALUE, reg_id = XMM1};};
-	template<> struct ArgumentTraits_cdecl<2, __m128, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_SP | ARG_TYPE_VALUE, reg_id = XMM2};};
+	template<> struct ArgTraits_cdecl<0, __m128, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_SP | ARG_TYPE_VALUE, reg_id = XMM0};};
+	template<> struct ArgTraits_cdecl<1, __m128, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_SP | ARG_TYPE_VALUE, reg_id = XMM1};};
+	template<> struct ArgTraits_cdecl<2, __m128, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_SP | ARG_TYPE_VALUE, reg_id = XMM2};};
 #endif
 
 #ifdef _INCLUDED_EMM
 	// specialization for __m128d
-	template<> struct ArgumentTraits_cdecl<0, __m128d, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_DP | ARG_TYPE_VALUE, reg_id = XMM0};};
-	template<> struct ArgumentTraits_cdecl<1, __m128d, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_DP | ARG_TYPE_VALUE, reg_id = XMM1};};
-	template<> struct ArgumentTraits_cdecl<2, __m128d, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_DP | ARG_TYPE_VALUE, reg_id = XMM2};};
+	template<> struct ArgTraits_cdecl<0, __m128d, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_DP | ARG_TYPE_VALUE, reg_id = XMM0};};
+	template<> struct ArgTraits_cdecl<1, __m128d, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_DP | ARG_TYPE_VALUE, reg_id = XMM1};};
+	template<> struct ArgTraits_cdecl<2, __m128d, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_DP | ARG_TYPE_VALUE, reg_id = XMM2};};
 
 	// specialization for __m128i
-	template<> struct ArgumentTraits_cdecl<0, __m128i, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_DP | ARG_TYPE_VALUE, reg_id = XMM0};};
-	template<> struct ArgumentTraits_cdecl<1, __m128i, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_DP | ARG_TYPE_VALUE, reg_id = XMM1};};
-	template<> struct ArgumentTraits_cdecl<2, __m128i, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_DP | ARG_TYPE_VALUE, reg_id = XMM2};};
+	template<> struct ArgTraits_cdecl<0, __m128i, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_DP | ARG_TYPE_VALUE, reg_id = XMM0};};
+	template<> struct ArgTraits_cdecl<1, __m128i, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_DP | ARG_TYPE_VALUE, reg_id = XMM1};};
+	template<> struct ArgTraits_cdecl<2, __m128i, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_DP | ARG_TYPE_VALUE, reg_id = XMM2};};
 #endif
 
 
 	/// Microsoft x64 fastcall argument type traits
 	template<int N, class T, int Size = sizeof(T)>
-	struct ArgumentTraits_win64 {
+	struct ArgTraits_win64 {
 		enum {
 			stack_size = 8,
 			flag = ARG_IN_STACK | (Size == 1 || Size == 2 || Size == 4 || Size == 8 ? ARG_TYPE_VALUE : ARG_TYPE_PTR),
@@ -5818,7 +5818,7 @@ namespace detail {
 	/**
 	 * Base class for argument which is stored in general purpose register.
 	 */
-	template<int RegID, int Flag> struct ArgumentTraits_win64_reg {
+	template<int RegID, int Flag> struct ArgTraits_win64_reg {
 		enum {
 			stack_size = 8,
 			flag = Flag,
@@ -5827,54 +5827,54 @@ namespace detail {
 	};
 
 	// specialization for argument pointer stored in register
-	template<class T, int Size> struct ArgumentTraits_win64<0, T, Size> : ArgumentTraits_win64_reg<RCX, ARG_IN_REG | ARG_TYPE_PTR> {};
-	template<class T, int Size> struct ArgumentTraits_win64<1, T, Size> : ArgumentTraits_win64_reg<RDX, ARG_IN_REG | ARG_TYPE_PTR> {};
-	template<class T, int Size> struct ArgumentTraits_win64<2, T, Size> : ArgumentTraits_win64_reg<R8, ARG_IN_REG | ARG_TYPE_PTR> {};
-	template<class T, int Size> struct ArgumentTraits_win64<3, T, Size> : ArgumentTraits_win64_reg<R9, ARG_IN_REG | ARG_TYPE_PTR> {};
+	template<class T, int Size> struct ArgTraits_win64<0, T, Size> : ArgTraits_win64_reg<RCX, ARG_IN_REG | ARG_TYPE_PTR> {};
+	template<class T, int Size> struct ArgTraits_win64<1, T, Size> : ArgTraits_win64_reg<RDX, ARG_IN_REG | ARG_TYPE_PTR> {};
+	template<class T, int Size> struct ArgTraits_win64<2, T, Size> : ArgTraits_win64_reg<R8, ARG_IN_REG | ARG_TYPE_PTR> {};
+	template<class T, int Size> struct ArgTraits_win64<3, T, Size> : ArgTraits_win64_reg<R9, ARG_IN_REG | ARG_TYPE_PTR> {};
 
 	// specialization for 1 byte type
-	template<class T> struct ArgumentTraits_win64<0, T, 1> : ArgumentTraits_win64_reg<RCX, ARG_IN_REG | ARG_TYPE_VALUE> {};
-	template<class T> struct ArgumentTraits_win64<1, T, 1> : ArgumentTraits_win64_reg<RDX, ARG_IN_REG | ARG_TYPE_VALUE> {};
-	template<class T> struct ArgumentTraits_win64<2, T, 1> : ArgumentTraits_win64_reg<R8, ARG_IN_REG | ARG_TYPE_VALUE> {};
-	template<class T> struct ArgumentTraits_win64<3, T, 1> : ArgumentTraits_win64_reg<R9, ARG_IN_REG | ARG_TYPE_VALUE> {};
+	template<class T> struct ArgTraits_win64<0, T, 1> : ArgTraits_win64_reg<RCX, ARG_IN_REG | ARG_TYPE_VALUE> {};
+	template<class T> struct ArgTraits_win64<1, T, 1> : ArgTraits_win64_reg<RDX, ARG_IN_REG | ARG_TYPE_VALUE> {};
+	template<class T> struct ArgTraits_win64<2, T, 1> : ArgTraits_win64_reg<R8, ARG_IN_REG | ARG_TYPE_VALUE> {};
+	template<class T> struct ArgTraits_win64<3, T, 1> : ArgTraits_win64_reg<R9, ARG_IN_REG | ARG_TYPE_VALUE> {};
 
 	// specialization for 2 bytes type
-	template<class T> struct ArgumentTraits_win64<0, T, 2> : ArgumentTraits_win64_reg<RCX, ARG_IN_REG | ARG_TYPE_VALUE> {};
-	template<class T> struct ArgumentTraits_win64<1, T, 2> : ArgumentTraits_win64_reg<RDX, ARG_IN_REG | ARG_TYPE_VALUE> {};
-	template<class T> struct ArgumentTraits_win64<2, T, 2> : ArgumentTraits_win64_reg<R8, ARG_IN_REG | ARG_TYPE_VALUE> {};
-	template<class T> struct ArgumentTraits_win64<3, T, 2> : ArgumentTraits_win64_reg<R9, ARG_IN_REG | ARG_TYPE_VALUE> {};
+	template<class T> struct ArgTraits_win64<0, T, 2> : ArgTraits_win64_reg<RCX, ARG_IN_REG | ARG_TYPE_VALUE> {};
+	template<class T> struct ArgTraits_win64<1, T, 2> : ArgTraits_win64_reg<RDX, ARG_IN_REG | ARG_TYPE_VALUE> {};
+	template<class T> struct ArgTraits_win64<2, T, 2> : ArgTraits_win64_reg<R8, ARG_IN_REG | ARG_TYPE_VALUE> {};
+	template<class T> struct ArgTraits_win64<3, T, 2> : ArgTraits_win64_reg<R9, ARG_IN_REG | ARG_TYPE_VALUE> {};
 
 	// specialization for 4 bytes type
-	template<class T> struct ArgumentTraits_win64<0, T, 4> : ArgumentTraits_win64_reg<RCX, ARG_IN_REG | ARG_TYPE_VALUE> {};
-	template<class T> struct ArgumentTraits_win64<1, T, 4> : ArgumentTraits_win64_reg<RDX, ARG_IN_REG | ARG_TYPE_VALUE> {};
-	template<class T> struct ArgumentTraits_win64<2, T, 4> : ArgumentTraits_win64_reg<R8, ARG_IN_REG | ARG_TYPE_VALUE> {};
-	template<class T> struct ArgumentTraits_win64<3, T, 4> : ArgumentTraits_win64_reg<R9, ARG_IN_REG | ARG_TYPE_VALUE> {};
+	template<class T> struct ArgTraits_win64<0, T, 4> : ArgTraits_win64_reg<RCX, ARG_IN_REG | ARG_TYPE_VALUE> {};
+	template<class T> struct ArgTraits_win64<1, T, 4> : ArgTraits_win64_reg<RDX, ARG_IN_REG | ARG_TYPE_VALUE> {};
+	template<class T> struct ArgTraits_win64<2, T, 4> : ArgTraits_win64_reg<R8, ARG_IN_REG | ARG_TYPE_VALUE> {};
+	template<class T> struct ArgTraits_win64<3, T, 4> : ArgTraits_win64_reg<R9, ARG_IN_REG | ARG_TYPE_VALUE> {};
 
 	// specialization for 8 bytes type
-	template<class T> struct ArgumentTraits_win64<0, T, 8> : ArgumentTraits_win64_reg<RCX, ARG_IN_REG | ARG_TYPE_VALUE> {};
-	template<class T> struct ArgumentTraits_win64<1, T, 8> : ArgumentTraits_win64_reg<RDX, ARG_IN_REG | ARG_TYPE_VALUE> {};
-	template<class T> struct ArgumentTraits_win64<2, T, 8> : ArgumentTraits_win64_reg<R8, ARG_IN_REG | ARG_TYPE_VALUE> {};
-	template<class T> struct ArgumentTraits_win64<3, T, 8> : ArgumentTraits_win64_reg<R9, ARG_IN_REG | ARG_TYPE_VALUE> {};
+	template<class T> struct ArgTraits_win64<0, T, 8> : ArgTraits_win64_reg<RCX, ARG_IN_REG | ARG_TYPE_VALUE> {};
+	template<class T> struct ArgTraits_win64<1, T, 8> : ArgTraits_win64_reg<RDX, ARG_IN_REG | ARG_TYPE_VALUE> {};
+	template<class T> struct ArgTraits_win64<2, T, 8> : ArgTraits_win64_reg<R8, ARG_IN_REG | ARG_TYPE_VALUE> {};
+	template<class T> struct ArgTraits_win64<3, T, 8> : ArgTraits_win64_reg<R9, ARG_IN_REG | ARG_TYPE_VALUE> {};
 
 #ifdef _MMINTRIN_H_INCLUDED
 	// specialization for __m64
-	template<> struct ArgumentTraits_win64<0, __m64, 8> : ArgumentTraits_win64_reg<RCX, ARG_IN_REG | ARG_TYPE_VALUE> {};
-	template<> struct ArgumentTraits_win64<1, __m64, 8> : ArgumentTraits_win64_reg<RDX, ARG_IN_REG | ARG_TYPE_VALUE> {};
-	template<> struct ArgumentTraits_win64<2, __m64, 8> : ArgumentTraits_win64_reg<R8, ARG_IN_REG | ARG_TYPE_VALUE> {};
-	template<> struct ArgumentTraits_win64<3, __m64, 8> : ArgumentTraits_win64_reg<R9, ARG_IN_REG | ARG_TYPE_VALUE> {};
+	template<> struct ArgTraits_win64<0, __m64, 8> : ArgTraits_win64_reg<RCX, ARG_IN_REG | ARG_TYPE_VALUE> {};
+	template<> struct ArgTraits_win64<1, __m64, 8> : ArgTraits_win64_reg<RDX, ARG_IN_REG | ARG_TYPE_VALUE> {};
+	template<> struct ArgTraits_win64<2, __m64, 8> : ArgTraits_win64_reg<R8, ARG_IN_REG | ARG_TYPE_VALUE> {};
+	template<> struct ArgTraits_win64<3, __m64, 8> : ArgTraits_win64_reg<R9, ARG_IN_REG | ARG_TYPE_VALUE> {};
 #endif
 
 	// specialization for float
-	template<> struct ArgumentTraits_win64<0, float, 4> : ArgumentTraits_win64_reg<XMM0, ARG_IN_XMM_SP | ARG_TYPE_VALUE> {};
-	template<> struct ArgumentTraits_win64<1, float, 4> : ArgumentTraits_win64_reg<XMM1, ARG_IN_XMM_SP | ARG_TYPE_VALUE> {};
-	template<> struct ArgumentTraits_win64<2, float, 4> : ArgumentTraits_win64_reg<XMM2, ARG_IN_XMM_SP | ARG_TYPE_VALUE> {};
-	template<> struct ArgumentTraits_win64<3, float, 4> : ArgumentTraits_win64_reg<XMM3, ARG_IN_XMM_SP | ARG_TYPE_VALUE> {};
+	template<> struct ArgTraits_win64<0, float, 4> : ArgTraits_win64_reg<XMM0, ARG_IN_XMM_SP | ARG_TYPE_VALUE> {};
+	template<> struct ArgTraits_win64<1, float, 4> : ArgTraits_win64_reg<XMM1, ARG_IN_XMM_SP | ARG_TYPE_VALUE> {};
+	template<> struct ArgTraits_win64<2, float, 4> : ArgTraits_win64_reg<XMM2, ARG_IN_XMM_SP | ARG_TYPE_VALUE> {};
+	template<> struct ArgTraits_win64<3, float, 4> : ArgTraits_win64_reg<XMM3, ARG_IN_XMM_SP | ARG_TYPE_VALUE> {};
 
 	// specialization for double
-	template<> struct ArgumentTraits_win64<0, double, 8> : ArgumentTraits_win64_reg<XMM0, ARG_IN_XMM_DP | ARG_TYPE_VALUE> {};
-	template<> struct ArgumentTraits_win64<1, double, 8> : ArgumentTraits_win64_reg<XMM1, ARG_IN_XMM_DP | ARG_TYPE_VALUE> {};
-	template<> struct ArgumentTraits_win64<2, double, 8> : ArgumentTraits_win64_reg<XMM2, ARG_IN_XMM_DP | ARG_TYPE_VALUE> {};
-	template<> struct ArgumentTraits_win64<3, double, 8> : ArgumentTraits_win64_reg<XMM3, ARG_IN_XMM_DP | ARG_TYPE_VALUE> {};
+	template<> struct ArgTraits_win64<0, double, 8> : ArgTraits_win64_reg<XMM0, ARG_IN_XMM_DP | ARG_TYPE_VALUE> {};
+	template<> struct ArgTraits_win64<1, double, 8> : ArgTraits_win64_reg<XMM1, ARG_IN_XMM_DP | ARG_TYPE_VALUE> {};
+	template<> struct ArgTraits_win64<2, double, 8> : ArgTraits_win64_reg<XMM2, ARG_IN_XMM_DP | ARG_TYPE_VALUE> {};
+	template<> struct ArgTraits_win64<3, double, 8> : ArgTraits_win64_reg<XMM3, ARG_IN_XMM_DP | ARG_TYPE_VALUE> {};
 
 
 	/// Special argument type
@@ -6314,10 +6314,10 @@ namespace detail {
 	public:
 		typedef Addr Arg;		///< main function argument type
 #ifdef JITASM64
-		template<int N, class T, int Size = sizeof(T)> struct ArgTraits : ArgumentTraits_win64<N, T, Size> {};
+		template<int N, class T, int Size = sizeof(T)> struct ArgTraits : ArgTraits_win64<N, T, Size> {};
 		bool dump_regarg_x64_;
 #else
-		template<int N, class T, int Size = sizeof(T)> struct ArgTraits : ArgumentTraits_cdecl<N, T, Size> {};
+		template<int N, class T, int Size = sizeof(T)> struct ArgTraits : ArgTraits_cdecl<N, T, Size> {};
 #endif
 
 		/**
@@ -6430,30 +6430,36 @@ namespace detail {
 		struct ArgInfo
 		{
 			Addr addr;
+			PhysicalRegID reg_id;
 			uint32 count_mmx;
 			uint32 count_xmm;
+
+			ArgInfo(const Addr& addr_, PhysicalRegID reg_id_, uint32 count_mmx_ = 0, uint32 count_xmm_ = 0) : addr(addr_), reg_id(reg_id_), count_mmx(count_mmx_), count_xmm(count_xmm_) {}
+			template<class Traits> ArgInfo Next(PhysicalRegID reg_id_) const {
+				return ArgInfo(addr + Traits::stack_size, reg_id_, count_mmx + (Traits::flag & ARG_IN_MMX ? 1 : 0), count_xmm + (Traits::flag & (ARG_IN_XMM_SP | ARG_IN_XMM_DP) ? 1 : 0));
+			}
 		};
 
-		template<class R>
-		inline Addr32 AddrArg1()  { return Addr32(RegID::CreatePhysicalRegID(R_TYPE_GP, EBP), sizeof(void *) * (2 + ResultT<R>::ArgR)); }
 		template<class R, class A1>
-		inline Addr32 AddrArg2()  { return AddrArg1<R>() + ArgumentTraits_cdecl<0, A1>::stack_size; }
+		inline ArgInfo ArgInfo1()  { return ArgInfo(Addr(RegID::CreatePhysicalRegID(R_TYPE_GP, EBP), sizeof(void *) * (2 + ResultT<R>::ArgR)), ArgTraits_cdecl<0, A1>::reg_id); }
 		template<class R, class A1, class A2>
-		inline Addr32 AddrArg3()  { return AddrArg2<R, A1>() + ArgumentTraits_cdecl<1, A2>::stack_size; }
+		inline ArgInfo ArgInfo2()  { return ArgInfo1<R>().Next< ArgTraits_cdecl<0, A1> >(ArgTraits_cdecl<1, A2>::reg_id); }
 		template<class R, class A1, class A2, class A3>
-		inline Addr32 AddrArg4()  { return AddrArg3<R, A1, A2>() + ArgumentTraits_cdecl<2, A3>::stack_size; }
+		inline ArgInfo ArgInfo3()  { return ArgInfo2<R, A1>().Next< ArgTraits_cdecl<1, A2> >(ArgTraits_cdecl<2, A3>::reg_id); }
 		template<class R, class A1, class A2, class A3, class A4>
-		inline Addr32 AddrArg5()  { return AddrArg4<R, A1, A2, A3>() + ArgumentTraits_cdecl<3, A4>::stack_size; }
+		inline ArgInfo ArgInfo4()  { return ArgInfo3<R, A1, A2>().Next< ArgTraits_cdecl<2, A3> >(ArgTraits_cdecl<3, A4>::reg_id); }
 		template<class R, class A1, class A2, class A3, class A4, class A5>
-		inline Addr32 AddrArg6()  { return AddrArg5<R, A1, A2, A3, A4>() + ArgumentTraits_cdecl<4, A5>::stack_size; }
+		inline ArgInfo ArgInfo5()  { return ArgInfo4<R, A1, A2, A3>().Next< ArgTraits_cdecl<3, A4> >(ArgTraits_cdecl<4, A5>::reg_id); }
 		template<class R, class A1, class A2, class A3, class A4, class A5, class A6>
-		inline Addr32 AddrArg7()  { return AddrArg6<R, A1, A2, A3, A4, A5>() + ArgumentTraits_cdecl<5, A6>::stack_size; }
+		inline ArgInfo ArgInfo6()  { return ArgInfo5<R, A1, A2, A3, A4>().Next< ArgTraits_cdecl<4, A5> >(ArgTraits_cdecl<5, A6>::reg_id); }
 		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7>
-		inline Addr32 AddrArg8()  { return AddrArg7<R, A1, A2, A3, A4, A5, A6>() + ArgumentTraits_cdecl<6, A7>::stack_size; }
+		inline ArgInfo ArgInfo7()  { return ArgInfo6<R, A1, A2, A3, A4, A5>().Next< ArgTraits_cdecl<5, A6> >(ArgTraits_cdecl<6, A7>::reg_id); }
 		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8>
-		inline Addr32 AddrArg9()  { return AddrArg8<R, A1, A2, A3, A4, A5, A6, A7>() + ArgumentTraits_cdecl<7, A8>::stack_size; }
+		inline ArgInfo ArgInfo8()  { return ArgInfo7<R, A1, A2, A3, A4, A5, A6>().Next< ArgTraits_cdecl<6, A7> >(ArgTraits_cdecl<7, A8>::reg_id); }
 		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9>
-		inline Addr32 AddrArg10() { return AddrArg9<R, A1, A2, A3, A4, A5, A6, A7, A8>() + ArgumentTraits_cdecl<8, A9>::stack_size; }
+		inline ArgInfo ArgInfo9()  { return ArgInfo8<R, A1, A2, A3, A4, A5, A6, A7>().Next< ArgTraits_cdecl<7, A8> >(ArgTraits_cdecl<8, A9>::reg_id); }
+		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9, class A10>
+		inline ArgInfo ArgInfo10() { return ArgInfo9<R, A1, A2, A3, A4, A5, A6, A7, A8>().Next< ArgTraits_cdecl<8, A9> >(ArgTraits_cdecl<9, A10>::reg_id); }
 
 		/// Function argument
 		template<class T, size_t Size = sizeof(T)>
@@ -6461,15 +6467,16 @@ namespace detail {
 		{
 			Addr addr_;
 #ifdef JITASM64
-			Arg(Frontend& f, const Addr& addr) : addr_(Reg64()) {
-				f.DeclareArg(addr_.reg_, f.ptr[addr]);
+			Arg(Frontend& f, const ArgInfo& arg_info) : addr_(Reg()) {
+				if (arg_info.reg_id != INVALID) {
+					f.DeclareArg(addr_.reg_, Reg(arg_info.reg_id), f.ptr[arg_info.addr]);
+				} else {
+					f.DeclareArg(addr_.reg_, f.ptr[addr]);
+				}
 			}
 #else
-			Arg(Frontend& f, const Addr& addr) : addr_(addr) {}
+			Arg(Frontend& f, const ArgInfo& arg_info) : addr_(arg_info.addr) {}
 #endif
-			Arg(Frontend& f, const PhysicalRegID reg, const Addr& shadow) : addr_(Reg()) {
-				f.DeclareArg(addr_.reg_, Reg(reg), f.qword_ptr[shadow]);
-			}
 			operator Addr () {return addr_;}
 		};
 
@@ -6478,27 +6485,24 @@ namespace detail {
 		struct Arg<T, 1>
 		{
 			Frontend *f_;
-			Addr addr_;
-			PhysicalRegID reg_id_;
+			ArgInfo arg_info_;
 
-			Arg(Frontend& f, const Addr& addr) : f_(&f), addr_(addr), reg_id_(INVALID) {}
-			Arg(Frontend& f, const PhysicalRegID reg, const Addr& shadow) : f_(&f), addr_(shadow), reg_id_(reg) {}
-
+			Arg(Frontend& f, const ArgInfo& arg_info) : f_(&f), arg_info_(arg_info) {}
 			operator Addr () {
 #ifdef JITASM64
 				// Dump to shadow space when x64 argument on register
-				if (reg_id_ != INVALID) {
-					f_->movzx(f_->qword_ptr[addr_], Reg8(reg_id_));
+				if (arg_info_.reg_id != INVALID) {
+					f_->movzx(f_->qword_ptr[arg_info_.addr], Reg8(arg_info_.reg_id));
 				}
 #endif
 				return addr_;
 			}
 			operator Reg8 () {
 				Reg8 reg;
-				if (reg_id_ == INVALID) {
-					f_->DeclareArg(reg, f_->byte_ptr[addr_]);					// argument on stack
+				if (arg_info_.reg_id == INVALID) {
+					f_->DeclareArg(reg, f_->byte_ptr[arg_info_.addr]);					// argument on stack
 				} else {
-					f_->DeclareArg(reg, Reg8(reg_id_), f_->byte_ptr[addr_]);	// argument on register
+					f_->DeclareArg(reg, Reg8(arg_info_.reg_id), f_->byte_ptr[arg_info_.addr]);	// argument on register
 				}
 				return reg;
 			}
@@ -6509,27 +6513,24 @@ namespace detail {
 		struct Arg<T, 2>
 		{
 			Frontend *f_;
-			Addr addr_;
-			PhysicalRegID reg_id_;
+			ArgInfo arg_info_;
 
-			Arg(Frontend& f, const Addr& addr) : f_(&f), addr_(addr), reg_id_(INVALID) {}
-			Arg(Frontend& f, const PhysicalRegID reg, const Addr& shadow) : f_(&f), addr_(shadow), reg_id_(reg) {}
-
+			Arg(Frontend& f, const ArgInfo& arg_info) : f_(&f), arg_info_(arg_info) {}
 			operator Addr () {
 #ifdef JITASM64
 				// Dump to shadow space when x64 argument on register
-				if (reg_id_ != INVALID) {
-					f_->movzx(f_->qword_ptr[addr_], Reg16(reg_id_));
+				if (arg_info_.reg_id != INVALID) {
+					f_->movzx(f_->qword_ptr[arg_info_.addr], Reg16(arg_info_.reg_id));
 				}
 #endif
 				return addr_;
 			}
 			operator Reg16 () {
 				Reg16 reg;
-				if (reg_id_ == INVALID) {
-					f_->DeclareArg(reg, f_->word_ptr[addr_]);					// argument on stack
+				if (arg_info_.reg_id == INVALID) {
+					f_->DeclareArg(reg, f_->word_ptr[arg_info_.addr]);					// argument on stack
 				} else {
-					f_->DeclareArg(reg, Reg16(reg_id_), f_->word_ptr[addr_]);	// argument on register
+					f_->DeclareArg(reg, Reg16(arg_info_.reg_id), f_->word_ptr[arg_info_.addr]);	// argument on register
 				}
 				return reg;
 			}
@@ -6540,27 +6541,24 @@ namespace detail {
 		struct Arg<T, 4>
 		{
 			Frontend *f_;
-			Addr addr_;
-			PhysicalRegID reg_id_;
+			ArgInfo arg_info_;
 
-			Arg(Frontend& f, const Addr& addr) : f_(&f), addr_(addr), reg_id_(INVALID) {}
-			Arg(Frontend& f, const PhysicalRegID reg, const Addr& shadow) : f_(&f), addr_(shadow), reg_id_(reg) {}
-
+			Arg(Frontend& f, const ArgInfo& arg_info) : f_(&f), arg_info_(arg_info) {}
 			operator Addr () {
 #ifdef JITASM64
 				// Dump to shadow space when x64 argument on register
-				if (reg_id_ != INVALID) {
-					f_->movzx(f_->qword_ptr[addr_], Reg32(reg_id_));
+				if (arg_info_.reg_id != INVALID) {
+					f_->movzx(f_->qword_ptr[arg_info_.addr], Reg32(arg_info_.reg_id));
 				}
 #endif
-				return addr_;
+				return arg_info_.addr;
 			}
 			operator Reg32 () {
 				Reg32 reg;
-				if (reg_id_ == INVALID) {
-					f_->DeclareArg(reg, f_->dword_ptr[addr_]);					// argument on stack
+				if (arg_info_.reg_id == INVALID) {
+					f_->DeclareArg(reg, f_->dword_ptr[arg_info_.addr]);					// argument on stack
 				} else {
-					f_->DeclareArg(reg, Reg32(reg_id_), f_->dword_ptr[addr_]);	// argument on register
+					f_->DeclareArg(reg, Reg32(arg_info_.reg_id), f_->dword_ptr[arg_info_.addr]);	// argument on register
 				}
 				return reg;
 			}
@@ -6572,25 +6570,22 @@ namespace detail {
 		struct Arg<T, 8>
 		{
 			Frontend *f_;
-			Addr addr_;
-			PhysicalRegID reg_id_;
+			ArgInfo arg_info_;
 
-			Arg(Frontend& f, const Addr& addr) : f_(&f), addr_(addr), reg_id_(INVALID) {}
-			Arg(Frontend& f, const PhysicalRegID reg, const Addr& shadow) : f_(&f), addr_(shadow), reg_id_(reg) {}
-
+			Arg(Frontend& f, const ArgInfo& arg_info) : f_(&f), arg_info_(arg_info) {}
 			operator Addr () {
 				// Dump to shadow space when x64 argument on register
-				if (reg_id_ != INVALID) {
-					f_->mov(f_->qword_ptr[addr_], Reg64(reg_id_));
+				if (arg_info_.reg_id != INVALID) {
+					f_->mov(f_->qword_ptr[arg_info_.addr], Reg64(arg_info_.reg_id));
 				}
-				return addr_;
+				return arg_info_.addr;
 			}
 			operator Reg64 () {
 				Reg64 reg;
-				if (reg_id_ == INVALID) {
-					f_->DeclareArg(reg, f_->qword_ptr[addr_]);					// argument on stack
+				if (arg_info_.reg_id == INVALID) {
+					f_->DeclareArg(reg, f_->qword_ptr[arg_info_.addr]);					// argument on stack
 				} else {
-					f_->DeclareArg(reg, Reg64(reg_id_), f_->qword_ptr[addr_]);	// argument on register
+					f_->DeclareArg(reg, Reg64(arg_info_.reg_id), f_->qword_ptr[arg_info_.addr]);	// argument on register
 				}
 				return reg;
 			}
@@ -6602,27 +6597,24 @@ namespace detail {
 		struct Arg<float, 4>
 		{
 			Frontend *f_;
-			Addr addr_;
-			PhysicalRegID reg_id_;
+			ArgInfo arg_info_;
 
-			Arg(Frontend& f, const Addr& addr) : f_(&f), addr_(addr), reg_id_(INVALID) {}
-			Arg(Frontend& f, const PhysicalRegID reg, const Addr& shadow) : f_(&f), addr_(shadow), reg_id_(reg) {}
-
+			Arg(Frontend& f, const ArgInfo& arg_info) : f_(&f), arg_info_(arg_info) {}
 			operator Addr () {
 #ifdef JITASM64
 				// Dump to shadow space when x64 argument on register
-				if (reg_id_ != INVALID) {
-					f_->movss(f_->dword_ptr[addr_], XmmReg(reg_id_));
+				if (arg_info_.reg_id != INVALID) {
+					f_->movss(f_->dword_ptr[arg_info_.addr], XmmReg(arg_info_.reg_id));
 				}
 #endif
-				return addr_;
+				return arg_info_.addr;
 			}
 			operator XmmReg () {
 				XmmReg reg;
-				if (reg_id_ == INVALID) {
-					f_->DeclareArg(reg, f_->dword_ptr[addr_]);	// argument on stack
+				if (arg_info_.reg_id == INVALID) {
+					f_->DeclareArg(reg, f_->dword_ptr[arg_info_.addr]);	// argument on stack
 				} else {
-					f_->DeclareArg(reg, XmmReg(reg_id_));		// argument on register
+					f_->DeclareArg(reg, XmmReg(arg_info_.reg_id));		// argument on register
 				}
 				return reg;
 			}
@@ -6633,27 +6625,24 @@ namespace detail {
 		struct Arg<double, 8>
 		{
 			Frontend *f_;
-			Addr addr_;
-			PhysicalRegID reg_id_;
+			ArgInfo arg_info_;
 
-			Arg(Frontend& f, const Addr& addr) : f_(&f), addr_(addr), reg_id_(INVALID) {}
-			Arg(Frontend& f, const PhysicalRegID reg, const Addr& shadow) : f_(&f), addr_(shadow), reg_id_(reg) {}
-
+			Arg(Frontend& f, const ArgInfo& arg_info) : f_(&f), arg_info_(arg_info) {}
 			operator Addr () {
 #ifdef JITASM64
 				// Dump to shadow space when x64 argument on register
-				if (reg_id_ != INVALID) {
-					f_->movsd(f_->qword_ptr[addr_], XmmReg(reg_id_));
+				if (arg_info_.reg_id != INVALID) {
+					f_->movsd(f_->qword_ptr[arg_info_.addr], XmmReg(arg_info_.reg_id));
 				}
 #endif
-				return addr_;
+				return arg_info_.addr;
 			}
 			operator XmmReg () {
 				XmmReg reg;
-				if (reg_id_ == INVALID) {
-					f_->DeclareArg(reg, f_->qword_ptr[addr_]);	// argument on stack
+				if (arg_info_.reg_id == INVALID) {
+					f_->DeclareArg(reg, f_->qword_ptr[arg_info_.addr]);	// argument on stack
 				} else {
-					f_->DeclareArg(reg, XmmReg(reg_id_));		// argument on register
+					f_->DeclareArg(reg, XmmReg(arg_info_.reg_id));		// argument on register
 				}
 				return reg;
 			}
@@ -6706,6 +6695,58 @@ namespace detail {
 	};
 
 }	// namespace detail
+
+/// cdecl function
+template<
+	class R,
+	class Derived,
+	class A1 = detail::ArgNone,
+	class A2 = detail::ArgNone,
+	class A3 = detail::ArgNone,
+	class A4 = detail::ArgNone,
+	class A5 = detail::ArgNone,
+	class A6 = detail::ArgNone,
+	class A7 = detail::ArgNone,
+	class A8 = detail::ArgNone,
+	class A9 = detail::ArgNone,
+	class A10 = detail::ArgNone>
+struct function_cdecl2 : Frontend
+{
+	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10);
+	typedef detail::ResultT<R> Result;	///< main function result type
+	typename detail::ResultTraits<R>::ResultPtr result_ptr;
+
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	void naked_main() {
+		static_cast<Derived *>(this)->main(
+			detail::cdecl::Arg<A1>(*this, detail::cdecl::ArgInfo1<R,A1>()),
+			detail::cdecl::Arg<A2>(*this, detail::cdecl::ArgInfo2<R,A1,A2>()),
+			detail::cdecl::Arg<A3>(*this, detail::cdecl::ArgInfo3<R,A1,A2,A3>()),
+			detail::cdecl::Arg<A4>(*this, detail::cdecl::ArgInfo4<R,A1,A2,A3,A4>()),
+			detail::cdecl::Arg<A5>(*this, detail::cdecl::ArgInfo5<R,A1,A2,A3,A4,A5>()),
+			detail::cdecl::Arg<A6>(*this, detail::cdecl::ArgInfo6<R,A1,A2,A3,A4,A5,A6>()),
+			detail::cdecl::Arg<A7>(*this, detail::cdecl::ArgInfo7<R,A1,A2,A3,A4,A5,A6,A7>()),
+			detail::cdecl::Arg<A8>(*this, detail::cdecl::ArgInfo8<R,A1,A2,A3,A4,A5,A6,A7,A8>()),
+			detail::cdecl::Arg<A9>(*this, detail::cdecl::ArgInfo9<R,A1,A2,A3,A4,A5,A6,A7,A8,A9>()),
+			detail::cdecl::Arg<A10>(*this, detail::cdecl::ArgInfo10<R,A1,A2,A3,A4,A5,A6,A7,A8,A9,A10>())
+			).Store(*this);
+		compiler::RegisterAllocation(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for no arguments and no result
+template<class Derived>
+struct function_cdecl2<void, Derived, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
+{
+	typedef void (__cdecl *FuncPtr)();
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	void naked_main() {
+		static_cast<Derived *>(this)->main();
+		compiler::RegisterAllocation(*this);
+		MakePrologAndEpilog();
+	}
+};
 
 /// cdecl function
 template<
