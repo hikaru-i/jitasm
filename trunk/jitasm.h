@@ -6451,7 +6451,8 @@ namespace detail {
 #ifdef JITASM64
 				// Dump to shadow space when x64 argument on register
 				if (arg_info_.reg_id != INVALID) {
-					f_->movzx(f_->qword_ptr[arg_info_.addr], Reg8(arg_info_.reg_id));
+					f_->movzx(Reg64(arg_info_.reg_id), Reg8(arg_info_.reg_id));
+					f_->mov(f_->qword_ptr[arg_info_.addr], Reg64(arg_info_.reg_id));
 				}
 #endif
 				return addr_;
@@ -6479,7 +6480,8 @@ namespace detail {
 #ifdef JITASM64
 				// Dump to shadow space when x64 argument on register
 				if (arg_info_.reg_id != INVALID) {
-					f_->movzx(f_->qword_ptr[arg_info_.addr], Reg16(arg_info_.reg_id));
+					f_->movzx(Reg64(arg_info_.reg_id), Reg16(arg_info_.reg_id));
+					f_->mov(f_->qword_ptr[arg_info_.addr], Reg64(arg_info_.reg_id));
 				}
 #endif
 				return addr_;
@@ -6507,7 +6509,7 @@ namespace detail {
 #ifdef JITASM64
 				// Dump to shadow space when x64 argument on register
 				if (arg_info_.reg_id != INVALID) {
-					f_->movzx(f_->qword_ptr[arg_info_.addr], Reg32(arg_info_.reg_id));
+					f_->mov(f_->qword_ptr[arg_info_.addr], Reg64(arg_info_.reg_id));
 				}
 #endif
 				return arg_info_.addr;
