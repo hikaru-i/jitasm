@@ -648,7 +648,9 @@ enum InstrID
 
 	I_AESENC, I_AESENCLAST, I_AESDEC, I_AESDECLAST, I_AESIMC, I_AESKEYGENASSIST,
 
-	I_PSEUDO_DECL_ARG
+	// Pseudo instructions
+	I_PSEUDO_DECLARE_REG_ARG,	///< Declare register argument
+	I_PSEUDO_DECLARE_STACK_ARG,	///< Declare stack argument
 };
 
 enum JumpCondition
@@ -1206,6 +1208,14 @@ namespace detail
 
 struct Frontend
 {
+	typedef jitasm::Addr	Addr;
+	typedef jitasm::Reg8	Reg8;
+	typedef jitasm::Reg16	Reg16;
+	typedef jitasm::Reg32	Reg32;
+	typedef jitasm::MmxReg	MmxReg;
+	typedef jitasm::XmmReg	XmmReg;
+	typedef jitasm::YmmReg	YmmReg;
+
 	Reg8_al		al;
 	Reg8_cl		cl;
 	Reg8		dl, bl, ah, ch, dh, bh;
@@ -1293,7 +1303,7 @@ struct Frontend
 	typedef std::deque<Label> LabelList;
 	LabelList	labels_;
 
-	virtual void naked_main() = 0;
+	virtual void InternalMain() = 0;
 
 	/// Make function prolog and epilog
 	void MakePrologAndEpilog()
@@ -1372,11 +1382,18 @@ struct Frontend
 		ret();
 	}
 
-	/// Declare variable of the function argument
-	void DeclareArg(const detail::Opd& var, const detail::Opd& arg, const detail::Opd& spill_slot = detail::Opd())
+	/// Declare variable of the function argument on register
+	void DeclareRegArg(const detail::Opd& var, const detail::Opd& arg, const detail::Opd& spill_slot = detail::Opd())
 	{
 		ASSERT(var.IsReg());
-		AppendInstr(I_PSEUDO_DECL_ARG, 0, E_SPECIAL, var, arg, spill_slot);
+		AppendInstr(I_PSEUDO_DECLARE_REG_ARG, 0, E_SPECIAL, Dummy(W(var), arg), spill_slot);
+	}
+
+	/// Declare variable of the function argument on stack
+	void DeclareStackArg(const detail::Opd& var, const detail::Opd& arg)
+	{
+		ASSERT(var.IsReg());
+		AppendInstr(I_PSEUDO_DECLARE_STACK_ARG, 0, E_SPECIAL, W(var), R(arg));
 	}
 
 	static bool IsJump(InstrID id)
@@ -1467,7 +1484,7 @@ struct Frontend
 		instrs_.clear();
 		labels_.clear();
 		instrs_.reserve(128);
-		naked_main();
+		InternalMain();
 
 		// Resolve jump instructions
 		if (!labels_.empty()) {
@@ -4073,6 +4090,16 @@ namespace compiler
 			return attributes_[reg_family][var].stack_slot;
 		}
 
+		/// Set stack slot for spill register
+		void SetSpillSlot(RegType reg_type, int var, const Addr& stack_slot)
+		{
+			const size_t reg_family = GetRegFamily(reg_type);
+			if (static_cast<size_t>(var) >= attributes_[reg_family].size()) {
+				attributes_[reg_family].resize(var + 1);
+			}
+			attributes_[reg_family][var].stack_slot = stack_slot;
+		}
+
 		/// Allocate stack of spill slots
 		void AllocSpillSlots(detail::StackManager& stack_manager)
 		{
@@ -4139,15 +4166,14 @@ namespace compiler
 		struct Interval
 		{
 			size_t instr_idx_offset;				///< Instruction index offset from basic block start point
-			size_t live_count;						///< Number of live variables that is not spilled
-			BitVector liveness;						///< The set of live variables that is not spilled
+			BitVector liveness;						///< The set of live variables
 			BitVector use;							///< The set of used variables in this interval
 			BitVector spill;						///< The set of spilled variables
 			std::vector<uint32> reg_assignables;	///< The constraints of register allocation
 			std::vector<int> assignment_table;		///< Register assignment table
 
-			Interval(size_t instr_idx, const std::vector<uint32>& assignables) : instr_idx_offset(instr_idx), live_count(0), reg_assignables(assignables) {}
-			Interval(size_t instr_idx, const BitVector& l, const std::vector<uint32>& assignables) : instr_idx_offset(instr_idx), liveness(l), live_count(l.count_bit()), reg_assignables(assignables) {}
+			Interval(size_t instr_idx, const std::vector<uint32>& assignables) : instr_idx_offset(instr_idx), reg_assignables(assignables) {}
+			Interval(size_t instr_idx, const BitVector& l, const BitVector& s, const std::vector<uint32>& assignables) : instr_idx_offset(instr_idx), liveness(l), spill(s), reg_assignables(assignables) {}
 
 			void UpdateUse(size_t var, RegUsePointRange& range, const Interval *next_interval)
 			{
@@ -4245,11 +4271,13 @@ namespace compiler
 			BitVector *last_liveness = NULL;
 			std::vector<uint32> reg_assignables;
 			bool last_reg_constraints = false;
+			bool last_stack_vars = false;
 			const size_t num_of_variables = live_in.size_bit() < use_points.size() ? use_points.size() : live_in.size_bit();
 			size_t instr_idx = 0;
 			size_t end_count;
 			do {
 				BitVector liveness = live_in;
+				BitVector stack_vars;
 				end_count = 0;
 				reg_assignables.clear();
 				size_t min_instr_idx = (size_t)-1;
@@ -4263,14 +4291,19 @@ namespace compiler
 						}
 
 						if (use_points_ranges[i].first->instr_idx == instr_idx) {
-							while (!use_points_ranges[i].empty() && use_points_ranges[i].first->instr_idx == instr_idx) {
+							for (; !use_points_ranges[i].empty() && use_points_ranges[i].first->instr_idx == instr_idx; ++use_points_ranges[i].first) {
+								// Check the constraints of register allocation
 								if (use_points_ranges[i].first->reg_assignable != 0xFFFFFFFF) {
 									reg_assignables.resize(num_of_variables, 0xFFFFFFFF);
 									reg_assignables[i] &= use_points_ranges[i].first->reg_assignable;
 								}
-								liveness.set_bit(i, true);
-								++use_points_ranges[i].first;
+
+								// Check the stack variable
+								if (use_points_ranges[i].first->type & O_TYPE_MEM) {
+									stack_vars.set_bit(i, true);
+								}
 							}
+							liveness.set_bit(i, true);
 						} else if (use_points_ranges[i].first->type & O_TYPE_READ) {
 							liveness.set_bit(i, true);
 						} else if (use_points_ranges[i].first->type & O_TYPE_WRITE) {
@@ -4284,11 +4317,14 @@ namespace compiler
 				// Split interval in the following case:
 				// - The liveness is changed.
 				// - Current or last instruction has any constraints of register allocation.
-				if (!reg_assignables.empty() || last_reg_constraints || !last_liveness || !last_liveness->is_equal(liveness)) {
-					intervals.push_back(Interval(instr_idx, liveness, reg_assignables));
+				// - Last instruction is I_PSEUDO_DECLARE_STACK_ARG
+				if (!reg_assignables.empty() || last_reg_constraints || last_stack_vars || !last_liveness || !last_liveness->is_equal(liveness)) {
+					intervals.push_back(Interval(instr_idx, liveness, stack_vars, reg_assignables));
 					last_liveness = &intervals.back().liveness;
 				}
+
 				last_reg_constraints = !reg_assignables.empty();
+				last_stack_vars = !stack_vars.empty();
 				instr_idx = min_instr_idx == instr_idx ? instr_idx + 1 : min_instr_idx;
 			} while (end_count < use_points_ranges.size());
 
@@ -4332,9 +4368,9 @@ namespace compiler
 			std::vector<int> cur_spill_cost;
 			for (size_t interval_idx = 0; interval_idx < intervals.size(); ++interval_idx) {
 				const Interval *prior_interval = interval_idx > 0 ? &intervals[interval_idx - 1] : last_interval;
-				Interval *cur_interval   = &intervals[interval_idx];
+				Interval *cur_interval = &intervals[interval_idx];
 
-				if (cur_interval->live_count > available_reg_count) {
+				if (cur_interval->liveness.count_bit() > available_reg_count) {
 					cur_interval->liveness.get_bit_indexes(live_vars);
 
 					const size_t max_var = live_vars.back();
@@ -4352,7 +4388,10 @@ namespace compiler
 						}
 
 						// calculate spill cost of this interval
-						if (cur_interval->use.get_bit(var) && interval_use_points[var].first->instr_idx == cur_interval->instr_idx_offset) {
+						if (cur_interval->use.get_bit(var) && (interval_use_points[var].first->type & O_TYPE_MEM)) {
+							// special low spill cost if this variable on stack (function arguemnt)
+							cur_spill_cost[var] = -1;
+						} else if (cur_interval->use.get_bit(var) && interval_use_points[var].first->instr_idx == cur_interval->instr_idx_offset) {
 							// special high spill cost if this variable is used at first instruction of this interval
 							// because it must not be spilled.
 							cur_spill_cost[var] = 0x7FFFFFFF;
@@ -4379,13 +4418,22 @@ namespace compiler
 					size_t split_interval_instr = (size_t)-1;
 					for (size_t i = 0; i < live_vars.size(); ++i) {
 						const size_t var = live_vars[i];
-						const bool spill = i + available_reg_count < live_vars.size();
+						const bool stack_var = (cur_spill_cost[var] < 0);		// It may be function argument on stack
+						const bool spill = (i + available_reg_count < live_vars.size() || stack_var);
 						cur_interval->spill.set_bit(var, spill);
 						if (spill) {
 							var_attrs[var].spill = true;
 						}
-						if (spill && cur_interval->use.get_bit(var) && interval_use_points[var].first->instr_idx < split_interval_instr) {
-							split_interval_instr = interval_use_points[var].first->instr_idx;
+						if (stack_var) {
+							// Split at next of using stack variable
+							if (interval_use_points[var].first->instr_idx + 1 < split_interval_instr) {
+								split_interval_instr = interval_use_points[var].first->instr_idx + 1;
+							}
+						} else if (spill && cur_interval->use.get_bit(var)) {
+							// Split if spilled variable is used in this interval.
+							if (interval_use_points[var].first->instr_idx < split_interval_instr) {
+								split_interval_instr = interval_use_points[var].first->instr_idx;
+							}
 						}
 					}
 
@@ -4484,8 +4532,8 @@ namespace compiler
 							// Try to assign another physical register if it is not used in this interval. But assign later.
 							live_vars.push_back(var);
 						} else {
-							// This may be false assignment but force to assign.
-							ASSERT(0);
+							// This may be out of assignment register (ESP, EBP and so on...)
+							ASSERT(((1 << var) & available_reg) == 0);		// false assignment!?
 							assigned_reg = static_cast<int>(var);
 						}
 					} else {
@@ -4953,10 +5001,10 @@ namespace compiler
 		// Instructions
 		// SUB, SBB, XOR, PXOR, XORPS, XORPD, PANDN, PSUBxx, PCMPxx
 		// TODO: Add AVX instructions
-		if (instr.id_ == I_SUB || instr.id_ == I_SBB || instr.id_ == I_XOR || instr.id_ == I_PXOR || instr.id_ == I_XORPS || instr.id_ == I_XORPD || instr.id_ == I_PANDN ||
-			instr.id_ == I_PSUBB || instr.id_ == I_PSUBW || instr.id_ == I_PSUBD || instr.id_ == I_PSUBQ || instr.id_ == I_PSUBSB || instr.id_ == I_PSUBSW || instr.id_ == I_PSUBUSB || instr.id_ == I_PSUBUSW ||
-			instr.id_ == I_PCMPEQB || instr.id_ == I_PCMPEQW || instr.id_ == I_PCMPEQD || instr.id_ == I_PCMPEQQ ||
-			instr.id_ == I_PCMPGTB || instr.id_ == I_PCMPGTW || instr.id_ == I_PCMPGTD || instr.id_ == I_PCMPGTQ) {
+		const InstrID id = instr.GetID();
+		if (id == I_SUB || id == I_SBB || id == I_XOR || id == I_PXOR || id == I_XORPS || id == I_XORPD || id == I_PANDN ||
+			id == I_PSUBB || id == I_PSUBW || id == I_PSUBD || id == I_PSUBQ || id == I_PSUBSB || id == I_PSUBSW || id == I_PSUBUSB || id == I_PSUBUSW ||
+			id == I_PCMPEQB || id == I_PCMPEQW || id == I_PCMPEQD || id == I_PCMPEQQ || id == I_PCMPGTB || id == I_PCMPGTW || id == I_PCMPGTD || id == I_PCMPGTQ) {
 			// source and destination operands are the same register.
 			// 8bit or 16bit register cannot break dependence.
 			const detail::Opd& opd0 = instr.GetOpd(0);
@@ -4978,16 +5026,33 @@ namespace compiler
 			// Scanning instructions of basic block and make register lifetime table
 			for (size_t i = it->instr_begin; i != it->instr_end; ++i) {
 				const size_t instr_offset = i - it->instr_begin;
-				if (IsBreakDependenceInstr(f.instrs_[i])) {
+				const Instr& instr = f.instrs_[i];
+				if (instr.GetID() == I_PSEUDO_DECLARE_REG_ARG) {
+					// Declare function argument on register
+					const detail::Opd& opd0 = instr.GetOpd(0);
+					const RegID& reg = opd0.GetReg();
+					const detail::Opd& opd1 = instr.GetOpd(1);
+					it->GetLifetime(reg.type).AddUsePoint(instr_offset, reg, opd0.opdtype_, opd0.GetSize(), opd0.reg_assignable_);
+					if (opd1.IsMem()) {
+						var_manager.SetSpillSlot(reg.type, reg.id, Addr(opd1.GetBase(), opd1.GetDisp()));
+					}
+				} else if (instr.GetID() == I_PSEUDO_DECLARE_STACK_ARG) {
+					// Declare function argument on stack
+					const detail::Opd& opd0 = instr.GetOpd(0);
+					const RegID& reg = opd0.GetReg();
+					const detail::Opd& opd1 = instr.GetOpd(1);
+					it->GetLifetime(reg.type).AddUsePoint(instr_offset, reg, static_cast<OpdType>(O_TYPE_MEM | O_TYPE_WRITE), opd0.GetSize(), opd0.reg_assignable_);
+					var_manager.SetSpillSlot(reg.type, reg.id, Addr(opd1.GetBase(), opd1.GetDisp()));
+				} else if (IsBreakDependenceInstr(instr)) {
 					// Add only 1 use point if the instruction that break register dependence
-					const detail::Opd& opd = f.instrs_[i].GetOpd(0);
+					const detail::Opd& opd = instr.GetOpd(0);
 					const RegID& reg = opd.GetReg();
 					it->GetLifetime(reg.type).AddUsePoint(instr_offset, reg, static_cast<OpdType>(O_TYPE_REG | O_TYPE_WRITE), opd.GetSize(), opd.reg_assignable_);
 					var_manager.UpdateVarSize(reg.type, reg.id, opd.GetSize() / 8);
 				} else {
 					// Add each use point of all operands
 					for (size_t j = 0; j < Instr::MAX_OPERAND_COUNT; ++j) {
-						const detail::Opd& opd = f.instrs_[i].GetOpd(j);
+						const detail::Opd& opd = instr.GetOpd(j);
 						if (opd.IsGpReg() || opd.IsMmxReg() || opd.IsXmmReg() || opd.IsYmmReg()) {
 							// Register operand
 							const RegID& reg = opd.GetReg();
@@ -5461,6 +5526,11 @@ namespace compiler
 					JITASM_TRACE("---- XMM/YMM register ----\n");
 					const Lifetime::Interval& first_interval = *interval_range[2].first;
 					GenerateInterIntervalInstr(first_interval, *++interval_range[2].first, var_manager.GetAttributes(2), XmmRegOperator(&f, &var_manager));
+				}
+
+				const InstrID instr_id = org_instrs[org_instr_index].GetID();
+				if (instr_id == I_PSEUDO_DECLARE_REG_ARG || instr_id == I_PSEUDO_DECLARE_STACK_ARG) {
+					continue;
 				}
 
 				// copy instruction
@@ -6307,125 +6377,14 @@ namespace detail {
 
 #endif	// JITASM64
 
-
-	/// cdecl function base class
-	class Function_cdecl : public Frontend
+	namespace calling_convention_cdecl
 	{
-	public:
-		typedef Addr Arg;		///< main function argument type
 #ifdef JITASM64
 		template<int N, class T, int Size = sizeof(T)> struct ArgTraits : ArgTraits_win64<N, T, Size> {};
-		bool dump_regarg_x64_;
 #else
 		template<int N, class T, int Size = sizeof(T)> struct ArgTraits : ArgTraits_cdecl<N, T, Size> {};
 #endif
 
-		/**
-		 * \param dump_regarg_x64	On x64, the caller passes the first four arguments in register.
-									If this parameter is true, the arguments in register are copied to
-									their stack space in prolog. This parameter has no effect on x86.
-		 */
-		Function_cdecl(bool dump_regarg_x64 = true)
-#ifdef JITASM64
-			: dump_regarg_x64_(dump_regarg_x64) {}
-#else
-		{avoid_unused_warn(dump_regarg_x64);}
-#endif
-
-	private:
-		template<int N, class T>
-		void CopyRegArgToStack(const Arg& addr, bool bForceCopy)
-		{
-			avoid_unused_warn(addr);
-			avoid_unused_warn(bForceCopy);
-#ifdef JITASM64
-			if (dump_regarg_x64_ || bForceCopy) {
-				if (ArgTraits<N, T>::flag & ARG_IN_REG)
-					mov(qword_ptr[addr], Reg64(static_cast<PhysicalRegID>(ArgTraits<N, T>::reg_id)));
-				else if (ArgTraits<N, T>::flag & ARG_IN_XMM_SP)
-					movss(dword_ptr[addr], XmmReg(static_cast<PhysicalRegID>(ArgTraits<N, T>::reg_id)));
-				else if (ArgTraits<N, T>::flag & ARG_IN_XMM_DP)
-					movsd(qword_ptr[addr], XmmReg(static_cast<PhysicalRegID>(ArgTraits<N, T>::reg_id)));
-			}
-#endif
-		}
-
-	public:
-		template<class R>
-		Arg DumpRegArg0()
-		{
-			Arg addr(zbp + sizeof(void *) * 2);
-			if (ResultT<R>::ArgR) {
-				// Copy result address to stack irrespectively of dump_regarg_x64_ for result.
-				CopyRegArgToStack<0, R>(addr, true);
-				addr = addr + ArgTraits<0, R>::stack_size;
-			}
-			return addr;
-		}
-
-		template<class R, class A1>
-		Arg DumpRegArg1()
-		{
-			Arg addr = DumpRegArg0<R>();
-			CopyRegArgToStack<0 + ResultT<R>::ArgR, A1>(addr, false);
-			return addr + ArgTraits<0 + ResultT<R>::ArgR, A1>::stack_size;
-		}
-
-		template<class R, class A1, class A2>
-		Arg DumpRegArg2()
-		{
-			Arg addr = DumpRegArg1<R, A1>();
-			CopyRegArgToStack<1 + ResultT<R>::ArgR, A2>(addr, false);
-			return addr + ArgTraits<1 + ResultT<R>::ArgR, A2>::stack_size;
-		}
-
-		template<class R, class A1, class A2, class A3>
-		Arg DumpRegArg3()
-		{
-			Arg addr = DumpRegArg2<R, A1, A2>();
-			CopyRegArgToStack<2 + ResultT<R>::ArgR, A3>(addr, false);
-			return addr + ArgTraits<2 + ResultT<R>::ArgR, A3>::stack_size;
-		}
-
-		template<class R, class A1, class A2, class A3, class A4>
-		Arg DumpRegArg4()
-		{
-			Arg addr = DumpRegArg3<R, A1, A2, A3>();
-			CopyRegArgToStack<3 + ResultT<R>::ArgR, A4>(addr, false);
-			return addr + ArgTraits<3 + ResultT<R>::ArgR, A4>::stack_size;
-		}
-
-		template<class R>
-		Arg Arg1() { return Arg(zbp + sizeof(void *) * (2 + ResultT<R>::ArgR)); }
-		template<class R, class A1>
-		Arg Arg2() { return Arg1<R>() + ArgTraits<0, A1>::stack_size; }
-		template<class R, class A1, class A2>
-		Arg Arg3() { return Arg2<R, A1>() + ArgTraits<1, A2>::stack_size; }
-		template<class R, class A1, class A2, class A3>
-		Arg Arg4() { return Arg3<R, A1, A2>() + ArgTraits<2, A3>::stack_size; }
-		template<class R, class A1, class A2, class A3, class A4>
-		Arg Arg5() { return Arg4<R, A1, A2, A3>() + ArgTraits<3, A4>::stack_size; }
-		template<class R, class A1, class A2, class A3, class A4, class A5>
-		Arg Arg6() { return Arg5<R, A1, A2, A3, A4>() + ArgTraits<4, A5>::stack_size; }
-		template<class R, class A1, class A2, class A3, class A4, class A5, class A6>
-		Arg Arg7() { return Arg6<R, A1, A2, A3, A4, A5>() + ArgTraits<5, A6>::stack_size; }
-		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7>
-		Arg Arg8() { return Arg7<R, A1, A2, A3, A4, A5, A6>() + ArgTraits<6, A7>::stack_size; }
-		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8>
-		Arg Arg9() { return Arg8<R, A1, A2, A3, A4, A5, A6, A7>() + ArgTraits<7, A8>::stack_size; }
-		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9>
-		Arg Arg10() { return Arg9<R, A1, A2, A3, A4, A5, A6, A7, A8>() + ArgTraits<8, A9>::stack_size; }
-	};
-
-	// specialization for void
-	template<>
-	inline Function_cdecl::Arg Function_cdecl::DumpRegArg0<void>()
-	{
-		return Arg(zbp + sizeof(void *) * 2);
-	}
-
-	namespace cdecl
-	{
 		/// Argument information
 		struct ArgInfo
 		{
@@ -6441,25 +6400,25 @@ namespace detail {
 		};
 
 		template<class R, class A1>
-		inline ArgInfo ArgInfo1()  { return ArgInfo(Addr(RegID::CreatePhysicalRegID(R_TYPE_GP, EBP), sizeof(void *) * (2 + ResultT<R>::ArgR)), ArgTraits_cdecl<0, A1>::reg_id); }
+		inline ArgInfo ArgInfo1()  { return ArgInfo(Addr(RegID::CreatePhysicalRegID(R_TYPE_GP, EBP), sizeof(void *) * (2 + ResultT<R>::ArgR)), static_cast<PhysicalRegID>(ArgTraits<0, A1>::reg_id)); }
 		template<class R, class A1, class A2>
-		inline ArgInfo ArgInfo2()  { return ArgInfo1<R>().Next< ArgTraits_cdecl<0, A1> >(ArgTraits_cdecl<1, A2>::reg_id); }
+		inline ArgInfo ArgInfo2()  { return ArgInfo1<R>().Next< ArgTraits<0, A1> >(ArgTraits<1, A2>::reg_id); }
 		template<class R, class A1, class A2, class A3>
-		inline ArgInfo ArgInfo3()  { return ArgInfo2<R, A1>().Next< ArgTraits_cdecl<1, A2> >(ArgTraits_cdecl<2, A3>::reg_id); }
+		inline ArgInfo ArgInfo3()  { return ArgInfo2<R, A1>().Next< ArgTraits<1, A2> >(ArgTraits<2, A3>::reg_id); }
 		template<class R, class A1, class A2, class A3, class A4>
-		inline ArgInfo ArgInfo4()  { return ArgInfo3<R, A1, A2>().Next< ArgTraits_cdecl<2, A3> >(ArgTraits_cdecl<3, A4>::reg_id); }
+		inline ArgInfo ArgInfo4()  { return ArgInfo3<R, A1, A2>().Next< ArgTraits<2, A3> >(ArgTraits<3, A4>::reg_id); }
 		template<class R, class A1, class A2, class A3, class A4, class A5>
-		inline ArgInfo ArgInfo5()  { return ArgInfo4<R, A1, A2, A3>().Next< ArgTraits_cdecl<3, A4> >(ArgTraits_cdecl<4, A5>::reg_id); }
+		inline ArgInfo ArgInfo5()  { return ArgInfo4<R, A1, A2, A3>().Next< ArgTraits<3, A4> >(ArgTraits<4, A5>::reg_id); }
 		template<class R, class A1, class A2, class A3, class A4, class A5, class A6>
-		inline ArgInfo ArgInfo6()  { return ArgInfo5<R, A1, A2, A3, A4>().Next< ArgTraits_cdecl<4, A5> >(ArgTraits_cdecl<5, A6>::reg_id); }
+		inline ArgInfo ArgInfo6()  { return ArgInfo5<R, A1, A2, A3, A4>().Next< ArgTraits<4, A5> >(ArgTraits<5, A6>::reg_id); }
 		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7>
-		inline ArgInfo ArgInfo7()  { return ArgInfo6<R, A1, A2, A3, A4, A5>().Next< ArgTraits_cdecl<5, A6> >(ArgTraits_cdecl<6, A7>::reg_id); }
+		inline ArgInfo ArgInfo7()  { return ArgInfo6<R, A1, A2, A3, A4, A5>().Next< ArgTraits<5, A6> >(ArgTraits<6, A7>::reg_id); }
 		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8>
-		inline ArgInfo ArgInfo8()  { return ArgInfo7<R, A1, A2, A3, A4, A5, A6>().Next< ArgTraits_cdecl<6, A7> >(ArgTraits_cdecl<7, A8>::reg_id); }
+		inline ArgInfo ArgInfo8()  { return ArgInfo7<R, A1, A2, A3, A4, A5, A6>().Next< ArgTraits<6, A7> >(ArgTraits<7, A8>::reg_id); }
 		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9>
-		inline ArgInfo ArgInfo9()  { return ArgInfo8<R, A1, A2, A3, A4, A5, A6, A7>().Next< ArgTraits_cdecl<7, A8> >(ArgTraits_cdecl<8, A9>::reg_id); }
+		inline ArgInfo ArgInfo9()  { return ArgInfo8<R, A1, A2, A3, A4, A5, A6, A7>().Next< ArgTraits<7, A8> >(ArgTraits<8, A9>::reg_id); }
 		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9, class A10>
-		inline ArgInfo ArgInfo10() { return ArgInfo9<R, A1, A2, A3, A4, A5, A6, A7, A8>().Next< ArgTraits_cdecl<8, A9> >(ArgTraits_cdecl<9, A10>::reg_id); }
+		inline ArgInfo ArgInfo10() { return ArgInfo9<R, A1, A2, A3, A4, A5, A6, A7, A8>().Next< ArgTraits<8, A9> >(ArgTraits<9, A10>::reg_id); }
 
 		/// Function argument
 		template<class T, size_t Size = sizeof(T)>
@@ -6469,9 +6428,9 @@ namespace detail {
 #ifdef JITASM64
 			Arg(Frontend& f, const ArgInfo& arg_info) : addr_(Reg()) {
 				if (arg_info.reg_id != INVALID) {
-					f.DeclareArg(addr_.reg_, Reg(arg_info.reg_id), f.ptr[arg_info.addr]);
+					f.DeclareRegArg(addr_.reg_, Reg(arg_info.reg_id), f.ptr[arg_info.addr]);
 				} else {
-					f.DeclareArg(addr_.reg_, f.ptr[addr]);
+					f.DeclareStackArg(addr_.reg_, f.ptr[addr]);
 				}
 			}
 #else
@@ -6500,9 +6459,9 @@ namespace detail {
 			operator Reg8 () {
 				Reg8 reg;
 				if (arg_info_.reg_id == INVALID) {
-					f_->DeclareArg(reg, f_->byte_ptr[arg_info_.addr]);					// argument on stack
+					f_->DeclareStackArg(reg, f_->byte_ptr[arg_info_.addr]);					// argument on stack
 				} else {
-					f_->DeclareArg(reg, Reg8(arg_info_.reg_id), f_->byte_ptr[arg_info_.addr]);	// argument on register
+					f_->DeclareRegArg(reg, Reg8(arg_info_.reg_id), f_->byte_ptr[arg_info_.addr]);	// argument on register
 				}
 				return reg;
 			}
@@ -6528,9 +6487,9 @@ namespace detail {
 			operator Reg16 () {
 				Reg16 reg;
 				if (arg_info_.reg_id == INVALID) {
-					f_->DeclareArg(reg, f_->word_ptr[arg_info_.addr]);					// argument on stack
+					f_->DeclareStackArg(reg, f_->word_ptr[arg_info_.addr]);					// argument on stack
 				} else {
-					f_->DeclareArg(reg, Reg16(arg_info_.reg_id), f_->word_ptr[arg_info_.addr]);	// argument on register
+					f_->DeclareRegArg(reg, Reg16(arg_info_.reg_id), f_->word_ptr[arg_info_.addr]);	// argument on register
 				}
 				return reg;
 			}
@@ -6556,9 +6515,9 @@ namespace detail {
 			operator Reg32 () {
 				Reg32 reg;
 				if (arg_info_.reg_id == INVALID) {
-					f_->DeclareArg(reg, f_->dword_ptr[arg_info_.addr]);					// argument on stack
+					f_->DeclareStackArg(reg, f_->dword_ptr[arg_info_.addr]);					// argument on stack
 				} else {
-					f_->DeclareArg(reg, Reg32(arg_info_.reg_id), f_->dword_ptr[arg_info_.addr]);	// argument on register
+					f_->DeclareRegArg(reg, Reg32(arg_info_.reg_id), f_->dword_ptr[arg_info_.addr]);	// argument on register
 				}
 				return reg;
 			}
@@ -6583,9 +6542,9 @@ namespace detail {
 			operator Reg64 () {
 				Reg64 reg;
 				if (arg_info_.reg_id == INVALID) {
-					f_->DeclareArg(reg, f_->qword_ptr[arg_info_.addr]);					// argument on stack
+					f_->DeclareStackArg(reg, f_->qword_ptr[arg_info_.addr]);					// argument on stack
 				} else {
-					f_->DeclareArg(reg, Reg64(arg_info_.reg_id), f_->qword_ptr[arg_info_.addr]);	// argument on register
+					f_->DeclareRegArg(reg, Reg64(arg_info_.reg_id), f_->qword_ptr[arg_info_.addr]);	// argument on register
 				}
 				return reg;
 			}
@@ -6612,9 +6571,9 @@ namespace detail {
 			operator XmmReg () {
 				XmmReg reg;
 				if (arg_info_.reg_id == INVALID) {
-					f_->DeclareArg(reg, f_->dword_ptr[arg_info_.addr]);	// argument on stack
+					f_->DeclareStackArg(reg, f_->dword_ptr[arg_info_.addr]);	// argument on stack
 				} else {
-					f_->DeclareArg(reg, XmmReg(arg_info_.reg_id));		// argument on register
+					f_->DeclareRegArg(reg, XmmReg(arg_info_.reg_id));		// argument on register
 				}
 				return reg;
 			}
@@ -6640,9 +6599,9 @@ namespace detail {
 			operator XmmReg () {
 				XmmReg reg;
 				if (arg_info_.reg_id == INVALID) {
-					f_->DeclareArg(reg, f_->qword_ptr[arg_info_.addr]);	// argument on stack
+					f_->DeclareStackArg(reg, f_->qword_ptr[arg_info_.addr]);	// argument on stack
 				} else {
-					f_->DeclareArg(reg, XmmReg(arg_info_.reg_id));		// argument on register
+					f_->DeclareRegArg(reg, XmmReg(arg_info_.reg_id));		// argument on register
 				}
 				return reg;
 			}
@@ -6666,33 +6625,7 @@ namespace detail {
 		//template<> struct Arg<__m128d, 16> {};
 		//template<> struct Arg<__m128i, 16> {};
 #endif	// _INCLUDED_EMM
-	}	// namespace cdecl
-
-	/// cdecl function base class
-	class Function_cdecl2 : public Frontend
-	{
-	protected:
-		template<class R, class A1>
-		Arg<A1> Arg1() { return Arg(zbp + sizeof(void *) * (2 + ResultT<R>::ArgR)); }
-		template<class R, class A1, class A2>
-		Arg<A2> Arg2() { return Arg1<R>() + ArgTraits<0, A1>::stack_size; }
-		template<class R, class A1, class A2, class A3>
-		Arg<A3> Arg3() { return Arg2<R, A1>() + ArgTraits<1, A2>::stack_size; }
-		template<class R, class A1, class A2, class A3, class A4>
-		Arg<A4> Arg4() { return Arg3<R, A1, A2>() + ArgTraits<2, A3>::stack_size; }
-		template<class R, class A1, class A2, class A3, class A4, class A5>
-		Arg<A5> Arg5() { return Arg4<R, A1, A2, A3>() + ArgTraits<3, A4>::stack_size; }
-		template<class R, class A1, class A2, class A3, class A4, class A5, class A6>
-		Arg<A6> Arg6() { return Arg5<R, A1, A2, A3, A4>() + ArgTraits<4, A5>::stack_size; }
-		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7>
-		Arg<A7> Arg7() { return Arg6<R, A1, A2, A3, A4, A5>() + ArgTraits<5, A6>::stack_size; }
-		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8>
-		Arg<A8> Arg8() { return Arg7<R, A1, A2, A3, A4, A5, A6>() + ArgTraits<6, A7>::stack_size; }
-		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9>
-		Arg<A9> Arg9() { return Arg8<R, A1, A2, A3, A4, A5, A6, A7>() + ArgTraits<7, A8>::stack_size; }
-		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9, class A10>
-		Arg<A10> Arg10() { return Arg9<R, A1, A2, A3, A4, A5, A6, A7, A8>() + ArgTraits<8, A9>::stack_size; }
-	};
+	}	// namespace calling_convention_cdecl
 
 }	// namespace detail
 
@@ -6710,26 +6643,453 @@ template<
 	class A8 = detail::ArgNone,
 	class A9 = detail::ArgNone,
 	class A10 = detail::ArgNone>
-struct function_cdecl2 : Frontend
+struct function_cdecl : Frontend
 {
 	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10);
 	typedef detail::ResultT<R> Result;	///< main function result type
 	typename detail::ResultTraits<R>::ResultPtr result_ptr;
 
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
+		using namespace detail::calling_convention_cdecl;
 		static_cast<Derived *>(this)->main(
-			detail::cdecl::Arg<A1>(*this, detail::cdecl::ArgInfo1<R,A1>()),
-			detail::cdecl::Arg<A2>(*this, detail::cdecl::ArgInfo2<R,A1,A2>()),
-			detail::cdecl::Arg<A3>(*this, detail::cdecl::ArgInfo3<R,A1,A2,A3>()),
-			detail::cdecl::Arg<A4>(*this, detail::cdecl::ArgInfo4<R,A1,A2,A3,A4>()),
-			detail::cdecl::Arg<A5>(*this, detail::cdecl::ArgInfo5<R,A1,A2,A3,A4,A5>()),
-			detail::cdecl::Arg<A6>(*this, detail::cdecl::ArgInfo6<R,A1,A2,A3,A4,A5,A6>()),
-			detail::cdecl::Arg<A7>(*this, detail::cdecl::ArgInfo7<R,A1,A2,A3,A4,A5,A6,A7>()),
-			detail::cdecl::Arg<A8>(*this, detail::cdecl::ArgInfo8<R,A1,A2,A3,A4,A5,A6,A7,A8>()),
-			detail::cdecl::Arg<A9>(*this, detail::cdecl::ArgInfo9<R,A1,A2,A3,A4,A5,A6,A7,A8,A9>()),
-			detail::cdecl::Arg<A10>(*this, detail::cdecl::ArgInfo10<R,A1,A2,A3,A4,A5,A6,A7,A8,A9,A10>())
+			Arg<A1>(*this, ArgInfo1<R,A1>()),
+			Arg<A2>(*this, ArgInfo2<R,A1,A2>()),
+			Arg<A3>(*this, ArgInfo3<R,A1,A2,A3>()),
+			Arg<A4>(*this, ArgInfo4<R,A1,A2,A3,A4>()),
+			Arg<A5>(*this, ArgInfo5<R,A1,A2,A3,A4,A5>()),
+			Arg<A6>(*this, ArgInfo6<R,A1,A2,A3,A4,A5,A6>()),
+			Arg<A7>(*this, ArgInfo7<R,A1,A2,A3,A4,A5,A6,A7>()),
+			Arg<A8>(*this, ArgInfo8<R,A1,A2,A3,A4,A5,A6,A7,A8>()),
+			Arg<A9>(*this, ArgInfo9<R,A1,A2,A3,A4,A5,A6,A7,A8,A9>()),
+			Arg<A10>(*this, ArgInfo10<R,A1,A2,A3,A4,A5,A6,A7,A8,A9,A10>())
 			).Store(*this);
+		compiler::RegisterAllocation(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for 10 arguments and no result
+template<class Derived, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9, class A10>
+struct function_cdecl<void, Derived, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10> : Frontend
+{
+	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10);
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
+	void naked_main() {
+		using namespace detail::calling_convention_cdecl;
+		static_cast<Derived *>(this)->main(
+			Arg<A1>(*this, ArgInfo1<void,A1>()),
+			Arg<A2>(*this, ArgInfo2<void,A1,A2>()),
+			Arg<A3>(*this, ArgInfo3<void,A1,A2,A3>()),
+			Arg<A4>(*this, ArgInfo4<void,A1,A2,A3,A4>()),
+			Arg<A5>(*this, ArgInfo5<void,A1,A2,A3,A4,A5>()),
+			Arg<A6>(*this, ArgInfo6<void,A1,A2,A3,A4,A5,A6>()),
+			Arg<A7>(*this, ArgInfo7<void,A1,A2,A3,A4,A5,A6,A7>()),
+			Arg<A8>(*this, ArgInfo8<void,A1,A2,A3,A4,A5,A6,A7,A8>()),
+			Arg<A9>(*this, ArgInfo9<void,A1,A2,A3,A4,A5,A6,A7,A8,A9>()),
+			Arg<A10>(*this, ArgInfo10<void,A1,A2,A3,A4,A5,A6,A7,A8,A9,A10>()));
+		compiler::RegisterAllocation(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for 9 arguments
+template<class R, class Derived, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9>
+struct function_cdecl<R, Derived, A1, A2, A3, A4, A5, A6, A7, A8, A9, detail::ArgNone> : Frontend
+{
+	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8, A9);
+	typedef detail::ResultT<R> Result;	///< main function result type
+	typename detail::ResultTraits<R>::ResultPtr result_ptr;
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
+	void naked_main() {
+		using namespace detail::calling_convention_cdecl;
+		static_cast<Derived *>(this)->main(
+			Arg<A1>(*this, ArgInfo1<R,A1>()),
+			Arg<A2>(*this, ArgInfo2<R,A1,A2>()),
+			Arg<A3>(*this, ArgInfo3<R,A1,A2,A3>()),
+			Arg<A4>(*this, ArgInfo4<R,A1,A2,A3,A4>()),
+			Arg<A5>(*this, ArgInfo5<R,A1,A2,A3,A4,A5>()),
+			Arg<A6>(*this, ArgInfo6<R,A1,A2,A3,A4,A5,A6>()),
+			Arg<A7>(*this, ArgInfo7<R,A1,A2,A3,A4,A5,A6,A7>()),
+			Arg<A8>(*this, ArgInfo8<R,A1,A2,A3,A4,A5,A6,A7,A8>()),
+			Arg<A9>(*this, ArgInfo9<R,A1,A2,A3,A4,A5,A6,A7,A8,A9>())
+			).Store(*this);
+		compiler::RegisterAllocation(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for 9 arguments and no result
+template<class Derived, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9>
+struct function_cdecl<void, Derived, A1, A2, A3, A4, A5, A6, A7, A8, A9, detail::ArgNone> : Frontend
+{
+	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8, A9);
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
+	void naked_main() {
+		using namespace detail::calling_convention_cdecl;
+		static_cast<Derived *>(this)->main(
+			Arg<A1>(*this, ArgInfo1<void,A1>()),
+			Arg<A2>(*this, ArgInfo2<void,A1,A2>()),
+			Arg<A3>(*this, ArgInfo3<void,A1,A2,A3>()),
+			Arg<A4>(*this, ArgInfo4<void,A1,A2,A3,A4>()),
+			Arg<A5>(*this, ArgInfo5<void,A1,A2,A3,A4,A5>()),
+			Arg<A6>(*this, ArgInfo6<void,A1,A2,A3,A4,A5,A6>()),
+			Arg<A7>(*this, ArgInfo7<void,A1,A2,A3,A4,A5,A6,A7>()),
+			Arg<A8>(*this, ArgInfo8<void,A1,A2,A3,A4,A5,A6,A7,A8>()),
+			Arg<A9>(*this, ArgInfo9<void,A1,A2,A3,A4,A5,A6,A7,A8,A9>()));
+		compiler::RegisterAllocation(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for 8 arguments
+template<class R, class Derived, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8>
+struct function_cdecl<R, Derived, A1, A2, A3, A4, A5, A6, A7, A8, detail::ArgNone, detail::ArgNone> : Frontend
+{
+	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8);
+	typedef detail::ResultT<R> Result;	///< main function result type
+	typename detail::ResultTraits<R>::ResultPtr result_ptr;
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
+	void naked_main() {
+		using namespace detail::calling_convention_cdecl;
+		static_cast<Derived *>(this)->main(
+			Arg<A1>(*this, ArgInfo1<R,A1>()),
+			Arg<A2>(*this, ArgInfo2<R,A1,A2>()),
+			Arg<A3>(*this, ArgInfo3<R,A1,A2,A3>()),
+			Arg<A4>(*this, ArgInfo4<R,A1,A2,A3,A4>()),
+			Arg<A5>(*this, ArgInfo5<R,A1,A2,A3,A4,A5>()),
+			Arg<A6>(*this, ArgInfo6<R,A1,A2,A3,A4,A5,A6>()),
+			Arg<A7>(*this, ArgInfo7<R,A1,A2,A3,A4,A5,A6,A7>()),
+			Arg<A8>(*this, ArgInfo8<R,A1,A2,A3,A4,A5,A6,A7,A8>())
+			).Store(*this);
+		compiler::RegisterAllocation(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for 8 arguments and no result
+template<class Derived, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8>
+struct function_cdecl<void, Derived, A1, A2, A3, A4, A5, A6, A7, A8, detail::ArgNone, detail::ArgNone> : Frontend
+{
+	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8);
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
+	void naked_main() {
+		using namespace detail::calling_convention_cdecl;
+		static_cast<Derived *>(this)->main(
+			Arg<A1>(*this, ArgInfo1<void,A1>()),
+			Arg<A2>(*this, ArgInfo2<void,A1,A2>()),
+			Arg<A3>(*this, ArgInfo3<void,A1,A2,A3>()),
+			Arg<A4>(*this, ArgInfo4<void,A1,A2,A3,A4>()),
+			Arg<A5>(*this, ArgInfo5<void,A1,A2,A3,A4,A5>()),
+			Arg<A6>(*this, ArgInfo6<void,A1,A2,A3,A4,A5,A6>()),
+			Arg<A7>(*this, ArgInfo7<void,A1,A2,A3,A4,A5,A6,A7>()),
+			Arg<A8>(*this, ArgInfo8<void,A1,A2,A3,A4,A5,A6,A7,A8>()));
+		compiler::RegisterAllocation(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for 7 arguments
+template<class R, class Derived, class A1, class A2, class A3, class A4, class A5, class A6, class A7>
+struct function_cdecl<R, Derived, A1, A2, A3, A4, A5, A6, A7, detail::ArgNone, detail::ArgNone, detail::ArgNone> : Frontend
+{
+	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7);
+	typedef detail::ResultT<R> Result;	///< main function result type
+	typename detail::ResultTraits<R>::ResultPtr result_ptr;
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
+	void naked_main() {
+		using namespace detail::calling_convention_cdecl;
+		static_cast<Derived *>(this)->main(
+			Arg<A1>(*this, ArgInfo1<R,A1>()),
+			Arg<A2>(*this, ArgInfo2<R,A1,A2>()),
+			Arg<A3>(*this, ArgInfo3<R,A1,A2,A3>()),
+			Arg<A4>(*this, ArgInfo4<R,A1,A2,A3,A4>()),
+			Arg<A5>(*this, ArgInfo5<R,A1,A2,A3,A4,A5>()),
+			Arg<A6>(*this, ArgInfo6<R,A1,A2,A3,A4,A5,A6>()),
+			Arg<A7>(*this, ArgInfo7<R,A1,A2,A3,A4,A5,A6,A7>())
+			).Store(*this);
+		compiler::RegisterAllocation(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for 7 arguments and no result
+template<class Derived, class A1, class A2, class A3, class A4, class A5, class A6, class A7>
+struct function_cdecl<void, Derived, A1, A2, A3, A4, A5, A6, A7, detail::ArgNone, detail::ArgNone, detail::ArgNone> : Frontend
+{
+	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7);
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
+	void naked_main() {
+		using namespace detail::calling_convention_cdecl;
+		static_cast<Derived *>(this)->main(
+			Arg<A1>(*this, ArgInfo1<void,A1>()),
+			Arg<A2>(*this, ArgInfo2<void,A1,A2>()),
+			Arg<A3>(*this, ArgInfo3<void,A1,A2,A3>()),
+			Arg<A4>(*this, ArgInfo4<void,A1,A2,A3,A4>()),
+			Arg<A5>(*this, ArgInfo5<void,A1,A2,A3,A4,A5>()),
+			Arg<A6>(*this, ArgInfo6<void,A1,A2,A3,A4,A5,A6>()),
+			Arg<A7>(*this, ArgInfo7<void,A1,A2,A3,A4,A5,A6,A7>()));
+		compiler::RegisterAllocation(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for 6 arguments
+template<class R, class Derived, class A1, class A2, class A3, class A4, class A5, class A6>
+struct function_cdecl<R, Derived, A1, A2, A3, A4, A5, A6, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : Frontend
+{
+	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6);
+	typedef detail::ResultT<R> Result;	///< main function result type
+	typename detail::ResultTraits<R>::ResultPtr result_ptr;
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
+	void naked_main() {
+		using namespace detail::calling_convention_cdecl;
+		static_cast<Derived *>(this)->main(
+			Arg<A1>(*this, ArgInfo1<R,A1>()),
+			Arg<A2>(*this, ArgInfo2<R,A1,A2>()),
+			Arg<A3>(*this, ArgInfo3<R,A1,A2,A3>()),
+			Arg<A4>(*this, ArgInfo4<R,A1,A2,A3,A4>()),
+			Arg<A5>(*this, ArgInfo5<R,A1,A2,A3,A4,A5>()),
+			Arg<A6>(*this, ArgInfo6<R,A1,A2,A3,A4,A5,A6>())
+			).Store(*this);
+		compiler::RegisterAllocation(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for 6 arguments and no result
+template<class Derived, class A1, class A2, class A3, class A4, class A5, class A6>
+struct function_cdecl<void, Derived, A1, A2, A3, A4, A5, A6, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : Frontend
+{
+	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6);
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
+	void naked_main() {
+		using namespace detail::calling_convention_cdecl;
+		static_cast<Derived *>(this)->main(
+			Arg<A1>(*this, ArgInfo1<void,A1>()),
+			Arg<A2>(*this, ArgInfo2<void,A1,A2>()),
+			Arg<A3>(*this, ArgInfo3<void,A1,A2,A3>()),
+			Arg<A4>(*this, ArgInfo4<void,A1,A2,A3,A4>()),
+			Arg<A5>(*this, ArgInfo5<void,A1,A2,A3,A4,A5>()),
+			Arg<A6>(*this, ArgInfo6<void,A1,A2,A3,A4,A5,A6>()));
+		compiler::RegisterAllocation(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for 5 arguments
+template<class R, class Derived, class A1, class A2, class A3, class A4, class A5>
+struct function_cdecl<R, Derived, A1, A2, A3, A4, A5, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : Frontend
+{
+	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4, A5);
+	typedef detail::ResultT<R> Result;	///< main function result type
+	typename detail::ResultTraits<R>::ResultPtr result_ptr;
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
+	void naked_main() {
+		using namespace detail::calling_convention_cdecl;
+		static_cast<Derived *>(this)->main(
+			Arg<A1>(*this, ArgInfo1<R,A1>()),
+			Arg<A2>(*this, ArgInfo2<R,A1,A2>()),
+			Arg<A3>(*this, ArgInfo3<R,A1,A2,A3>()),
+			Arg<A4>(*this, ArgInfo4<R,A1,A2,A3,A4>()),
+			Arg<A5>(*this, ArgInfo5<R,A1,A2,A3,A4,A5>())
+			).Store(*this);
+		compiler::RegisterAllocation(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for 5 arguments and no result
+template<class Derived, class A1, class A2, class A3, class A4, class A5>
+struct function_cdecl<void, Derived, A1, A2, A3, A4, A5, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : Frontend
+{
+	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4, A5);
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
+	void naked_main() {
+		using namespace detail::calling_convention_cdecl;
+		static_cast<Derived *>(this)->main(
+			Arg<A1>(*this, ArgInfo1<void,A1>()),
+			Arg<A2>(*this, ArgInfo2<void,A1,A2>()),
+			Arg<A3>(*this, ArgInfo3<void,A1,A2,A3>()),
+			Arg<A4>(*this, ArgInfo4<void,A1,A2,A3,A4>()),
+			Arg<A5>(*this, ArgInfo5<void,A1,A2,A3,A4,A5>()));
+		compiler::RegisterAllocation(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for 4 arguments
+template<class R, class Derived, class A1, class A2, class A3, class A4>
+struct function_cdecl<R, Derived, A1, A2, A3, A4, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : Frontend
+{
+	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4);
+	typedef detail::ResultT<R> Result;	///< main function result type
+	typename detail::ResultTraits<R>::ResultPtr result_ptr;
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
+	void naked_main() {
+		using namespace detail::calling_convention_cdecl;
+		static_cast<Derived *>(this)->main(
+			Arg<A1>(*this, ArgInfo1<R,A1>()),
+			Arg<A2>(*this, ArgInfo2<R,A1,A2>()),
+			Arg<A3>(*this, ArgInfo3<R,A1,A2,A3>()),
+			Arg<A4>(*this, ArgInfo4<R,A1,A2,A3,A4>())
+			).Store(*this);
+		compiler::RegisterAllocation(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for 4 arguments and no result
+template<class Derived, class A1, class A2, class A3, class A4>
+struct function_cdecl<void, Derived, A1, A2, A3, A4, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : Frontend
+{
+	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4);
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
+	void naked_main() {
+		using namespace detail::calling_convention_cdecl;
+		static_cast<Derived *>(this)->main(
+			Arg<A1>(*this, ArgInfo1<void,A1>()),
+			Arg<A2>(*this, ArgInfo2<void,A1,A2>()),
+			Arg<A3>(*this, ArgInfo3<void,A1,A2,A3>()),
+			Arg<A4>(*this, ArgInfo4<void,A1,A2,A3,A4>()));
+		compiler::RegisterAllocation(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for 3 arguments
+template<class R, class Derived, class A1, class A2, class A3>
+struct function_cdecl<R, Derived, A1, A2, A3, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : Frontend
+{
+	typedef R (__cdecl *FuncPtr)(A1, A2, A3);
+	typedef detail::ResultT<R> Result;	///< main function result type
+	typename detail::ResultTraits<R>::ResultPtr result_ptr;
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
+	void naked_main() {
+		using namespace detail::calling_convention_cdecl;
+		static_cast<Derived *>(this)->main(
+			Arg<A1>(*this, ArgInfo1<R,A1>()),
+			Arg<A2>(*this, ArgInfo2<R,A1,A2>()),
+			Arg<A3>(*this, ArgInfo3<R,A1,A2,A3>())
+			).Store(*this);
+		compiler::RegisterAllocation(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for 3 arguments and no result
+template<class Derived, class A1, class A2, class A3>
+struct function_cdecl<void, Derived, A1, A2, A3, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : Frontend
+{
+	typedef void (__cdecl *FuncPtr)(A1, A2, A3);
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
+	void naked_main() {
+		using namespace detail::calling_convention_cdecl;
+		static_cast<Derived *>(this)->main(
+			Arg<A1>(*this, ArgInfo1<void,A1>()),
+			Arg<A2>(*this, ArgInfo2<void,A1,A2>()),
+			Arg<A3>(*this, ArgInfo3<void,A1,A2,A3>()));
+		compiler::RegisterAllocation(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for 2 arguments
+template<class R, class Derived, class A1, class A2>
+struct function_cdecl<R, Derived, A1, A2, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : Frontend
+{
+	typedef R (__cdecl *FuncPtr)(A1, A2);
+	typedef detail::ResultT<R> Result;	///< main function result type
+	typename detail::ResultTraits<R>::ResultPtr result_ptr;
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
+	void naked_main() {
+		using namespace detail::calling_convention_cdecl;
+		static_cast<Derived *>(this)->main(
+			Arg<A1>(*this, ArgInfo1<R,A1>()),
+			Arg<A2>(*this, ArgInfo2<R,A1,A2>())
+			).Store(*this);
+		compiler::RegisterAllocation(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for 2 arguments and no result
+template<class Derived, class A1, class A2>
+struct function_cdecl<void, Derived, A1, A2, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : Frontend
+{
+	typedef void (__cdecl *FuncPtr)(A1, A2);
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
+	void naked_main() {
+		using namespace detail::calling_convention_cdecl;
+		static_cast<Derived *>(this)->main(
+			Arg<A1>(*this, ArgInfo1<void,A1>()),
+			Arg<A2>(*this, ArgInfo2<void,A1,A2>()));
+		compiler::RegisterAllocation(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for 1 argument
+template<class R, class Derived, class A1>
+struct function_cdecl<R, Derived, A1, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : Frontend
+{
+	typedef R (__cdecl *FuncPtr)(A1);
+	typedef detail::ResultT<R> Result;	///< main function result type
+	typename detail::ResultTraits<R>::ResultPtr result_ptr;
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
+	void naked_main() {
+		using namespace detail::calling_convention_cdecl;
+		static_cast<Derived *>(this)->main(Arg<A1>(*this, ArgInfo1<R,A1>())).Store(*this);
+		compiler::RegisterAllocation(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for 1 argument and no result
+template<class Derived, class A1>
+struct function_cdecl<void, Derived, A1, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : Frontend
+{
+	typedef void (__cdecl *FuncPtr)(A1);
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
+	void naked_main() {
+		using namespace detail::calling_convention_cdecl;
+		static_cast<Derived *>(this)->main(Arg<A1>(*this, ArgInfo1<void,A1>()));
+		compiler::RegisterAllocation(*this);
+		MakePrologAndEpilog();
+	}
+};
+
+// specialization for no arguments
+template<class R, class Derived>
+struct function_cdecl<R, Derived, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : Frontend
+{
+	typedef R (__cdecl *FuncPtr)();
+	typedef detail::ResultT<R> Result;	///< main function result type
+	typename detail::ResultTraits<R>::ResultPtr result_ptr;
+	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
+	void naked_main() {
+		static_cast<Derived *>(this)->main().Store(*this);
 		compiler::RegisterAllocation(*this);
 		MakePrologAndEpilog();
 	}
@@ -6737,387 +7097,13 @@ struct function_cdecl2 : Frontend
 
 // specialization for no arguments and no result
 template<class Derived>
-struct function_cdecl2<void, Derived, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
+struct function_cdecl<void, Derived, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : Frontend
 {
 	typedef void (__cdecl *FuncPtr)();
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
+	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
 		static_cast<Derived *>(this)->main();
-		compiler::RegisterAllocation(*this);
-		MakePrologAndEpilog();
-	}
-};
-
-/// cdecl function
-template<
-	class R,
-	class A1 = detail::ArgNone,
-	class A2 = detail::ArgNone,
-	class A3 = detail::ArgNone,
-	class A4 = detail::ArgNone,
-	class A5 = detail::ArgNone,
-	class A6 = detail::ArgNone,
-	class A7 = detail::ArgNone,
-	class A8 = detail::ArgNone,
-	class A9 = detail::ArgNone,
-	class A10 = detail::ArgNone>
-struct function_cdecl : detail::Function_cdecl
-{
-	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10);
-	typedef detail::ResultT<R> Result;	///< main function result type
-	typename detail::ResultTraits<R>::ResultPtr result_ptr;
-
-	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual Result main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/, Arg /*a7*/, Arg /*a8*/, Arg /*a9*/, Arg /*a10*/) { return Result(); }
-	void naked_main() {
-		DumpRegArg4<R, A1, A2, A3, A4>();
-		main(Arg1<R>(), Arg2<R,A1>(), Arg3<R,A1,A2>(), Arg4<R,A1,A2,A4>(), Arg5<R,A1,A2,A4,A5>(), Arg6<R,A1,A2,A4,A5,A6>(), Arg7<R,A1,A2,A4,A5,A6,A7>(), Arg8<R,A1,A2,A4,A5,A6,A7,A8>(), Arg9<R,A1,A2,A4,A5,A6,A7,A8,A9>(), Arg10<R,A1,A2,A4,A5,A6,A7,A8,A9,A10>()).Store(*this);
-		MakePrologAndEpilog();
-	}
-};
-
-// specialization for 10 arguments and no result
-template<class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9, class A10>
-struct function_cdecl<void, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10> : detail::Function_cdecl
-{
-	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10);
-	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual void main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/, Arg /*a7*/, Arg /*a8*/, Arg /*a9*/, Arg /*a10*/) {}
-	void naked_main() {
-		DumpRegArg4<void, A1, A2, A3, A4>();
-		main(Arg1<void>(), Arg2<void,A1>(), Arg3<void,A1,A2>(), Arg4<void,A1,A2,A4>(), Arg5<void,A1,A2,A4,A5>(), Arg6<void,A1,A2,A4,A5,A6>(), Arg7<void,A1,A2,A4,A5,A6,A7>(), Arg8<void,A1,A2,A4,A5,A6,A7,A8>(), Arg9<void,A1,A2,A4,A5,A6,A7,A8,A9>(), Arg10<void,A1,A2,A4,A5,A6,A7,A8,A9,A10>());
-		MakePrologAndEpilog();
-	}
-};
-
-// specialization for 9 arguments
-template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9>
-struct function_cdecl<R, A1, A2, A3, A4, A5, A6, A7, A8, A9, detail::ArgNone> : detail::Function_cdecl
-{
-	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8, A9);
-	typedef detail::ResultT<R> Result;	///< main function result type
-	typename detail::ResultTraits<R>::ResultPtr result_ptr;
-
-	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual Result main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/, Arg /*a7*/, Arg /*a8*/, Arg /*a9*/) { return Result(); }
-	void naked_main() {
-		DumpRegArg4<R, A1, A2, A3, A4>();
-		main(Arg1<R>(), Arg2<R,A1>(), Arg3<R,A1,A2>(), Arg4<R,A1,A2,A4>(), Arg5<R,A1,A2,A4,A5>(), Arg6<R,A1,A2,A4,A5,A6>(), Arg7<R,A1,A2,A4,A5,A6,A7>(), Arg8<R,A1,A2,A4,A5,A6,A7,A8>(), Arg9<R,A1,A2,A4,A5,A6,A7,A8,A9>()).Store(*this);
-		MakePrologAndEpilog();
-	}
-};
-
-// specialization for 9 arguments and no result
-template<class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9>
-struct function_cdecl<void, A1, A2, A3, A4, A5, A6, A7, A8, A9, detail::ArgNone> : detail::Function_cdecl
-{
-	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8, A9);
-	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual void main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/, Arg /*a7*/, Arg /*a8*/, Arg /*a9*/) {}
-	void naked_main() {
-		DumpRegArg4<void, A1, A2, A3, A4>();
-		main(Arg1<void>(), Arg2<void,A1>(), Arg3<void,A1,A2>(), Arg4<void,A1,A2,A4>(), Arg5<void,A1,A2,A4,A5>(), Arg6<void,A1,A2,A4,A5,A6>(), Arg7<void,A1,A2,A4,A5,A6,A7>(), Arg8<void,A1,A2,A4,A5,A6,A7,A8>(), Arg9<void,A1,A2,A4,A5,A6,A7,A8,A9>());
-		MakePrologAndEpilog();
-	}
-};
-
-// specialization for 8 arguments
-template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8>
-struct function_cdecl<R, A1, A2, A3, A4, A5, A6, A7, A8, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
-{
-	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8);
-	typedef detail::ResultT<R> Result;	///< main function result type
-	typename detail::ResultTraits<R>::ResultPtr result_ptr;
-
-	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual Result main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/, Arg /*a7*/, Arg /*a8*/) { return Result(); }
-	void naked_main() {
-		DumpRegArg4<R, A1, A2, A3, A4>();
-		main(Arg1<R>(), Arg2<R,A1>(), Arg3<R,A1,A2>(), Arg4<R,A1,A2,A4>(), Arg5<R,A1,A2,A4,A5>(), Arg6<R,A1,A2,A4,A5,A6>(), Arg7<R,A1,A2,A4,A5,A6,A7>(), Arg8<R,A1,A2,A4,A5,A6,A7,A8>()).Store(*this);
-		MakePrologAndEpilog();
-	}
-};
-
-// specialization for 8 arguments and no result
-template<class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8>
-struct function_cdecl<void, A1, A2, A3, A4, A5, A6, A7, A8, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
-{
-	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8);
-	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual void main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/, Arg /*a7*/, Arg /*a8*/) {}
-	void naked_main() {
-		DumpRegArg4<void, A1, A2, A3, A4>();
-		main(Arg1<void>(), Arg2<void,A1>(), Arg3<void,A1,A2>(), Arg4<void,A1,A2,A4>(), Arg5<void,A1,A2,A4,A5>(), Arg6<void,A1,A2,A4,A5,A6>(), Arg7<void,A1,A2,A4,A5,A6,A7>(), Arg8<void,A1,A2,A4,A5,A6,A7,A8>());
-		MakePrologAndEpilog();
-	}
-};
-
-// specialization for 7 arguments
-template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7>
-struct function_cdecl<R, A1, A2, A3, A4, A5, A6, A7, detail::ArgNone, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
-{
-	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7);
-	typedef detail::ResultT<R> Result;	///< main function result type
-	typename detail::ResultTraits<R>::ResultPtr result_ptr;
-
-	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual Result main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/, Arg /*a7*/) { return Result(); }
-	void naked_main() {
-		DumpRegArg4<R, A1, A2, A3, A4>();
-		main(Arg1<R>(), Arg2<R,A1>(), Arg3<R,A1,A2>(), Arg4<R,A1,A2,A4>(), Arg5<R,A1,A2,A4,A5>(), Arg6<R,A1,A2,A4,A5,A6>(), Arg7<R,A1,A2,A4,A5,A6,A7>()).Store(*this);
-		MakePrologAndEpilog();
-	}
-};
-
-// specialization for 7 arguments and no result
-template<class A1, class A2, class A3, class A4, class A5, class A6, class A7>
-struct function_cdecl<void, A1, A2, A3, A4, A5, A6, A7, detail::ArgNone, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
-{
-	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7);
-	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual void main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/, Arg /*a7*/) {}
-	void naked_main() {
-		DumpRegArg4<void, A1, A2, A3, A4>();
-		main(Arg1<void>(), Arg2<void,A1>(), Arg3<void,A1,A2>(), Arg4<void,A1,A2,A4>(), Arg5<void,A1,A2,A4,A5>(), Arg6<void,A1,A2,A4,A5,A6>(), Arg7<void,A1,A2,A4,A5,A6,A7>());
-		MakePrologAndEpilog();
-	}
-};
-
-// specialization for 6 arguments
-template<class R, class A1, class A2, class A3, class A4, class A5, class A6>
-struct function_cdecl<R, A1, A2, A3, A4, A5, A6, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
-{
-	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6);
-	typedef detail::ResultT<R> Result;	///< main function result type
-	typename detail::ResultTraits<R>::ResultPtr result_ptr;
-
-	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual Result main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/) { return Result(); }
-	void naked_main() {
-		DumpRegArg4<R, A1, A2, A3, A4>();
-		main(Arg1<R>(), Arg2<R,A1>(), Arg3<R,A1,A2>(), Arg4<R,A1,A2,A4>(), Arg5<R,A1,A2,A4,A5>(), Arg6<R,A1,A2,A4,A5,A6>()).Store(*this);
-		MakePrologAndEpilog();
-	}
-};
-
-// specialization for 6 arguments and no result
-template<class A1, class A2, class A3, class A4, class A5, class A6>
-struct function_cdecl<void, A1, A2, A3, A4, A5, A6, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
-{
-	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6);
-	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual void main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/, Arg /*a6*/) {}
-	void naked_main() {
-		DumpRegArg4<void, A1, A2, A3, A4>();
-		main(Arg1<void>(), Arg2<void,A1>(), Arg3<void,A1,A2>(), Arg4<void,A1,A2,A4>(), Arg5<void,A1,A2,A4,A5>(), Arg6<void,A1,A2,A4,A5,A6>());
-		MakePrologAndEpilog();
-	}
-};
-
-// specialization for 5 arguments
-template<class R, class A1, class A2, class A3, class A4, class A5>
-struct function_cdecl<R, A1, A2, A3, A4, A5, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
-{
-	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4, A5);
-	typedef detail::ResultT<R> Result;	///< main function result type
-	typename detail::ResultTraits<R>::ResultPtr result_ptr;
-
-	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual Result main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/) { return Result(); }
-	void naked_main() {
-		DumpRegArg4<R, A1, A2, A3, A4>();
-		main(Arg1<R>(), Arg2<R,A1>(), Arg3<R,A1,A2>(), Arg4<R,A1,A2,A4>(), Arg5<R,A1,A2,A4,A5>()).Store(*this);
-		MakePrologAndEpilog();
-	}
-};
-
-// specialization for 5 arguments and no result
-template<class A1, class A2, class A3, class A4, class A5>
-struct function_cdecl<void, A1, A2, A3, A4, A5, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
-{
-	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4, A5);
-	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual void main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/, Arg /*a5*/) {}
-	void naked_main() {
-		DumpRegArg4<void, A1, A2, A3, A4>();
-		main(Arg1<void>(), Arg2<void,A1>(), Arg3<void,A1,A2>(), Arg4<void,A1,A2,A4>(), Arg5<void,A1,A2,A4,A5>());
-		MakePrologAndEpilog();
-	}
-};
-
-// specialization for 4 arguments
-template<class R, class A1, class A2, class A3, class A4>
-struct function_cdecl<R, A1, A2, A3, A4, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
-{
-	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4);
-	typedef detail::ResultT<R> Result;	///< main function result type
-	typename detail::ResultTraits<R>::ResultPtr result_ptr;
-
-	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual Result main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/) { return Result(); }
-	void naked_main() {
-		DumpRegArg4<R, A1, A2, A3, A4>();
-		main(Arg1<R>(), Arg2<R,A1>(), Arg3<R,A1,A2>(), Arg4<R,A1,A2,A4>()).Store(*this);
-		MakePrologAndEpilog();
-	}
-};
-
-// specialization for 4 arguments and no result
-template<class A1, class A2, class A3, class A4>
-struct function_cdecl<void, A1, A2, A3, A4, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
-{
-	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4);
-	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual void main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/, Arg /*a4*/) {}
-	void naked_main() {
-		DumpRegArg4<void, A1, A2, A3, A4>();
-		main(Arg1<void>(), Arg2<void,A1>(), Arg3<void,A1,A2>(), Arg4<void,A1,A2,A4>());
-		MakePrologAndEpilog();
-	}
-};
-
-// specialization for 3 arguments
-template<class R, class A1, class A2, class A3>
-struct function_cdecl<R, A1, A2, A3, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
-{
-	typedef R (__cdecl *FuncPtr)(A1, A2, A3);
-	typedef detail::ResultT<R> Result;	///< main function result type
-	typename detail::ResultTraits<R>::ResultPtr result_ptr;
-
-	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual Result main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/) { return Result(); }
-	void naked_main() {
-		DumpRegArg3<R, A1, A2, A3>();
-		main(Arg1<R>(), Arg2<R,A1>(), Arg3<R,A1,A2>()).Store(*this);
-		MakePrologAndEpilog();
-	}
-};
-
-// specialization for 3 arguments and no result
-template<class A1, class A2, class A3>
-struct function_cdecl<void, A1, A2, A3, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
-{
-	typedef void (__cdecl *FuncPtr)(A1, A2, A3);
-	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual void main(Arg /*a1*/, Arg /*a2*/, Arg /*a3*/) {}
-	void naked_main() {
-		DumpRegArg3<void, A1, A2, A3>();
-		main(Arg1<void>(), Arg2<void,A1>(), Arg3<void,A1,A2>());
-		MakePrologAndEpilog();
-	}
-};
-
-// specialization for 2 arguments
-template<class R, class A1, class A2>
-struct function_cdecl<R, A1, A2, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
-{
-	typedef R (__cdecl *FuncPtr)(A1, A2);
-	typedef detail::ResultT<R> Result;	///< main function result type
-	typename detail::ResultTraits<R>::ResultPtr result_ptr;
-
-	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual Result main(Arg /*a1*/, Arg /*a2*/) { return Result(); }
-	void naked_main() {
-		DumpRegArg2<R, A1, A2>();
-		main(Arg1<R>(), Arg2<R,A1>()).Store(*this);
-		MakePrologAndEpilog();
-	}
-};
-
-// specialization for 2 arguments and no result
-template<class A1, class A2>
-struct function_cdecl<void, A1, A2, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
-{
-	typedef void (__cdecl *FuncPtr)(A1, A2);
-	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual void main(Arg /*a1*/, Arg /*a2*/) {}
-	void naked_main() {
-		DumpRegArg2<void, A1, A2>();
-		main(Arg1<void>(), Arg2<void,A1>());
-		MakePrologAndEpilog();
-	}
-};
-
-// specialization for 1 arguments
-template<class R, class A1>
-struct function_cdecl<R, A1, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
-{
-	typedef R (__cdecl *FuncPtr)(A1);
-	typedef detail::ResultT<R> Result;	///< main function result type
-	typename detail::ResultTraits<R>::ResultPtr result_ptr;
-
-	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual Result main(Arg /*a1*/) { return Result(); }
-	void naked_main() {
-		DumpRegArg1<R, A1>();
-		main(Arg1<R>()).Store(*this);
-		MakePrologAndEpilog();
-	}
-};
-
-// specialization for 1 arguments and no result
-template<class A1>
-struct function_cdecl<void, A1, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
-{
-	typedef void (__cdecl *FuncPtr)(A1);
-	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual void main(Arg /*a1*/) {}
-	void naked_main() {
-		DumpRegArg1<void, A1>();
-		main(Arg1<void>());
-		MakePrologAndEpilog();
-	}
-};
-
-// specialization for no arguments
-template<class R>
-struct function_cdecl<R, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
-{
-	typedef R (__cdecl *FuncPtr)();
-	typedef detail::ResultT<R> Result;	///< main function result type
-	typename detail::ResultTraits<R>::ResultPtr result_ptr;
-
-	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual Result main() { return Result(); }
-	void naked_main() {
-		DumpRegArg0<R>();
-		main().Store(*this);
-		MakePrologAndEpilog();
-	}
-};
-
-// specialization for no arguments and no result
-template<>
-struct function_cdecl<void, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : detail::Function_cdecl
-{
-	typedef void (__cdecl *FuncPtr)();
-	function_cdecl(bool dump_regarg_x64 = true) : detail::Function_cdecl(dump_regarg_x64) {}
-	operator FuncPtr() { return (FuncPtr)GetCode(); }
-	virtual void main() {}
-	void naked_main() {
-		main();
-
 		compiler::RegisterAllocation(*this);
 		MakePrologAndEpilog();
 	}
@@ -7127,6 +7113,7 @@ struct function_cdecl<void, detail::ArgNone, detail::ArgNone, detail::ArgNone, d
 /// function
 template<
 	class R,
+	class Derived,
 	class A1 = detail::ArgNone,
 	class A2 = detail::ArgNone,
 	class A3 = detail::ArgNone,
@@ -7137,7 +7124,7 @@ template<
 	class A8 = detail::ArgNone,
 	class A9 = detail::ArgNone,
 	class A10 = detail::ArgNone>
-struct function : function_cdecl<R, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10> {};
+struct function : function_cdecl<R, Derived, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10> {};
 
 }	// namespace jitasm
 
