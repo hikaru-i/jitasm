@@ -3671,9 +3671,8 @@ masm_test_function_return_m64_ptr endp
 masm_test_function_return_m128_xmm1 proc
 	push rbp
 	mov rbp, rsp
-	mov qword ptr[rbp + 16], rcx
 	pxor xmm1, xmm1
-	mov rax, qword ptr[rbp + 16]
+	mov rax, rcx
 	movaps xmmword ptr[rax], xmm1
 	leave
 	ret
@@ -3685,8 +3684,7 @@ masm_test_function_return_m128_xmm1 endp
 masm_test_function_return_m128_ptr proc
 	push rbp
 	mov rbp, rsp
-	mov qword ptr[rbp + 16], rcx
-	mov rax, qword ptr[rbp + 16]
+	mov rax, rcx
 	movaps xmm0, xmmword ptr[rsp - 16]
 	movaps xmmword ptr[rax], xmm0
 	leave
@@ -3699,9 +3697,8 @@ masm_test_function_return_m128_ptr endp
 masm_test_function_return_m128d_xmm1 proc
 	push rbp
 	mov rbp, rsp
-	mov qword ptr[rbp + 16], rcx
 	pxor xmm1, xmm1
-	mov rax, qword ptr[rbp + 16]
+	mov rax, rcx
 	movapd xmmword ptr[rax], xmm1
 	leave
 	ret
@@ -3713,8 +3710,7 @@ masm_test_function_return_m128d_xmm1 endp
 masm_test_function_return_m128d_ptr proc
 	push rbp
 	mov rbp, rsp
-	mov qword ptr[rbp + 16], rcx
-	mov rax, qword ptr[rbp + 16]
+	mov rax, rcx
 	movapd xmm0, xmmword ptr[rsp - 16]
 	movapd xmmword ptr[rax], xmm0
 	leave
@@ -3727,9 +3723,8 @@ masm_test_function_return_m128d_ptr endp
 masm_test_function_return_m128i_xmm1 proc
 	push rbp
 	mov rbp, rsp
-	mov qword ptr[rbp + 16], rcx
 	pxor xmm1, xmm1
-	mov rax, qword ptr[rbp + 16]
+	mov rax, rcx
 	movdqa xmmword ptr[rax], xmm1
 	leave
 	ret
@@ -3741,8 +3736,7 @@ masm_test_function_return_m128i_xmm1 endp
 masm_test_function_return_m128i_ptr proc
 	push rbp
 	mov rbp, rsp
-	mov qword ptr[rbp + 16], rcx
-	mov rax, qword ptr[rbp + 16]
+	mov rax, rcx
 	movdqa xmm0, xmmword ptr[rsp - 16]
 	movdqa xmmword ptr[rax], xmm0
 	leave
