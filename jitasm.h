@@ -38,19 +38,23 @@
 #include <set>
 #include <map>
 #include <algorithm>
-#include <assert.h>
 #include <intrin.h>
 
 #pragma warning( push )
 #pragma warning( disable : 4127 )	// conditional expression is constant.
 #pragma warning( disable : 4201 )	// nonstandard extension used : nameless struct/union
 
-#ifndef ASSERT
-#define ASSERT assert
+#ifdef ASSERT
+#define JITASM_ASSERT ASSERT
+#else
+#include <assert.h>
+#define JITASM_ASSERT assert
 #endif
 
-#if 1
+//#define JITASM_DEBUG_DUMP
+#ifdef JITASM_DEBUG_DUMP
 #define JITASM_TRACE	jitasm::detail::Trace
+//#define JITASM_TRACE	printf
 #else
 #define JITASM_TRACE	__noop
 #endif
@@ -234,12 +238,12 @@ namespace detail
 
 		OpdSize	GetSize() const		{return opdsize_;}
 		OpdSize	GetAddressSize() const	{return addrsize_;}
-		RegID	GetReg() const		{ASSERT(IsReg()); return reg_;}
-		RegID	GetBase() const		{ASSERT(IsMem()); return base_;}
-		RegID	GetIndex() const	{ASSERT(IsMem()); return index_;}
-		sint64	GetScale() const	{ASSERT(IsMem()); return scale_;}
-		sint64	GetDisp() const		{ASSERT(IsMem()); return disp_;}
-		sint64	GetImm() const		{ASSERT(IsImm()); return imm_;}
+		RegID	GetReg() const		{JITASM_ASSERT(IsReg()); return reg_;}
+		RegID	GetBase() const		{JITASM_ASSERT(IsMem()); return base_;}
+		RegID	GetIndex() const	{JITASM_ASSERT(IsMem()); return index_;}
+		sint64	GetScale() const	{JITASM_ASSERT(IsMem()); return scale_;}
+		sint64	GetDisp() const		{JITASM_ASSERT(IsMem()); return disp_;}
+		sint64	GetImm() const		{JITASM_ASSERT(IsImm()); return imm_;}
 
 		bool operator==(const Opd& rhs) const
 		{
@@ -263,8 +267,8 @@ namespace detail
 	/// Add O_TYPE_DUMMY to the specified operand and constraint of register assignment
 	inline Opd Dummy(const Opd& opd, const Opd& constraint)
 	{
-		ASSERT(opd.IsReg() && (opd.opdtype_ & O_TYPE_TYPE_MASK) == (constraint.opdtype_ & O_TYPE_TYPE_MASK) && !constraint.GetReg().IsSymbolic());
-		ASSERT(opd.GetReg().IsSymbolic() || opd.GetReg().id == constraint.GetReg().id);
+		JITASM_ASSERT(opd.IsReg() && (opd.opdtype_ & O_TYPE_TYPE_MASK) == (constraint.opdtype_ & O_TYPE_TYPE_MASK) && !constraint.GetReg().IsSymbolic());
+		JITASM_ASSERT(opd.GetReg().IsSymbolic() || opd.GetReg().id == constraint.GetReg().id);
 		Opd o(opd);
 		o.opdtype_ = static_cast<OpdType>(static_cast<int>(o.opdtype_) | O_TYPE_DUMMY);
 		o.reg_assignable_ = (1 << constraint.reg_.id);
@@ -733,7 +737,7 @@ struct Backend
 		uint8* pb = (uint8*) p;
 		while (n--) {
 			if (pbuff_) {
-				if (size_ == buffsize_) ASSERT(0);
+				if (size_ == buffsize_) JITASM_ASSERT(0);
 				pbuff_[size_] = *pb++;
 			}
 			size_++;
@@ -780,7 +784,7 @@ struct Backend
 				if (flag & E_VEX_0F) mmmmm = 1;
 				else if (flag & E_VEX_0F38) mmmmm = 2;
 				else if (flag & E_VEX_0F3A) mmmmm = 3;
-				else ASSERT(0);
+				else JITASM_ASSERT(0);
 
 				db(0xC4);
 				db((~wrxb & 7) << 5 | mmmmm);
@@ -793,8 +797,8 @@ struct Backend
 			uint8 wrxb = GetWRXB(flag & E_REXW_PREFIX, reg, r_m);
 			if (wrxb) {
 				// Encode REX prefix
-				ASSERT(!reg.IsReg() || reg.GetSize() != O_SIZE_8 || reg.GetReg().id < AH || reg.GetReg().id >= R8B);	// AH, BH, CH, or DH may not be used with REX.
-				ASSERT(!r_m.IsReg() || r_m.GetSize() != O_SIZE_8 || r_m.GetReg().id < AH || r_m.GetReg().id >= R8B);	// AH, BH, CH, or DH may not be used with REX.
+				JITASM_ASSERT(!reg.IsReg() || reg.GetSize() != O_SIZE_8 || reg.GetReg().id < AH || reg.GetReg().id >= R8B);	// AH, BH, CH, or DH may not be used with REX.
+				JITASM_ASSERT(!r_m.IsReg() || r_m.GetSize() != O_SIZE_8 || r_m.GetReg().id < AH || r_m.GetReg().id >= R8B);	// AH, BH, CH, or DH may not be used with REX.
 
 				if (flag & E_REP_PREFIX) db(0xF3);
 #ifdef JITASM64
@@ -828,7 +832,7 @@ struct Backend
 		if (r_m.IsReg()) {
 			db(0xC0 | reg << 3 | r_m.GetReg().id & 0x7);
 		} else if (r_m.IsMem()) {
-			ASSERT(r_m.GetBase().type == R_TYPE_GP && r_m.GetIndex().type == R_TYPE_GP);
+			JITASM_ASSERT(r_m.GetBase().type == R_TYPE_GP && r_m.GetIndex().type == R_TYPE_GP);
 			int base = r_m.GetBase().id; if (base != INVALID) base &= 0x7;
 			int index = r_m.GetIndex().id; if (index != INVALID) index &= 0x7;
 
@@ -841,8 +845,8 @@ struct Backend
 #endif
 				dd(r_m.GetDisp());
 			} else {
-				ASSERT(base != ESP || index != ESP);
-				ASSERT(index != ESP || r_m.GetScale() == 0);
+				JITASM_ASSERT(base != ESP || index != ESP);
+				JITASM_ASSERT(index != ESP || r_m.GetScale() == 0);
 
 				if (index == ESP) {
 					index = base;
@@ -855,7 +859,7 @@ struct Backend
 				if (r_m.GetDisp() == 0 || sib && base == INVALID) mod = base != EBP ? 0 : 1;
 				else if (detail::IsInt8(r_m.GetDisp())) mod = 1;
 				else if (detail::IsInt32(r_m.GetDisp())) mod = 2;
-				else ASSERT(0);
+				else JITASM_ASSERT(0);
 				db(mod << 6 | reg << 3 | (sib ? 4 : base));
 
 				// SIB
@@ -865,7 +869,7 @@ struct Backend
 					else if (r_m.GetScale() == 2) ss = 1;
 					else if (r_m.GetScale() == 4) ss = 2;
 					else if (r_m.GetScale() == 8) ss = 3;
-					else ASSERT(0);
+					else JITASM_ASSERT(0);
 					if (index != INVALID && base != INVALID) {
 						db(ss << 6 | index << 3 | base);
 					} else if (base != INVALID) {
@@ -873,7 +877,7 @@ struct Backend
 					} else if (index != INVALID) {
 						db(ss << 6 | index << 3 | 5);
 					} else {
-						ASSERT(0);
+						JITASM_ASSERT(0);
 					}
 				}
 
@@ -883,7 +887,7 @@ struct Backend
 				if (mod == 2) dd(r_m.GetDisp());
 			}
 		} else {
-			ASSERT(0);
+			JITASM_ASSERT(0);
 		}
 	}
 
@@ -902,17 +906,17 @@ struct Backend
 		else if (size == O_SIZE_16) dw(imm.GetImm());
 		else if (size == O_SIZE_32) dd(imm.GetImm());
 		else if (size == O_SIZE_64) dq(imm.GetImm());
-		else ASSERT(0);
+		else JITASM_ASSERT(0);
 	}
 
 	void Encode(const Instr& instr)
 	{
 		uint32 opcode = instr.opcode_;
 
-		const detail::Opd& opd1 = instr.GetOpd(0).IsDummy() ? detail::Opd() : instr.GetOpd(0);	ASSERT(!(opd1.IsReg() && opd1.GetReg().IsSymbolic()));
-		const detail::Opd& opd2 = instr.GetOpd(1).IsDummy() ? detail::Opd() : instr.GetOpd(1);	ASSERT(!(opd2.IsReg() && opd2.GetReg().IsSymbolic()));
-		const detail::Opd& opd3 = instr.GetOpd(2).IsDummy() ? detail::Opd() : instr.GetOpd(2);	ASSERT(!(opd3.IsReg() && opd3.GetReg().IsSymbolic()));
-		const detail::Opd& opd4 = instr.GetOpd(3).IsDummy() ? detail::Opd() : instr.GetOpd(3);	ASSERT(!(opd4.IsReg() && opd4.GetReg().IsSymbolic()));
+		const detail::Opd& opd1 = instr.GetOpd(0).IsDummy() ? detail::Opd() : instr.GetOpd(0);	JITASM_ASSERT(!(opd1.IsReg() && opd1.GetReg().IsSymbolic()));
+		const detail::Opd& opd2 = instr.GetOpd(1).IsDummy() ? detail::Opd() : instr.GetOpd(1);	JITASM_ASSERT(!(opd2.IsReg() && opd2.GetReg().IsSymbolic()));
+		const detail::Opd& opd3 = instr.GetOpd(2).IsDummy() ? detail::Opd() : instr.GetOpd(2);	JITASM_ASSERT(!(opd3.IsReg() && opd3.GetReg().IsSymbolic()));
+		const detail::Opd& opd4 = instr.GetOpd(3).IsDummy() ? detail::Opd() : instr.GetOpd(3);	JITASM_ASSERT(!(opd4.IsReg() && opd4.GetReg().IsSymbolic()));
 
 		// +rb, +rw, +rd, +ro
 		if (opd1.IsReg() && (opd2.IsNone() || opd2.IsImm())) {
@@ -948,7 +952,7 @@ struct Backend
 	{
 		const detail::Opd& reg = instr.GetOpd(1);
 		const detail::Opd& imm = instr.GetOpd(2);
-		ASSERT(instr.GetOpd(0).IsImm() && reg.IsReg() && imm.IsImm());
+		JITASM_ASSERT(instr.GetOpd(0).IsImm() && reg.IsReg() && imm.IsImm());
 
 		if (reg.GetReg().id == EAX && (reg.GetSize() == O_SIZE_8 || !detail::IsInt8(imm.GetImm()))) {
 			opcode |= (reg.GetSize() == O_SIZE_8 ? 0 : 1);
@@ -978,7 +982,7 @@ struct Backend
 		} else if (instr.GetID() == I_LOOP) {
 			Encode(Instr(instr.GetID(), instr.opcode_, instr.encoding_flag_, imm));
 		} else {
-			ASSERT(0);
+			JITASM_ASSERT(0);
 		}
 	}
 
@@ -987,7 +991,7 @@ struct Backend
 #ifndef JITASM64
 		const detail::Opd& reg = instr.GetOpd(0);
 		const detail::Opd& mem = instr.GetOpd(1);
-		ASSERT(reg.IsReg() && mem.IsMem());
+		JITASM_ASSERT(reg.IsReg() && mem.IsMem());
 
 		if (reg.GetReg().id == EAX && mem.GetBase().IsInvalid() && mem.GetIndex().IsInvalid()) {
 			uint32 opcode = 0xA0 | ~instr.opcode_ & 0x2 | instr.opcode_ & 1;
@@ -1004,7 +1008,7 @@ struct Backend
 	{
 		const detail::Opd& reg = instr.GetOpd(1);
 		const detail::Opd& imm = instr.GetOpd(2);
-		ASSERT(instr.GetOpd(0).IsImm() && reg.IsReg() && imm.IsImm());
+		JITASM_ASSERT(instr.GetOpd(0).IsImm() && reg.IsReg() && imm.IsImm());
 
 		if (reg.GetReg().id == EAX) {
 			uint32 opcode = 0xA8 | (reg.GetSize() == O_SIZE_8 ? 0 : 1);
@@ -1018,7 +1022,7 @@ struct Backend
 	{
 		const detail::Opd& dst = instr.GetOpd(0);
 		const detail::Opd& src = instr.GetOpd(1);
-		ASSERT(dst.IsReg() && src.IsReg());
+		JITASM_ASSERT(dst.IsReg() && src.IsReg());
 
 		if (dst.GetReg().id == EAX) {
 			Encode(Instr(instr.GetID(), 0x90, instr.encoding_flag_, src));
@@ -1077,7 +1081,7 @@ namespace detail
 	/// The bit position of the first bit 1.
 	inline uint32 bit_scan_forward(uint32 x)
 	{
-		ASSERT(x != 0);
+		JITASM_ASSERT(x != 0);
 		unsigned long index;
 		_BitScanForward(&index, x);
 		//index = __builtin_ctz(x);		// for gcc
@@ -1156,7 +1160,7 @@ namespace detail
 			}
 			if (codesize) {
 				void* pbuff = ::VirtualAlloc(NULL, codesize, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
-				if (pbuff == NULL) ASSERT(0);
+				if (pbuff == NULL) JITASM_ASSERT(0);
 				MEMORY_BASIC_INFORMATION info;
 				::VirtualQuery(pbuff, &info, sizeof(info));
 
@@ -1385,14 +1389,14 @@ struct Frontend
 	/// Declare variable of the function argument on register
 	void DeclareRegArg(const detail::Opd& var, const detail::Opd& arg, const detail::Opd& spill_slot = detail::Opd())
 	{
-		ASSERT(var.IsReg());
+		JITASM_ASSERT(var.IsReg());
 		AppendInstr(I_PSEUDO_DECLARE_REG_ARG, 0, E_SPECIAL, Dummy(W(var), arg), spill_slot);
 	}
 
 	/// Declare variable of the function argument on stack
 	void DeclareStackArg(const detail::Opd& var, const detail::Opd& arg)
 	{
-		ASSERT(var.IsReg());
+		JITASM_ASSERT(var.IsReg());
 		AppendInstr(I_PSEUDO_DECLARE_STACK_ARG, 0, E_SPECIAL, W(var), R(arg));
 	}
 
@@ -1404,7 +1408,7 @@ struct Frontend
 	size_t GetJumpTo(const Instr& instr) const
 	{
 		size_t label_id = (size_t) instr.GetOpd(0).GetImm();
-		ASSERT(labels_[label_id].instr_number != (size_t)-1);	// invalid label
+		JITASM_ASSERT(labels_[label_id].instr_number != (size_t)-1);	// invalid label
 		return labels_[label_id].instr_number;
 	}
 
@@ -1443,15 +1447,15 @@ struct Frontend
 						if (!detail::IsInt8(rel)) {
 							// jrcxz, jcxz, jecxz, loop, loope, loopne are only for short jump
 							uint32 tttn = instr.opcode_;
-							if (instr.GetID() == I_JCC && (tttn == JCC_CXZ || tttn == JCC_ECXZ || tttn == JCC_RCXZ)) ASSERT(0);
-							if (instr.GetID() == I_LOOP) ASSERT(0);
+							if (instr.GetID() == I_JCC && (tttn == JCC_CXZ || tttn == JCC_ECXZ || tttn == JCC_RCXZ)) JITASM_ASSERT(0);
+							if (instr.GetID() == I_LOOP) JITASM_ASSERT(0);
 
 							// Retry with immediate 32
 							instr = Instr(instr.GetID(), instr.opcode_, instr.encoding_flag_, Imm32(0x7FFFFFFF), Imm64(instr.GetOpd(1).GetImm()));
 							retry = true;
 						}
 					} else if (size == O_SIZE_32) {
-						ASSERT(detail::IsInt32(rel));	// There is no jump instruction larger than immediate 32.
+						JITASM_ASSERT(detail::IsInt32(rel));	// There is no jump instruction larger than immediate 32.
 					}
 				}
 			}
@@ -1465,10 +1469,10 @@ struct Frontend
 				int rel = (int) offsets[d] - offsets[i + 1];
 				OpdSize size = instr.GetOpd(0).GetSize();
 				if (size == O_SIZE_8) {
-					ASSERT(detail::IsInt8(rel));
+					JITASM_ASSERT(detail::IsInt8(rel));
 					instr = Instr(instr.GetID(), instr.opcode_, instr.encoding_flag_, Imm8((uint8) rel));
 				} else if (size == O_SIZE_32) {
-					ASSERT(detail::IsInt32(rel));
+					JITASM_ASSERT(detail::IsInt32(rel));
 					instr = Instr(instr.GetID(), instr.opcode_, instr.encoding_flag_, Imm32((uint32) rel));
 				}
 			}
@@ -1543,7 +1547,7 @@ struct Frontend
 	/// Change label id of jump instruction
 	static void ChangeLabelID(Instr& instr, size_t label_id)
 	{
-		ASSERT(IsJump(instr.id_) && instr.GetOpd(0).IsImm());
+		JITASM_ASSERT(IsJump(instr.id_) && instr.GetOpd(0).IsImm());
 		instr.GetOpd(0).imm_ = label_id;
 	}
 
@@ -1571,7 +1575,7 @@ struct Frontend
 	// Label
 	void L(const std::string& label_name)
 	{
-		ASSERT(!label_name.empty());
+		JITASM_ASSERT(!label_name.empty());
 		L(GetLabelID(label_name));
 	}
 
@@ -2187,8 +2191,12 @@ struct Frontend
 	void rep_movsb()	{AppendInstr(I_MOVS_B, 0xA4, E_REP_PREFIX);}
 	void rep_movsw()	{AppendInstr(I_MOVS_W, 0xA5, E_REP_PREFIX | E_OPERAND_SIZE_PREFIX);}
 	void rep_movsd()	{AppendInstr(I_MOVS_D, 0xA5, E_REP_PREFIX);}
+	void rep_movsb(const Reg& dst, const Reg& src, const Reg& count)	{AppendInstr(I_MOVS_B, 0xA4, E_REP_PREFIX, Dummy(R(dst), edi), Dummy(R(src), esi), Dummy(R(count), ecx));}
+	void rep_movsw(const Reg& dst, const Reg& src, const Reg& count)	{AppendInstr(I_MOVS_W, 0xA5, E_REP_PREFIX | E_OPERAND_SIZE_PREFIX, Dummy(R(dst), edi), Dummy(R(src), esi), Dummy(R(count), ecx));}
+	void rep_movsd(const Reg& dst, const Reg& src, const Reg& count)	{AppendInstr(I_MOVS_D, 0xA5, E_REP_PREFIX, Dummy(R(dst), edi), Dummy(R(src), esi), Dummy(R(count), ecx));}
 #ifdef JITASM64
 	void rep_movsq()	{AppendInstr(I_MOVS_Q, 0xA5, E_REP_PREFIX | E_REXW_PREFIX);}
+	void rep_movsq(const Reg64& dst, const Reg64& src, const Reg64& count)	{AppendInstr(I_MOVS_Q, 0xA5, E_REP_PREFIX | E_REXW_PREFIX, Dummy(R(dst), rdi), Dummy(R(src), rsi), Dummy(R(count), rcx));}
 #endif
 	void movsx(const Reg16& dst, const Reg8& src)	{AppendInstr(I_MOVSX, 0x0FBE, E_OPERAND_SIZE_PREFIX, W(dst), R(src));}
 	void movsx(const Reg16& dst, const Mem8& src)	{AppendInstr(I_MOVSX, 0x0FBE, E_OPERAND_SIZE_PREFIX, W(dst), R(src));}
@@ -3185,23 +3193,23 @@ struct Frontend
 	void minpd(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_MINPD,	0x0F5D, E_MANDATORY_PREFIX_66, dst, src);}
 	void minsd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MINSD,	0x0F5D, E_MANDATORY_PREFIX_F2, dst, src);}
 	void minsd(const XmmReg& dst, const Mem64& src)		{AppendInstr(I_MINSD,	0x0F5D, E_MANDATORY_PREFIX_F2, dst, src);}
-	void movapd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MOVAPD,	0x0F28, E_MANDATORY_PREFIX_66, dst, src);}
-	void movapd(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_MOVAPD,	0x0F28, E_MANDATORY_PREFIX_66, dst, src);}
-	void movapd(const Mem128& dst, const XmmReg& src)	{AppendInstr(I_MOVAPD,	0x0F29, E_MANDATORY_PREFIX_66, src, dst);}
-	void movd(const XmmReg& dst, const Reg32& src)		{AppendInstr(I_MOVD,		0x0F6E, E_MANDATORY_PREFIX_66, dst, src);}
-	void movd(const XmmReg& dst, const Mem32& src)		{AppendInstr(I_MOVD,		0x0F6E, E_MANDATORY_PREFIX_66, dst, src);}
-	void movd(const Reg32& dst, const XmmReg& src)		{AppendInstr(I_MOVD,		0x0F7E, E_MANDATORY_PREFIX_66, src, dst);}
-	void movd(const Mem32& dst, const XmmReg& src)		{AppendInstr(I_MOVD,		0x0F7E, E_MANDATORY_PREFIX_66, src, dst);}
+	void movapd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MOVAPD,	0x0F28, E_MANDATORY_PREFIX_66, W(dst), R(src));}
+	void movapd(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_MOVAPD,	0x0F28, E_MANDATORY_PREFIX_66, W(dst), R(src));}
+	void movapd(const Mem128& dst, const XmmReg& src)	{AppendInstr(I_MOVAPD,	0x0F29, E_MANDATORY_PREFIX_66, R(src), W(dst));}
+	void movd(const XmmReg& dst, const Reg32& src)		{AppendInstr(I_MOVD,	0x0F6E, E_MANDATORY_PREFIX_66, W(dst), R(src));}
+	void movd(const XmmReg& dst, const Mem32& src)		{AppendInstr(I_MOVD,	0x0F6E, E_MANDATORY_PREFIX_66, W(dst), R(src));}
+	void movd(const Reg32& dst, const XmmReg& src)		{AppendInstr(I_MOVD,	0x0F7E, E_MANDATORY_PREFIX_66, R(src), W(dst));}
+	void movd(const Mem32& dst, const XmmReg& src)		{AppendInstr(I_MOVD,	0x0F7E, E_MANDATORY_PREFIX_66, R(src), W(dst));}
 #ifdef JITASM64
-	void movd(const XmmReg& dst, const Reg64& src)		{AppendInstr(I_MOVD,		0x0F6E, E_MANDATORY_PREFIX_66 | E_REXW_PREFIX, dst, src);}
-	void movd(const Reg64& dst, const XmmReg& src)		{AppendInstr(I_MOVD,		0x0F7E, E_MANDATORY_PREFIX_66 | E_REXW_PREFIX, src, dst);}
+	void movd(const XmmReg& dst, const Reg64& src)		{AppendInstr(I_MOVD,	0x0F6E, E_MANDATORY_PREFIX_66 | E_REXW_PREFIX, W(dst), R(src));}
+	void movd(const Reg64& dst, const XmmReg& src)		{AppendInstr(I_MOVD,	0x0F7E, E_MANDATORY_PREFIX_66 | E_REXW_PREFIX, R(src), W(dst));}
 #endif
-	void movdqa(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MOVDQA,	0x0F6F, E_MANDATORY_PREFIX_66, dst, src);}
-	void movdqa(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_MOVDQA,	0x0F6F, E_MANDATORY_PREFIX_66, dst, src);}
-	void movdqa(const Mem128& dst, const XmmReg& src)	{AppendInstr(I_MOVDQA,	0x0F7F, E_MANDATORY_PREFIX_66, src, dst);}
-	void movdqu(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MOVDQU,	0x0F6F, E_MANDATORY_PREFIX_F3, dst, src);}
-	void movdqu(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_MOVDQU,	0x0F6F, E_MANDATORY_PREFIX_F3, dst, src);}
-	void movdqu(const Mem128& dst, const XmmReg& src)	{AppendInstr(I_MOVDQU,	0x0F7F, E_MANDATORY_PREFIX_F3, src, dst);}
+	void movdqa(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MOVDQA,	0x0F6F, E_MANDATORY_PREFIX_66, W(dst), R(src));}
+	void movdqa(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_MOVDQA,	0x0F6F, E_MANDATORY_PREFIX_66, W(dst), R(src));}
+	void movdqa(const Mem128& dst, const XmmReg& src)	{AppendInstr(I_MOVDQA,	0x0F7F, E_MANDATORY_PREFIX_66, R(src), W(dst));}
+	void movdqu(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MOVDQU,	0x0F6F, E_MANDATORY_PREFIX_F3, W(dst), R(src));}
+	void movdqu(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_MOVDQU,	0x0F6F, E_MANDATORY_PREFIX_F3, W(dst), R(src));}
+	void movdqu(const Mem128& dst, const XmmReg& src)	{AppendInstr(I_MOVDQU,	0x0F7F, E_MANDATORY_PREFIX_F3, R(src), W(dst));}
 	void movdq2q(const MmxReg& dst, const XmmReg& src)	{AppendInstr(I_MOVDQ2Q,	0x0FD6, E_MANDATORY_PREFIX_F2, dst, src);}
 	void movhpd(const XmmReg& dst, const Mem64& src)	{AppendInstr(I_MOVHPD,	0x0F16, E_MANDATORY_PREFIX_66, dst, src);}
 	void movhpd(const Mem64& dst, const XmmReg& src)	{AppendInstr(I_MOVHPD,	0x0F17, E_MANDATORY_PREFIX_66, src, dst);}
@@ -3217,20 +3225,20 @@ struct Frontend
 	void movnti(const Mem64& dst, const Reg64& src)		{AppendInstr(I_MOVNTI,	0x0FC3, E_REXW_PREFIX, src, dst);}
 #endif
 	void movntpd(const Mem128& dst, const XmmReg& src)	{AppendInstr(I_MOVNTPD,	0x0F2B, E_MANDATORY_PREFIX_66, src, dst);}
-	void movq(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_MOVQ,		0x0F7E, E_MANDATORY_PREFIX_F3, dst, src);}
-	void movq(const XmmReg& dst, const Mem64& src)		{AppendInstr(I_MOVQ,		0x0F7E, E_MANDATORY_PREFIX_F3, dst, src);}
-	void movq(const Mem64& dst, const XmmReg& src)		{AppendInstr(I_MOVQ,		0x0FD6, E_MANDATORY_PREFIX_66, src, dst);}
+	void movq(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_MOVQ,		0x0F7E, E_MANDATORY_PREFIX_F3, W(dst), R(src));}
+	void movq(const XmmReg& dst, const Mem64& src)		{AppendInstr(I_MOVQ,		0x0F7E, E_MANDATORY_PREFIX_F3, W(dst), R(src));}
+	void movq(const Mem64& dst, const XmmReg& src)		{AppendInstr(I_MOVQ,		0x0FD6, E_MANDATORY_PREFIX_66, R(src), W(dst));}
 #ifdef JITASM64
 	void movq(const XmmReg& dst, const Reg64& src)		{movd(dst, src);}
 	void movq(const Reg64& dst, const XmmReg& src)		{movd(dst, src);}
 #endif
 	void movq2dq(const XmmReg& dst, const MmxReg& src)	{AppendInstr(I_MOVQ2DQ,	0x0FD6, E_MANDATORY_PREFIX_F3, dst, src);}
-	void movsd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MOVSD,	0x0F10, E_MANDATORY_PREFIX_F2, dst, src);}
-	void movsd(const XmmReg& dst, const Mem64& src)		{AppendInstr(I_MOVSD,	0x0F10, E_MANDATORY_PREFIX_F2, dst, src);}
-	void movsd(const Mem64& dst, const XmmReg& src)		{AppendInstr(I_MOVSD,	0x0F11, E_MANDATORY_PREFIX_F2, src, dst);}
-	void movupd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MOVUPD,	0x0F10, E_MANDATORY_PREFIX_66, dst, src);}
-	void movupd(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_MOVUPD,	0x0F10, E_MANDATORY_PREFIX_66, dst, src);}
-	void movupd(const Mem128& dst, const XmmReg& src)	{AppendInstr(I_MOVUPD,	0x0F11, E_MANDATORY_PREFIX_66, src, dst);}
+	void movsd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MOVSD,	0x0F10, E_MANDATORY_PREFIX_F2, RW(dst), R(src));}	// 64~127bits are unchanged
+	void movsd(const XmmReg& dst, const Mem64& src)		{AppendInstr(I_MOVSD,	0x0F10, E_MANDATORY_PREFIX_F2, W(dst), R(src));}
+	void movsd(const Mem64& dst, const XmmReg& src)		{AppendInstr(I_MOVSD,	0x0F11, E_MANDATORY_PREFIX_F2, R(src), W(dst));}
+	void movupd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MOVUPD,	0x0F10, E_MANDATORY_PREFIX_66, W(dst), R(src));}
+	void movupd(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_MOVUPD,	0x0F10, E_MANDATORY_PREFIX_66, W(dst), R(src));}
+	void movupd(const Mem128& dst, const XmmReg& src)	{AppendInstr(I_MOVUPD,	0x0F11, E_MANDATORY_PREFIX_66, R(src), W(dst));}
 	void mulpd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MULPD,	0x0F59, E_MANDATORY_PREFIX_66, dst, src);}
 	void mulpd(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_MULPD,	0x0F59, E_MANDATORY_PREFIX_66, dst, src);}
 	void mulsd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MULSD,	0x0F59, E_MANDATORY_PREFIX_F2, dst, src);}
@@ -4021,7 +4029,7 @@ namespace compiler
 			case R_TYPE_SYMBOLIC_YMM:	return 2;
 			case R_TYPE_FPU:
 			default:
-				ASSERT(0);
+				JITASM_ASSERT(0);
 				return 0x7FFFFFFF;
 		}
 	}
@@ -4309,7 +4317,7 @@ namespace compiler
 						} else if (use_points_ranges[i].first->type & O_TYPE_WRITE) {
 							liveness.set_bit(i, false);
 						} else {
-							ASSERT(0);
+							JITASM_ASSERT(0);
 						}
 					}
 				}
@@ -4493,6 +4501,13 @@ namespace compiler
 							}
 						}
 
+						// physical register or symbolic register
+						const int lhs_sym_reg = (lhs < NUM_OF_PHYSICAL_REG ? 0 : 1);
+						const int rhs_sym_reg = (rhs < NUM_OF_PHYSICAL_REG ? 0 : 1);
+						if (lhs_sym_reg != rhs_sym_reg) {
+							return lhs_sym_reg < rhs_sym_reg;
+						}
+
 						if (prior_interval) {
 							// is the variable assigned register in prior interval or not
 							const bool lhs_prior_reg = !prior_interval->spill.get_bit(lhs) && prior_interval->liveness.get_bit(lhs);
@@ -4521,19 +4536,19 @@ namespace compiler
 					const size_t var = live_vars[i];
 					const bool first_try = (i < num_of_live_vars);	// Try to assign for the first time
 					const uint32 reg_assignable = first_try && var < cur_interval->reg_assignables.size() ? cur_interval->reg_assignables[var] : 0xFFFFFFFF;	// Ignore constraint if it is retried
-					ASSERT((cur_avail & reg_assignable) != 0);
+					JITASM_ASSERT((cur_avail & reg_assignable) != 0);
 					int assigned_reg = -1;
 					if (var < NUM_OF_PHYSICAL_REG && first_try) {
 						// Physical register
-						ASSERT((reg_assignable & (1 << var)) != 0);		// This physical register violates the register constraint!
+						JITASM_ASSERT((reg_assignable & (1 << var)) != 0);		// This physical register violates the register constraint!
 						if (cur_avail & reg_assignable & (1 << var)) {
 							assigned_reg = static_cast<int>(var);
-						} else if (!cur_interval->use.get_bit(var)) {
+						} else if (((1 << var) & available_reg) && !cur_interval->use.get_bit(var)) {
 							// Try to assign another physical register if it is not used in this interval. But assign later.
 							live_vars.push_back(var);
 						} else {
 							// This may be out of assignment register (ESP, EBP and so on...)
-							ASSERT(((1 << var) & available_reg) == 0);		// false assignment!?
+							JITASM_ASSERT(((1 << var) & available_reg) == 0);		// false assignment!?
 							assigned_reg = static_cast<int>(var);
 						}
 					} else {
@@ -4548,7 +4563,7 @@ namespace compiler
 							// Try to assign register ignoring constraint if it is not used in this interval. But assign later.
 							live_vars.push_back(var);
 						} else {
-							ASSERT(0);
+							JITASM_ASSERT(0);
 						}
 					}
 
@@ -4562,6 +4577,7 @@ namespace compiler
 
 		void DumpIntervals(size_t block_id, bool dump_assigned_reg) const
 		{
+			avoid_unused_warn(block_id);
 			JITASM_TRACE("---- Block%d ----\n", block_id);
 			for (size_t i = 0; i < intervals.size(); ++i) {
 				intervals[i].Dump(dump_assigned_reg);
@@ -4811,7 +4827,7 @@ namespace compiler
 				return target_block;
 
 			BlockSet::iterator new_block = blocks_.insert(detail::next(target_block), BasicBlock(instr_idx, target_block->instr_end));
-			ASSERT(detail::next(target_block) == new_block);
+			JITASM_ASSERT(detail::next(target_block) == new_block);
 			new_block->successor[0] = target_block->successor[0];
 			new_block->successor[1] = target_block->successor[1];
 			new_block->predecessor.push_back(&*target_block);
@@ -4883,11 +4899,10 @@ namespace compiler
 		{
 			typedef BlockSet::iterator BlockIterator;
 			BlockIterator cur_block = initialize(f.instrs_.size());
-			for (Frontend::InstrList::const_iterator it = f.instrs_.begin(); it != f.instrs_.end(); ++it) {
-				InstrID instr_id = it->GetID();
+			for (size_t instr_idx = 0; instr_idx < f.instrs_.size(); ++instr_idx) {
+				InstrID instr_id = f.instrs_[instr_idx].GetID();
 				if (Frontend::IsJump(instr_id) || instr_id == I_RET || instr_id == I_IRET) {
 					// jump instruction always terminate basic block
-					const size_t instr_idx = std::distance(f.instrs_.begin(), it);
 					BlockIterator next_block;
 					if (instr_idx + 1 < cur_block->instr_end) {
 						// split basic block
@@ -4906,7 +4921,7 @@ namespace compiler
 						get_exit_block()->predecessor.push_back(&*cur_block);
 					}
 					else {
-						const size_t jump_to = f.GetJumpTo(*it);	// jump target instruction index
+						const size_t jump_to = f.GetJumpTo(f.instrs_[instr_idx]);	// jump target instruction index
 						BlockIterator jump_target = split(get_block(jump_to), jump_to);
 
 						// update cur_block if split cur_block
@@ -4921,7 +4936,7 @@ namespace compiler
 							jump_target->predecessor.push_back(&*cur_block);
 						}
 						else {
-							ASSERT(instr_id == I_JCC || instr_id == I_LOOP);
+							JITASM_ASSERT(instr_id == I_JCC || instr_id == I_LOOP);
 							if (cur_block->successor[1])
 								cur_block->successor[1]->RemovePredecessor(&*cur_block);
 							cur_block->successor[1] = &*jump_target;
@@ -5085,7 +5100,7 @@ namespace compiler
 						if (type & O_TYPE_READ) {
 							lifetime.gen.set_bit(i, true);	// GEN
 						} else {
-							ASSERT(type & O_TYPE_WRITE);
+							JITASM_ASSERT(type & O_TYPE_WRITE);
 							lifetime.kill.set_bit(i, true);	// KILL
 						}
 					}
@@ -5149,7 +5164,9 @@ namespace compiler
 			// Register assignment
 			lifetime.AssignRegister(available_reg, last_interval);
 
+#ifdef JITASM_DEBUG_DUMP
 			lifetime.DumpIntervals((*block)->depth, true);
+#endif
 			if (!lifetime.intervals.empty()) {
 				last_interval = &lifetime.intervals.back();
 				last_loop_depth = loop_depth;
@@ -5232,7 +5249,7 @@ namespace compiler
 			} else if (size == 256 / 8) {
 				f_->vmovaps(YmmReg(dst_reg), YmmReg(src_reg));
 			} else {
-				ASSERT(0);
+				JITASM_ASSERT(0);
 			}
 		}
 
@@ -5247,7 +5264,7 @@ namespace compiler
 				f_->vxorps(YmmReg(reg2), YmmReg(reg1), YmmReg(reg2));
 				f_->vxorps(YmmReg(reg1), YmmReg(reg1), YmmReg(reg2));
 			} else {
-				ASSERT(0);
+				JITASM_ASSERT(0);
 			}
 		}
 
@@ -5259,7 +5276,7 @@ namespace compiler
 			} else if (size == 256 / 8) {
 				f_->vmovaps(YmmReg(dst_reg), f_->ymmword_ptr[var_manager_->GetSpillSlot(2, var)]);
 			} else {
-				ASSERT(0);
+				JITASM_ASSERT(0);
 			}
 		}
 
@@ -5271,7 +5288,7 @@ namespace compiler
 			} else if (size == 256 / 8) {
 				f_->vmovaps(f_->ymmword_ptr[var_manager_->GetSpillSlot(2, var)], YmmReg(src_reg));
 			} else {
-				ASSERT(0);
+				JITASM_ASSERT(0);
 			}
 		}
 	};
@@ -5353,7 +5370,9 @@ namespace compiler
 	template<class RegOp>
 	inline void GenerateInterIntervalInstr(const Lifetime::Interval& first_interval, const Lifetime::Interval& second_interval, const std::vector<VarAttribute>& var_attrs, RegOp reg_operator)
 	{
+#ifdef JITASM_DEBUG_DUMP
 		first_interval.Dump(true);
+#endif
 
 		struct Operations {
 			int move[NUM_OF_PHYSICAL_REG];
@@ -5415,7 +5434,7 @@ namespace compiler
 				if (count > 1) {
 					for (size_t i = 0; i < count - 1; ++i) {
 						const int r = scc[i];
-						ASSERT(r != moves_[r] && moves_[r] != -1);
+						JITASM_ASSERT(r != moves_[r] && moves_[r] != -1);
 						reg_operator_->Swap(static_cast<PhysicalRegID>(moves_[r]), static_cast<PhysicalRegID>(r), sizes_[r]);
 						JITASM_TRACE("Swap%d %d <-> %d\n", sizes_[r] * 8, moves_[r], r);
 					}
@@ -5437,7 +5456,9 @@ namespace compiler
 			}
 		}
 
+#ifdef JITASM_DEBUG_DUMP
 		second_interval.Dump(true);
+#endif
 	}
 
 	/// Generate inter-block instructions
@@ -5566,7 +5587,7 @@ namespace compiler
 			}
 
 			// Generate inter-block instructions
-			ASSERT(!(!block->successor[0] && block->successor[1]));
+			JITASM_ASSERT(!(!block->successor[0] && block->successor[1]));
 			if (block->successor[0] && !block->successor[1]) {
 				// 1 successor
 
@@ -5586,7 +5607,7 @@ namespace compiler
 				}
 			} else if (block->successor[0] && block->successor[1]) {
 				// 2 successors
-				ASSERT(Frontend::IsJump(f.instrs_.back().GetID()) && f.instrs_.back().GetOpd(0).IsImm());	// the last instruction must be jump
+				JITASM_ASSERT(Frontend::IsJump(f.instrs_.back().GetID()) && f.instrs_.back().GetOpd(0).IsImm());	// the last instruction must be jump
 				const size_t jump_instr_idx = f.instrs_.size() - 1;
 				const size_t label_successor1 = static_cast<size_t>(f.instrs_.back().GetOpd(0).GetImm());
 
@@ -5638,7 +5659,9 @@ namespace compiler
 
 		LiveVariableAnalysis(f, cfg, var_manager);
 
+#ifdef JITASM_DEBUG_DUMP
 		cfg.DumpDot();
+#endif
 
 #ifdef JITASM64
 		// rax, rcx, rdx, rbx, rsi, rdi, r8 ~ r15, mm0 ~ mm7, xmm0/ymm0 ~ xmm15/ymm15
@@ -5950,6 +5973,20 @@ namespace detail {
 	/// Special argument type
 	struct ArgNone {};
 
+	/// Argument information
+	struct ArgInfo
+	{
+		Addr addr;
+		PhysicalRegID reg_id;
+		uint32 count_mmx;
+		uint32 count_xmm;
+
+		ArgInfo(const Addr& addr_, PhysicalRegID reg_id_, uint32 count_mmx_ = 0, uint32 count_xmm_ = 0) : addr(addr_), reg_id(reg_id_), count_mmx(count_mmx_), count_xmm(count_xmm_) {}
+		template<class Traits> ArgInfo Next(int reg_id_) const {
+			return ArgInfo(addr + Traits::stack_size, static_cast<PhysicalRegID>(reg_id_), count_mmx + (Traits::flag & ARG_IN_MMX ? 1 : 0), count_xmm + (Traits::flag & (ARG_IN_XMM_SP | ARG_IN_XMM_DP) ? 1 : 0));
+		}
+	};
+
 	/// Result type traits
 	template<class T>
 	struct ResultTraits {
@@ -5966,6 +6003,21 @@ namespace detail {
 		struct ResultPtr {};
 	};
 
+	/// Result store destination
+	struct ResultDest {
+		Reg ptr;
+		ResultDest(Frontend& f, const ArgInfo& dest)
+		{
+			if (dest.reg_id != INVALID) {
+				// result pointer on register
+				f.DeclareRegArg(ptr, Reg(dest.reg_id), !dest.addr.reg_.IsInvalid() ? f.ptr[dest.addr] : Opd());
+			} else if (!dest.addr.reg_.IsInvalid()) {
+				// result pointer on stack
+				f.DeclareStackArg(ptr, f.ptr[dest.addr]);
+			}
+		}
+	};
+
 	/// Function result
 	template<class T, int Size = ResultTraits<T>::size>
 	struct ResultT {
@@ -5974,14 +6026,13 @@ namespace detail {
 		OpdR val_;
 		ResultT() {}
 		ResultT(const MemT<OpdR>& val) : val_(val) {}
-		void Store(Frontend& f)
+		void StoreResult(Frontend& f, const ResultDest& dst)
 		{
 			if (val_.IsMem()) {
-				f.mov(f.zcx, Size);
 				f.lea(f.zsi, static_cast<MemT<OpdR>&>(val_));
-				f.mov(f.zdi, f.ptr[f.zbp + sizeof(void *) * 2]);
-				f.mov(f.zax, f.zdi);
-				f.rep_movsb();
+				f.mov(f.zcx, Size);
+				f.rep_movsb(dst.ptr, f.zsi, f.zcx);
+				f.mov(f.zax, dst.ptr);
 			}
 		}
 	};
@@ -6001,16 +6052,15 @@ namespace detail {
 		ResultT() {}
 		ResultT(const Opd8& val) : val_(val) {}
 		ResultT(uint8 imm) : val_(Imm8(imm)) {}
-		void Store(Frontend& f)
+		void StoreResult(Frontend& f, const ResultDest& /*dst*/)
 		{
 			if (val_.IsGpReg()) {
-				if (val_.GetReg().id != AL)
+				if (val_.GetReg().id != AL) {
 					f.mov(f.al, static_cast<Reg8&>(val_));
-			}
-			else if (val_.IsMem()) {
+				}
+			} else if (val_.IsMem()) {
 				f.mov(f.al, static_cast<Mem8&>(val_));
-			}
-			else if (val_.IsImm()) {
+			} else if (val_.IsImm()) {
 				f.mov(f.al, static_cast<Imm8&>(val_));
 			}
 		}
@@ -6024,16 +6074,15 @@ namespace detail {
 		ResultT() {}
 		ResultT(const Opd16& val) : val_(val) {}
 		ResultT(uint16 imm) : val_(Imm16(imm)) {}
-		void Store(Frontend& f)
+		void StoreResult(Frontend& f, const ResultDest& /*dst*/)
 		{
 			if (val_.IsGpReg()) {
-				if (val_.GetReg().id != AX)
+				if (val_.GetReg().id != AX) {
 					f.mov(f.ax, static_cast<Reg16&>(val_));
-			}
-			else if (val_.IsMem()) {
+				}
+			} else if (val_.IsMem()) {
 				f.mov(f.ax, static_cast<Mem16&>(val_));
-			}
-			else if (val_.IsImm()) {
+			} else if (val_.IsImm()) {
 				f.mov(f.ax, static_cast<Imm16&>(val_));
 			}
 		}
@@ -6047,16 +6096,15 @@ namespace detail {
 		ResultT() {}
 		ResultT(const Opd32& val) : val_(val) {}
 		ResultT(uint32 imm) : val_(Imm32(imm)) {}
-		void Store(Frontend& f)
+		void StoreResult(Frontend& f, const ResultDest& /*dst*/)
 		{
 			if (val_.IsGpReg()) {
-				if (val_.GetReg().id != EAX)
+				if (val_.GetReg().id != EAX) {
 					f.mov(f.eax, static_cast<Reg32&>(val_));
-			}
-			else if (val_.IsMem()) {
+				}
+			} else if (val_.IsMem()) {
 				f.mov(f.eax, static_cast<Mem32&>(val_));
-			}
-			else if (val_.IsImm()) {
+			} else if (val_.IsImm()) {
 				f.mov(f.eax, static_cast<Imm32&>(val_));
 			}
 		}
@@ -6070,20 +6118,18 @@ namespace detail {
 		ResultT() {}
 		ResultT(const Opd64& val) : val_(val) {}
 		ResultT(uint64 imm) : val_(Imm64(imm)) {}
-		void Store(Frontend& f)
+		void StoreResult(Frontend& f, const ResultDest& /*dst*/)
 		{
 #ifdef JITASM64
 			if (val_.IsGpReg()) {
-				if (val_.GetReg().id != RAX)
+				if (val_.GetReg().id != RAX) {
 					f.mov(f.rax, static_cast<Reg64&>(val_));
-			}
-			else if (val_.IsMem()) {
+				}
+			} else if (val_.IsMem()) {
 				f.mov(f.rax, static_cast<Mem64&>(val_));
-			}
-			else if (val_.IsImm()) {
+			} else if (val_.IsImm()) {
 				f.mov(f.rax, static_cast<Imm64&>(val_));
-			}
-			else if (val_.IsMmxReg()) {
+			} else if (val_.IsMmxReg()) {
 				f.movq(f.rax, static_cast<MmxReg&>(val_));
 			}
 #else
@@ -6093,8 +6139,7 @@ namespace detail {
 				Mem32 hi(val_.GetAddressSize(), val_.GetBase(), val_.GetIndex(), val_.GetScale(), val_.GetDisp() + 4);
 				f.mov(f.eax, lo);
 				f.mov(f.edx, hi);
-			}
-			else if (val_.IsImm()) {
+			} else if (val_.IsImm()) {
 				// from immediate
 				f.mov(f.eax, static_cast<sint32>(val_.GetImm()));
 				f.mov(f.edx, static_cast<sint32>(val_.GetImm() >> 32));
@@ -6113,24 +6158,22 @@ namespace detail {
 		ResultT(const Mem32& mem) : val_(mem) {}
 		ResultT(const XmmReg& xmm) : val_(xmm) {}
 		ResultT(const float imm) : val_(Imm32(*(uint32*)&imm)) {}
-		void Store(Frontend& f)
+		void StoreResult(Frontend& f, const ResultDest& /*dst*/)
 		{
 #ifdef JITASM64
 			if (val_.IsFpuReg()) {
 				// from FPU register
 				f.fstp(f.real4_ptr[f.rsp - 4]);
 				f.movss(f.xmm0, f.dword_ptr[f.rsp - 4]);
-			}
-			else if (val_.IsMem() && val_.GetSize() == O_SIZE_32) {
+			} else if (val_.IsMem() && val_.GetSize() == O_SIZE_32) {
 				// from memory
 				f.movss(f.xmm0, static_cast<Mem32&>(val_));
-			}
-			else if (val_.IsXmmReg()) {
+			} else if (val_.IsXmmReg()) {
 				// from XMM register
-				if (val_.GetReg().id != XMM0)
+				if (val_.GetReg().id != XMM0) {
 					f.movss(f.xmm0, static_cast<XmmReg&>(val_));
-			}
-			else if (val_.IsImm()) {
+				}
+			} else if (val_.IsImm()) {
 				// from float immediate
 				f.mov(f.dword_ptr[f.rsp - 4], static_cast<Imm32&>(val_));
 				f.movss(f.xmm0, f.dword_ptr[f.rsp - 4]);
@@ -6138,19 +6181,17 @@ namespace detail {
 #else
 			if (val_.IsFpuReg()) {
 				// from FPU register
-				if (val_.GetReg().id != ST0)
+				if (val_.GetReg().id != ST0) {
 					f.fld(static_cast<FpuReg&>(val_));
-			}
-			else if (val_.IsMem() && val_.GetSize() == O_SIZE_32) {
+				}
+			} else if (val_.IsMem() && val_.GetSize() == O_SIZE_32) {
 				// from memory
 				f.fld(static_cast<Mem32&>(val_));
-			}
-			else if (val_.IsXmmReg()) {
+			} else if (val_.IsXmmReg()) {
 				// from XMM register
 				f.movss(f.dword_ptr[f.esp - 4], static_cast<XmmReg&>(val_));
 				f.fld(f.real4_ptr[f.esp - 4]);
-			}
-			else if (val_.IsImm()) {
+			} else if (val_.IsImm()) {
 				// from float immediate
 				f.mov(f.dword_ptr[f.esp - 4], static_cast<Imm32&>(val_));
 				f.fld(f.real4_ptr[f.esp - 4]);
@@ -6170,24 +6211,22 @@ namespace detail {
 		ResultT(const Mem64& mem) : val_(mem) {}
 		ResultT(const XmmReg& xmm) : val_(xmm) {}
 		ResultT(const double imm) : val_(Imm32(0)), imm_(imm) {}
-		void Store(Frontend& f)
+		void StoreResult(Frontend& f, const ResultDest& /*dst*/)
 		{
 #ifdef JITASM64
 			if (val_.IsFpuReg()) {
 				// from FPU register
 				f.fstp(f.real8_ptr[f.rsp - 8]);
 				f.movsd(f.xmm0, f.qword_ptr[f.rsp - 8]);
-			}
-			else if (val_.IsMem() && val_.GetSize() == O_SIZE_64) {
+			} else if (val_.IsMem() && val_.GetSize() == O_SIZE_64) {
 				// from memory
 				f.movsd(f.xmm0, static_cast<Mem64&>(val_));
-			}
-			else if (val_.IsXmmReg()) {
+			} else if (val_.IsXmmReg()) {
 				// from XMM register
-				if (val_.GetReg().id != XMM0)
+				if (val_.GetReg().id != XMM0) {
 					f.movsd(f.xmm0, static_cast<XmmReg&>(val_));
-			}
-			else if (val_.IsImm()) {
+				}
+			} else if (val_.IsImm()) {
 				// from float immediate
 				f.mov(f.dword_ptr[f.rsp - 8], *reinterpret_cast<uint32*>(&imm_));
 				f.mov(f.dword_ptr[f.rsp - 4], *(reinterpret_cast<uint32*>(&imm_) + 1));
@@ -6196,19 +6235,17 @@ namespace detail {
 #else
 			if (val_.IsFpuReg()) {
 				// from FPU register
-				if (val_.GetReg().id != ST0)
+				if (val_.GetReg().id != ST0) {
 					f.fld(static_cast<FpuReg&>(val_));
-			}
-			else if (val_.IsMem() && val_.GetSize() == O_SIZE_64) {
+				}
+			} else if (val_.IsMem() && val_.GetSize() == O_SIZE_64) {
 				// from memory
 				f.fld(static_cast<Mem64&>(val_));
-			}
-			else if (val_.IsXmmReg()) {
+			} else if (val_.IsXmmReg()) {
 				// from XMM register
 				f.movsd(f.qword_ptr[f.esp - 8], static_cast<XmmReg&>(val_));
 				f.fld(f.real8_ptr[f.esp - 8]);
-			}
-			else if (val_.IsImm()) {	// val_ is immediate 0
+			} else if (val_.IsImm()) {	// val_ is immediate 0
 				// from double immediate
 				f.mov(f.dword_ptr[f.esp - 8], *reinterpret_cast<uint32*>(&imm_));
 				f.mov(f.dword_ptr[f.esp - 4], *(reinterpret_cast<uint32*>(&imm_) + 1));
@@ -6229,13 +6266,12 @@ namespace detail {
 		ResultT() {}
 		ResultT(const XmmReg& xmm) : val_(xmm) {}
 		ResultT(const Mem128& mem) : val_(mem) {}
-		void Store(Frontend& f)
+		void StoreResult(Frontend& f, const ResultDest& dst)
 		{
-			f.mov(f.zax, f.ptr[f.zbp + sizeof(void *) * 2]);
+			f.mov(f.zax, dst.ptr);
 			if (val_.IsXmmReg()) {
 				f.movaps(f.xmmword_ptr[f.zax], static_cast<const XmmReg&>(val_));
-			}
-			else if (val_.IsMem()) {
+			} else if (val_.IsMem()) {
 				f.movaps(f.xmm0, static_cast<const Mem128&>(val_));
 				f.movaps(f.xmmword_ptr[f.zax], f.xmm0);
 			}
@@ -6252,13 +6288,12 @@ namespace detail {
 		ResultT() {}
 		ResultT(const XmmReg& xmm) : val_(xmm) {}
 		ResultT(const Mem128& mem) : val_(mem) {}
-		void Store(Frontend& f)
+		void StoreResult(Frontend& f, const ResultDest& dst)
 		{
-			f.mov(f.zax, f.ptr[f.zbp + sizeof(void *) * 2]);
+			f.mov(f.zax, dst.ptr);
 			if (val_.IsXmmReg()) {
 				f.movapd(f.xmmword_ptr[f.zax], static_cast<const XmmReg&>(val_));
-			}
-			else if (val_.IsMem()) {
+			} else if (val_.IsMem()) {
 				f.movapd(f.xmm0, static_cast<const Mem128&>(val_));
 				f.movapd(f.xmmword_ptr[f.zax], f.xmm0);
 			}
@@ -6273,13 +6308,12 @@ namespace detail {
 		ResultT() {}
 		ResultT(const XmmReg& xmm) : val_(xmm) {}
 		ResultT(const Mem128& mem) : val_(mem) {}
-		void Store(Frontend& f)
+		void StoreResult(Frontend& f, const ResultDest& dst)
 		{
-			f.mov(f.zax, f.ptr[f.zbp + sizeof(void *) * 2]);
+			f.mov(f.zax, dst.ptr);
 			if (val_.IsXmmReg()) {
 				f.movdqa(f.xmmword_ptr[f.zax], static_cast<const XmmReg&>(val_));
-			}
-			else if (val_.IsMem()) {
+			} else if (val_.IsMem()) {
 				f.movdqa(f.xmm0, static_cast<const Mem128&>(val_));
 				f.movdqa(f.xmmword_ptr[f.zax], f.xmm0);
 			}
@@ -6298,13 +6332,13 @@ namespace detail {
 		ResultT() {}
 		ResultT(const MmxReg& mm) : val_(mm) {}
 		ResultT(const Mem64& mem) : val_(mem) {}
-		void Store(Frontend& f)
+		void StoreResult(Frontend& f, const ResultDest& /*dst*/)
 		{
 			if (val_.IsMmxReg()) {
-				if (val_.GetReg().id != MM0)
+				if (val_.GetReg().id != MM0) {
 					f.movq(f.mm0, static_cast<const MmxReg&>(val_));
-			}
-			else if (val_.IsMem()) {
+				}
+			} else if (val_.IsMem()) {
 				f.movq(f.mm0, static_cast<const Mem64&>(val_));
 			}
 		}
@@ -6320,13 +6354,13 @@ namespace detail {
 		ResultT() {}
 		ResultT(const XmmReg& xmm) : val_(xmm) {}
 		ResultT(const Mem128& mem) : val_(mem) {}
-		void Store(Frontend& f)
+		void StoreResult(Frontend& f, const ResultDest& /*dst*/)
 		{
 			if (val_.IsXmmReg()) {
-				if (val_.GetReg().id != XMM0)
+				if (val_.GetReg().id != XMM0) {
 					f.movaps(f.xmm0, static_cast<const XmmReg&>(val_));
-			}
-			else if (val_.IsMem()) {
+				}
+			} else if (val_.IsMem()) {
 				f.movaps(f.xmm0, static_cast<const Mem128&>(val_));
 			}
 		}
@@ -6342,13 +6376,13 @@ namespace detail {
 		ResultT() {}
 		ResultT(const XmmReg& xmm) : val_(xmm) {}
 		ResultT(const Mem128& mem) : val_(mem) {}
-		void Store(Frontend& f)
+		void StoreResult(Frontend& f, const ResultDest& /*dst*/)
 		{
 			if (val_.IsXmmReg()) {
-				if (val_.GetReg().id != XMM0)
+				if (val_.GetReg().id != XMM0) {
 					f.movapd(f.xmm0, static_cast<const XmmReg&>(val_));
-			}
-			else if (val_.IsMem()) {
+				}
+			} else if (val_.IsMem()) {
 				f.movapd(f.xmm0, static_cast<const Mem128&>(val_));
 			}
 		}
@@ -6362,13 +6396,13 @@ namespace detail {
 		ResultT() {}
 		ResultT(const XmmReg& xmm) : val_(xmm) {}
 		ResultT(const Mem128& mem) : val_(mem) {}
-		void Store(Frontend& f)
+		void StoreResult(Frontend& f, const ResultDest& /*dst*/)
 		{
 			if (val_.IsXmmReg()) {
-				if (val_.GetReg().id != XMM0)
+				if (val_.GetReg().id != XMM0) {
 					f.movdqa(f.xmm0, static_cast<const XmmReg&>(val_));
-			}
-			else if (val_.IsMem()) {
+				}
+			} else if (val_.IsMem()) {
 				f.movdqa(f.xmm0, static_cast<const Mem128&>(val_));
 			}
 		}
@@ -6385,40 +6419,40 @@ namespace detail {
 		template<int N, class T, int Size = sizeof(T)> struct ArgTraits : ArgTraits_cdecl<N, T, Size> {};
 #endif
 
-		/// Argument information
-		struct ArgInfo
+		template<class R>
+		ArgInfo ResultInfo()
 		{
-			Addr addr;
-			PhysicalRegID reg_id;
-			uint32 count_mmx;
-			uint32 count_xmm;
-
-			ArgInfo(const Addr& addr_, PhysicalRegID reg_id_, uint32 count_mmx_ = 0, uint32 count_xmm_ = 0) : addr(addr_), reg_id(reg_id_), count_mmx(count_mmx_), count_xmm(count_xmm_) {}
-			template<class Traits> ArgInfo Next(PhysicalRegID reg_id_) const {
-				return ArgInfo(addr + Traits::stack_size, reg_id_, count_mmx + (Traits::flag & ARG_IN_MMX ? 1 : 0), count_xmm + (Traits::flag & (ARG_IN_XMM_SP | ARG_IN_XMM_DP) ? 1 : 0));
+			if (ResultT<R>::ArgR) {
+#ifdef JITASM64
+				return ArgInfo(Addr(RegID::CreatePhysicalRegID(R_TYPE_GP, RBP), sizeof(void *) * 2), RCX);
+#else
+				return ArgInfo(Addr(RegID::CreatePhysicalRegID(R_TYPE_GP, EBP), sizeof(void *) * 2), INVALID);
+#endif
+			} else {
+				return ArgInfo(Addr(RegID::Invalid(), 0), INVALID);
 			}
-		};
+		}
 
 		template<class R, class A1>
-		inline ArgInfo ArgInfo1()  { return ArgInfo(Addr(RegID::CreatePhysicalRegID(R_TYPE_GP, EBP), sizeof(void *) * (2 + ResultT<R>::ArgR)), static_cast<PhysicalRegID>(ArgTraits<0, A1>::reg_id)); }
+		ArgInfo ArgInfo1()	{ return ArgInfo(Addr(RegID::CreatePhysicalRegID(R_TYPE_GP, EBP), sizeof(void *) * (2 + ResultT<R>::ArgR)), static_cast<PhysicalRegID>(ArgTraits<ResultT<R>::ArgR + 0, A1>::reg_id)); }
 		template<class R, class A1, class A2>
-		inline ArgInfo ArgInfo2()  { return ArgInfo1<R>().Next< ArgTraits<0, A1> >(ArgTraits<1, A2>::reg_id); }
+		ArgInfo ArgInfo2()	{ return ArgInfo1<R, A1>().Next< ArgTraits<ResultT<R>::ArgR + 0, A1> >(ArgTraits<ResultT<R>::ArgR + 1, A2>::reg_id); }
 		template<class R, class A1, class A2, class A3>
-		inline ArgInfo ArgInfo3()  { return ArgInfo2<R, A1>().Next< ArgTraits<1, A2> >(ArgTraits<2, A3>::reg_id); }
+		ArgInfo ArgInfo3()	{ return ArgInfo2<R, A1, A2>().Next< ArgTraits<ResultT<R>::ArgR + 1, A2> >(ArgTraits<ResultT<R>::ArgR + 2, A3>::reg_id); }
 		template<class R, class A1, class A2, class A3, class A4>
-		inline ArgInfo ArgInfo4()  { return ArgInfo3<R, A1, A2>().Next< ArgTraits<2, A3> >(ArgTraits<3, A4>::reg_id); }
+		ArgInfo ArgInfo4()	{ return ArgInfo3<R, A1, A2, A3>().Next< ArgTraits<ResultT<R>::ArgR + 2, A3> >(ArgTraits<ResultT<R>::ArgR + 3, A4>::reg_id); }
 		template<class R, class A1, class A2, class A3, class A4, class A5>
-		inline ArgInfo ArgInfo5()  { return ArgInfo4<R, A1, A2, A3>().Next< ArgTraits<3, A4> >(ArgTraits<4, A5>::reg_id); }
+		ArgInfo ArgInfo5()	{ return ArgInfo4<R, A1, A2, A3, A4>().Next< ArgTraits<ResultT<R>::ArgR + 3, A4> >(ArgTraits<ResultT<R>::ArgR + 4, A5>::reg_id); }
 		template<class R, class A1, class A2, class A3, class A4, class A5, class A6>
-		inline ArgInfo ArgInfo6()  { return ArgInfo5<R, A1, A2, A3, A4>().Next< ArgTraits<4, A5> >(ArgTraits<5, A6>::reg_id); }
+		ArgInfo ArgInfo6()	{ return ArgInfo5<R, A1, A2, A3, A4, A5>().Next< ArgTraits<ResultT<R>::ArgR + 4, A5> >(ArgTraits<ResultT<R>::ArgR + 5, A6>::reg_id); }
 		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7>
-		inline ArgInfo ArgInfo7()  { return ArgInfo6<R, A1, A2, A3, A4, A5>().Next< ArgTraits<5, A6> >(ArgTraits<6, A7>::reg_id); }
+		ArgInfo ArgInfo7()	{ return ArgInfo6<R, A1, A2, A3, A4, A5, A6>().Next< ArgTraits<ResultT<R>::ArgR + 5, A6> >(ArgTraits<ResultT<R>::ArgR + 6, A7>::reg_id); }
 		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8>
-		inline ArgInfo ArgInfo8()  { return ArgInfo7<R, A1, A2, A3, A4, A5, A6>().Next< ArgTraits<6, A7> >(ArgTraits<7, A8>::reg_id); }
+		ArgInfo ArgInfo8()	{ return ArgInfo7<R, A1, A2, A3, A4, A5, A6, A7>().Next< ArgTraits<ResultT<R>::ArgR + 6, A7> >(ArgTraits<ResultT<R>::ArgR + 7, A8>::reg_id); }
 		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9>
-		inline ArgInfo ArgInfo9()  { return ArgInfo8<R, A1, A2, A3, A4, A5, A6, A7>().Next< ArgTraits<7, A8> >(ArgTraits<8, A9>::reg_id); }
+		ArgInfo ArgInfo9()	{ return ArgInfo8<R, A1, A2, A3, A4, A5, A6, A7, A8>().Next< ArgTraits<ResultT<R>::ArgR + 7, A8> >(ArgTraits<ResultT<R>::ArgR + 8, A9>::reg_id); }
 		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9, class A10>
-		inline ArgInfo ArgInfo10() { return ArgInfo9<R, A1, A2, A3, A4, A5, A6, A7, A8>().Next< ArgTraits<8, A9> >(ArgTraits<9, A10>::reg_id); }
+		ArgInfo ArgInfo10()	{ return ArgInfo9<R, A1, A2, A3, A4, A5, A6, A7, A8, A9>().Next< ArgTraits<ResultT<R>::ArgR + 8, A9> >(ArgTraits<ResultT<R>::ArgR + 9, A10>::reg_id); }
 
 		/// Function argument
 		template<class T, size_t Size = sizeof(T)>
@@ -6430,7 +6464,7 @@ namespace detail {
 				if (arg_info.reg_id != INVALID) {
 					f.DeclareRegArg(addr_.reg_, Reg(arg_info.reg_id), f.ptr[arg_info.addr]);
 				} else {
-					f.DeclareStackArg(addr_.reg_, f.ptr[addr]);
+					f.DeclareStackArg(addr_.reg_, f.ptr[arg_info.addr]);
 				}
 			}
 #else
@@ -6655,6 +6689,7 @@ struct function_cdecl : Frontend
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
 		using namespace detail::calling_convention_cdecl;
+		detail::ResultDest result_dst(*this, ResultInfo<R>());
 		static_cast<Derived *>(this)->main(
 			Arg<A1>(*this, ArgInfo1<R,A1>()),
 			Arg<A2>(*this, ArgInfo2<R,A1,A2>()),
@@ -6666,7 +6701,7 @@ struct function_cdecl : Frontend
 			Arg<A8>(*this, ArgInfo8<R,A1,A2,A3,A4,A5,A6,A7,A8>()),
 			Arg<A9>(*this, ArgInfo9<R,A1,A2,A3,A4,A5,A6,A7,A8,A9>()),
 			Arg<A10>(*this, ArgInfo10<R,A1,A2,A3,A4,A5,A6,A7,A8,A9,A10>())
-			).Store(*this);
+			).StoreResult(*this, result_dst);
 		compiler::RegisterAllocation(*this);
 		MakePrologAndEpilog();
 	}
@@ -6708,6 +6743,7 @@ struct function_cdecl<R, Derived, A1, A2, A3, A4, A5, A6, A7, A8, A9, detail::Ar
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
 		using namespace detail::calling_convention_cdecl;
+		detail::ResultDest result_dst(*this, ResultInfo<R>());
 		static_cast<Derived *>(this)->main(
 			Arg<A1>(*this, ArgInfo1<R,A1>()),
 			Arg<A2>(*this, ArgInfo2<R,A1,A2>()),
@@ -6718,7 +6754,7 @@ struct function_cdecl<R, Derived, A1, A2, A3, A4, A5, A6, A7, A8, A9, detail::Ar
 			Arg<A7>(*this, ArgInfo7<R,A1,A2,A3,A4,A5,A6,A7>()),
 			Arg<A8>(*this, ArgInfo8<R,A1,A2,A3,A4,A5,A6,A7,A8>()),
 			Arg<A9>(*this, ArgInfo9<R,A1,A2,A3,A4,A5,A6,A7,A8,A9>())
-			).Store(*this);
+			).StoreResult(*this, result_dst);
 		compiler::RegisterAllocation(*this);
 		MakePrologAndEpilog();
 	}
@@ -6759,6 +6795,7 @@ struct function_cdecl<R, Derived, A1, A2, A3, A4, A5, A6, A7, A8, detail::ArgNon
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
 		using namespace detail::calling_convention_cdecl;
+		detail::ResultDest result_dst(*this, ResultInfo<R>());
 		static_cast<Derived *>(this)->main(
 			Arg<A1>(*this, ArgInfo1<R,A1>()),
 			Arg<A2>(*this, ArgInfo2<R,A1,A2>()),
@@ -6768,7 +6805,7 @@ struct function_cdecl<R, Derived, A1, A2, A3, A4, A5, A6, A7, A8, detail::ArgNon
 			Arg<A6>(*this, ArgInfo6<R,A1,A2,A3,A4,A5,A6>()),
 			Arg<A7>(*this, ArgInfo7<R,A1,A2,A3,A4,A5,A6,A7>()),
 			Arg<A8>(*this, ArgInfo8<R,A1,A2,A3,A4,A5,A6,A7,A8>())
-			).Store(*this);
+			).StoreResult(*this, result_dst);
 		compiler::RegisterAllocation(*this);
 		MakePrologAndEpilog();
 	}
@@ -6808,6 +6845,7 @@ struct function_cdecl<R, Derived, A1, A2, A3, A4, A5, A6, A7, detail::ArgNone, d
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
 		using namespace detail::calling_convention_cdecl;
+		detail::ResultDest result_dst(*this, ResultInfo<R>());
 		static_cast<Derived *>(this)->main(
 			Arg<A1>(*this, ArgInfo1<R,A1>()),
 			Arg<A2>(*this, ArgInfo2<R,A1,A2>()),
@@ -6816,7 +6854,7 @@ struct function_cdecl<R, Derived, A1, A2, A3, A4, A5, A6, A7, detail::ArgNone, d
 			Arg<A5>(*this, ArgInfo5<R,A1,A2,A3,A4,A5>()),
 			Arg<A6>(*this, ArgInfo6<R,A1,A2,A3,A4,A5,A6>()),
 			Arg<A7>(*this, ArgInfo7<R,A1,A2,A3,A4,A5,A6,A7>())
-			).Store(*this);
+			).StoreResult(*this, result_dst);
 		compiler::RegisterAllocation(*this);
 		MakePrologAndEpilog();
 	}
@@ -6855,6 +6893,7 @@ struct function_cdecl<R, Derived, A1, A2, A3, A4, A5, A6, detail::ArgNone, detai
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
 		using namespace detail::calling_convention_cdecl;
+		detail::ResultDest result_dst(*this, ResultInfo<R>());
 		static_cast<Derived *>(this)->main(
 			Arg<A1>(*this, ArgInfo1<R,A1>()),
 			Arg<A2>(*this, ArgInfo2<R,A1,A2>()),
@@ -6862,7 +6901,7 @@ struct function_cdecl<R, Derived, A1, A2, A3, A4, A5, A6, detail::ArgNone, detai
 			Arg<A4>(*this, ArgInfo4<R,A1,A2,A3,A4>()),
 			Arg<A5>(*this, ArgInfo5<R,A1,A2,A3,A4,A5>()),
 			Arg<A6>(*this, ArgInfo6<R,A1,A2,A3,A4,A5,A6>())
-			).Store(*this);
+			).StoreResult(*this, result_dst);
 		compiler::RegisterAllocation(*this);
 		MakePrologAndEpilog();
 	}
@@ -6900,13 +6939,14 @@ struct function_cdecl<R, Derived, A1, A2, A3, A4, A5, detail::ArgNone, detail::A
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
 		using namespace detail::calling_convention_cdecl;
+		detail::ResultDest result_dst(*this, ResultInfo<R>());
 		static_cast<Derived *>(this)->main(
 			Arg<A1>(*this, ArgInfo1<R,A1>()),
 			Arg<A2>(*this, ArgInfo2<R,A1,A2>()),
 			Arg<A3>(*this, ArgInfo3<R,A1,A2,A3>()),
 			Arg<A4>(*this, ArgInfo4<R,A1,A2,A3,A4>()),
 			Arg<A5>(*this, ArgInfo5<R,A1,A2,A3,A4,A5>())
-			).Store(*this);
+			).StoreResult(*this, result_dst);
 		compiler::RegisterAllocation(*this);
 		MakePrologAndEpilog();
 	}
@@ -6943,12 +6983,13 @@ struct function_cdecl<R, Derived, A1, A2, A3, A4, detail::ArgNone, detail::ArgNo
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
 		using namespace detail::calling_convention_cdecl;
+		detail::ResultDest result_dst(*this, ResultInfo<R>());
 		static_cast<Derived *>(this)->main(
 			Arg<A1>(*this, ArgInfo1<R,A1>()),
 			Arg<A2>(*this, ArgInfo2<R,A1,A2>()),
 			Arg<A3>(*this, ArgInfo3<R,A1,A2,A3>()),
 			Arg<A4>(*this, ArgInfo4<R,A1,A2,A3,A4>())
-			).Store(*this);
+			).StoreResult(*this, result_dst);
 		compiler::RegisterAllocation(*this);
 		MakePrologAndEpilog();
 	}
@@ -6984,11 +7025,12 @@ struct function_cdecl<R, Derived, A1, A2, A3, detail::ArgNone, detail::ArgNone, 
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
 		using namespace detail::calling_convention_cdecl;
+		detail::ResultDest result_dst(*this, ResultInfo<R>());
 		static_cast<Derived *>(this)->main(
 			Arg<A1>(*this, ArgInfo1<R,A1>()),
 			Arg<A2>(*this, ArgInfo2<R,A1,A2>()),
 			Arg<A3>(*this, ArgInfo3<R,A1,A2,A3>())
-			).Store(*this);
+			).StoreResult(*this, result_dst);
 		compiler::RegisterAllocation(*this);
 		MakePrologAndEpilog();
 	}
@@ -7023,10 +7065,11 @@ struct function_cdecl<R, Derived, A1, A2, detail::ArgNone, detail::ArgNone, deta
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
 		using namespace detail::calling_convention_cdecl;
+		detail::ResultDest result_dst(*this, ResultInfo<R>());
 		static_cast<Derived *>(this)->main(
 			Arg<A1>(*this, ArgInfo1<R,A1>()),
 			Arg<A2>(*this, ArgInfo2<R,A1,A2>())
-			).Store(*this);
+			).StoreResult(*this, result_dst);
 		compiler::RegisterAllocation(*this);
 		MakePrologAndEpilog();
 	}
@@ -7060,7 +7103,8 @@ struct function_cdecl<R, Derived, A1, detail::ArgNone, detail::ArgNone, detail::
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
 		using namespace detail::calling_convention_cdecl;
-		static_cast<Derived *>(this)->main(Arg<A1>(*this, ArgInfo1<R,A1>())).Store(*this);
+		detail::ResultDest result_dst(*this, ResultInfo<R>());
+		static_cast<Derived *>(this)->main(Arg<A1>(*this, ArgInfo1<R,A1>())).StoreResult(*this, result_dst);
 		compiler::RegisterAllocation(*this);
 		MakePrologAndEpilog();
 	}
@@ -7091,7 +7135,8 @@ struct function_cdecl<R, Derived, detail::ArgNone, detail::ArgNone, detail::ArgN
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
-		static_cast<Derived *>(this)->main().Store(*this);
+		detail::ResultDest result_dst(*this, detail::calling_convention_cdecl::ResultInfo<R>());
+		static_cast<Derived *>(this)->main().StoreResult(*this, result_dst);
 		compiler::RegisterAllocation(*this);
 		MakePrologAndEpilog();
 	}
