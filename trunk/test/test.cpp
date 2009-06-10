@@ -1,3 +1,4 @@
+#include <iostream>
 #include <assert.h>
 #include <intrin.h>
 #include <windows.h>
@@ -5,16 +6,19 @@
 
 #define _TOSTR(s) #s
 #define TOSTR(s) _TOSTR(s)
-#define TEST_M(func_name) {test_impl(TOSTR(func_name), func_name ## (), masm_ ## func_name);}
-#define TEST_N(func_name) {test_impl(TOSTR(func_name), func_name ## (), nasm_ ## func_name);}
+#define TEST_M(func_name) {test_impl<func_name>(TOSTR(func_name), masm_ ## func_name);}
+#define TEST_N(func_name) {test_impl<func_name>(TOSTR(func_name), nasm_ ## func_name);}
+#define TEST_EQUAL(actual, expected) {test_equal_impl(TOSTR(actual), (actual), (expected));}
 
 size_t	g_test_succeeded = 0;
 size_t	g_test_failed = 0;
 LONGLONG g_assemble_time = 0;
 
 template<class Fn1, class Fn2>
-void test_impl(const char* func_name, Fn1 fn1, Fn2 fn2)
+void test_impl(const char* func_name, Fn2 fn2)
 {
+	Fn1 fn1;
+
 	LARGE_INTEGER beg_time, end_time;
 	::QueryPerformanceCounter(&beg_time);
 	fn1.Assemble();
@@ -51,9 +55,23 @@ void test_impl(const char* func_name, Fn1 fn1, Fn2 fn2)
 	g_test_succeeded++;
 }
 
+template<class T>
+void test_equal_impl(const char* func_name, T actual, T expected)
+{
+	if (actual == expected) {
+		g_test_succeeded++;
+	} else {
+		std::cout << "<" << func_name << "> ... failed.";
+		std::cout << " expected: " << expected;
+		std::cout << " actual: " << actual << std::endl;
+		g_test_failed++;
+	}
+}
+
+
 struct test_mmx_sse2 : jitasm::function<void, test_mmx_sse2>
 {
-	virtual void main()
+	void main()
 	{
 #ifdef JITASM64
 		movdqa(xmm0, xmm1);
@@ -4656,11 +4674,35 @@ struct test_cfg : jitasm::function_cdecl<void, test_cfg>
 	}
 };
 
-struct test_new_function : jitasm::function_cdecl<void, test_new_function, int>
+struct test_ipow1 : jitasm::function_cdecl<int, test_ipow1, int, int>
 {
-	void main(jitasm::Reg32 a)
+	Result main(Reg32 a, Reg32 b)
 	{
-		add(eax, a);
+		Reg32 i;
+		Reg32 c;
+		mov(c, 1);
+		xor(i, i);
+		While(i < b);
+			imul(c, a);
+			inc(i);
+		EndW();
+		return c;
+	}
+};
+
+struct test_ipow2 : jitasm::function_cdecl<int, test_ipow2, int, int>
+{
+	Result main(Addr a, Reg32 b)
+	{
+		Reg32 i;
+		Reg32 c;
+		mov(c, 1);
+		xor(i, i);
+		While(i < b);
+			imul(c, dword_ptr[a]);
+			inc(i);
+		EndW();
+		return c;
 	}
 };
 
@@ -4669,6 +4711,11 @@ int wmain()
 	test_instruction();
 	test_calling_convension();
 	test_avx_instructions();
+
+	TEST_EQUAL(test_ipow1()(2, 0), 1);
+	TEST_EQUAL(test_ipow1()(2, 3), 8);
+	TEST_EQUAL(test_ipow2()(2, 0), 1);
+	TEST_EQUAL(test_ipow2()(2, 3), 8);
 
 	printf("TEST RESULT - %d passed, %d failed\n", g_test_succeeded, g_test_failed);
 	LARGE_INTEGER freq;
