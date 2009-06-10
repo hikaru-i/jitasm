@@ -28,12 +28,13 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <string>
+#include <vector>
 #include <boost/bind.hpp>
 #include <boost/spirit.hpp>
 #include "jitasm.h"
 
 
-class RenderExpr : public jitasm::function<void, void *, size_t, void *, size_t, void *, size_t, int, int>
+class RenderExpr : public jitasm::function<void, RenderExpr, void *, size_t, void *, size_t, void *, size_t, int, int>
 {
 private:
 	struct Calculator : public boost::spirit::grammar<Calculator>
@@ -77,49 +78,57 @@ private:
 
 	void do_add(const wchar_t *, const wchar_t *)
 	{
-		addps(jitasm::XmmReg(static_cast<jitasm::RegID>(regId_ - 1)), jitasm::XmmReg(static_cast<jitasm::RegID>(regId_)));
-		--regId_;
+		XmmReg reg1 = variableStack_.back();
+		variableStack_.pop_back();
+		XmmReg reg2 = variableStack_.back();
+		addps(reg2, reg1);
 	}
 
 	void do_sub(const wchar_t *, const wchar_t *)
 	{
-		subps(jitasm::XmmReg(static_cast<jitasm::RegID>(regId_ - 1)), jitasm::XmmReg(static_cast<jitasm::RegID>(regId_)));
-		--regId_;
+		XmmReg reg1 = variableStack_.back();
+		variableStack_.pop_back();
+		XmmReg reg2 = variableStack_.back();
+		subps(reg2, reg1);
 	}
 
 	void do_mul(const wchar_t *, const wchar_t *)
 	{
-		mulps(jitasm::XmmReg(static_cast<jitasm::RegID>(regId_ - 1)), jitasm::XmmReg(static_cast<jitasm::RegID>(regId_)));
-		--regId_;
+		XmmReg reg1 = variableStack_.back();
+		variableStack_.pop_back();
+		XmmReg reg2 = variableStack_.back();
+		mulps(reg2, reg1);
 	}
 
 	void do_div(const wchar_t *, const wchar_t *)
 	{
-		divps(jitasm::XmmReg(static_cast<jitasm::RegID>(regId_ - 1)), jitasm::XmmReg(static_cast<jitasm::RegID>(regId_)));
-		--regId_;
+		XmmReg reg1 = variableStack_.back();
+		variableStack_.pop_back();
+		XmmReg reg2 = variableStack_.back();
+		divps(reg2, reg1);
 	}
 
 	void do_real(double val)
 	{
-		if (regId_ == lastRegId_) throw;
 		float fval = static_cast<float>(val);
 		mov(eax, *(unsigned int*)&fval);
-		jitasm::XmmReg xmm(static_cast<jitasm::RegID>(++regId_));
-		movd(xmm, eax);
-		shufps(xmm, xmm, 0);
+		XmmReg var;
+		movd(var, eax);
+		shufps(var, var, 0);
+		variableStack_.push_back(var);
 	}
 
 	void do_src(int i)
 	{
-		if (regId_ == lastRegId_) throw;
 		__declspec(align(16)) const static float factor8bpp[4] = {1.0f/255.0f, 1.0f/255.0f, 1.0f/255.0f, 1.0f/255.0f};
-		jitasm::XmmReg xmm(static_cast<jitasm::RegID>(++regId_));
-		movd(xmm, dword_ptr[i == 0 ? zsi : zbx]);
-		punpcklbw(xmm, xmm0);
-		punpcklwd(xmm, xmm0);
-		cvtdq2ps(xmm, xmm);
+		XmmReg src;
+		movd(src, dword_ptr[i == 0 ? zsi : zbx]);
+		punpcklbw(src, zero_);
+		punpcklwd(src, zero_);
+		cvtdq2ps(src, src);
 		mov(zax, (uintptr_t)factor8bpp);
-		mulps(xmm, xmmword_ptr[zax]);
+		mulps(src, xmmword_ptr[zax]);
+		variableStack_.push_back(src);
 	}
 
 	void do_src1(const wchar_t *, const wchar_t *)
@@ -134,27 +143,22 @@ private:
 
 	void do_neg(const wchar_t *, const wchar_t *)
 	{
-		jitasm::XmmReg xmm(static_cast<jitasm::RegID>(regId_));
-		subps(xmm0, xmm);
-		movaps(xmm, xmm0);
-		pxor(xmm0, xmm0);
+		XmmReg var = variableStack_.back();
+		XmmReg tmp;
+		xorps(tmp, tmp);
+		subps(tmp, var);
+		movaps(var, tmp);
 	}
 
 public:
-	RenderExpr(wchar_t *expr) : expr_(expr), regId_(jitasm::XMM0),
-#ifdef JITASM64
-		lastRegId_(jitasm::XMM15)
-#else
-		lastRegId_(jitasm::XMM7)
-#endif
-	{}
+	RenderExpr(wchar_t *expr) : expr_(expr) {}
 
-	void main(Arg dst, Arg dstSkip, Arg src1, Arg src1Skip, Arg src2, Arg src2Skip, Arg width, Arg height)
+	void main(Addr dst, Addr dstSkip, Addr src1, Addr src1Skip, Addr src2, Addr src2Skip, Addr width, Addr height)
 	{
-		mov(zsi, zword_ptr[src1]);
-		mov(zbx, zword_ptr[src2]);
-		mov(zdi, zword_ptr[dst]);
-		pxor(xmm0, xmm0);
+		mov(zsi, ptr[src1]);
+		mov(zbx, ptr[src2]);
+		mov(zdi, ptr[dst]);
+		xorps(zero_, zero_);
 
 		L("LoopY");
 		{
@@ -169,11 +173,12 @@ public:
 
 				__declspec(align(16)) const static float factor8bpp[4] = {255.0f, 255.0f, 255.0f, 255.0f};
 				mov(zax, (uintptr_t)factor8bpp);
-				mulps(xmm1, xmmword_ptr[zax]);
-				cvtps2dq(xmm1, xmm1);
-				packssdw(xmm1, xmm1);
-				packuswb(xmm1, xmm1);
-				movd(eax, xmm1);
+				XmmReg dstReg = variableStack_.back();
+				mulps(dstReg, xmmword_ptr[zax]);
+				cvtps2dq(dstReg, dstReg);
+				packssdw(dstReg, dstReg);
+				packuswb(dstReg, dstReg);
+				movd(eax, dstReg);
 				movnti(dword_ptr[zdi], eax);
 
 				add(zsi, 4);
@@ -183,9 +188,9 @@ public:
 				jnz("LoopX");
 			}
 
-			add(zsi, zword_ptr[src1Skip]);
-			add(zbx, zword_ptr[src2Skip]);
-			add(zdi, zword_ptr[dstSkip]);
+			add(zsi, ptr[src1Skip]);
+			add(zbx, ptr[src2Skip]);
+			add(zdi, ptr[dstSkip]);
 			dec(dword_ptr[height]);
 			jnz("LoopY");
 		}
@@ -193,8 +198,8 @@ public:
 
 private:
 	wchar_t *expr_;
-	int regId_;
-	int lastRegId_;
+	std::vector<XmmReg> variableStack_;
+	XmmReg zero_;
 };
 
 bool RenderJIT(wchar_t *expr, void *dst, size_t dstStride, void *src1, size_t src1Stride, void *src2, size_t src2Stride, int width, int height)

@@ -1121,7 +1121,7 @@ namespace detail
 	{
 		if (num >= 10)
 			append_num(str, num / 10);
-		str.append(1, '0' + num % 10);
+		str.append(1, static_cast<char>('0' + num % 10));
 	}
 
 	/// Debug trace
@@ -2946,14 +2946,14 @@ struct Frontend
 	void pshufw(const MmxReg& dst, const Mem64& src, const Imm8& order)		{AppendInstr(I_PSHUFW, 0x0F70, 0, dst, src, order);}
 
 	// SSE
-	void addps(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_ADDPS,	0x0F58, 0, dst, src);}
-	void addps(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_ADDPS,	0x0F58, 0, dst, src);}
-	void addss(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_ADDSS,	0x0F58, E_MANDATORY_PREFIX_F3, dst, src);}
-	void addss(const XmmReg& dst, const Mem32& src)		{AppendInstr(I_ADDSS,	0x0F58, E_MANDATORY_PREFIX_F3, dst, src);}
-	void andps(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_ANDPS,	0x0F54, 0, dst, src);}
-	void andps(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_ANDPS,	0x0F54, 0, dst, src);}
-	void andnps(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_ANDNPS,	0x0F55, 0, dst, src);}
-	void andnps(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_ANDNPS,	0x0F55, 0, dst, src);}
+	void addps(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_ADDPS,	0x0F58, 0, RW(dst), R(src));}
+	void addps(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_ADDPS,	0x0F58, 0, RW(dst), R(src));}
+	void addss(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_ADDSS,	0x0F58, E_MANDATORY_PREFIX_F3, RW(dst), R(src));}
+	void addss(const XmmReg& dst, const Mem32& src)		{AppendInstr(I_ADDSS,	0x0F58, E_MANDATORY_PREFIX_F3, RW(dst), R(src));}
+	void andps(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_ANDPS,	0x0F54, 0, RW(dst), R(src));}
+	void andps(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_ANDPS,	0x0F54, 0, RW(dst), R(src));}
+	void andnps(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_ANDNPS,	0x0F55, 0, RW(dst), R(src));}
+	void andnps(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_ANDNPS,	0x0F55, 0, RW(dst), R(src));}
 	void cmpps(const XmmReg& dst, const XmmReg& src, const Imm8& opd3)	{AppendInstr(I_CMPPS, 0x0FC2, 0, dst, src, opd3);}
 	void cmpps(const XmmReg& dst, const Mem128& src, const Imm8& opd3)	{AppendInstr(I_CMPPS, 0x0FC2, 0, dst, src, opd3);}
 	void cmpeqps(const XmmReg& dst, const XmmReg& src)		{cmpps(dst, src, 0);}
@@ -3012,20 +3012,20 @@ struct Frontend
 	void cvttss2si(const Reg64& dst, const XmmReg& src)		{AppendInstr(I_CVTTSS2SI, 0x0F2C, E_MANDATORY_PREFIX_F3 | E_REXW_PREFIX, dst, src);}
 	void cvttss2si(const Reg64& dst, const Mem32& src)		{AppendInstr(I_CVTTSS2SI, 0x0F2C, E_MANDATORY_PREFIX_F3 | E_REXW_PREFIX, dst, src);}
 #endif
-	void divps(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_DIVPS,	0x0F5E, 0, dst, src);}
-	void divps(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_DIVPS,	0x0F5E, 0, dst, src);}
-	void divss(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_DIVSS,	0x0F5E, E_MANDATORY_PREFIX_F3, dst, src);}
-	void divss(const XmmReg& dst, const Mem32& src)		{AppendInstr(I_DIVSS,	0x0F5E, E_MANDATORY_PREFIX_F3, dst, src);}
+	void divps(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_DIVPS,	0x0F5E, 0, RW(dst), R(src));}
+	void divps(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_DIVPS,	0x0F5E, 0, RW(dst), R(src));}
+	void divss(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_DIVSS,	0x0F5E, E_MANDATORY_PREFIX_F3, RW(dst), R(src));}
+	void divss(const XmmReg& dst, const Mem32& src)		{AppendInstr(I_DIVSS,	0x0F5E, E_MANDATORY_PREFIX_F3, RW(dst), R(src));}
 	void ldmxcsr(const Mem32& src)						{AppendInstr(I_LDMXCSR,	0x0FAE, 0, Imm8(2), src);}
 	void maskmovq(const MmxReg& dst, const MmxReg& mask){AppendInstr(I_MASKMOVQ,	0x0FF7, 0, dst, mask);}
-	void maxps(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MAXPS,	0x0F5F, 0, dst, src);}
-	void maxps(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_MAXPS,	0x0F5F, 0, dst, src);}
-	void maxss(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MAXSS,	0x0F5F, E_MANDATORY_PREFIX_F3, dst, src);}
-	void maxss(const XmmReg& dst, const Mem32& src)		{AppendInstr(I_MAXSS,	0x0F5F, E_MANDATORY_PREFIX_F3, dst, src);}
-	void minps(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MINPS,	0x0F5D, 0, dst, src);}
-	void minps(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_MINPS,	0x0F5D, 0, dst, src);}
-	void minss(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MINSS,	0x0F5D, E_MANDATORY_PREFIX_F3, dst, src);}
-	void minss(const XmmReg& dst, const Mem32& src)		{AppendInstr(I_MINSS,	0x0F5D, E_MANDATORY_PREFIX_F3, dst, src);}
+	void maxps(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MAXPS,	0x0F5F, 0, RW(dst), R(src));}
+	void maxps(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_MAXPS,	0x0F5F, 0, RW(dst), R(src));}
+	void maxss(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MAXSS,	0x0F5F, E_MANDATORY_PREFIX_F3, RW(dst), R(src));}
+	void maxss(const XmmReg& dst, const Mem32& src)		{AppendInstr(I_MAXSS,	0x0F5F, E_MANDATORY_PREFIX_F3, RW(dst), R(src));}
+	void minps(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MINPS,	0x0F5D, 0, RW(dst), R(src));}
+	void minps(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_MINPS,	0x0F5D, 0, RW(dst), R(src));}
+	void minss(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MINSS,	0x0F5D, E_MANDATORY_PREFIX_F3, RW(dst), R(src));}
+	void minss(const XmmReg& dst, const Mem32& src)		{AppendInstr(I_MINSS,	0x0F5D, E_MANDATORY_PREFIX_F3, RW(dst), R(src));}
 	void movaps(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MOVAPS,	0x0F28, 0, W(dst), R(src));}
 	void movaps(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_MOVAPS,	0x0F28, 0, W(dst), R(src));}
 	void movaps(const Mem128& dst, const XmmReg& src)	{AppendInstr(I_MOVAPS,	0x0F29, 0, R(src), W(dst));}
@@ -3047,10 +3047,10 @@ struct Frontend
 	void movups(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MOVUPS,	0x0F10, 0, dst, src);}
 	void movups(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_MOVUPS,	0x0F10, 0, dst, src);}
 	void movups(const Mem128& dst, const XmmReg& src)	{AppendInstr(I_MOVUPS,	0x0F11, 0, src, dst);}
-	void mulps(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MULPS,	0x0F59, 0, dst, src);}
-	void mulps(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_MULPS,	0x0F59, 0, dst, src);}
-	void mulss(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MULSS,	0x0F59, E_MANDATORY_PREFIX_F3, dst, src);}
-	void mulss(const XmmReg& dst, const Mem32& src)		{AppendInstr(I_MULSS,	0x0F59, E_MANDATORY_PREFIX_F3, dst, src);}
+	void mulps(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MULPS,	0x0F59, 0, RW(dst), R(src));}
+	void mulps(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_MULPS,	0x0F59, 0, RW(dst), R(src));}
+	void mulss(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MULSS,	0x0F59, E_MANDATORY_PREFIX_F3, RW(dst), R(src));}
+	void mulss(const XmmReg& dst, const Mem32& src)		{AppendInstr(I_MULSS,	0x0F59, E_MANDATORY_PREFIX_F3, RW(dst), R(src));}
 	void orps(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_ORPS,		0x0F56, 0, dst, src);}
 	void orps(const XmmReg& dst, const Mem128& src)		{AppendInstr(I_ORPS,		0x0F56, 0, dst, src);}
 	void prefetcht0(const Mem8& mem)					{AppendInstr(I_PREFETCH,	0x0F18, 0, Imm8(1), mem);}
@@ -3066,25 +3066,25 @@ struct Frontend
 	void rsqrtss(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_RSQRTSS,	0x0F52, E_MANDATORY_PREFIX_F3, dst, src);}
 	void rsqrtss(const XmmReg& dst, const Mem32& src)	{AppendInstr(I_RSQRTSS,	0x0F52, E_MANDATORY_PREFIX_F3, dst, src);}
 	void sfence()										{AppendInstr(I_SFENCE,	0x0FAEF8, 0);}
-	void shufps(const XmmReg& dst, const XmmReg& src, const Imm8& sel)	{AppendInstr(I_SHUFPS, 0x0FC6, 0, dst, src, sel);}
-	void shufps(const XmmReg& dst, const Mem128& src, const Imm8& sel)	{AppendInstr(I_SHUFPS, 0x0FC6, 0, dst, src, sel);}
-	void sqrtps(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_SQRTPS,	0x0F51, 0, dst, src);}
-	void sqrtps(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_SQRTPS,	0x0F51, 0, dst, src);}
-	void sqrtss(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_SQRTSS,	0x0F51, E_MANDATORY_PREFIX_F3, dst, src);}
-	void sqrtss(const XmmReg& dst, const Mem32& src)	{AppendInstr(I_SQRTSS,	0x0F51, E_MANDATORY_PREFIX_F3, dst, src);}
+	void shufps(const XmmReg& dst, const XmmReg& src, const Imm8& sel)	{AppendInstr(I_SHUFPS, 0x0FC6, 0, RW(dst), R(src), sel);}
+	void shufps(const XmmReg& dst, const Mem128& src, const Imm8& sel)	{AppendInstr(I_SHUFPS, 0x0FC6, 0, RW(dst), R(src), sel);}
+	void sqrtps(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_SQRTPS,	0x0F51, 0, W(dst), R(src));}
+	void sqrtps(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_SQRTPS,	0x0F51, 0, W(dst), R(src));}
+	void sqrtss(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_SQRTSS,	0x0F51, E_MANDATORY_PREFIX_F3, RW(dst), R(src));}
+	void sqrtss(const XmmReg& dst, const Mem32& src)	{AppendInstr(I_SQRTSS,	0x0F51, E_MANDATORY_PREFIX_F3, RW(dst), R(src));}
 	void stmxcsr(const Mem32& dst)						{AppendInstr(I_STMXCSR,	0x0FAE, 0, Imm8(3), dst);}
-	void subps(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_SUBPS,	0x0F5C, 0, dst, src);}
-	void subps(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_SUBPS,	0x0F5C, 0, dst, src);}
-	void subss(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_SUBSS,	0x0F5C, E_MANDATORY_PREFIX_F3, dst, src);}
-	void subss(const XmmReg& dst, const Mem32& src)		{AppendInstr(I_SUBSS,	0x0F5C, E_MANDATORY_PREFIX_F3, dst, src);}
+	void subps(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_SUBPS,	0x0F5C, 0, RW(dst), R(src));}
+	void subps(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_SUBPS,	0x0F5C, 0, RW(dst), R(src));}
+	void subss(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_SUBSS,	0x0F5C, E_MANDATORY_PREFIX_F3, RW(dst), R(src));}
+	void subss(const XmmReg& dst, const Mem32& src)		{AppendInstr(I_SUBSS,	0x0F5C, E_MANDATORY_PREFIX_F3, RW(dst), R(src));}
 	void ucomiss(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_UCOMISS,	0x0F2E, 0, dst, src);}
 	void ucomiss(const XmmReg& dst, const Mem32& src)	{AppendInstr(I_UCOMISS,	0x0F2E, 0, dst, src);}
 	void unpckhps(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_UNPCKHPS, 0x0F15, 0, dst, src);}
 	void unpckhps(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_UNPCKHPS, 0x0F15, 0, dst, src);}
 	void unpcklps(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_UNPCKLPS, 0x0F14, 0, dst, src);}
 	void unpcklps(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_UNPCKLPS, 0x0F14, 0, dst, src);}
-	void xorps(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_XORPS,	0x0F57, 0, dst, src);}
-	void xorps(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_XORPS,	0x0F57, 0, dst, src);}
+	void xorps(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_XORPS,	0x0F57, 0, RW(dst), R(src));}
+	void xorps(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_XORPS,	0x0F57, 0, RW(dst), R(src));}
 
 	// SSE2
 	void addpd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_ADDPD,	0x0F58, E_MANDATORY_PREFIX_66, dst, src);}
@@ -3142,19 +3142,19 @@ struct Frontend
 	void cvtpd2pi(const MmxReg& dst, const Mem128& src)		{AppendInstr(I_CVTPD2PI, 0x0F2D, E_MANDATORY_PREFIX_66, dst, src);}
 	void cvtpd2ps(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_CVTPD2PS, 0x0F5A, E_MANDATORY_PREFIX_66, dst, src);}
 	void cvtpd2ps(const XmmReg& dst, const Mem128& src)		{AppendInstr(I_CVTPD2PS, 0x0F5A, E_MANDATORY_PREFIX_66, dst, src);}
-	void cvtpi2pd(const XmmReg& dst, const MmxReg& src)		{AppendInstr(I_CVTPI2PD, 0x0F2A, E_MANDATORY_PREFIX_66, dst, src);}
-	void cvtpi2pd(const XmmReg& dst, const Mem64& src)		{AppendInstr(I_CVTPI2PD, 0x0F2A, E_MANDATORY_PREFIX_66, dst, src);}
-	void cvtps2dq(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_CVTPS2DQ, 0x0F5B, E_MANDATORY_PREFIX_66, dst, src);}
-	void cvtps2dq(const XmmReg& dst, const Mem128& src)		{AppendInstr(I_CVTPS2DQ, 0x0F5B, E_MANDATORY_PREFIX_66, dst, src);}
-	void cvtdq2ps(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_CVTDQ2PS, 0x0F5B, 0, dst, src);}
-	void cvtdq2ps(const XmmReg& dst, const Mem128& src)		{AppendInstr(I_CVTDQ2PS, 0x0F5B, 0, dst, src);}
-	void cvtps2pd(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_CVTPS2PD, 0x0F5A, 0, dst, src);}
-	void cvtps2pd(const XmmReg& dst, const Mem64& src)		{AppendInstr(I_CVTPS2PD, 0x0F5A, 0, dst, src);}
-	void cvtsd2si(const Reg32& dst, const XmmReg& src)		{AppendInstr(I_CVTSD2SI, 0x0F2D, E_MANDATORY_PREFIX_F2, dst, src);}
-	void cvtsd2si(const Reg32& dst, const Mem64& src)		{AppendInstr(I_CVTSD2SI, 0x0F2D, E_MANDATORY_PREFIX_F2, dst, src);}
+	void cvtpi2pd(const XmmReg& dst, const MmxReg& src)		{AppendInstr(I_CVTPI2PD, 0x0F2A, E_MANDATORY_PREFIX_66, W(dst), R(src));}
+	void cvtpi2pd(const XmmReg& dst, const Mem64& src)		{AppendInstr(I_CVTPI2PD, 0x0F2A, E_MANDATORY_PREFIX_66, W(dst), R(src));}
+	void cvtps2dq(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_CVTPS2DQ, 0x0F5B, E_MANDATORY_PREFIX_66, W(dst), R(src));}
+	void cvtps2dq(const XmmReg& dst, const Mem128& src)		{AppendInstr(I_CVTPS2DQ, 0x0F5B, E_MANDATORY_PREFIX_66, W(dst), R(src));}
+	void cvtdq2ps(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_CVTDQ2PS, 0x0F5B, 0, W(dst), R(src));}
+	void cvtdq2ps(const XmmReg& dst, const Mem128& src)		{AppendInstr(I_CVTDQ2PS, 0x0F5B, 0, W(dst), R(src));}
+	void cvtps2pd(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_CVTPS2PD, 0x0F5A, 0, W(dst), R(src));}
+	void cvtps2pd(const XmmReg& dst, const Mem64& src)		{AppendInstr(I_CVTPS2PD, 0x0F5A, 0, W(dst), R(src));}
+	void cvtsd2si(const Reg32& dst, const XmmReg& src)		{AppendInstr(I_CVTSD2SI, 0x0F2D, E_MANDATORY_PREFIX_F2, W(dst), R(src));}
+	void cvtsd2si(const Reg32& dst, const Mem64& src)		{AppendInstr(I_CVTSD2SI, 0x0F2D, E_MANDATORY_PREFIX_F2, W(dst), R(src));}
 #ifdef JITASM64
-	void cvtsd2si(const Reg64& dst, const XmmReg& src)		{AppendInstr(I_CVTSD2SI, 0x0F2D, E_MANDATORY_PREFIX_F2 | E_REXW_PREFIX, dst, src);}
-	void cvtsd2si(const Reg64& dst, const Mem64& src)		{AppendInstr(I_CVTSD2SI, 0x0F2D, E_MANDATORY_PREFIX_F2 | E_REXW_PREFIX, dst, src);}
+	void cvtsd2si(const Reg64& dst, const XmmReg& src)		{AppendInstr(I_CVTSD2SI, 0x0F2D, E_MANDATORY_PREFIX_F2 | E_REXW_PREFIX, W(dst), R(src));}
+	void cvtsd2si(const Reg64& dst, const Mem64& src)		{AppendInstr(I_CVTSD2SI, 0x0F2D, E_MANDATORY_PREFIX_F2 | E_REXW_PREFIX, W(dst), R(src));}
 #endif
 	void cvtsd2ss(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_CVTSD2SS, 0x0F5A, E_MANDATORY_PREFIX_F2, dst, src);}
 	void cvtsd2ss(const XmmReg& dst, const Mem64& src)		{AppendInstr(I_CVTSD2SS, 0x0F5A, E_MANDATORY_PREFIX_F2, dst, src);}
@@ -3377,34 +3377,34 @@ struct Frontend
 	void psubusb(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_PSUBUSB,	0x0FD8, E_MANDATORY_PREFIX_66, dst, src);}
 	void psubusw(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_PSUBUSW,	0x0FD9, E_MANDATORY_PREFIX_66, dst, src);}
 	void psubusw(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_PSUBUSW,	0x0FD9, E_MANDATORY_PREFIX_66, dst, src);}
-	void punpckhbw(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_PUNPCKHBW,	0x0F68, E_MANDATORY_PREFIX_66, dst, src);}
-	void punpckhbw(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_PUNPCKHBW,	0x0F68, E_MANDATORY_PREFIX_66, dst, src);}
-	void punpckhwd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_PUNPCKHWD,	0x0F69, E_MANDATORY_PREFIX_66, dst, src);}
-	void punpckhwd(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_PUNPCKHWD,	0x0F69, E_MANDATORY_PREFIX_66, dst, src);}
-	void punpckhdq(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_PUNPCKHDQ,	0x0F6A, E_MANDATORY_PREFIX_66, dst, src);}
-	void punpckhdq(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_PUNPCKHDQ,	0x0F6A, E_MANDATORY_PREFIX_66, dst, src);}
-	void punpckhqdq(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_PUNPCKHQDQ,	0x0F6D, E_MANDATORY_PREFIX_66, dst, src);}
-	void punpckhqdq(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_PUNPCKHQDQ,	0x0F6D, E_MANDATORY_PREFIX_66, dst, src);}
-	void punpcklbw(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_PUNPCKLBW,	0x0F60, E_MANDATORY_PREFIX_66, dst, src);}
-	void punpcklbw(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_PUNPCKLBW,	0x0F60, E_MANDATORY_PREFIX_66, dst, src);}
-	void punpcklwd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_PUNPCKLWD,	0x0F61, E_MANDATORY_PREFIX_66, dst, src);}
-	void punpcklwd(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_PUNPCKLWD,	0x0F61, E_MANDATORY_PREFIX_66, dst, src);}
-	void punpckldq(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_PUNPCKLDQ,	0x0F62, E_MANDATORY_PREFIX_66, dst, src);}
-	void punpckldq(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_PUNPCKLDQ,	0x0F62, E_MANDATORY_PREFIX_66, dst, src);}
-	void punpcklqdq(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_PUNPCKLQDQ,	0x0F6C, E_MANDATORY_PREFIX_66, dst, src);}
-	void punpcklqdq(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_PUNPCKLQDQ,	0x0F6C, E_MANDATORY_PREFIX_66, dst, src);}
-	void pxor(const XmmReg& dst, const XmmReg& src)			{AppendInstr(I_PXOR,			0x0FEF, E_MANDATORY_PREFIX_66, dst, src);}
-	void pxor(const XmmReg& dst, const Mem128& src)			{AppendInstr(I_PXOR,			0x0FEF, E_MANDATORY_PREFIX_66, dst, src);}
-	void shufpd(const XmmReg& dst, const XmmReg& src, const Imm8& sel)	{AppendInstr(I_SHUFPD, 0x0FC6, E_MANDATORY_PREFIX_66, dst, src, sel);}
-	void shufpd(const XmmReg& dst, const Mem128& src, const Imm8& sel)	{AppendInstr(I_SHUFPD, 0x0FC6, E_MANDATORY_PREFIX_66, dst, src, sel);}
-	void sqrtpd(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_SQRTPD,	0x0F51, E_MANDATORY_PREFIX_66, dst, src);}
-	void sqrtpd(const XmmReg& dst, const Mem128& src)		{AppendInstr(I_SQRTPD,	0x0F51, E_MANDATORY_PREFIX_66, dst, src);}
-	void sqrtsd(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_SQRTSD,	0x0F51, E_MANDATORY_PREFIX_F2, dst, src);}
-	void sqrtsd(const XmmReg& dst, const Mem64& src)		{AppendInstr(I_SQRTSD,	0x0F51, E_MANDATORY_PREFIX_F2, dst, src);}
-	void subpd(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_SUBPD,	0x0F5C, E_MANDATORY_PREFIX_66, dst, src);}
-	void subpd(const XmmReg& dst, const Mem128& src)		{AppendInstr(I_SUBPD,	0x0F5C, E_MANDATORY_PREFIX_66, dst, src);}
-	void subsd(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_SUBSD,	0x0F5C, E_MANDATORY_PREFIX_F2, dst, src);}
-	void subsd(const XmmReg& dst, const Mem64& src)			{AppendInstr(I_SUBSD,	0x0F5C, E_MANDATORY_PREFIX_F2, dst, src);}
+	void punpckhbw(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_PUNPCKHBW,	0x0F68, E_MANDATORY_PREFIX_66, RW(dst), R(src));}
+	void punpckhbw(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_PUNPCKHBW,	0x0F68, E_MANDATORY_PREFIX_66, RW(dst), R(src));}
+	void punpckhwd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_PUNPCKHWD,	0x0F69, E_MANDATORY_PREFIX_66, RW(dst), R(src));}
+	void punpckhwd(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_PUNPCKHWD,	0x0F69, E_MANDATORY_PREFIX_66, RW(dst), R(src));}
+	void punpckhdq(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_PUNPCKHDQ,	0x0F6A, E_MANDATORY_PREFIX_66, RW(dst), R(src));}
+	void punpckhdq(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_PUNPCKHDQ,	0x0F6A, E_MANDATORY_PREFIX_66, RW(dst), R(src));}
+	void punpckhqdq(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_PUNPCKHQDQ,	0x0F6D, E_MANDATORY_PREFIX_66, RW(dst), R(src));}
+	void punpckhqdq(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_PUNPCKHQDQ,	0x0F6D, E_MANDATORY_PREFIX_66, RW(dst), R(src));}
+	void punpcklbw(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_PUNPCKLBW,	0x0F60, E_MANDATORY_PREFIX_66, RW(dst), R(src));}
+	void punpcklbw(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_PUNPCKLBW,	0x0F60, E_MANDATORY_PREFIX_66, RW(dst), R(src));}
+	void punpcklwd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_PUNPCKLWD,	0x0F61, E_MANDATORY_PREFIX_66, RW(dst), R(src));}
+	void punpcklwd(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_PUNPCKLWD,	0x0F61, E_MANDATORY_PREFIX_66, RW(dst), R(src));}
+	void punpckldq(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_PUNPCKLDQ,	0x0F62, E_MANDATORY_PREFIX_66, RW(dst), R(src));}
+	void punpckldq(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_PUNPCKLDQ,	0x0F62, E_MANDATORY_PREFIX_66, RW(dst), R(src));}
+	void punpcklqdq(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_PUNPCKLQDQ,	0x0F6C, E_MANDATORY_PREFIX_66, RW(dst), R(src));}
+	void punpcklqdq(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_PUNPCKLQDQ,	0x0F6C, E_MANDATORY_PREFIX_66, RW(dst), R(src));}
+	void pxor(const XmmReg& dst, const XmmReg& src)			{AppendInstr(I_PXOR,		0x0FEF, E_MANDATORY_PREFIX_66, RW(dst), R(src));}
+	void pxor(const XmmReg& dst, const Mem128& src)			{AppendInstr(I_PXOR,		0x0FEF, E_MANDATORY_PREFIX_66, RW(dst), R(src));}
+	void shufpd(const XmmReg& dst, const XmmReg& src, const Imm8& sel)	{AppendInstr(I_SHUFPD, 0x0FC6, E_MANDATORY_PREFIX_66, RW(dst), R(src), sel);}
+	void shufpd(const XmmReg& dst, const Mem128& src, const Imm8& sel)	{AppendInstr(I_SHUFPD, 0x0FC6, E_MANDATORY_PREFIX_66, RW(dst), R(src), sel);}
+	void sqrtpd(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_SQRTPD,	0x0F51, E_MANDATORY_PREFIX_66, W(dst), R(src));}
+	void sqrtpd(const XmmReg& dst, const Mem128& src)		{AppendInstr(I_SQRTPD,	0x0F51, E_MANDATORY_PREFIX_66, W(dst), R(src));}
+	void sqrtsd(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_SQRTSD,	0x0F51, E_MANDATORY_PREFIX_F2, RW(dst), R(src));}
+	void sqrtsd(const XmmReg& dst, const Mem64& src)		{AppendInstr(I_SQRTSD,	0x0F51, E_MANDATORY_PREFIX_F2, RW(dst), R(src));}
+	void subpd(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_SUBPD,	0x0F5C, E_MANDATORY_PREFIX_66, RW(dst), R(src));}
+	void subpd(const XmmReg& dst, const Mem128& src)		{AppendInstr(I_SUBPD,	0x0F5C, E_MANDATORY_PREFIX_66, RW(dst), R(src));}
+	void subsd(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_SUBSD,	0x0F5C, E_MANDATORY_PREFIX_F2, RW(dst), R(src));}
+	void subsd(const XmmReg& dst, const Mem64& src)			{AppendInstr(I_SUBSD,	0x0F5C, E_MANDATORY_PREFIX_F2, RW(dst), R(src));}
 	void ucomisd(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_UCOMISD,	0x0F2E, E_MANDATORY_PREFIX_66, dst, src);}
 	void ucomisd(const XmmReg& dst, const Mem64& src)		{AppendInstr(I_UCOMISD,	0x0F2E, E_MANDATORY_PREFIX_66, dst, src);}
 	void unpckhpd(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_UNPCKHPD, 0x0F15, E_MANDATORY_PREFIX_66, dst, src);}
@@ -3959,7 +3959,7 @@ namespace compiler
 				uint32 m = at(i);
 				while (m != 0) {
 					uint32 index = detail::bit_scan_forward(m);
-					indexes.push_back(i * 32 + index);
+					indexes.push_back(static_cast<uint32>(i * 32) + index);
 					m &= ~(1 << index);
 				}
 			}
@@ -4088,7 +4088,7 @@ namespace compiler
 			}
 
 			if (attributes_[reg_family][var].size < size) {
-				attributes_[reg_family][var].size = size;
+				attributes_[reg_family][var].size = static_cast<uint8>(size);
 			}
 		}
 
@@ -4466,7 +4466,7 @@ namespace compiler
 					uint32 l = cur_interval->liveness[i] & ~s;
 					while (l != 0) {
 						uint32 index = detail::bit_scan_forward(l);
-						live_vars.push_back(i * 32 + index);
+						live_vars.push_back(static_cast<uint32>(i * 32) + index);
 						l &= ~(1 << index);
 					}
 				}
