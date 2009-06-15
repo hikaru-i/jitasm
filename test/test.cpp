@@ -3081,7 +3081,7 @@ struct test_sse2_d : jitasm::function<void, test_sse2_d>
 		divsd(xmm0, xmm1);
 		divsd(xmm0, qword_ptr[esp]);
 		lfence();
-		maskmovdqu(xmm0, xmm1);
+		maskmovdqu(xmm0, xmm1, zdi);
 		maxpd(xmm0, xmm1);
 		maxpd(xmm0, xmmword_ptr[esp]);
 		maxsd(xmm0, xmm1);
@@ -3096,7 +3096,7 @@ struct test_sse2_d : jitasm::function<void, test_sse2_d>
 		divpd(xmm8, xmmword_ptr[r8]);
 		divsd(xmm8, xmm9);
 		divsd(xmm8, qword_ptr[r8]);
-		maskmovdqu(xmm8, xmm9);
+		maskmovdqu(xmm8, xmm9, rdi);
 		maxpd(xmm8, xmm9);
 		maxpd(xmm8, xmmword_ptr[r8]);
 		maxsd(xmm8, xmm9);
@@ -4268,8 +4268,7 @@ struct test_avx_d : jitasm::function<void, test_avx_d>
 //----------------------------------------
 // Register allocation
 //----------------------------------------
-extern "C" void masm_test_register_allocation();
-struct test_register_allocation : jitasm::function_cdecl<void, test_register_allocation>
+struct test_register_allocation1 : jitasm::function_cdecl<void, test_register_allocation1>
 {
 	void main()
 	{
@@ -4623,6 +4622,12 @@ void test_instruction()
 	TEST_M(test_sse4_2);
 }
 
+void test_avx_instructions()
+{
+	TEST_N(test_avx_a);
+	TEST_N(test_avx_b);
+}
+
 void test_calling_convension()
 {
 	TEST_M(test_function_return_char);
@@ -4645,12 +4650,6 @@ void test_calling_convension()
 	TEST_M(test_function_return_m128d_ptr);
 	TEST_M(test_function_return_m128i_xmm1);
 	TEST_M(test_function_return_m128i_ptr);
-}
-
-void test_avx_instructions()
-{
-	TEST_N(test_avx_a);
-	TEST_N(test_avx_b);
 }
 
 struct test_cfg : jitasm::function_cdecl<void, test_cfg>
@@ -4709,8 +4708,8 @@ struct test_ipow2 : jitasm::function_cdecl<int, test_ipow2, int, int>
 int wmain()
 {
 	test_instruction();
-	test_calling_convension();
 	test_avx_instructions();
+	test_calling_convension();
 
 	TEST_EQUAL(test_ipow1()(2, 0), 1);
 	TEST_EQUAL(test_ipow1()(2, 3), 8);

@@ -104,10 +104,15 @@ enum
 	/** \var NUM_OF_PHYSICAL_REG
 	 * Number of physical register
 	 */
+	/** \var SIZE_OF_GP_REG
+	 * Size of general-purpose register
+	 */
 #ifdef JITASM64
-	NUM_OF_PHYSICAL_REG = 16
+	NUM_OF_PHYSICAL_REG = 16,
+	SIZE_OF_GP_REG = 8
 #else
-	NUM_OF_PHYSICAL_REG = 8
+	NUM_OF_PHYSICAL_REG = 8,
+	SIZE_OF_GP_REG = 4
 #endif
 };
 
@@ -652,9 +657,11 @@ enum InstrID
 
 	I_AESENC, I_AESENCLAST, I_AESDEC, I_AESDECLAST, I_AESIMC, I_AESKEYGENASSIST,
 
-	// Pseudo instructions
-	I_PSEUDO_DECLARE_REG_ARG,	///< Declare register argument
-	I_PSEUDO_DECLARE_STACK_ARG,	///< Declare stack argument
+	// jitasm compiler instructions
+	I_COMPILER_DECLARE_REG_ARG,		///< Declare register argument
+	I_COMPILER_DECLARE_STACK_ARG,	///< Declare stack argument
+	I_COMPILER_PROLOG,				///< Function prolog
+	I_COMPILER_EPILOG				///< Function epilog
 };
 
 enum JumpCondition
@@ -1088,6 +1095,16 @@ namespace detail
 		return index;
 	}
 
+	/// The bit position of the last bit 1.
+	inline uint32 bit_scan_reverse(uint32 x)
+	{
+		JITASM_ASSERT(x != 0);
+		unsigned long index;
+		_BitScanReverse(&index, x);
+		//index = __builtin_clz(x);		// for gcc
+		return index;
+	}
+
 	/// Prior iterator
 	template<class It> It prior(const It &it) {
 		It i = it;
@@ -1172,20 +1189,47 @@ namespace detail
 	};
 
 	/// Stack manager
+	/**
+	 * <b>Stack layout</b>
+	 * \verbatim
+	 * +-----------------------+
+	 * | Caller return address |
+	 * +=======================+========
+	 * |       ebp (rbp)       |
+	 * +-----------------------+ <-- ebp (rbp)
+	 * |  Saved gp registers   |
+	 * +-----------------------+
+	 * | Padding for alignment |
+	 * +-----------------------+ <-- Stack base
+	 * |    Spill slots and    |
+	 * |    local variable     |
+	 * +-----------------------+ <-- esp (rsp)
+	 * \endverbatim
+	 */
 	class StackManager
 	{
 	private:
-		size_t stack_size_;
+		Addr stack_base_;
+		uint32 stack_size_;
 
 	public:
-		StackManager() : stack_size_(0) {}
+		StackManager() : stack_base_(RegID::CreatePhysicalRegID(R_TYPE_GP, EBX), 0), stack_size_(0) {}
+
+		/// Get allocated stack size
+		uint32 GetSize() const {return (stack_size_ + 15) / 16 * 16; /* 16 bytes aligned*/}
+
+		/// Get stack base
+		Addr GetStackBase() const {return stack_base_;}
+
+		/// Set stack base
+		void SetStackBase(const Addr& stack_base) {stack_base_ = stack_base;}
 
 		/// Allocate stack
-		Addr Alloc(size_t size)
+		Addr Alloc(uint32 size, uint32 alignment)
 		{
-			size_t offset = stack_size_;
+			stack_size_ = (stack_size_ + alignment - 1) / alignment * alignment;
 			stack_size_ += size;
-			return Addr(RegID::CreatePhysicalRegID(R_TYPE_GP, EBP), offset);
+			return stack_base_ - stack_size_;
 		}
 	};
 
@@ -1210,6 +1254,13 @@ namespace detail
 	};
 }	// namespace detail
 
+// compiler prototype declaration
+struct Frontend;
+namespace compiler {
+	void Compile(Frontend& f);
+}
+
+/// jitasm frontend
 struct Frontend
 {
 	typedef jitasm::Addr	Addr;
@@ -1313,95 +1364,30 @@ struct Frontend
 
 	virtual void InternalMain() = 0;
 
-	/// Make function prolog and epilog
-	void MakePrologAndEpilog()
-	{
-		// Find out which registers need to save
-		uint32 gpreg = 0, xmmreg = 0;
-		for (InstrList::iterator it = instrs_.begin(); it != instrs_.end(); ++it) {
-			for (size_t i = 0; i < Instr::MAX_OPERAND_COUNT; ++i) {
-				const detail::Opd& opd = it->GetOpd(i);
-				if (opd.IsGpReg()) {
-					gpreg |= 1 << (opd.GetReg().id - EAX);
-				}
-				else if (opd.IsXmmReg()) {
-					xmmreg |= 1 << (opd.GetReg().id - XMM0);
-				}
-			}
-		}
-
-		// Prolog
-		InstrList main_instr;
-		main_instr.reserve(32);
-		main_instr.swap(instrs_);	// Put main instructions aside for prolog
-		push(zbp);
-		mov(zbp, zsp);
-		uint32 count = 0;
-		if (gpreg & (1 << (EBX - EAX))) { push(zbx); ++count; }
-		if (gpreg & (1 << (EDI - EAX))) { push(zdi); ++count; }
-		if (gpreg & (1 << (ESI - EAX))) { push(zsi); ++count; }
-#ifdef JITASM64
-		if (gpreg & (1 << (R12 - RAX))) { push(r12); ++count; }
-		if (gpreg & (1 << (R13 - RAX))) { push(r13); ++count; }
-		if (gpreg & (1 << (R14 - RAX))) { push(r14); ++count; }
-		if (gpreg & (1 << (R15 - RAX))) { push(r15); ++count; }
-		uint32 xmm_store = detail::Count1Bits(xmmreg & 0xFFC0) * 16;
-		if (xmm_store > 0) {
-			xmm_store += (count & 1) * 8;	// align 16 bytes
-			sub(rsp, xmm_store);
-		}
-		size_t offset = 0;
-		for (int reg_id = XMM15; reg_id >= XMM6; --reg_id) {
-			if (xmmreg & (1 << (reg_id - XMM0))) {
-				movdqa(xmmword_ptr[rsp + offset], XmmReg(static_cast<PhysicalRegID>(reg_id)));
-				offset += 16;
-			}
-		}
-#endif
-
-		// Adjust labels
-		const size_t prolog_instr_count = instrs_.size();
-		for (LabelList::iterator it = labels_.begin(); it != labels_.end(); ++it) {
-			it->instr_number += prolog_instr_count;
-		}
-
-		// Put main instructions after prolog
-		instrs_.insert(instrs_.end(), main_instr.begin(), main_instr.end());
-
-		// Epilog
-#ifdef JITASM64
-		for (int reg_id = XMM6; reg_id <= XMM15; ++reg_id) {
-			if (xmmreg & (1 << (reg_id - XMM0))) {
-				offset -= 16;
-				movdqa(XmmReg(static_cast<PhysicalRegID>(reg_id)), xmmword_ptr[rsp + offset]);
-			}
-		}
-		if (xmm_store > 0)
-			add(rsp, xmm_store);
-		if (gpreg & (1 << (R15 - RAX))) pop(r15);
-		if (gpreg & (1 << (R14 - RAX))) pop(r14);
-		if (gpreg & (1 << (R13 - RAX))) pop(r13);
-		if (gpreg & (1 << (R12 - RAX))) pop(r12);
-#endif
-		if (gpreg & (1 << (ESI - EAX))) pop(zsi);
-		if (gpreg & (1 << (EDI - EAX))) pop(zdi);
-		if (gpreg & (1 << (EBX - EAX))) pop(zbx);
-		leave();
-		ret();
-	}
-
 	/// Declare variable of the function argument on register
 	void DeclareRegArg(const detail::Opd& var, const detail::Opd& arg, const detail::Opd& spill_slot = detail::Opd())
 	{
 		JITASM_ASSERT(var.IsReg());
-		AppendInstr(I_PSEUDO_DECLARE_REG_ARG, 0, E_SPECIAL, Dummy(W(var), arg), spill_slot);
+		AppendInstr(I_COMPILER_DECLARE_REG_ARG, 0, E_SPECIAL, Dummy(W(var), arg), spill_slot);
 	}
 
 	/// Declare variable of the function argument on stack
 	void DeclareStackArg(const detail::Opd& var, const detail::Opd& arg)
 	{
 		JITASM_ASSERT(var.IsReg());
-		AppendInstr(I_PSEUDO_DECLARE_STACK_ARG, 0, E_SPECIAL, W(var), R(arg));
+		AppendInstr(I_COMPILER_DECLARE_STACK_ARG, 0, E_SPECIAL, W(var), R(arg));
+	}
+
+	/// Function prolog
+	void Prolog()
+	{
+		AppendInstr(I_COMPILER_PROLOG, 0, E_SPECIAL);
+	}
+
+	/// Function epilog
+	void Epilog()
+	{
+		AppendInstr(I_COMPILER_EPILOG, 0, E_SPECIAL);
 	}
 
 	static bool IsJump(InstrID id)
@@ -1492,7 +1478,9 @@ struct Frontend
 		instrs_.clear();
 		labels_.clear();
 		instrs_.reserve(128);
+
 		InternalMain();
+		compiler::Compile(*this);
 
 		// Resolve jump instructions
 		if (!labels_.empty()) {
@@ -1576,7 +1564,7 @@ struct Frontend
 		labels_[label_id].instr_number = instrs_.size();	// Label current instruction
 	}
 
-	// Label
+	/// Label
 	void L(const std::string& label_name)
 	{
 		JITASM_ASSERT(!label_name.empty());
@@ -2293,38 +2281,38 @@ struct Frontend
 	void rep_outsb()	{AppendInstr(I_OUTS_B, 0x6E, E_REP_PREFIX);}
 	void rep_outsw()	{AppendInstr(I_OUTS_W, 0x6F, E_REP_PREFIX | E_OPERAND_SIZE_PREFIX);}
 	void rep_outsd()	{AppendInstr(I_OUTS_D, 0x6F, E_REP_PREFIX);}
-	void pop(const Reg16& dst)	{AppendInstr(I_POP, 0x58, E_OPERAND_SIZE_PREFIX, dst);}
-	void pop(const Mem16& dst)	{AppendInstr(I_POP, 0x8F, E_OPERAND_SIZE_PREFIX, Imm8(0), dst);}
+	void pop(const Reg16& dst)	{AppendInstr(I_POP, 0x58, E_OPERAND_SIZE_PREFIX, W(dst));}
+	void pop(const Mem16& dst)	{AppendInstr(I_POP, 0x8F, E_OPERAND_SIZE_PREFIX, Imm8(0), W(dst));}
 #ifndef JITASM64
-	void pop(const Reg32& dst)	{AppendInstr(I_POP, 0x58, 0, dst);}
-	void pop(const Mem32& dst)	{AppendInstr(I_POP, 0x8F, 0, Imm8(0), dst);}
+	void pop(const Reg32& dst)	{AppendInstr(I_POP, 0x58, 0, W(dst), Dummy(RW(esp)));}
+	void pop(const Mem32& dst)	{AppendInstr(I_POP, 0x8F, 0, Imm8(0), W(dst), Dummy(RW(esp)));}
 #else
-	void pop(const Reg64& dst)	{AppendInstr(I_POP, 0x58, 0, dst);}
-	void pop(const Mem64& dst)	{AppendInstr(I_POP, 0x8F, 0, Imm8(0), dst);}
+	void pop(const Reg64& dst)	{AppendInstr(I_POP, 0x58, 0, W(dst), Dummy(RW(esp)));}
+	void pop(const Mem64& dst)	{AppendInstr(I_POP, 0x8F, 0, Imm8(0), W(dst), Dummy(RW(esp)));}
 #endif
 #ifndef JITASM64
-	void popf()		{AppendInstr(I_POPF, 0x9D, E_OPERAND_SIZE_PREFIX);}
-	void popfd()	{AppendInstr(I_POPFD, 0x9D, 0);}
+	void popf()		{AppendInstr(I_POPF, 0x9D, E_OPERAND_SIZE_PREFIX, Dummy(RW(esp)));}
+	void popfd()	{AppendInstr(I_POPFD, 0x9D, 0, Dummy(RW(esp)));}
 #else
-	void popf()		{AppendInstr(I_POPF, 0x9D, E_OPERAND_SIZE_PREFIX);}
-	void popfq()	{AppendInstr(I_POPFQ, 0x9D, 0);}
+	void popf()		{AppendInstr(I_POPF, 0x9D, E_OPERAND_SIZE_PREFIX, Dummy(RW(esp)));}
+	void popfq()	{AppendInstr(I_POPFQ, 0x9D, 0, Dummy(RW(esp)));}
 #endif
-	void push(const Reg16& dst)	{AppendInstr(I_PUSH, 0x50, E_OPERAND_SIZE_PREFIX, dst);}
-	void push(const Mem16& dst)	{AppendInstr(I_PUSH, 0xFF, E_OPERAND_SIZE_PREFIX, Imm8(6), dst);}
+	void push(const Reg16& src)	{AppendInstr(I_PUSH, 0x50, E_OPERAND_SIZE_PREFIX, R(src), Dummy(RW(esp)));}
+	void push(const Mem16& src)	{AppendInstr(I_PUSH, 0xFF, E_OPERAND_SIZE_PREFIX, Imm8(6), R(src), Dummy(RW(esp)));}
 #ifndef JITASM64
-	void push(const Reg32& dst)	{AppendInstr(I_PUSH, 0x50, 0, dst);}
-	void push(const Mem32& dst)	{AppendInstr(I_PUSH, 0xFF, 0, Imm8(6), dst);}
+	void push(const Reg32& src)	{AppendInstr(I_PUSH, 0x50, 0, R(src), Dummy(RW(esp)));}
+	void push(const Mem32& src)	{AppendInstr(I_PUSH, 0xFF, 0, Imm8(6), R(src), Dummy(RW(esp)));}
 #else
-	void push(const Reg64& dst)	{AppendInstr(I_PUSH, 0x50, 0, dst);}
-	void push(const Mem64& dst)	{AppendInstr(I_PUSH, 0xFF, 0, Imm8(6), dst);}
+	void push(const Reg64& src)	{AppendInstr(I_PUSH, 0x50, 0, R(src), Dummy(RW(esp)));}
+	void push(const Mem64& src)	{AppendInstr(I_PUSH, 0xFF, 0, Imm8(6), R(src), Dummy(RW(esp)));}
 #endif
-	void push(const Imm32& imm)	{AppendInstr(I_PUSH, detail::IsInt8(imm.GetImm()) ? 0x6A : 0x68, 0, detail::ImmXor8(imm));}
+	void push(const Imm32& imm)	{AppendInstr(I_PUSH, detail::IsInt8(imm.GetImm()) ? 0x6A : 0x68, 0, detail::ImmXor8(imm), Dummy(RW(esp)));}
 #ifndef JITASM64
-	void pushf()	{AppendInstr(I_PUSHF, 0x9C, E_OPERAND_SIZE_PREFIX);}
-	void pushfd()	{AppendInstr(I_PUSHFD, 0x9C, 0);}
+	void pushf()	{AppendInstr(I_PUSHF, 0x9C, E_OPERAND_SIZE_PREFIX, Dummy(RW(esp)));}
+	void pushfd()	{AppendInstr(I_PUSHFD, 0x9C, 0, Dummy(RW(esp)));}
 #else
-	void pushf()	{AppendInstr(I_PUSHF, 0x9C, E_OPERAND_SIZE_PREFIX);}
-	void pushfq()	{AppendInstr(I_PUSHFQ, 0x9C, 0);}
+	void pushf()	{AppendInstr(I_PUSHF, 0x9C, E_OPERAND_SIZE_PREFIX, Dummy(RW(esp)));}
+	void pushfq()	{AppendInstr(I_PUSHFQ, 0x9C, 0, Dummy(RW(esp)));}
 #endif
  	void rcl(const Reg8& dst, const Imm8& shift)	{shift.GetImm() == 1 ? AppendInstr(I_RCL, 0xD0, 0, Imm8(2), dst) : AppendInstr(I_RCL, 0xC0, 0, Imm8(2), dst, shift);}
 	void rcl(const Mem8& dst, const Imm8& shift)	{shift.GetImm() == 1 ? AppendInstr(I_RCL, 0xD0, 0, Imm8(2), dst) : AppendInstr(I_RCL, 0xC0, 0, Imm8(2), dst, shift);}
@@ -3091,17 +3079,17 @@ struct Frontend
 	void xorps(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_XORPS,	0x0F57, 0, RW(dst), R(src));}
 
 	// SSE2
-	void addpd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_ADDPD,	0x0F58, E_MANDATORY_PREFIX_66, dst, src);}
-	void addpd(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_ADDPD,	0x0F58, E_MANDATORY_PREFIX_66, dst, src);}
-	void addsd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_ADDSD,	0x0F58, E_MANDATORY_PREFIX_F2, dst, src);}
-	void addsd(const XmmReg& dst, const Mem64& src)		{AppendInstr(I_ADDSD,	0x0F58, E_MANDATORY_PREFIX_F2, dst, src);}
-	void andpd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_ANDPD,	0x0F54, E_MANDATORY_PREFIX_66, dst, src);}
-	void andpd(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_ANDPD,	0x0F54, E_MANDATORY_PREFIX_66, dst, src);}
-	void andnpd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_ANDNPD,	0x0F55, E_MANDATORY_PREFIX_66, dst, src);}
-	void andnpd(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_ANDNPD,	0x0F55, E_MANDATORY_PREFIX_66, dst, src);}
-	void clflush(const Mem8& dst) {AppendInstr(I_CLFLUSH, 0x0FAE, 0, Imm8(7), dst);}
-	void cmppd(const XmmReg& dst, const XmmReg& src, const Imm8& opd3)	{AppendInstr(I_CMPPD, 0x0FC2, E_MANDATORY_PREFIX_66, dst, src, opd3);}
-	void cmppd(const XmmReg& dst, const Mem128& src, const Imm8& opd3)	{AppendInstr(I_CMPPD, 0x0FC2, E_MANDATORY_PREFIX_66, dst, src, opd3);}
+	void addpd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_ADDPD,	0x0F58, E_MANDATORY_PREFIX_66, RW(dst), R(src));}
+	void addpd(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_ADDPD,	0x0F58, E_MANDATORY_PREFIX_66, RW(dst), R(src));}
+	void addsd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_ADDSD,	0x0F58, E_MANDATORY_PREFIX_F2, RW(dst), R(src));}
+	void addsd(const XmmReg& dst, const Mem64& src)		{AppendInstr(I_ADDSD,	0x0F58, E_MANDATORY_PREFIX_F2, RW(dst), R(src));}
+	void andpd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_ANDPD,	0x0F54, E_MANDATORY_PREFIX_66, RW(dst), R(src));}
+	void andpd(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_ANDPD,	0x0F54, E_MANDATORY_PREFIX_66, RW(dst), R(src));}
+	void andnpd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_ANDNPD,	0x0F55, E_MANDATORY_PREFIX_66, RW(dst), R(src));}
+	void andnpd(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_ANDNPD,	0x0F55, E_MANDATORY_PREFIX_66, RW(dst), R(src));}
+	void clflush(const Mem8& src) {AppendInstr(I_CLFLUSH, 0x0FAE, 0, Imm8(7), R(src));}
+	void cmppd(const XmmReg& dst, const XmmReg& src, const Imm8& opd3)	{AppendInstr(I_CMPPD, 0x0FC2, E_MANDATORY_PREFIX_66, RW(dst), R(src), opd3);}
+	void cmppd(const XmmReg& dst, const Mem128& src, const Imm8& opd3)	{AppendInstr(I_CMPPD, 0x0FC2, E_MANDATORY_PREFIX_66, RW(dst), R(src), opd3);}
 	void cmpeqpd(const XmmReg& dst, const XmmReg& src)		{cmppd(dst, src, 0);}
 	void cmpeqpd(const XmmReg& dst, const Mem128& src)		{cmppd(dst, src, 0);}
 	void cmpltpd(const XmmReg& dst, const XmmReg& src)		{cmppd(dst, src, 1);}
@@ -3118,8 +3106,8 @@ struct Frontend
 	void cmpnlepd(const XmmReg& dst, const Mem128& src)		{cmppd(dst, src, 6);}
 	void cmpordpd(const XmmReg& dst, const XmmReg& src)		{cmppd(dst, src, 7);}
 	void cmpordpd(const XmmReg& dst, const Mem128& src)		{cmppd(dst, src, 7);}
-	void cmpsd(const XmmReg& dst, const XmmReg& src, const Imm8& opd3)	{AppendInstr(I_CMPSD, 0x0FC2, E_MANDATORY_PREFIX_F2, dst, src, opd3);}
-	void cmpsd(const XmmReg& dst, const Mem64& src, const Imm8& opd3)	{AppendInstr(I_CMPSD, 0x0FC2, E_MANDATORY_PREFIX_F2, dst, src, opd3);}
+	void cmpsd(const XmmReg& dst, const XmmReg& src, const Imm8& opd3)	{AppendInstr(I_CMPSD, 0x0FC2, E_MANDATORY_PREFIX_F2, RW(dst), R(src), opd3);}
+	void cmpsd(const XmmReg& dst, const Mem64& src, const Imm8& opd3)	{AppendInstr(I_CMPSD, 0x0FC2, E_MANDATORY_PREFIX_F2, RW(dst), R(src), opd3);}
 	void cmpeqsd(const XmmReg& dst, const XmmReg& src)		{cmpsd(dst, src, 0);}
 	void cmpeqsd(const XmmReg& dst, const Mem64& src)		{cmpsd(dst, src, 0);}
 	void cmpltsd(const XmmReg& dst, const XmmReg& src)		{cmpsd(dst, src, 1);}
@@ -3136,16 +3124,16 @@ struct Frontend
 	void cmpnlesd(const XmmReg& dst, const Mem64& src)		{cmpsd(dst, src, 6);}
 	void cmpordsd(const XmmReg& dst, const XmmReg& src)		{cmpsd(dst, src, 7);}
 	void cmpordsd(const XmmReg& dst, const Mem64& src)		{cmpsd(dst, src, 7);}
-	void comisd(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_COMISD,	0x0F2F, E_MANDATORY_PREFIX_66, dst, src);}
-	void comisd(const XmmReg& dst, const Mem64& src)		{AppendInstr(I_COMISD,	0x0F2F, E_MANDATORY_PREFIX_66, dst, src);}
-	void cvtdq2pd(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_CVTDQ2PD, 0x0FE6, E_MANDATORY_PREFIX_F3, dst, src);}
-	void cvtdq2pd(const XmmReg& dst, const Mem64& src)		{AppendInstr(I_CVTDQ2PD, 0x0FE6, E_MANDATORY_PREFIX_F3, dst, src);}
-	void cvtpd2dq(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_CVTPD2DQ, 0x0FE6, E_MANDATORY_PREFIX_F2, dst, src);}
-	void cvtpd2dq(const XmmReg& dst, const Mem128& src)		{AppendInstr(I_CVTPD2DQ, 0x0FE6, E_MANDATORY_PREFIX_F2, dst, src);}
-	void cvtpd2pi(const MmxReg& dst, const XmmReg& src)		{AppendInstr(I_CVTPD2PI, 0x0F2D, E_MANDATORY_PREFIX_66, dst, src);}
-	void cvtpd2pi(const MmxReg& dst, const Mem128& src)		{AppendInstr(I_CVTPD2PI, 0x0F2D, E_MANDATORY_PREFIX_66, dst, src);}
-	void cvtpd2ps(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_CVTPD2PS, 0x0F5A, E_MANDATORY_PREFIX_66, dst, src);}
-	void cvtpd2ps(const XmmReg& dst, const Mem128& src)		{AppendInstr(I_CVTPD2PS, 0x0F5A, E_MANDATORY_PREFIX_66, dst, src);}
+	void comisd(const XmmReg& src1, const XmmReg& src2)		{AppendInstr(I_COMISD,	0x0F2F, E_MANDATORY_PREFIX_66, R(src1), R(src2));}
+	void comisd(const XmmReg& src1, const Mem64& src2)		{AppendInstr(I_COMISD,	0x0F2F, E_MANDATORY_PREFIX_66, R(src1), R(src2));}
+	void cvtdq2pd(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_CVTDQ2PD, 0x0FE6, E_MANDATORY_PREFIX_F3, W(dst), R(src));}
+	void cvtdq2pd(const XmmReg& dst, const Mem64& src)		{AppendInstr(I_CVTDQ2PD, 0x0FE6, E_MANDATORY_PREFIX_F3, W(dst), R(src));}
+	void cvtpd2dq(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_CVTPD2DQ, 0x0FE6, E_MANDATORY_PREFIX_F2, W(dst), R(src));}
+	void cvtpd2dq(const XmmReg& dst, const Mem128& src)		{AppendInstr(I_CVTPD2DQ, 0x0FE6, E_MANDATORY_PREFIX_F2, W(dst), R(src));}
+	void cvtpd2pi(const MmxReg& dst, const XmmReg& src)		{AppendInstr(I_CVTPD2PI, 0x0F2D, E_MANDATORY_PREFIX_66, W(dst), R(src));}
+	void cvtpd2pi(const MmxReg& dst, const Mem128& src)		{AppendInstr(I_CVTPD2PI, 0x0F2D, E_MANDATORY_PREFIX_66, W(dst), R(src));}
+	void cvtpd2ps(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_CVTPD2PS, 0x0F5A, E_MANDATORY_PREFIX_66, W(dst), R(src));}
+	void cvtpd2ps(const XmmReg& dst, const Mem128& src)		{AppendInstr(I_CVTPD2PS, 0x0F5A, E_MANDATORY_PREFIX_66, W(dst), R(src));}
 	void cvtpi2pd(const XmmReg& dst, const MmxReg& src)		{AppendInstr(I_CVTPI2PD, 0x0F2A, E_MANDATORY_PREFIX_66, W(dst), R(src));}
 	void cvtpi2pd(const XmmReg& dst, const Mem64& src)		{AppendInstr(I_CVTPI2PD, 0x0F2A, E_MANDATORY_PREFIX_66, W(dst), R(src));}
 	void cvtps2dq(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_CVTPS2DQ, 0x0F5B, E_MANDATORY_PREFIX_66, W(dst), R(src));}
@@ -3160,43 +3148,43 @@ struct Frontend
 	void cvtsd2si(const Reg64& dst, const XmmReg& src)		{AppendInstr(I_CVTSD2SI, 0x0F2D, E_MANDATORY_PREFIX_F2 | E_REXW_PREFIX, W(dst), R(src));}
 	void cvtsd2si(const Reg64& dst, const Mem64& src)		{AppendInstr(I_CVTSD2SI, 0x0F2D, E_MANDATORY_PREFIX_F2 | E_REXW_PREFIX, W(dst), R(src));}
 #endif
-	void cvtsd2ss(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_CVTSD2SS, 0x0F5A, E_MANDATORY_PREFIX_F2, dst, src);}
-	void cvtsd2ss(const XmmReg& dst, const Mem64& src)		{AppendInstr(I_CVTSD2SS, 0x0F5A, E_MANDATORY_PREFIX_F2, dst, src);}
-	void cvtsi2sd(const XmmReg& dst, const Reg32& src)		{AppendInstr(I_CVTSI2SD, 0x0F2A, E_MANDATORY_PREFIX_F2, dst, src);}
-	void cvtsi2sd(const XmmReg& dst, const Mem32& src)		{AppendInstr(I_CVTSI2SD, 0x0F2A, E_MANDATORY_PREFIX_F2, dst, src);}
+	void cvtsd2ss(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_CVTSD2SS, 0x0F5A, E_MANDATORY_PREFIX_F2, RW(dst), R(src));}
+	void cvtsd2ss(const XmmReg& dst, const Mem64& src)		{AppendInstr(I_CVTSD2SS, 0x0F5A, E_MANDATORY_PREFIX_F2, RW(dst), R(src));}
+	void cvtsi2sd(const XmmReg& dst, const Reg32& src)		{AppendInstr(I_CVTSI2SD, 0x0F2A, E_MANDATORY_PREFIX_F2, RW(dst), R(src));}
+	void cvtsi2sd(const XmmReg& dst, const Mem32& src)		{AppendInstr(I_CVTSI2SD, 0x0F2A, E_MANDATORY_PREFIX_F2, RW(dst), R(src));}
 #ifdef JITASM64
-	void cvtsi2sd(const XmmReg& dst, const Reg64& src)		{AppendInstr(I_CVTSI2SD, 0x0F2A, E_MANDATORY_PREFIX_F2 | E_REXW_PREFIX, dst, src);}
-	void cvtsi2sd(const XmmReg& dst, const Mem64& src)		{AppendInstr(I_CVTSI2SD, 0x0F2A, E_MANDATORY_PREFIX_F2 | E_REXW_PREFIX, dst, src);}
+	void cvtsi2sd(const XmmReg& dst, const Reg64& src)		{AppendInstr(I_CVTSI2SD, 0x0F2A, E_MANDATORY_PREFIX_F2 | E_REXW_PREFIX, RW(dst), R(src));}
+	void cvtsi2sd(const XmmReg& dst, const Mem64& src)		{AppendInstr(I_CVTSI2SD, 0x0F2A, E_MANDATORY_PREFIX_F2 | E_REXW_PREFIX, RW(dst), R(src));}
 #endif
-	void cvtss2sd(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_CVTSS2SD,  0x0F5A, E_MANDATORY_PREFIX_F3, dst, src);}
-	void cvtss2sd(const XmmReg& dst, const Mem32& src)		{AppendInstr(I_CVTSS2SD,  0x0F5A, E_MANDATORY_PREFIX_F3, dst, src);}
-	void cvttpd2dq(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_CVTTPD2DQ, 0x0FE6, E_MANDATORY_PREFIX_66, dst, src);}
-	void cvttpd2dq(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_CVTTPD2DQ, 0x0FE6, E_MANDATORY_PREFIX_66, dst, src);}
-	void cvttpd2pi(const MmxReg& dst, const XmmReg& src)	{AppendInstr(I_CVTTPD2PI, 0x0F2C, E_MANDATORY_PREFIX_66, dst, src);}
-	void cvttpd2pi(const MmxReg& dst, const Mem128& src)	{AppendInstr(I_CVTTPD2PI, 0x0F2C, E_MANDATORY_PREFIX_66, dst, src);}
-	void cvttps2dq(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_CVTTPS2DQ, 0x0F5B, E_MANDATORY_PREFIX_F3, dst, src);}
-	void cvttps2dq(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_CVTTPS2DQ, 0x0F5B, E_MANDATORY_PREFIX_F3, dst, src);}
-	void cvttsd2si(const Reg32& dst, const XmmReg& src)		{AppendInstr(I_CVTTSD2SI, 0x0F2C, E_MANDATORY_PREFIX_F2, dst, src);}
-	void cvttsd2si(const Reg32& dst, const Mem64& src)		{AppendInstr(I_CVTTSD2SI, 0x0F2C, E_MANDATORY_PREFIX_F2, dst, src);}
+	void cvtss2sd(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_CVTSS2SD,  0x0F5A, E_MANDATORY_PREFIX_F3, RW(dst), R(src));}
+	void cvtss2sd(const XmmReg& dst, const Mem32& src)		{AppendInstr(I_CVTSS2SD,  0x0F5A, E_MANDATORY_PREFIX_F3, RW(dst), R(src));}
+	void cvttpd2dq(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_CVTTPD2DQ, 0x0FE6, E_MANDATORY_PREFIX_66, W(dst), R(src));}
+	void cvttpd2dq(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_CVTTPD2DQ, 0x0FE6, E_MANDATORY_PREFIX_66, W(dst), R(src));}
+	void cvttpd2pi(const MmxReg& dst, const XmmReg& src)	{AppendInstr(I_CVTTPD2PI, 0x0F2C, E_MANDATORY_PREFIX_66, W(dst), R(src));}
+	void cvttpd2pi(const MmxReg& dst, const Mem128& src)	{AppendInstr(I_CVTTPD2PI, 0x0F2C, E_MANDATORY_PREFIX_66, W(dst), R(src));}
+	void cvttps2dq(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_CVTTPS2DQ, 0x0F5B, E_MANDATORY_PREFIX_F3, W(dst), R(src));}
+	void cvttps2dq(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_CVTTPS2DQ, 0x0F5B, E_MANDATORY_PREFIX_F3, W(dst), R(src));}
+	void cvttsd2si(const Reg32& dst, const XmmReg& src)		{AppendInstr(I_CVTTSD2SI, 0x0F2C, E_MANDATORY_PREFIX_F2, W(dst), R(src));}
+	void cvttsd2si(const Reg32& dst, const Mem64& src)		{AppendInstr(I_CVTTSD2SI, 0x0F2C, E_MANDATORY_PREFIX_F2, W(dst), R(src));}
 #ifdef JITASM64
-	void cvttsd2si(const Reg64& dst, const XmmReg& src)		{AppendInstr(I_CVTTSD2SI, 0x0F2C, E_MANDATORY_PREFIX_F2 | E_REXW_PREFIX, dst, src);}
-	void cvttsd2si(const Reg64& dst, const Mem64& src)		{AppendInstr(I_CVTTSD2SI, 0x0F2C, E_MANDATORY_PREFIX_F2 | E_REXW_PREFIX, dst, src);}
+	void cvttsd2si(const Reg64& dst, const XmmReg& src)		{AppendInstr(I_CVTTSD2SI, 0x0F2C, E_MANDATORY_PREFIX_F2 | E_REXW_PREFIX, W(dst), R(src));}
+	void cvttsd2si(const Reg64& dst, const Mem64& src)		{AppendInstr(I_CVTTSD2SI, 0x0F2C, E_MANDATORY_PREFIX_F2 | E_REXW_PREFIX, W(dst), R(src));}
 #endif
-	void divpd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_DIVPD,	0x0F5E, E_MANDATORY_PREFIX_66, dst, src);}
-	void divpd(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_DIVPD,	0x0F5E, E_MANDATORY_PREFIX_66, dst, src);}
-	void divsd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_DIVSD,	0x0F5E, E_MANDATORY_PREFIX_F2, dst, src);}
-	void divsd(const XmmReg& dst, const Mem64& src)		{AppendInstr(I_DIVSD,	0x0F5E, E_MANDATORY_PREFIX_F2, dst, src);}
+	void divpd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_DIVPD,	0x0F5E, E_MANDATORY_PREFIX_66, RW(dst), R(src));}
+	void divpd(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_DIVPD,	0x0F5E, E_MANDATORY_PREFIX_66, RW(dst), R(src));}
+	void divsd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_DIVSD,	0x0F5E, E_MANDATORY_PREFIX_F2, RW(dst), R(src));}
+	void divsd(const XmmReg& dst, const Mem64& src)		{AppendInstr(I_DIVSD,	0x0F5E, E_MANDATORY_PREFIX_F2, RW(dst), R(src));}
 	void lfence()										{AppendInstr(I_LFENCE,	0x0FAEE8, 0);}
-	void maskmovdqu(const XmmReg& dst, const XmmReg& mask)	{AppendInstr(I_MASKMOVDQU, 0x0FF7, E_MANDATORY_PREFIX_66, dst, mask);}
-	void maxpd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MAXPD,	0x0F5F, E_MANDATORY_PREFIX_66, dst, src);}
-	void maxpd(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_MAXPD,	0x0F5F, E_MANDATORY_PREFIX_66, dst, src);}
-	void maxsd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MAXSD,	0x0F5F, E_MANDATORY_PREFIX_F2, dst, src);}
-	void maxsd(const XmmReg& dst, const Mem64& src)		{AppendInstr(I_MAXSD,	0x0F5F, E_MANDATORY_PREFIX_F2, dst, src);}
+	void maskmovdqu(const XmmReg& src, const XmmReg& mask, const Reg& dstptr)	{AppendInstr(I_MASKMOVDQU, 0x0FF7, E_MANDATORY_PREFIX_66, R(src), R(mask), Dummy(R(dstptr), edi));}
+	void maxpd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MAXPD,	0x0F5F, E_MANDATORY_PREFIX_66, RW(dst), R(src));}
+	void maxpd(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_MAXPD,	0x0F5F, E_MANDATORY_PREFIX_66, RW(dst), R(src));}
+	void maxsd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MAXSD,	0x0F5F, E_MANDATORY_PREFIX_F2, RW(dst), R(src));}
+	void maxsd(const XmmReg& dst, const Mem64& src)		{AppendInstr(I_MAXSD,	0x0F5F, E_MANDATORY_PREFIX_F2, RW(dst), R(src));}
 	void mfence()										{AppendInstr(I_MFENCE,	0x0FAEF0, 0);}
-	void minpd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MINPD,	0x0F5D, E_MANDATORY_PREFIX_66, dst, src);}
-	void minpd(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_MINPD,	0x0F5D, E_MANDATORY_PREFIX_66, dst, src);}
-	void minsd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MINSD,	0x0F5D, E_MANDATORY_PREFIX_F2, dst, src);}
-	void minsd(const XmmReg& dst, const Mem64& src)		{AppendInstr(I_MINSD,	0x0F5D, E_MANDATORY_PREFIX_F2, dst, src);}
+	void minpd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MINPD,	0x0F5D, E_MANDATORY_PREFIX_66, RW(dst), R(src));}
+	void minpd(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_MINPD,	0x0F5D, E_MANDATORY_PREFIX_66, RW(dst), R(src));}
+	void minsd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MINSD,	0x0F5D, E_MANDATORY_PREFIX_F2, RW(dst), R(src));}
+	void minsd(const XmmReg& dst, const Mem64& src)		{AppendInstr(I_MINSD,	0x0F5D, E_MANDATORY_PREFIX_F2, RW(dst), R(src));}
 	void movapd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_MOVAPD,	0x0F28, E_MANDATORY_PREFIX_66, W(dst), R(src));}
 	void movapd(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_MOVAPD,	0x0F28, E_MANDATORY_PREFIX_66, W(dst), R(src));}
 	void movapd(const Mem128& dst, const XmmReg& src)	{AppendInstr(I_MOVAPD,	0x0F29, E_MANDATORY_PREFIX_66, R(src), W(dst));}
@@ -4017,6 +4005,9 @@ namespace compiler
 
 		const T& operator[](size_t i) const {return data_[i];}
 		T& operator[](size_t i) {return data_[i];}
+
+		const T& back() const {return data_[size_ - 1];}
+		T& back() {return data_[size_ - 1];}
 	};
 
 	/// Register family
@@ -4118,21 +4109,21 @@ namespace compiler
 			// YMM
 			for (size_t i = 0; i < attributes_[2].size(); ++i) {
 				if (attributes_[2][i].spill && attributes_[2][i].size == 256 / 8 && attributes_[2][i].stack_slot.reg_.IsInvalid()) {
-					attributes_[2][i].stack_slot = stack_manager.Alloc(256 / 8);
+					attributes_[2][i].stack_slot = stack_manager.Alloc(256 / 8, 16);
 				}
 			}
 
 			// XMM
 			for (size_t i = 0; i < attributes_[2].size(); ++i) {
 				if (attributes_[2][i].spill && attributes_[2][i].size == 128 / 8 && attributes_[2][i].stack_slot.reg_.IsInvalid()) {
-					attributes_[2][i].stack_slot = stack_manager.Alloc(128 / 8);
+					attributes_[2][i].stack_slot = stack_manager.Alloc(128 / 8, 16);
 				}
 			}
 
 			// MMX
 			for (size_t i = 0; i < attributes_[1].size(); ++i) {
 				if (attributes_[1][i].spill && attributes_[1][i].stack_slot.reg_.IsInvalid()) {
-					attributes_[1][i].stack_slot = stack_manager.Alloc(64 / 8);
+					attributes_[1][i].stack_slot = stack_manager.Alloc(64 / 8, 8);
 				}
 			}
 
@@ -4140,9 +4131,9 @@ namespace compiler
 			for (size_t i = 0; i < attributes_[0].size(); ++i) {
 				if (attributes_[0][i].spill && attributes_[0][i].stack_slot.reg_.IsInvalid()) {
 #ifdef JITASM64
-					attributes_[0][i].stack_slot = stack_manager.Alloc(64 / 8);
+					attributes_[0][i].stack_slot = stack_manager.Alloc(64 / 8, 8);
 #else
-					attributes_[0][i].stack_slot = stack_manager.Alloc(32 / 8);
+					attributes_[0][i].stack_slot = stack_manager.Alloc(32 / 8, 4);
 #endif
 				}
 			}
@@ -4329,7 +4320,7 @@ namespace compiler
 				// Split interval in the following case:
 				// - The liveness is changed.
 				// - Current or last instruction has any constraints of register allocation.
-				// - Last instruction is I_PSEUDO_DECLARE_STACK_ARG
+				// - Last instruction is I_COMPILER_DECLARE_STACK_ARG
 				if (!reg_assignables.empty() || last_reg_constraints || last_stack_vars || !last_liveness || !last_liveness->is_equal(liveness)) {
 					intervals.push_back(Interval(instr_idx, liveness, stack_vars, reg_assignables));
 					last_liveness = &intervals.back().liveness;
@@ -4456,8 +4447,15 @@ namespace compiler
 			}
 		}
 
-		void AssignRegister(uint32 available_reg, const Interval *last_interval)
+		/// Assign register in basic block
+		/**
+		 * \param[in] available_reg	Available physical register mask
+		 * \param[in] last_interval	Last Interval as the hint of assignment
+		 * \return Used physical register mask
+		 */
+		uint32 AssignRegister(uint32 available_reg, const Interval *last_interval)
 		{
+			uint32 used_reg = 0;
 			std::vector<size_t> live_vars;
 			for (size_t interval_idx = 0; interval_idx < intervals.size(); ++interval_idx) {
 				const Interval *prior_interval = interval_idx > 0 ? &intervals[interval_idx - 1] : last_interval;
@@ -4576,7 +4574,11 @@ namespace compiler
 						cur_avail &= ~(1 << assigned_reg);
 					}
 				}
+
+				used_reg |= ~cur_avail & available_reg;
 			}
+
+			return used_reg;
 		}
 
 		void DumpIntervals(size_t block_id, bool dump_assigned_reg) const
@@ -4596,13 +4598,12 @@ namespace compiler
 		size_t instr_begin;					///< Begin instruction index of the basic block (inclusive)
 		size_t instr_end;					///< End instruction index of the basic block (exclusive)
 		size_t depth;						///< Depth-first order of Control flow
-		size_t dfs_instr_begin;				///< Begin instruction index in depth-first order
 		BasicBlock *dfs_parent;				///< Depth-first search tree parent
 		BasicBlock *immediate_dominator;	///< Immediate dominator
 		size_t loop_depth;					///< Loop nesting depth
 		Lifetime lifetime[3];				///< Variable lifetime (0: GP, 1: MMX, 2: XMM/YMM)
 
-		BasicBlock(size_t instr_begin_, size_t instr_end_, BasicBlock *successor0 = NULL, BasicBlock *successor1 = NULL) : instr_begin(instr_begin_), instr_end(instr_end_), depth((size_t)-1), dfs_instr_begin(0), dfs_parent(NULL), immediate_dominator(NULL), loop_depth(0) {
+		BasicBlock(size_t instr_begin_, size_t instr_end_, BasicBlock *successor0 = NULL, BasicBlock *successor1 = NULL) : instr_begin(instr_begin_), instr_end(instr_end_), depth((size_t)-1), dfs_parent(NULL), immediate_dominator(NULL), loop_depth(0) {
 			successor[0] = successor0;
 			successor[1] = successor1;
 		}
@@ -4813,7 +4814,6 @@ namespace compiler
 			}
 		}
 
-	public:
 		BlockSet::iterator initialize(size_t num_of_instructions) {
 			blocks_.clear();
 			depth_first_blocks_.clear();
@@ -4846,6 +4846,7 @@ namespace compiler
 			return new_block;
 		}
 
+	public:
 		BlockSet::iterator get_block(size_t instr_idx) {
 			BlockSet::iterator it = blocks_.upper_bound(BasicBlock(instr_idx, instr_idx));
 			return it != blocks_.begin() ? --it : blocks_.end();
@@ -4899,6 +4900,7 @@ namespace compiler
 			printf("}\n");
 		}
 
+		/// Build control flow graph from instruction list
 		void Build(const Frontend& f)
 		{
 			typedef BlockSet::iterator BlockIterator;
@@ -4955,63 +4957,105 @@ namespace compiler
 			// make depth first orderd list
 			MakeDepthFirstBlocks(&*get_block(0));
 
-			// numbering depth and set dfs_instr_begin
-			size_t dfs_instr_begin = 0;
+			// numbering depth
 			for (size_t i = 0; i < depth_first_blocks_.size(); ++i) {
 				depth_first_blocks_[i]->depth = i;
-				depth_first_blocks_[i]->dfs_instr_begin = dfs_instr_begin;
-				dfs_instr_begin += depth_first_blocks_[i]->instr_end - depth_first_blocks_[i]->instr_begin;
 			}
 
 			// detect loops
 			DetectLoops();
 		}
+
+		/// Build dummy control flow graph which has enter and exit blocks.
+		void BuildDummy(const Frontend& f)
+		{
+			BasicBlock *enter_block = &*initialize(f.instrs_.size());
+			BasicBlock *exit_block = enter_block->successor[0];
+
+			enter_block->depth = 0;
+			depth_first_blocks_.push_back(enter_block);
+			if (exit_block) {
+				exit_block->depth = 1;
+				exit_block->dfs_parent = enter_block;
+				exit_block->immediate_dominator = enter_block;
+				depth_first_blocks_.push_back(exit_block);
+			}
+		}
 	};
 
-	/// Re-number symbolic register ID
-	inline bool NormalizeSymbolicReg(Frontend& f, int (&num_of_sym_reg)[3])
+	/// Prepare compile
+	/**
+	 * - Re-number symbolic register ID.
+	 * - Check if register allocation is needed or not.
+	 * - Look over physical register use.
+	 *
+	 * \param[in,out]  instrs					Instruction list
+	 * \param[out]     modified_physical_reg	Modified physical register mask
+	 * \param[out]     need_reg_alloc			Register allocation is needed or not
+	 * \return There is any compile process if it is true.
+	 */
+	inline bool PrepareCompile(Frontend::InstrList& instrs, uint32 (&modified_physical_reg)[3], bool (&need_reg_alloc)[3])
 	{
 		struct RegIDMap {
 			int next_id_;
 			std::map<int, int> id_map_;
 			RegIDMap() : next_id_(NUM_OF_PHYSICAL_REG) {}
-			int GetNewID(int id) {
+			int GetNormalizedID(int id) {
 				std::map<int, int>::iterator it = id_map_.find(id);
-				if (it != id_map_.end()) {
-					return it->second;
-				}
+				if (it != id_map_.end()) {return it->second;}
 				int new_id = next_id_++;
 				id_map_.insert(std::pair<int, int>(id, new_id));
 				return new_id;
 			}
 		};
 		RegIDMap reg_id_map[3];		// GP, MMX, XMM/YMM
+		modified_physical_reg[0] = modified_physical_reg[1] = modified_physical_reg[2] = 0;
+		need_reg_alloc[0] = need_reg_alloc[1] = need_reg_alloc[2] = false;
+		bool compile_process = false;
 
-		for (Frontend::InstrList::iterator it = f.instrs_.begin(); it != f.instrs_.end(); ++it) {
+		for (Frontend::InstrList::iterator it = instrs.begin(); it != instrs.end(); ++it) {
+			const InstrID instr_id = it->GetID();
+			if (instr_id == I_COMPILER_DECLARE_REG_ARG || instr_id == I_COMPILER_DECLARE_STACK_ARG || instr_id == I_COMPILER_PROLOG || instr_id == I_COMPILER_EPILOG) {
+				compile_process = true;
+			}
+
 			for (size_t i = 0; i < Instr::MAX_OPERAND_COUNT; ++i) {
 				detail::Opd& opd = it->GetOpd(i);
-				if (opd.IsReg()) {
-					RegID reg = opd.GetReg();
+				if (opd.IsReg() && !opd.IsFpuReg()) {
+					const RegID& reg = opd.GetReg();
+					const size_t reg_family = GetRegFamily(reg.type);
 					if (reg.IsSymbolic()) {
-						opd.reg_.id = reg_id_map[GetRegFamily(reg.type)].GetNewID(reg.id);
+						opd.reg_.id = reg_id_map[reg_family].GetNormalizedID(reg.id);
+					} else if (opd.opdtype_ & O_TYPE_WRITE) {
+						// This physical register is modified
+						modified_physical_reg[reg_family] |= (1 << reg.id);
+						if ((opd.reg_assignable_ & (1 << reg.id)) == 0) {
+							// Specified physical register does not fit the instruction.
+							// Let's try to assign optimal physical register by register allocation.
+							need_reg_alloc[reg_family] = true;
+						}
 					}
 				} else if (opd.IsMem()) {
-					RegID base = opd.GetBase();
+					const RegID& base = opd.GetBase();
 					if (base.IsSymbolic()) {
-						opd.base_.id = reg_id_map[R_TYPE_GP].GetNewID(base.id);
+						opd.base_.id = reg_id_map[0].GetNormalizedID(base.id);
 					}
-					RegID index = opd.GetIndex();
+
+					const RegID& index = opd.GetIndex();
 					if (index.IsSymbolic()) {
-						opd.index_.id = reg_id_map[R_TYPE_GP].GetNewID(index.id);
+						opd.index_.id = reg_id_map[0].GetNormalizedID(index.id);
 					}
 				}
 			}
 		}
 
-		num_of_sym_reg[0] = reg_id_map[0].next_id_ - NUM_OF_PHYSICAL_REG;		// GP
-		num_of_sym_reg[1] = reg_id_map[1].next_id_ - NUM_OF_PHYSICAL_REG;		// MMX
-		num_of_sym_reg[2] = reg_id_map[2].next_id_ - NUM_OF_PHYSICAL_REG;		// XMM/YMM
-		return num_of_sym_reg[0] > 0 || num_of_sym_reg[1] > 0 || num_of_sym_reg[2] > 0;
+		for (size_t i = 0; i < 3; ++i) {
+			if (!need_reg_alloc[i] && reg_id_map[i].next_id_ > NUM_OF_PHYSICAL_REG) {
+				need_reg_alloc[i] = true;
+			}
+		}
+
+		return compile_process || need_reg_alloc[0] || need_reg_alloc[1] || need_reg_alloc[2];
 	}
 
 	/// check the instruction if it break register dependence
@@ -5046,7 +5090,7 @@ namespace compiler
 			for (size_t i = it->instr_begin; i != it->instr_end; ++i) {
 				const size_t instr_offset = i - it->instr_begin;
 				const Instr& instr = f.instrs_[i];
-				if (instr.GetID() == I_PSEUDO_DECLARE_REG_ARG) {
+				if (instr.GetID() == I_COMPILER_DECLARE_REG_ARG) {
 					// Declare function argument on register
 					const detail::Opd& opd0 = instr.GetOpd(0);
 					const RegID& reg = opd0.GetReg();
@@ -5055,7 +5099,7 @@ namespace compiler
 					if (opd1.IsMem()) {
 						var_manager.SetSpillSlot(reg.type, reg.id, Addr(opd1.GetBase(), opd1.GetDisp()));
 					}
-				} else if (instr.GetID() == I_PSEUDO_DECLARE_STACK_ARG) {
+				} else if (instr.GetID() == I_COMPILER_DECLARE_STACK_ARG) {
 					// Declare function argument on stack
 					const detail::Opd& opd0 = instr.GetOpd(0);
 					const RegID& reg = opd0.GetReg();
@@ -5146,9 +5190,17 @@ namespace compiler
 		}
 	}
 
-	inline void LinearScanRegisterAlloc(ControlFlowGraph& cfg, size_t reg_family, uint32 available_reg, std::vector<VarAttribute>& var_attrs)
+	/// Linear scan register allocation
+	/**
+	 * \param[in,out] cfg			Control flow graph and additional information
+	 * \param[in]     reg_family	Register family
+	 * \param[in]     available_reg	Available physical register mask
+	 * \param[out]    var_attrs		Variable attributes
+	 * \return	Used physical register mask
+	 */
+	inline uint32 LinearScanRegisterAlloc(ControlFlowGraph& cfg, size_t reg_family, uint32 available_reg, std::vector<VarAttribute>& var_attrs)
 	{
-		uint32 available_reg_count = detail::Count1Bits(available_reg);
+		const uint32 available_reg_count = detail::Count1Bits(available_reg);
 
 		std::vector<int> total_spill_cost;
 		for (ControlFlowGraph::BlockSet::iterator block = cfg.begin(); block != cfg.end(); ++block) {
@@ -5156,6 +5208,7 @@ namespace compiler
 			block->lifetime[reg_family].GetSpillCost(block->GetFrequency(), total_spill_cost);
 		}
 
+		uint32 used_reg = 0;
 		const Lifetime::Interval *last_interval = NULL;
 		size_t last_loop_depth = 0;
 		for (ControlFlowGraph::BlockList::iterator block = cfg.dfs_begin(); block != cfg.dfs_end(); ++block) {
@@ -5166,7 +5219,7 @@ namespace compiler
 			lifetime.SpillIdentification(available_reg_count, total_spill_cost, (*block)->GetFrequency(), last_loop_depth == loop_depth ? last_interval : NULL, var_attrs);
 
 			// Register assignment
-			lifetime.AssignRegister(available_reg, last_interval);
+			used_reg |= lifetime.AssignRegister(available_reg, last_interval);
 
 #ifdef JITASM_DEBUG_DUMP
 			lifetime.DumpIntervals((*block)->depth, true);
@@ -5176,6 +5229,8 @@ namespace compiler
 				last_loop_depth = loop_depth;
 			}
 		}
+
+		return used_reg;
 	}
 
 	/// General purpose register operator
@@ -5482,12 +5537,117 @@ namespace compiler
 		}
 	}
 
+	/// Generate prolog instructions
+	inline void GenerateProlog(Frontend& f, const uint32 (&preserved_reg)[3], const Addr& preserved_reg_stack)
+	{
+		avoid_unused_warn(preserved_reg_stack);
+
+		f.push(f.zbp);
+		f.mov(f.zbp, f.zsp);
+
+		size_t stack_size = f.stack_manager_.GetSize();
+
+		// Save general-purpose registers
+		size_t num_of_preserved_gp_reg = 0;
+		for (uint32 reg_mask = preserved_reg[0]; reg_mask != 0; ++num_of_preserved_gp_reg) {
+			uint32 reg_id = detail::bit_scan_forward(reg_mask);
+			f.push(Reg(static_cast<PhysicalRegID>(reg_id)));
+			reg_mask &= ~(1 << reg_id);
+		}
+
+#ifdef JITASM64
+		// Stack base
+		if (stack_size > 0) {
+			if (num_of_preserved_gp_reg & 1) {
+				// Copy with alignment
+				f.lea(f.rbx, f.ptr[f.rsp - 8]);
+				stack_size += 8;	// padding for keep alignment
+			} else {
+				f.mov(f.rbx, f.rsp);
+			}
+		}
+#else
+		if (stack_size > 0) {
+			// Align stack pointer
+			f.and(f.esp, 0xFFFFFFF0);
+
+			// Stack base
+			f.mov(f.ebx, f.esp);
+		}
+#endif
+
+		// Move stack pointer
+		if (stack_size > 0) {
+			f.sub(f.zsp, static_cast<uint32>(stack_size));
+		}
+
+#ifdef JITASM64
+		// Save xmm registers
+		uint32 reg_mask = preserved_reg[2];
+		for (size_t i = 0; reg_mask != 0; ++i) {
+			uint32 reg_id = detail::bit_scan_forward(reg_mask);
+			f.movaps(f.xmmword_ptr[preserved_reg_stack + 16 * i], XmmReg(static_cast<PhysicalRegID>(reg_id)));
+			reg_mask &= ~(1 << reg_id);
+		}
+#endif
+	}
+
+	/// Generate epilog instructions
+	inline void GenerateEpilog(Frontend& f, const uint32 (&preserved_reg)[3], const Addr& preserved_reg_stack)
+	{
+		avoid_unused_warn(preserved_reg_stack);
+
+		size_t stack_size = f.stack_manager_.GetSize();
+		const size_t num_of_preserved_gp_reg = detail::Count1Bits(preserved_reg[0]);
+
+#ifdef JITASM64
+		// Restore xmm registers
+		// Push the register id and index by saved order
+		FixedArray<uint32, 16> regs;
+		for (uint32 reg_mask = preserved_reg[2]; reg_mask != 0; ) {
+			uint32 reg_id = detail::bit_scan_forward(reg_mask);
+			regs.push_back(reg_id);
+			reg_mask &= ~(1 << reg_id);
+		}
+
+		// Insert restore instruction by inverse order
+		while (!regs.empty()) {
+			f.movaps(XmmReg(static_cast<PhysicalRegID>(regs.back())), f.xmmword_ptr[preserved_reg_stack + 16 * (regs.size() - 1)]);
+			regs.pop_back();
+		}
+
+		// Move stack pointer
+		if (stack_size > 0) {
+			if (num_of_preserved_gp_reg & 1) {
+				stack_size += 8;	// padding for keep alignment
+			}
+			f.add(f.zsp, static_cast<uint32>(stack_size));
+		}
+#else
+		// Move stack pointer
+		if (stack_size > 0) {
+			f.lea(f.zsp, f.ptr[f.zbp - num_of_preserved_gp_reg * 4]);
+		}
+#endif
+
+		// Restore general-purpose registers
+		for (uint32 reg_mask = preserved_reg[0]; reg_mask != 0; ) {
+			uint32 reg_id = detail::bit_scan_reverse(reg_mask);
+			f.pop(Reg(static_cast<PhysicalRegID>(reg_id)));
+			reg_mask &= ~(1 << reg_id);
+		}
+
+		f.pop(f.zbp);
+		f.ret();
+	}
+
 	/// Rewrite instructions
 	/**
 	 * - Replace symbolic register to physical register
 	 * - Generate instructions for register move and spill
+	 * - Generate function prolog and epilog
 	 */
-	inline void RewriteInstructions(Frontend& f, const ControlFlowGraph& cfg, const VariableManager& var_manager)
+	inline void RewriteInstructions(Frontend& f, const ControlFlowGraph& cfg, const VariableManager& var_manager, const uint32 (&preserved_reg)[3], const Addr& preserved_reg_stack)
 	{
 		// Prepare instruction number ordered labels for adjusting label position
 		struct OrderedLabel {
@@ -5525,7 +5685,7 @@ namespace compiler
 				continue;
 			}
 
-			// initialize interval_range
+			// Initialize interval_range
 			detail::ConstRange< std::vector<Lifetime::Interval> > interval_range[3];
 			for (size_t reg_family = 0; reg_family < 3; ++reg_family) {
 				interval_range[reg_family].first = block->lifetime[reg_family].intervals.begin();
@@ -5553,40 +5713,46 @@ namespace compiler
 					GenerateInterIntervalInstr(first_interval, *++interval_range[2].first, var_manager.GetAttributes(2), XmmRegOperator(&f, &var_manager));
 				}
 
+				const size_t cur_instr_index = f.instrs_.size();
 				const InstrID instr_id = org_instrs[org_instr_index].GetID();
-				if (instr_id == I_PSEUDO_DECLARE_REG_ARG || instr_id == I_PSEUDO_DECLARE_STACK_ARG) {
-					continue;
+				if (instr_id == I_COMPILER_DECLARE_REG_ARG || instr_id == I_COMPILER_DECLARE_STACK_ARG) {
+					// No actual machine code
+				} else if (instr_id == I_COMPILER_PROLOG) {
+					// Generate function prolog
+					GenerateProlog(f, preserved_reg, preserved_reg_stack);
+				} else if (instr_id == I_COMPILER_EPILOG) {
+					// Generate function epilog
+					GenerateEpilog(f, preserved_reg, preserved_reg_stack);
+				} else {
+					// Copy instruction
+					f.instrs_.push_back(org_instrs[org_instr_index]);
+					Instr &instr = f.instrs_.back();
+
+					// Replace symbolic register to physical register
+					for (size_t i = 0; i < Instr::MAX_OPERAND_COUNT; ++i) {
+						detail::Opd& opd = instr.GetOpd(i);
+						if (opd.IsReg()) {
+							if (opd.reg_.IsSymbolic()) {
+								opd.reg_.type = static_cast<RegType>(opd.reg_.type - R_TYPE_SYMBOLIC_GP);
+								opd.reg_.id = interval_range[GetRegFamily(opd.reg_.type)].first->assignment_table[opd.reg_.id];
+							}
+						} else if (opd.IsMem()) {
+							if (opd.base_.IsSymbolic()) {
+								opd.base_.type = R_TYPE_GP;
+								opd.base_.id = interval_range[0].first->assignment_table[opd.base_.id];
+							}
+							if (opd.index_.IsSymbolic()) {
+								opd.index_.type = R_TYPE_GP;
+								opd.index_.id = interval_range[0].first->assignment_table[opd.index_.id];
+							}
+						}
+					}
 				}
 
-				// copy instruction
-				const size_t cur_instr_index = f.instrs_.size();
-				f.instrs_.push_back(org_instrs[org_instr_index]);
-				Instr &instr = f.instrs_.back();
-
-				// adjust label position
+				// Adjust label position
 				while (cur_label != orderd_labels.end() && cur_label->instr_idx == org_instr_index) {
 					f.labels_[cur_label->id].instr_number += cur_instr_index - org_instr_index;
 					++cur_label;
-				}
-
-				// replace symbolic register to physical register
-				for (size_t i = 0; i < Instr::MAX_OPERAND_COUNT; ++i) {
-					detail::Opd& opd = instr.GetOpd(i);
-					if (opd.IsReg()) {
-						if (opd.reg_.IsSymbolic()) {
-							opd.reg_.type = static_cast<RegType>(opd.reg_.type - R_TYPE_SYMBOLIC_GP);
-							opd.reg_.id = interval_range[GetRegFamily(opd.reg_.type)].first->assignment_table[opd.reg_.id];
-						}
-					} else if (opd.IsMem()) {
-						if (opd.base_.IsSymbolic()) {
-							opd.base_.type = R_TYPE_GP;
-							opd.base_.id = interval_range[0].first->assignment_table[opd.base_.id];
-						}
-						if (opd.index_.IsSymbolic()) {
-							opd.index_.type = R_TYPE_GP;
-							opd.index_.id = interval_range[0].first->assignment_table[opd.index_.id];
-						}
-					}
 				}
 			}
 
@@ -5595,7 +5761,7 @@ namespace compiler
 			if (block->successor[0] && !block->successor[1]) {
 				// 1 successor
 
-				// remove last instruction if it is jump
+				// Remove last instruction if it is jump
 				Instr jump_instr(I_NOP, 0, 0);
 				if (Frontend::IsJump(f.instrs_.back().GetID())) {
 					jump_instr = f.instrs_.back();
@@ -5605,7 +5771,7 @@ namespace compiler
 				JITASM_TRACE("==== Edge to Block%d\n", block->successor[0]->depth);
 				GenerateInterBlockInstr(&*block, block->successor[0], f, var_manager);
 
-				// add last instruction if it is jump
+				// Add last instruction if it is jump
 				if (Frontend::IsJump(jump_instr.GetID())) {
 					f.instrs_.push_back(jump_instr);
 				}
@@ -5615,76 +5781,108 @@ namespace compiler
 				const size_t jump_instr_idx = f.instrs_.size() - 1;
 				const size_t label_successor1 = static_cast<size_t>(f.instrs_.back().GetOpd(0).GetImm());
 
-				// generate inter-block instructions between current block and successor 1 separately
+				// Generate inter-block instructions between current block and successor 1 separately
 				Frontend::InstrList temp_instrs;
 				temp_instrs.swap(f.instrs_);
 				JITASM_TRACE("==== Edge to Block%d\n", block->successor[1]->depth);
 				GenerateInterBlockInstr(&*block, block->successor[1], f, var_manager);
 				temp_instrs.swap(f.instrs_);
 
-				// insert inter-block instructions between current block and successor 0
+				// Insert inter-block instructions between current block and successor 0
 				JITASM_TRACE("==== Edge to Block%d\n", block->successor[0]->depth);
 				GenerateInterBlockInstr(&*block, block->successor[0], f, var_manager);
 
 				if (!temp_instrs.empty()) {
-					// insert inter-block instructions between current block and successor 1 and change jump flow
+					// Insert inter-block instructions between current block and successor 1 and change jump flow
 
-					// jump to successor0
+					// Jump to successor0
 					const size_t label_successor0 = f.NewLabelID("");
 					f.AppendJmp(label_successor0);
 
-					// change conditional jump to successor1_edge instead of successor1
+					// Change conditional jump to successor1_edge instead of successor1
 					const size_t label_successor1_edge = f.NewLabelID("");
 					f.L(label_successor1_edge);
 					Frontend::ChangeLabelID(f.instrs_[jump_instr_idx], label_successor1_edge);
 
-					// insert instructions
+					// Insert instructions
 					f.instrs_.insert(f.instrs_.end(), temp_instrs.begin(), temp_instrs.end());
 					f.AppendJmp(label_successor1);
 
-					// label of successor0 block
+					// Label of successor0 block
 					f.L(label_successor0);
 				}
 			}
 		}
 	}
 
-	inline bool RegisterAllocation(Frontend& f)
+	/// Compile
+	inline void Compile(Frontend& f)
 	{
-		int num_of_sym_reg[3];
-		if (!NormalizeSymbolicReg(f, num_of_sym_reg)) {
-			return true;	// no need to register allocation
+#ifdef JITASM64
+		// Available registers : rax, rcx, rdx, rsi, rdi, r8 ~ r15, mm0 ~ mm7, xmm0/ymm0 ~ xmm15/ymm15
+		const uint32 available_reg[3] = {0xFFC7, 0xFF, 0xFFFF};
+
+		// Preserved registers : rbx, rsi, rdi, r12 ~ r15, xmm6 ~ xmm15
+		uint32 preserved_reg[3] = {0xF0C8, 0, 0xFFC0};
+#else
+		// Available registers : eax, ecx, edx, esi, edi, mm0 ~ mm7, xmm0/ymm0 ~ xmm7/ymm7
+		const uint32 available_reg[3] = {0xC7, 0xFF, 0xFF};
+
+		// Preserved registers : ebx, esi, edi
+		uint32 preserved_reg[3] = {0xC8, 0, 0};
+#endif
+
+		uint32 used_physical_reg[3];
+		bool need_reg_alloc[3];
+		if (!PrepareCompile(f.instrs_, used_physical_reg, need_reg_alloc)) {
+			// No compile process
+			return;
 		}
 
 		VariableManager var_manager;
-
 		ControlFlowGraph cfg;
-		cfg.Build(f);
 
-		LiveVariableAnalysis(f, cfg, var_manager);
+		if (need_reg_alloc[0] || need_reg_alloc[1] || need_reg_alloc[2]) {
+			// Register allocation process
+
+			// Build CFG including loop detection
+			cfg.Build(f);
+
+			// Live variable analysis
+			LiveVariableAnalysis(f, cfg, var_manager);
+
+			// Linear scan register allocation
+			for (size_t reg_family = 0; reg_family < 3; ++reg_family) {
+				if (need_reg_alloc[reg_family]) {
+					used_physical_reg[reg_family] = LinearScanRegisterAlloc(cfg, reg_family, available_reg[reg_family], var_manager.GetAttributes(reg_family));
+				}
+			}
+		} else {
+			// No register allocation
+			// Build dummy CFG
+			cfg.BuildDummy(f);
+		}
 
 #ifdef JITASM_DEBUG_DUMP
 		cfg.DumpDot();
 #endif
 
-#ifdef JITASM64
-		// rax, rcx, rdx, rbx, rsi, rdi, r8 ~ r15, mm0 ~ mm7, xmm0/ymm0 ~ xmm15/ymm15
-		uint32 available[3] = {0xFFCF, 0xFF, 0xFFFF};
-#else
-		// eax, ecx, edx, ebx, esi, edi, mm0 ~ mm7, xmm0/ymm0 ~ xmm7/ymm7
-		uint32 available[3] = {0xCF, 0xFF, 0xFF};
-#endif
-		for (size_t reg_family = 0; reg_family < 3; ++reg_family) {
-			if (num_of_sym_reg[reg_family] > 0) {
-				LinearScanRegisterAlloc(cfg, reg_family, available[reg_family], var_manager.GetAttributes(reg_family));
-			}
+		// Identify saving registers
+		preserved_reg[0] &= used_physical_reg[0];
+		preserved_reg[1] &= used_physical_reg[1];
+		preserved_reg[2] &= used_physical_reg[2];
+
+		// Reserve stack for saving xmm register
+		Addr preserved_reg_stack(RegID::Invalid(), 0);
+		if (preserved_reg[2] != 0) {
+			// For saving xmm registers
+			preserved_reg_stack = f.stack_manager_.Alloc(detail::Count1Bits(preserved_reg[2]) * 16, 16);
 		}
 
+		// Allocate stack for spill variable
 		var_manager.AllocSpillSlots(f.stack_manager_);
 
-		RewriteInstructions(f, cfg, var_manager);
-
-		return true;
+		RewriteInstructions(f, cfg, var_manager, preserved_reg, preserved_reg_stack);
 	}
 
 }	// namespace compiler
@@ -6428,9 +6626,9 @@ namespace detail {
 		{
 			if (ResultT<R>::ArgR) {
 #ifdef JITASM64
-				return ArgInfo(Addr(RegID::CreatePhysicalRegID(R_TYPE_GP, RBP), sizeof(void *) * 2), RCX);
+				return ArgInfo(Addr(RegID::CreatePhysicalRegID(R_TYPE_GP, RBP), SIZE_OF_GP_REG * 2), RCX);
 #else
-				return ArgInfo(Addr(RegID::CreatePhysicalRegID(R_TYPE_GP, EBP), sizeof(void *) * 2), INVALID);
+				return ArgInfo(Addr(RegID::CreatePhysicalRegID(R_TYPE_GP, EBP), SIZE_OF_GP_REG * 2), INVALID);
 #endif
 			} else {
 				return ArgInfo(Addr(RegID::Invalid(), 0), INVALID);
@@ -6438,7 +6636,7 @@ namespace detail {
 		}
 
 		template<class R, class A1>
-		ArgInfo ArgInfo1()	{ return ArgInfo(Addr(RegID::CreatePhysicalRegID(R_TYPE_GP, EBP), sizeof(void *) * (2 + ResultT<R>::ArgR)), static_cast<PhysicalRegID>(ArgTraits<ResultT<R>::ArgR + 0, A1>::reg_id)); }
+		ArgInfo ArgInfo1()	{ return ArgInfo(Addr(RegID::CreatePhysicalRegID(R_TYPE_GP, EBP), SIZE_OF_GP_REG * (2 + ResultT<R>::ArgR)), static_cast<PhysicalRegID>(ArgTraits<ResultT<R>::ArgR + 0, A1>::reg_id)); }
 		template<class R, class A1, class A2>
 		ArgInfo ArgInfo2()	{ return ArgInfo1<R, A1>().Next< ArgTraits<ResultT<R>::ArgR + 0, A1> >(ArgTraits<ResultT<R>::ArgR + 1, A2>::reg_id); }
 		template<class R, class A1, class A2, class A3>
@@ -6693,6 +6891,7 @@ struct function_cdecl : Frontend
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
 		using namespace detail::calling_convention_cdecl;
+		Prolog();
 		detail::ResultDest result_dst(*this, ResultInfo<R>());
 		static_cast<Derived *>(this)->main(
 			Arg<A1>(*this, ArgInfo1<R,A1>()),
@@ -6706,8 +6905,7 @@ struct function_cdecl : Frontend
 			Arg<A9>(*this, ArgInfo9<R,A1,A2,A3,A4,A5,A6,A7,A8,A9>()),
 			Arg<A10>(*this, ArgInfo10<R,A1,A2,A3,A4,A5,A6,A7,A8,A9,A10>())
 			).StoreResult(*this, result_dst);
-		compiler::RegisterAllocation(*this);
-		MakePrologAndEpilog();
+		Epilog();
 	}
 };
 
@@ -6720,6 +6918,7 @@ struct function_cdecl<void, Derived, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10> : 
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
 		using namespace detail::calling_convention_cdecl;
+		Prolog();
 		static_cast<Derived *>(this)->main(
 			Arg<A1>(*this, ArgInfo1<void,A1>()),
 			Arg<A2>(*this, ArgInfo2<void,A1,A2>()),
@@ -6731,8 +6930,7 @@ struct function_cdecl<void, Derived, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10> : 
 			Arg<A8>(*this, ArgInfo8<void,A1,A2,A3,A4,A5,A6,A7,A8>()),
 			Arg<A9>(*this, ArgInfo9<void,A1,A2,A3,A4,A5,A6,A7,A8,A9>()),
 			Arg<A10>(*this, ArgInfo10<void,A1,A2,A3,A4,A5,A6,A7,A8,A9,A10>()));
-		compiler::RegisterAllocation(*this);
-		MakePrologAndEpilog();
+		Epilog();
 	}
 };
 
@@ -6747,6 +6945,7 @@ struct function_cdecl<R, Derived, A1, A2, A3, A4, A5, A6, A7, A8, A9, detail::Ar
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
 		using namespace detail::calling_convention_cdecl;
+		Prolog();
 		detail::ResultDest result_dst(*this, ResultInfo<R>());
 		static_cast<Derived *>(this)->main(
 			Arg<A1>(*this, ArgInfo1<R,A1>()),
@@ -6759,8 +6958,7 @@ struct function_cdecl<R, Derived, A1, A2, A3, A4, A5, A6, A7, A8, A9, detail::Ar
 			Arg<A8>(*this, ArgInfo8<R,A1,A2,A3,A4,A5,A6,A7,A8>()),
 			Arg<A9>(*this, ArgInfo9<R,A1,A2,A3,A4,A5,A6,A7,A8,A9>())
 			).StoreResult(*this, result_dst);
-		compiler::RegisterAllocation(*this);
-		MakePrologAndEpilog();
+		Epilog();
 	}
 };
 
@@ -6773,6 +6971,7 @@ struct function_cdecl<void, Derived, A1, A2, A3, A4, A5, A6, A7, A8, A9, detail:
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
 		using namespace detail::calling_convention_cdecl;
+		Prolog();
 		static_cast<Derived *>(this)->main(
 			Arg<A1>(*this, ArgInfo1<void,A1>()),
 			Arg<A2>(*this, ArgInfo2<void,A1,A2>()),
@@ -6783,8 +6982,7 @@ struct function_cdecl<void, Derived, A1, A2, A3, A4, A5, A6, A7, A8, A9, detail:
 			Arg<A7>(*this, ArgInfo7<void,A1,A2,A3,A4,A5,A6,A7>()),
 			Arg<A8>(*this, ArgInfo8<void,A1,A2,A3,A4,A5,A6,A7,A8>()),
 			Arg<A9>(*this, ArgInfo9<void,A1,A2,A3,A4,A5,A6,A7,A8,A9>()));
-		compiler::RegisterAllocation(*this);
-		MakePrologAndEpilog();
+		Epilog();
 	}
 };
 
@@ -6799,6 +6997,7 @@ struct function_cdecl<R, Derived, A1, A2, A3, A4, A5, A6, A7, A8, detail::ArgNon
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
 		using namespace detail::calling_convention_cdecl;
+		Prolog();
 		detail::ResultDest result_dst(*this, ResultInfo<R>());
 		static_cast<Derived *>(this)->main(
 			Arg<A1>(*this, ArgInfo1<R,A1>()),
@@ -6810,8 +7009,7 @@ struct function_cdecl<R, Derived, A1, A2, A3, A4, A5, A6, A7, A8, detail::ArgNon
 			Arg<A7>(*this, ArgInfo7<R,A1,A2,A3,A4,A5,A6,A7>()),
 			Arg<A8>(*this, ArgInfo8<R,A1,A2,A3,A4,A5,A6,A7,A8>())
 			).StoreResult(*this, result_dst);
-		compiler::RegisterAllocation(*this);
-		MakePrologAndEpilog();
+		Epilog();
 	}
 };
 
@@ -6824,6 +7022,7 @@ struct function_cdecl<void, Derived, A1, A2, A3, A4, A5, A6, A7, A8, detail::Arg
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
 		using namespace detail::calling_convention_cdecl;
+		Prolog();
 		static_cast<Derived *>(this)->main(
 			Arg<A1>(*this, ArgInfo1<void,A1>()),
 			Arg<A2>(*this, ArgInfo2<void,A1,A2>()),
@@ -6833,8 +7032,7 @@ struct function_cdecl<void, Derived, A1, A2, A3, A4, A5, A6, A7, A8, detail::Arg
 			Arg<A6>(*this, ArgInfo6<void,A1,A2,A3,A4,A5,A6>()),
 			Arg<A7>(*this, ArgInfo7<void,A1,A2,A3,A4,A5,A6,A7>()),
 			Arg<A8>(*this, ArgInfo8<void,A1,A2,A3,A4,A5,A6,A7,A8>()));
-		compiler::RegisterAllocation(*this);
-		MakePrologAndEpilog();
+		Epilog();
 	}
 };
 
@@ -6849,6 +7047,7 @@ struct function_cdecl<R, Derived, A1, A2, A3, A4, A5, A6, A7, detail::ArgNone, d
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
 		using namespace detail::calling_convention_cdecl;
+		Prolog();
 		detail::ResultDest result_dst(*this, ResultInfo<R>());
 		static_cast<Derived *>(this)->main(
 			Arg<A1>(*this, ArgInfo1<R,A1>()),
@@ -6859,8 +7058,7 @@ struct function_cdecl<R, Derived, A1, A2, A3, A4, A5, A6, A7, detail::ArgNone, d
 			Arg<A6>(*this, ArgInfo6<R,A1,A2,A3,A4,A5,A6>()),
 			Arg<A7>(*this, ArgInfo7<R,A1,A2,A3,A4,A5,A6,A7>())
 			).StoreResult(*this, result_dst);
-		compiler::RegisterAllocation(*this);
-		MakePrologAndEpilog();
+		Epilog();
 	}
 };
 
@@ -6873,6 +7071,7 @@ struct function_cdecl<void, Derived, A1, A2, A3, A4, A5, A6, A7, detail::ArgNone
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
 		using namespace detail::calling_convention_cdecl;
+		Prolog();
 		static_cast<Derived *>(this)->main(
 			Arg<A1>(*this, ArgInfo1<void,A1>()),
 			Arg<A2>(*this, ArgInfo2<void,A1,A2>()),
@@ -6881,8 +7080,7 @@ struct function_cdecl<void, Derived, A1, A2, A3, A4, A5, A6, A7, detail::ArgNone
 			Arg<A5>(*this, ArgInfo5<void,A1,A2,A3,A4,A5>()),
 			Arg<A6>(*this, ArgInfo6<void,A1,A2,A3,A4,A5,A6>()),
 			Arg<A7>(*this, ArgInfo7<void,A1,A2,A3,A4,A5,A6,A7>()));
-		compiler::RegisterAllocation(*this);
-		MakePrologAndEpilog();
+		Epilog();
 	}
 };
 
@@ -6897,6 +7095,7 @@ struct function_cdecl<R, Derived, A1, A2, A3, A4, A5, A6, detail::ArgNone, detai
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
 		using namespace detail::calling_convention_cdecl;
+		Prolog();
 		detail::ResultDest result_dst(*this, ResultInfo<R>());
 		static_cast<Derived *>(this)->main(
 			Arg<A1>(*this, ArgInfo1<R,A1>()),
@@ -6906,8 +7105,7 @@ struct function_cdecl<R, Derived, A1, A2, A3, A4, A5, A6, detail::ArgNone, detai
 			Arg<A5>(*this, ArgInfo5<R,A1,A2,A3,A4,A5>()),
 			Arg<A6>(*this, ArgInfo6<R,A1,A2,A3,A4,A5,A6>())
 			).StoreResult(*this, result_dst);
-		compiler::RegisterAllocation(*this);
-		MakePrologAndEpilog();
+		Epilog();
 	}
 };
 
@@ -6920,6 +7118,7 @@ struct function_cdecl<void, Derived, A1, A2, A3, A4, A5, A6, detail::ArgNone, de
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
 		using namespace detail::calling_convention_cdecl;
+		Prolog();
 		static_cast<Derived *>(this)->main(
 			Arg<A1>(*this, ArgInfo1<void,A1>()),
 			Arg<A2>(*this, ArgInfo2<void,A1,A2>()),
@@ -6927,8 +7126,7 @@ struct function_cdecl<void, Derived, A1, A2, A3, A4, A5, A6, detail::ArgNone, de
 			Arg<A4>(*this, ArgInfo4<void,A1,A2,A3,A4>()),
 			Arg<A5>(*this, ArgInfo5<void,A1,A2,A3,A4,A5>()),
 			Arg<A6>(*this, ArgInfo6<void,A1,A2,A3,A4,A5,A6>()));
-		compiler::RegisterAllocation(*this);
-		MakePrologAndEpilog();
+		Epilog();
 	}
 };
 
@@ -6943,6 +7141,7 @@ struct function_cdecl<R, Derived, A1, A2, A3, A4, A5, detail::ArgNone, detail::A
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
 		using namespace detail::calling_convention_cdecl;
+		Prolog();
 		detail::ResultDest result_dst(*this, ResultInfo<R>());
 		static_cast<Derived *>(this)->main(
 			Arg<A1>(*this, ArgInfo1<R,A1>()),
@@ -6951,8 +7150,7 @@ struct function_cdecl<R, Derived, A1, A2, A3, A4, A5, detail::ArgNone, detail::A
 			Arg<A4>(*this, ArgInfo4<R,A1,A2,A3,A4>()),
 			Arg<A5>(*this, ArgInfo5<R,A1,A2,A3,A4,A5>())
 			).StoreResult(*this, result_dst);
-		compiler::RegisterAllocation(*this);
-		MakePrologAndEpilog();
+		Epilog();
 	}
 };
 
@@ -6965,14 +7163,14 @@ struct function_cdecl<void, Derived, A1, A2, A3, A4, A5, detail::ArgNone, detail
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
 		using namespace detail::calling_convention_cdecl;
+		Prolog();
 		static_cast<Derived *>(this)->main(
 			Arg<A1>(*this, ArgInfo1<void,A1>()),
 			Arg<A2>(*this, ArgInfo2<void,A1,A2>()),
 			Arg<A3>(*this, ArgInfo3<void,A1,A2,A3>()),
 			Arg<A4>(*this, ArgInfo4<void,A1,A2,A3,A4>()),
 			Arg<A5>(*this, ArgInfo5<void,A1,A2,A3,A4,A5>()));
-		compiler::RegisterAllocation(*this);
-		MakePrologAndEpilog();
+		Epilog();
 	}
 };
 
@@ -6987,6 +7185,7 @@ struct function_cdecl<R, Derived, A1, A2, A3, A4, detail::ArgNone, detail::ArgNo
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
 		using namespace detail::calling_convention_cdecl;
+		Prolog();
 		detail::ResultDest result_dst(*this, ResultInfo<R>());
 		static_cast<Derived *>(this)->main(
 			Arg<A1>(*this, ArgInfo1<R,A1>()),
@@ -6994,8 +7193,7 @@ struct function_cdecl<R, Derived, A1, A2, A3, A4, detail::ArgNone, detail::ArgNo
 			Arg<A3>(*this, ArgInfo3<R,A1,A2,A3>()),
 			Arg<A4>(*this, ArgInfo4<R,A1,A2,A3,A4>())
 			).StoreResult(*this, result_dst);
-		compiler::RegisterAllocation(*this);
-		MakePrologAndEpilog();
+		Epilog();
 	}
 };
 
@@ -7008,13 +7206,13 @@ struct function_cdecl<void, Derived, A1, A2, A3, A4, detail::ArgNone, detail::Ar
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
 		using namespace detail::calling_convention_cdecl;
+		Prolog();
 		static_cast<Derived *>(this)->main(
 			Arg<A1>(*this, ArgInfo1<void,A1>()),
 			Arg<A2>(*this, ArgInfo2<void,A1,A2>()),
 			Arg<A3>(*this, ArgInfo3<void,A1,A2,A3>()),
 			Arg<A4>(*this, ArgInfo4<void,A1,A2,A3,A4>()));
-		compiler::RegisterAllocation(*this);
-		MakePrologAndEpilog();
+		Epilog();
 	}
 };
 
@@ -7029,14 +7227,14 @@ struct function_cdecl<R, Derived, A1, A2, A3, detail::ArgNone, detail::ArgNone, 
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
 		using namespace detail::calling_convention_cdecl;
+		Prolog();
 		detail::ResultDest result_dst(*this, ResultInfo<R>());
 		static_cast<Derived *>(this)->main(
 			Arg<A1>(*this, ArgInfo1<R,A1>()),
 			Arg<A2>(*this, ArgInfo2<R,A1,A2>()),
 			Arg<A3>(*this, ArgInfo3<R,A1,A2,A3>())
 			).StoreResult(*this, result_dst);
-		compiler::RegisterAllocation(*this);
-		MakePrologAndEpilog();
+		Epilog();
 	}
 };
 
@@ -7049,12 +7247,12 @@ struct function_cdecl<void, Derived, A1, A2, A3, detail::ArgNone, detail::ArgNon
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
 		using namespace detail::calling_convention_cdecl;
+		Prolog();
 		static_cast<Derived *>(this)->main(
 			Arg<A1>(*this, ArgInfo1<void,A1>()),
 			Arg<A2>(*this, ArgInfo2<void,A1,A2>()),
 			Arg<A3>(*this, ArgInfo3<void,A1,A2,A3>()));
-		compiler::RegisterAllocation(*this);
-		MakePrologAndEpilog();
+		Epilog();
 	}
 };
 
@@ -7069,13 +7267,13 @@ struct function_cdecl<R, Derived, A1, A2, detail::ArgNone, detail::ArgNone, deta
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
 		using namespace detail::calling_convention_cdecl;
+		Prolog();
 		detail::ResultDest result_dst(*this, ResultInfo<R>());
 		static_cast<Derived *>(this)->main(
 			Arg<A1>(*this, ArgInfo1<R,A1>()),
 			Arg<A2>(*this, ArgInfo2<R,A1,A2>())
 			).StoreResult(*this, result_dst);
-		compiler::RegisterAllocation(*this);
-		MakePrologAndEpilog();
+		Epilog();
 	}
 };
 
@@ -7088,11 +7286,11 @@ struct function_cdecl<void, Derived, A1, A2, detail::ArgNone, detail::ArgNone, d
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
 		using namespace detail::calling_convention_cdecl;
+		Prolog();
 		static_cast<Derived *>(this)->main(
 			Arg<A1>(*this, ArgInfo1<void,A1>()),
 			Arg<A2>(*this, ArgInfo2<void,A1,A2>()));
-		compiler::RegisterAllocation(*this);
-		MakePrologAndEpilog();
+		Epilog();
 	}
 };
 
@@ -7107,10 +7305,10 @@ struct function_cdecl<R, Derived, A1, detail::ArgNone, detail::ArgNone, detail::
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
 		using namespace detail::calling_convention_cdecl;
+		Prolog();
 		detail::ResultDest result_dst(*this, ResultInfo<R>());
 		static_cast<Derived *>(this)->main(Arg<A1>(*this, ArgInfo1<R,A1>())).StoreResult(*this, result_dst);
-		compiler::RegisterAllocation(*this);
-		MakePrologAndEpilog();
+		Epilog();
 	}
 };
 
@@ -7123,9 +7321,9 @@ struct function_cdecl<void, Derived, A1, detail::ArgNone, detail::ArgNone, detai
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
 		using namespace detail::calling_convention_cdecl;
+		Prolog();
 		static_cast<Derived *>(this)->main(Arg<A1>(*this, ArgInfo1<void,A1>()));
-		compiler::RegisterAllocation(*this);
-		MakePrologAndEpilog();
+		Epilog();
 	}
 };
 
@@ -7139,10 +7337,10 @@ struct function_cdecl<R, Derived, detail::ArgNone, detail::ArgNone, detail::ArgN
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
+		Prolog();
 		detail::ResultDest result_dst(*this, detail::calling_convention_cdecl::ResultInfo<R>());
 		static_cast<Derived *>(this)->main().StoreResult(*this, result_dst);
-		compiler::RegisterAllocation(*this);
-		MakePrologAndEpilog();
+		Epilog();
 	}
 };
 
@@ -7154,9 +7352,9 @@ struct function_cdecl<void, Derived, detail::ArgNone, detail::ArgNone, detail::A
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
+		Prolog();
 		static_cast<Derived *>(this)->main();
-		compiler::RegisterAllocation(*this);
-		MakePrologAndEpilog();
+		Epilog();
 	}
 };
 
