@@ -3494,7 +3494,7 @@ masm_test_function_return_char proc
 	movzx esi, cl
 	mov al, cl
 	pop rsi
-	leave
+	pop rbp
 	ret
 masm_test_function_return_char endp
 
@@ -3505,7 +3505,7 @@ masm_test_function_return_short proc
 	push rbp
 	mov rbp, rsp
 	mov ax, word ptr[rsi]
-	leave
+	pop rbp
 	ret
 masm_test_function_return_short endp
 
@@ -3516,7 +3516,7 @@ masm_test_function_return_int_imm proc
 	push rbp
 	mov rbp, rsp
 	mov eax, 16
-	leave
+	pop rbp
 	ret
 masm_test_function_return_int_imm endp
 
@@ -3526,7 +3526,7 @@ masm_test_function_return_int_imm endp
 masm_test_function_return_int_eax proc
 	push rbp
 	mov rbp, rsp
-	leave
+	pop rbp
 	ret
 masm_test_function_return_int_eax endp
 
@@ -3538,7 +3538,7 @@ masm_test_function_return_float_imm proc
 	mov rbp, rsp
 	mov dword ptr[rsp - 4], 41300000h
 	movss xmm0, dword ptr[rsp - 4]
-	leave
+	pop rbp
 	ret
 masm_test_function_return_float_imm endp
 
@@ -3548,13 +3548,14 @@ masm_test_function_return_float_imm endp
 masm_test_function_return_float_xmm proc
 	push rbp
 	mov rbp, rsp
+	mov rbx, rsp
 	sub rsp, 16
-	movdqa xmmword ptr[rsp], xmm7
+	movaps xmmword ptr[rbx - 16], xmm7		; save xmm7
 	movss xmm7, dword ptr[rsp]
 	movss xmm0, xmm7
-	movdqa xmm7, xmmword ptr[rsp]
+	movaps xmm7, xmmword ptr[rbx - 16]		; restore xmm7
 	add rsp, 16
-	leave
+	pop rbp
 	ret
 masm_test_function_return_float_xmm endp
 
@@ -3566,7 +3567,7 @@ masm_test_function_return_float_ptr proc
 	mov rbp, rsp
 	movss dword ptr[rbp + 16], xmm0
 	movss xmm0, dword ptr[rbp + 16]
-	leave
+	pop rbp
 	ret
 masm_test_function_return_float_ptr endp
 
@@ -3580,7 +3581,7 @@ masm_test_function_return_float_st0 proc
 	fld real4 ptr[rbp + 16]
 	fstp real4 ptr[rsp - 4]
 	movss xmm0, dword ptr[rsp - 4]
-	leave
+	pop rbp
 	ret
 masm_test_function_return_float_st0 endp
 
@@ -3593,7 +3594,7 @@ masm_test_function_return_double_imm proc
 	mov dword ptr[rsp - 8], 0
 	mov dword ptr[rsp - 4], 40260000h
 	movsd xmm0, qword ptr[rsp - 8]
-	leave
+	pop rbp
 	ret
 masm_test_function_return_double_imm endp
 
@@ -3603,13 +3604,14 @@ masm_test_function_return_double_imm endp
 masm_test_function_return_double_xmm proc
 	push rbp
 	mov rbp, rsp
+	mov rbx, rsp
 	sub rsp, 16
-	movdqa xmmword ptr[rsp], xmm7
+	movaps xmmword ptr[rbx - 16], xmm7		; save smm7
 	movsd xmm7, qword ptr[rsp]
 	movsd xmm0, xmm7
-	movdqa xmm7, xmmword ptr[rsp]
+	movaps xmm7, xmmword ptr[rbx - 16]		; restore xmm7
 	add rsp, 16
-	leave
+	pop rbp
 	ret
 masm_test_function_return_double_xmm endp
 
@@ -3621,7 +3623,7 @@ masm_test_function_return_double_ptr proc
 	mov rbp, rsp
 	movsd qword ptr[rbp + 16], xmm0
 	movsd xmm0, qword ptr[rbp + 16]
-	leave
+	pop rbp
 	ret
 masm_test_function_return_double_ptr endp
 
@@ -3635,7 +3637,7 @@ masm_test_function_return_double_st0 proc
 	fld real8 ptr[rbp + 16]
 	fstp real8 ptr[rsp - 8]
 	movsd xmm0, qword ptr[rsp - 8]
-	leave
+	pop rbp
 	ret
 masm_test_function_return_double_st0 endp
 
@@ -3650,7 +3652,7 @@ masm_test_function_return_m64_mm1 proc
 	punpckldq mm1, mm1
 	paddw mm1, mm1
 	movd rax, mm1
-	leave
+	pop rbp
 	ret
 masm_test_function_return_m64_mm1 endp
 
@@ -3661,7 +3663,7 @@ masm_test_function_return_m64_ptr proc
 	push rbp
 	mov rbp, rsp
 	mov rax, qword ptr[rsp - 8]
-	leave
+	pop rbp
 	ret
 masm_test_function_return_m64_ptr endp
 
@@ -3674,7 +3676,7 @@ masm_test_function_return_m128_xmm1 proc
 	pxor xmm1, xmm1
 	mov rax, rcx
 	movaps xmmword ptr[rax], xmm1
-	leave
+	pop rbp
 	ret
 masm_test_function_return_m128_xmm1 endp
 
@@ -3687,7 +3689,7 @@ masm_test_function_return_m128_ptr proc
 	mov rax, rcx
 	movaps xmm0, xmmword ptr[rsp - 16]
 	movaps xmmword ptr[rax], xmm0
-	leave
+	pop rbp
 	ret
 masm_test_function_return_m128_ptr endp
 
@@ -3700,7 +3702,7 @@ masm_test_function_return_m128d_xmm1 proc
 	pxor xmm1, xmm1
 	mov rax, rcx
 	movapd xmmword ptr[rax], xmm1
-	leave
+	pop rbp
 	ret
 masm_test_function_return_m128d_xmm1 endp
 
@@ -3713,7 +3715,7 @@ masm_test_function_return_m128d_ptr proc
 	mov rax, rcx
 	movapd xmm0, xmmword ptr[rsp - 16]
 	movapd xmmword ptr[rax], xmm0
-	leave
+	pop rbp
 	ret
 masm_test_function_return_m128d_ptr endp
 
@@ -3726,7 +3728,7 @@ masm_test_function_return_m128i_xmm1 proc
 	pxor xmm1, xmm1
 	mov rax, rcx
 	movdqa xmmword ptr[rax], xmm1
-	leave
+	pop rbp
 	ret
 masm_test_function_return_m128i_xmm1 endp
 
@@ -3739,7 +3741,7 @@ masm_test_function_return_m128i_ptr proc
 	mov rax, rcx
 	movdqa xmm0, xmmword ptr[rsp - 16]
 	movdqa xmmword ptr[rax], xmm0
-	leave
+	pop rbp
 	ret
 masm_test_function_return_m128i_ptr endp
 

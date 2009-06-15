@@ -2320,7 +2320,7 @@ masm_test_function_return_char proc
 	movzx esi, cl
 	mov al, cl
 	pop esi
-	leave
+	pop ebp
 	ret
 masm_test_function_return_char endp
 
@@ -2331,7 +2331,7 @@ masm_test_function_return_short proc
 	push ebp
 	mov ebp, esp
 	mov ax, word ptr[esi]
-	leave
+	pop ebp
 	ret
 masm_test_function_return_short endp
 
@@ -2342,7 +2342,7 @@ masm_test_function_return_int_imm proc
 	push ebp
 	mov ebp, esp
 	mov eax, 16
-	leave
+	pop ebp
 	ret
 masm_test_function_return_int_imm endp
 
@@ -2352,7 +2352,7 @@ masm_test_function_return_int_imm endp
 masm_test_function_return_int_eax proc
 	push ebp
 	mov ebp, esp
-	leave
+	pop ebp
 	ret
 masm_test_function_return_int_eax endp
 
@@ -2364,7 +2364,7 @@ masm_test_function_return_float_imm proc
 	mov ebp, esp
 	mov dword ptr[esp - 4], 41300000h
 	fld real4 ptr[esp - 4]
-	leave
+	pop ebp
 	ret
 masm_test_function_return_float_imm endp
 
@@ -2377,7 +2377,7 @@ masm_test_function_return_float_xmm proc
 	movss xmm7, dword ptr[esp]
 	movss dword ptr[esp - 4], xmm7
 	fld real4 ptr[esp - 4]
-	leave
+	pop ebp
 	ret
 masm_test_function_return_float_xmm endp
 
@@ -2388,7 +2388,7 @@ masm_test_function_return_float_ptr proc
 	push ebp
 	mov ebp, esp
 	fld real4 ptr[ebp + 8]
-	leave
+	pop ebp
 	ret
 masm_test_function_return_float_ptr endp
 
@@ -2399,7 +2399,7 @@ masm_test_function_return_float_st0 proc
 	push ebp
 	mov ebp, esp
 	fld real4 ptr[ebp + 8]
-	leave
+	pop ebp
 	ret
 masm_test_function_return_float_st0 endp
 
@@ -2412,7 +2412,7 @@ masm_test_function_return_double_imm proc
 	mov dword ptr[esp - 8], 0
 	mov dword ptr[esp - 4], 40260000h
 	fld real8 ptr[esp - 8]
-	leave
+	pop ebp
 	ret
 masm_test_function_return_double_imm endp
 
@@ -2425,7 +2425,7 @@ masm_test_function_return_double_xmm proc
 	movsd xmm7, qword ptr[esp]
 	movsd qword ptr[esp - 8], xmm7
 	fld real8 ptr[esp - 8]
-	leave
+	pop ebp
 	ret
 masm_test_function_return_double_xmm endp
 
@@ -2436,7 +2436,7 @@ masm_test_function_return_double_ptr proc
 	push ebp
 	mov ebp, esp
 	fld real8 ptr[ebp + 8]
-	leave
+	pop ebp
 	ret
 masm_test_function_return_double_ptr endp
 
@@ -2447,7 +2447,7 @@ masm_test_function_return_double_st0 proc
 	push ebp
 	mov ebp, esp
 	fld real8 ptr[ebp + 8]
-	leave
+	pop ebp
 	ret
 masm_test_function_return_double_st0 endp
 
@@ -2461,7 +2461,7 @@ masm_test_function_return_m64_mm1 proc
 	punpckldq mm1, mm1
 	paddw mm1, mm1
 	movq mm0, mm1
-	leave
+	pop ebp
 	ret
 masm_test_function_return_m64_mm1 endp
 
@@ -2472,7 +2472,7 @@ masm_test_function_return_m64_ptr proc
 	push ebp
 	mov ebp, esp
 	movq mm0, qword ptr[esp - 8]
-	leave
+	pop ebp
 	ret
 masm_test_function_return_m64_ptr endp
 
@@ -2484,7 +2484,7 @@ masm_test_function_return_m128_xmm1 proc
 	mov ebp, esp
 	pxor xmm1, xmm1
 	movaps xmm0, xmm1
-	leave
+	pop ebp
 	ret
 masm_test_function_return_m128_xmm1 endp
 
@@ -2495,7 +2495,7 @@ masm_test_function_return_m128_ptr proc
 	push ebp
 	mov ebp, esp
 	movaps xmm0, xmmword ptr[esp - 16]
-	leave
+	pop ebp
 	ret
 masm_test_function_return_m128_ptr endp
 
@@ -2507,7 +2507,7 @@ masm_test_function_return_m128d_xmm1 proc
 	mov ebp, esp
 	pxor xmm1, xmm1
 	movapd xmm0, xmm1
-	leave
+	pop ebp
 	ret
 masm_test_function_return_m128d_xmm1 endp
 
@@ -2518,7 +2518,7 @@ masm_test_function_return_m128d_ptr proc
 	push ebp
 	mov ebp, esp
 	movapd xmm0, xmmword ptr[esp - 16]
-	leave
+	pop ebp
 	ret
 masm_test_function_return_m128d_ptr endp
 
@@ -2530,7 +2530,7 @@ masm_test_function_return_m128i_xmm1 proc
 	mov ebp, esp
 	pxor xmm1, xmm1
 	movdqa xmm0, xmm1
-	leave
+	pop ebp
 	ret
 masm_test_function_return_m128i_xmm1 endp
 
@@ -2541,7 +2541,7 @@ masm_test_function_return_m128i_ptr proc
 	push ebp
 	mov ebp, esp
 	movdqa xmm0, xmmword ptr[esp - 16]
-	leave
+	pop ebp
 	ret
 masm_test_function_return_m128i_ptr endp
 
