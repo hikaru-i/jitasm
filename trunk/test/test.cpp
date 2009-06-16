@@ -4320,6 +4320,19 @@ struct test_register_allocation1 : jitasm::function_cdecl<void, test_register_al
 };
 
 //----------------------------------------
+// Reassign physical register by register allocator
+//----------------------------------------
+extern "C" void masm_test_regalloc_reassign_physical_reg();
+struct test_regalloc_reassign_physical_reg : jitasm::function<void, test_regalloc_reassign_physical_reg>
+{
+	void naked_main()
+	{
+		maskmovdqu(xmm0, xmm1, zdi);
+		maskmovdqu(xmm0, xmm1, zsi);
+	}
+};
+
+//----------------------------------------
 // function_cdecl<char>
 //----------------------------------------
 extern "C" void masm_test_function_return_char();
@@ -4628,6 +4641,11 @@ void test_avx_instructions()
 	TEST_N(test_avx_b);
 }
 
+void test_register_allocation()
+{
+	TEST_M(test_regalloc_reassign_physical_reg);
+}
+
 void test_calling_convension()
 {
 	TEST_M(test_function_return_char);
@@ -4709,6 +4727,7 @@ int wmain()
 {
 	test_instruction();
 	test_avx_instructions();
+	test_register_allocation();
 	test_calling_convension();
 
 	TEST_EQUAL(test_ipow1()(2, 0), 1);
