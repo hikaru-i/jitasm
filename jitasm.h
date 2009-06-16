@@ -273,7 +273,6 @@ namespace detail
 	inline Opd Dummy(const Opd& opd, const Opd& constraint)
 	{
 		JITASM_ASSERT(opd.IsReg() && (opd.opdtype_ & O_TYPE_TYPE_MASK) == (constraint.opdtype_ & O_TYPE_TYPE_MASK) && !constraint.GetReg().IsSymbolic());
-		JITASM_ASSERT(opd.GetReg().IsSymbolic() || opd.GetReg().id == constraint.GetReg().id);
 		Opd o(opd);
 		o.opdtype_ = static_cast<OpdType>(static_cast<int>(o.opdtype_) | O_TYPE_DUMMY);
 		o.reg_assignable_ = (1 << constraint.reg_.id);
@@ -4542,12 +4541,15 @@ namespace compiler
 					int assigned_reg = -1;
 					if (var < NUM_OF_PHYSICAL_REG && first_try) {
 						// Physical register
-						JITASM_ASSERT((reg_assignable & (1 << var)) != 0);		// This physical register violates the register constraint!
 						if (cur_avail & reg_assignable & (1 << var)) {
 							assigned_reg = static_cast<int>(var);
 						} else if (((1 << var) & available_reg) && !cur_interval->use.get_bit(var)) {
 							// Try to assign another physical register if it is not used in this interval. But assign later.
 							live_vars.push_back(var);
+						} else if (reg_assignable != 0xFFFFFFFF && (cur_avail & reg_assignable) && cur_interval->use.get_bit(var)) {
+							// This physical register violates the register constraint.
+							// Assign another physical register which satisfy the constraint.
+							assigned_reg = detail::bit_scan_forward(cur_avail & reg_assignable);
 						} else {
 							// This may be out of assignment register (ESP, EBP and so on...)
 							JITASM_ASSERT(((1 << var) & available_reg) == 0);		// false assignment!?
@@ -5026,9 +5028,12 @@ namespace compiler
 					const size_t reg_family = GetRegFamily(reg.type);
 					if (reg.IsSymbolic()) {
 						opd.reg_.id = reg_id_map[reg_family].GetNormalizedID(reg.id);
-					} else if (opd.opdtype_ & O_TYPE_WRITE) {
-						// This physical register is modified
-						modified_physical_reg[reg_family] |= (1 << reg.id);
+					} else {
+						if (opd.opdtype_ & O_TYPE_WRITE) {
+							// This physical register is modified
+							modified_physical_reg[reg_family] |= (1 << reg.id);
+						}
+
 						if ((opd.reg_assignable_ & (1 << reg.id)) == 0) {
 							// Specified physical register does not fit the instruction.
 							// Let's try to assign optimal physical register by register allocation.

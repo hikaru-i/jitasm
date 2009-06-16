@@ -2311,6 +2311,15 @@ masm_test_sse4_2 proc
 masm_test_sse4_2 endp
 
 ;----------------------------------------
+; Reassign physical register by register allocator
+;----------------------------------------
+masm_test_regalloc_reassign_physical_reg proc
+	maskmovdqu xmm0, xmm1
+	mov edi, esi
+	maskmovdqu xmm0, xmm1
+masm_test_regalloc_reassign_physical_reg endp
+
+;----------------------------------------
 ; function0_cdecl<char>
 ;----------------------------------------
 masm_test_function_return_char proc
