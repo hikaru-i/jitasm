@@ -1242,6 +1242,8 @@ masm_test_gpi_e proc
 	rep outsb 
 	rep outsw 
 	rep outsd 
+	popa
+	popad
 	popf
 	popfd
 	;popfq

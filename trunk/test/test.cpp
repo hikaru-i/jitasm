@@ -2141,6 +2141,10 @@ struct test_gpi_e : jitasm::function<void, test_gpi_e>
 		rep_outsb();
 		rep_outsw();
 		rep_outsd();
+#ifndef JITASM64
+		popa();
+		popad();
+#endif
 		popf();
 #ifndef JITASM64
 		popfd();
