@@ -1247,6 +1247,8 @@ masm_test_gpi_e proc
 	popf
 	popfd
 	;popfq
+	pusha
+	pushad
 	pushf
 	pushfd
 	;pushfq
