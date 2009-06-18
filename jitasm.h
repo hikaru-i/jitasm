@@ -603,7 +603,7 @@ enum InstrID
 	I_MOV, I_MOVBE, I_MOVS_B, I_MOVS_W, I_MOVS_D, I_MOVS_Q, I_MOVZX, I_MOVSX, I_MOVSXD,	I_MUL,
 	I_NEG, I_NOP, I_NOT,
 	I_OR, I_OUT, I_OUTS_B, I_OUTS_W, I_OUTS_D,
-	I_POP, I_POPF, I_POPFD, I_POPFQ, I_PUSH, I_PUSHF, I_PUSHFD, I_PUSHFQ,
+	I_POP, I_POPAD, I_POPF, I_POPFD, I_POPFQ, I_PUSH, I_PUSHF, I_PUSHFD, I_PUSHFQ,
 	I_RDMSR, I_RDPMC, I_RDTSC, I_RET, I_RCL, I_RCR, I_ROL, I_ROR, I_RSM, 
 	I_SAR, I_SHL, I_SHR, I_SBB, I_SCAS_B, I_SCAS_W, I_SCAS_D, I_SCAS_Q, I_SETCC, I_SHLD, I_SHRD, I_SGDT, I_SIDT, I_SLDT, I_SMSW, I_STC, I_STD, I_STI,
 	I_STOS_B, I_STOS_W, I_STOS_D, I_STOS_Q, I_SUB, I_SWAPGS, I_SYSCALL, I_SYSENTER, I_SYSEXIT, I_SYSRET,
@@ -2304,6 +2304,10 @@ struct Frontend
 #else
 	void pop(const Reg64& dst)	{AppendInstr(I_POP, 0x58, 0, W(dst), Dummy(RW(esp)));}
 	void pop(const Mem64& dst)	{AppendInstr(I_POP, 0x8F, 0, Imm8(0), W(dst), Dummy(RW(esp)));}
+#endif
+#ifndef JITASM64
+	void popa()		{popad();}
+	void popad()	{AppendInstr(I_POPAD, 0x61, 0, Dummy(RW(esp)));}
 #endif
 #ifndef JITASM64
 	void popf()		{AppendInstr(I_POPF, 0x9D, E_OPERAND_SIZE_PREFIX, Dummy(RW(esp)));}
