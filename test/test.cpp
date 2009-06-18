@@ -2151,6 +2151,10 @@ struct test_gpi_e : jitasm::function<void, test_gpi_e>
 #else
 		popfq();
 #endif
+#ifndef JITASM64
+		pusha();
+		pushad();
+#endif
 		pushf();
 #ifndef JITASM64
 		pushfd();
