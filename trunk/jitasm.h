@@ -5140,6 +5140,17 @@ namespace compiler
 					const RegID& reg = opd.GetReg();
 					it->GetLifetime(reg.type).AddUsePoint(instr_offset, reg, static_cast<OpdType>(O_TYPE_REG | O_TYPE_WRITE), opd.GetSize(), opd.reg_assignable_);
 					var_manager.UpdateVarSize(reg.type, reg.id, opd.GetSize() / 8);
+				} else if (instr.GetID() == I_PUSHAD || instr.GetID() == I_POPAD) {
+					// Add use point of pushad/popad
+					const OpdType type = static_cast<OpdType>(O_TYPE_REG | (instr.GetID() == I_PUSHAD ? O_TYPE_READ : O_TYPE_WRITE));
+					it->GetLifetime(R_TYPE_GP).AddUsePoint(instr_offset, RegID::CreatePhysicalRegID(R_TYPE_GP, EAX), type, O_SIZE_32, 0xFFFFFFFF);
+					it->GetLifetime(R_TYPE_GP).AddUsePoint(instr_offset, RegID::CreatePhysicalRegID(R_TYPE_GP, ECX), type, O_SIZE_32, 0xFFFFFFFF);
+					it->GetLifetime(R_TYPE_GP).AddUsePoint(instr_offset, RegID::CreatePhysicalRegID(R_TYPE_GP, EDX), type, O_SIZE_32, 0xFFFFFFFF);
+					it->GetLifetime(R_TYPE_GP).AddUsePoint(instr_offset, RegID::CreatePhysicalRegID(R_TYPE_GP, EBX), type, O_SIZE_32, 0xFFFFFFFF);
+					it->GetLifetime(R_TYPE_GP).AddUsePoint(instr_offset, RegID::CreatePhysicalRegID(R_TYPE_GP, EBP), type, O_SIZE_32, 0xFFFFFFFF);
+					it->GetLifetime(R_TYPE_GP).AddUsePoint(instr_offset, RegID::CreatePhysicalRegID(R_TYPE_GP, ESI), type, O_SIZE_32, 0xFFFFFFFF);
+					it->GetLifetime(R_TYPE_GP).AddUsePoint(instr_offset, RegID::CreatePhysicalRegID(R_TYPE_GP, EDI), type, O_SIZE_32, 0xFFFFFFFF);
+					it->GetLifetime(R_TYPE_GP).AddUsePoint(instr_offset, RegID::CreatePhysicalRegID(R_TYPE_GP, ESP), static_cast<OpdType>(O_TYPE_REG | O_TYPE_READ | O_TYPE_WRITE), O_SIZE_32, 0xFFFFFFFF);
 				} else {
 					// Add each use point of all operands
 					for (size_t j = 0; j < Instr::MAX_OPERAND_COUNT; ++j) {
