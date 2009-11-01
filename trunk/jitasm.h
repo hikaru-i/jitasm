@@ -1730,15 +1730,15 @@ struct Frontend
 	void bts(const Mem64& bitbase, const Imm8& bitoffset)	{AppendInstr(I_BTS, 0x0FBA, E_REXW_PREFIX, Imm8(5), RW(bitbase), bitoffset);}
 #endif
 #ifndef JITASM64
-	void call(const Reg16& dst)	{AppendInstr(I_CALL, 0xFF, E_OPERAND_SIZE_PREFIX, Imm8(2), dst);}
-	void call(const Reg32& dst)	{AppendInstr(I_CALL, 0xFF, 0, Imm8(2), dst);}
+	void call(const Reg16& dst)	{AppendInstr(I_CALL, 0xFF, E_OPERAND_SIZE_PREFIX, Imm8(2), R(dst));}
+	void call(const Reg32& dst)	{AppendInstr(I_CALL, 0xFF, 0, Imm8(2), R(dst));}
 #else
-	void call(const Reg64& dst)	{AppendInstr(I_CALL, 0xFF, 0, Imm8(2), dst);}
+	void call(const Reg64& dst)	{AppendInstr(I_CALL, 0xFF, 0, Imm8(2), R(dst));}
 #endif
-	void cbw()	{AppendInstr(I_CBW,	0x98, E_OPERAND_SIZE_PREFIX);}
-	void cwde()	{AppendInstr(I_CBW,	0x98, 0);}
+	void cbw()	{AppendInstr(I_CBW,	0x98, E_OPERAND_SIZE_PREFIX, Dummy(RW(eax)));}
+	void cwde()	{AppendInstr(I_CBW,	0x98, 0, Dummy(RW(eax)));}
 #ifdef JITASM64
-	void cdqe()	{AppendInstr(I_CBW,	0x98, E_REXW_PREFIX);}
+	void cdqe()	{AppendInstr(I_CBW,	0x98, E_REXW_PREFIX, Dummy(RW(eax)));}
 #endif
 	void clc()	{AppendInstr(I_CLC,	0xF8, 0);}
 	void cld()	{AppendInstr(I_CLD,	0xFC, 0);}
@@ -1747,26 +1747,26 @@ struct Frontend
 	void clts()	{AppendInstr(I_CLTS,	0x0F06, 0);}
 #endif
 	void cmc()	{AppendInstr(I_CMC,	0xF5, 0);}
-	void cmova(const Reg16& dst, const Reg16& src)		{AppendInstr(I_CMOVCC, 0x0F47, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void cmova(const Reg16& dst, const Mem16& src)		{AppendInstr(I_CMOVCC, 0x0F47, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void cmovae(const Reg16& dst, const Reg16& src)		{AppendInstr(I_CMOVCC, 0x0F43, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void cmovae(const Reg16& dst, const Mem16& src)		{AppendInstr(I_CMOVCC, 0x0F43, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void cmovb(const Reg16& dst, const Reg16& src)		{AppendInstr(I_CMOVCC, 0x0F42, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void cmovb(const Reg16& dst, const Mem16& src)		{AppendInstr(I_CMOVCC, 0x0F42, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void cmovbe(const Reg16& dst, const Reg16& src)		{AppendInstr(I_CMOVCC, 0x0F46, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void cmovbe(const Reg16& dst, const Mem16& src)		{AppendInstr(I_CMOVCC, 0x0F46, E_OPERAND_SIZE_PREFIX, dst, src);}
+	void cmova(const Reg16& dst, const Reg16& src)		{AppendInstr(I_CMOVCC, 0x0F47, E_OPERAND_SIZE_PREFIX, RW(dst), R(src));}
+	void cmova(const Reg16& dst, const Mem16& src)		{AppendInstr(I_CMOVCC, 0x0F47, E_OPERAND_SIZE_PREFIX, RW(dst), R(src));}
+	void cmovae(const Reg16& dst, const Reg16& src)		{AppendInstr(I_CMOVCC, 0x0F43, E_OPERAND_SIZE_PREFIX, RW(dst), R(src));}
+	void cmovae(const Reg16& dst, const Mem16& src)		{AppendInstr(I_CMOVCC, 0x0F43, E_OPERAND_SIZE_PREFIX, RW(dst), R(src));}
+	void cmovb(const Reg16& dst, const Reg16& src)		{AppendInstr(I_CMOVCC, 0x0F42, E_OPERAND_SIZE_PREFIX, RW(dst), R(src));}
+	void cmovb(const Reg16& dst, const Mem16& src)		{AppendInstr(I_CMOVCC, 0x0F42, E_OPERAND_SIZE_PREFIX, RW(dst), R(src));}
+	void cmovbe(const Reg16& dst, const Reg16& src)		{AppendInstr(I_CMOVCC, 0x0F46, E_OPERAND_SIZE_PREFIX, RW(dst), R(src));}
+	void cmovbe(const Reg16& dst, const Mem16& src)		{AppendInstr(I_CMOVCC, 0x0F46, E_OPERAND_SIZE_PREFIX, RW(dst), R(src));}
 	void cmovc(const Reg16& dst, const Reg16& src)		{cmovb(dst, src);}
 	void cmovc(const Reg16& dst, const Mem16& src)		{cmovb(dst, src);}
-	void cmove(const Reg16& dst, const Reg16& src)		{AppendInstr(I_CMOVCC, 0x0F44, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void cmove(const Reg16& dst, const Mem16& src)		{AppendInstr(I_CMOVCC, 0x0F44, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void cmovg(const Reg16& dst, const Reg16& src)		{AppendInstr(I_CMOVCC, 0x0F4F, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void cmovg(const Reg16& dst, const Mem16& src)		{AppendInstr(I_CMOVCC, 0x0F4F, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void cmovge(const Reg16& dst, const Reg16& src)		{AppendInstr(I_CMOVCC, 0x0F4D, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void cmovge(const Reg16& dst, const Mem16& src)		{AppendInstr(I_CMOVCC, 0x0F4D, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void cmovl(const Reg16& dst, const Reg16& src)		{AppendInstr(I_CMOVCC, 0x0F4C, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void cmovl(const Reg16& dst, const Mem16& src)		{AppendInstr(I_CMOVCC, 0x0F4C, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void cmovle(const Reg16& dst, const Reg16& src)		{AppendInstr(I_CMOVCC, 0x0F4E, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void cmovle(const Reg16& dst, const Mem16& src)		{AppendInstr(I_CMOVCC, 0x0F4E, E_OPERAND_SIZE_PREFIX, dst, src);}
+	void cmove(const Reg16& dst, const Reg16& src)		{AppendInstr(I_CMOVCC, 0x0F44, E_OPERAND_SIZE_PREFIX, RW(dst), R(src));}
+	void cmove(const Reg16& dst, const Mem16& src)		{AppendInstr(I_CMOVCC, 0x0F44, E_OPERAND_SIZE_PREFIX, RW(dst), R(src));}
+	void cmovg(const Reg16& dst, const Reg16& src)		{AppendInstr(I_CMOVCC, 0x0F4F, E_OPERAND_SIZE_PREFIX, RW(dst), R(src));}
+	void cmovg(const Reg16& dst, const Mem16& src)		{AppendInstr(I_CMOVCC, 0x0F4F, E_OPERAND_SIZE_PREFIX, RW(dst), R(src));}
+	void cmovge(const Reg16& dst, const Reg16& src)		{AppendInstr(I_CMOVCC, 0x0F4D, E_OPERAND_SIZE_PREFIX, RW(dst), R(src));}
+	void cmovge(const Reg16& dst, const Mem16& src)		{AppendInstr(I_CMOVCC, 0x0F4D, E_OPERAND_SIZE_PREFIX, RW(dst), R(src));}
+	void cmovl(const Reg16& dst, const Reg16& src)		{AppendInstr(I_CMOVCC, 0x0F4C, E_OPERAND_SIZE_PREFIX, RW(dst), R(src));}
+	void cmovl(const Reg16& dst, const Mem16& src)		{AppendInstr(I_CMOVCC, 0x0F4C, E_OPERAND_SIZE_PREFIX, RW(dst), R(src));}
+	void cmovle(const Reg16& dst, const Reg16& src)		{AppendInstr(I_CMOVCC, 0x0F4E, E_OPERAND_SIZE_PREFIX, RW(dst), R(src));}
+	void cmovle(const Reg16& dst, const Mem16& src)		{AppendInstr(I_CMOVCC, 0x0F4E, E_OPERAND_SIZE_PREFIX, RW(dst), R(src));}
 	void cmovna(const Reg16& dst, const Reg16& src)		{cmovbe(dst, src);}
 	void cmovna(const Reg16& dst, const Mem16& src)		{cmovbe(dst, src);}
 	void cmovnae(const Reg16& dst, const Reg16& src)	{cmovb(dst, src);}
@@ -1777,8 +1777,8 @@ struct Frontend
 	void cmovnbe(const Reg16& dst, const Mem16& src)	{cmova(dst, src);}
 	void cmovnc(const Reg16& dst, const Reg16& src)		{cmovae(dst, src);}
 	void cmovnc(const Reg16& dst, const Mem16& src)		{cmovae(dst, src);}
-	void cmovne(const Reg16& dst, const Reg16& src)		{AppendInstr(I_CMOVCC, 0x0F45, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void cmovne(const Reg16& dst, const Mem16& src)		{AppendInstr(I_CMOVCC, 0x0F45, E_OPERAND_SIZE_PREFIX, dst, src);}
+	void cmovne(const Reg16& dst, const Reg16& src)		{AppendInstr(I_CMOVCC, 0x0F45, E_OPERAND_SIZE_PREFIX, RW(dst), R(src));}
+	void cmovne(const Reg16& dst, const Mem16& src)		{AppendInstr(I_CMOVCC, 0x0F45, E_OPERAND_SIZE_PREFIX, RW(dst), R(src));}
 	void cmovng(const Reg16& dst, const Reg16& src)		{cmovle(dst, src);}
 	void cmovng(const Reg16& dst, const Mem16& src)		{cmovle(dst, src);}
 	void cmovnge(const Reg16& dst, const Reg16& src)	{cmovl(dst, src);}
@@ -1787,46 +1787,46 @@ struct Frontend
 	void cmovnl(const Reg16& dst, const Mem16& src)		{cmovge(dst, src);}
 	void cmovnle(const Reg16& dst, const Reg16& src)	{cmovg(dst, src);}
 	void cmovnle(const Reg16& dst, const Mem16& src)	{cmovg(dst, src);}
-	void cmovno(const Reg16& dst, const Reg16& src)		{AppendInstr(I_CMOVCC, 0x0F41, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void cmovno(const Reg16& dst, const Mem16& src)		{AppendInstr(I_CMOVCC, 0x0F41, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void cmovnp(const Reg16& dst, const Reg16& src)		{AppendInstr(I_CMOVCC, 0x0F4B, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void cmovnp(const Reg16& dst, const Mem16& src)		{AppendInstr(I_CMOVCC, 0x0F4B, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void cmovns(const Reg16& dst, const Reg16& src)		{AppendInstr(I_CMOVCC, 0x0F49, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void cmovns(const Reg16& dst, const Mem16& src)		{AppendInstr(I_CMOVCC, 0x0F49, E_OPERAND_SIZE_PREFIX, dst, src);}
+	void cmovno(const Reg16& dst, const Reg16& src)		{AppendInstr(I_CMOVCC, 0x0F41, E_OPERAND_SIZE_PREFIX, RW(dst), R(src));}
+	void cmovno(const Reg16& dst, const Mem16& src)		{AppendInstr(I_CMOVCC, 0x0F41, E_OPERAND_SIZE_PREFIX, RW(dst), R(src));}
+	void cmovnp(const Reg16& dst, const Reg16& src)		{AppendInstr(I_CMOVCC, 0x0F4B, E_OPERAND_SIZE_PREFIX, RW(dst), R(src));}
+	void cmovnp(const Reg16& dst, const Mem16& src)		{AppendInstr(I_CMOVCC, 0x0F4B, E_OPERAND_SIZE_PREFIX, RW(dst), R(src));}
+	void cmovns(const Reg16& dst, const Reg16& src)		{AppendInstr(I_CMOVCC, 0x0F49, E_OPERAND_SIZE_PREFIX, RW(dst), R(src));}
+	void cmovns(const Reg16& dst, const Mem16& src)		{AppendInstr(I_CMOVCC, 0x0F49, E_OPERAND_SIZE_PREFIX, RW(dst), R(src));}
 	void cmovnz(const Reg16& dst, const Reg16& src)		{cmovne(dst, src);}
 	void cmovnz(const Reg16& dst, const Mem16& src)		{cmovne(dst, src);}
-	void cmovo(const Reg16& dst, const Reg16& src)		{AppendInstr(I_CMOVCC, 0x0F40, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void cmovo(const Reg16& dst, const Mem16& src)		{AppendInstr(I_CMOVCC, 0x0F40, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void cmovp(const Reg16& dst, const Reg16& src)		{AppendInstr(I_CMOVCC, 0x0F4A, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void cmovp(const Reg16& dst, const Mem16& src)		{AppendInstr(I_CMOVCC, 0x0F4A, E_OPERAND_SIZE_PREFIX, dst, src);}
+	void cmovo(const Reg16& dst, const Reg16& src)		{AppendInstr(I_CMOVCC, 0x0F40, E_OPERAND_SIZE_PREFIX, RW(dst), R(src));}
+	void cmovo(const Reg16& dst, const Mem16& src)		{AppendInstr(I_CMOVCC, 0x0F40, E_OPERAND_SIZE_PREFIX, RW(dst), R(src));}
+	void cmovp(const Reg16& dst, const Reg16& src)		{AppendInstr(I_CMOVCC, 0x0F4A, E_OPERAND_SIZE_PREFIX, RW(dst), R(src));}
+	void cmovp(const Reg16& dst, const Mem16& src)		{AppendInstr(I_CMOVCC, 0x0F4A, E_OPERAND_SIZE_PREFIX, RW(dst), R(src));}
 	void cmovpe(const Reg16& dst, const Reg16& src)		{cmovp(dst, src);}
 	void cmovpe(const Reg16& dst, const Mem16& src)		{cmovp(dst, src);}
 	void cmovpo(const Reg16& dst, const Reg16& src)		{cmovnp(dst, src);}
 	void cmovpo(const Reg16& dst, const Mem16& src)		{cmovnp(dst, src);}
-	void cmovs(const Reg16& dst, const Reg16& src)		{AppendInstr(I_CMOVCC, 0x0F48, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void cmovs(const Reg16& dst, const Mem16& src)		{AppendInstr(I_CMOVCC, 0x0F48, E_OPERAND_SIZE_PREFIX, dst, src);}
+	void cmovs(const Reg16& dst, const Reg16& src)		{AppendInstr(I_CMOVCC, 0x0F48, E_OPERAND_SIZE_PREFIX, RW(dst), R(src));}
+	void cmovs(const Reg16& dst, const Mem16& src)		{AppendInstr(I_CMOVCC, 0x0F48, E_OPERAND_SIZE_PREFIX, RW(dst), R(src));}
 	void cmovz(const Reg16& dst, const Reg16& src)		{cmove(dst, src);}
 	void cmovz(const Reg16& dst, const Mem16& src)		{cmove(dst, src);}
-	void cmova(const Reg32& dst, const Reg32& src)		{AppendInstr(I_CMOVCC, 0x0F47, 0, dst, src);}
-	void cmova(const Reg32& dst, const Mem32& src)		{AppendInstr(I_CMOVCC, 0x0F47, 0, dst, src);}
-	void cmovae(const Reg32& dst, const Reg32& src)		{AppendInstr(I_CMOVCC, 0x0F43, 0, dst, src);}
-	void cmovae(const Reg32& dst, const Mem32& src)		{AppendInstr(I_CMOVCC, 0x0F43, 0, dst, src);}
-	void cmovb(const Reg32& dst, const Reg32& src)		{AppendInstr(I_CMOVCC, 0x0F42, 0, dst, src);}
-	void cmovb(const Reg32& dst, const Mem32& src)		{AppendInstr(I_CMOVCC, 0x0F42, 0, dst, src);}
-	void cmovbe(const Reg32& dst, const Reg32& src)		{AppendInstr(I_CMOVCC, 0x0F46, 0, dst, src);}
-	void cmovbe(const Reg32& dst, const Mem32& src)		{AppendInstr(I_CMOVCC, 0x0F46, 0, dst, src);}
+	void cmova(const Reg32& dst, const Reg32& src)		{AppendInstr(I_CMOVCC, 0x0F47, 0, RW(dst), R(src));}
+	void cmova(const Reg32& dst, const Mem32& src)		{AppendInstr(I_CMOVCC, 0x0F47, 0, RW(dst), R(src));}
+	void cmovae(const Reg32& dst, const Reg32& src)		{AppendInstr(I_CMOVCC, 0x0F43, 0, RW(dst), R(src));}
+	void cmovae(const Reg32& dst, const Mem32& src)		{AppendInstr(I_CMOVCC, 0x0F43, 0, RW(dst), R(src));}
+	void cmovb(const Reg32& dst, const Reg32& src)		{AppendInstr(I_CMOVCC, 0x0F42, 0, RW(dst), R(src));}
+	void cmovb(const Reg32& dst, const Mem32& src)		{AppendInstr(I_CMOVCC, 0x0F42, 0, RW(dst), R(src));}
+	void cmovbe(const Reg32& dst, const Reg32& src)		{AppendInstr(I_CMOVCC, 0x0F46, 0, RW(dst), R(src));}
+	void cmovbe(const Reg32& dst, const Mem32& src)		{AppendInstr(I_CMOVCC, 0x0F46, 0, RW(dst), R(src));}
 	void cmovc(const Reg32& dst, const Reg32& src)		{cmovb(dst, src);}
 	void cmovc(const Reg32& dst, const Mem32& src)		{cmovb(dst, src);}
-	void cmove(const Reg32& dst, const Reg32& src)		{AppendInstr(I_CMOVCC, 0x0F44, 0, dst, src);}
-	void cmove(const Reg32& dst, const Mem32& src)		{AppendInstr(I_CMOVCC, 0x0F44, 0, dst, src);}
-	void cmovg(const Reg32& dst, const Reg32& src)		{AppendInstr(I_CMOVCC, 0x0F4F, 0, dst, src);}
-	void cmovg(const Reg32& dst, const Mem32& src)		{AppendInstr(I_CMOVCC, 0x0F4F, 0, dst, src);}
-	void cmovge(const Reg32& dst, const Reg32& src)		{AppendInstr(I_CMOVCC, 0x0F4D, 0, dst, src);}
-	void cmovge(const Reg32& dst, const Mem32& src)		{AppendInstr(I_CMOVCC, 0x0F4D, 0, dst, src);}
-	void cmovl(const Reg32& dst, const Reg32& src)		{AppendInstr(I_CMOVCC, 0x0F4C, 0, dst, src);}
-	void cmovl(const Reg32& dst, const Mem32& src)		{AppendInstr(I_CMOVCC, 0x0F4C, 0, dst, src);}
-	void cmovle(const Reg32& dst, const Reg32& src)		{AppendInstr(I_CMOVCC, 0x0F4E, 0, dst, src);}
-	void cmovle(const Reg32& dst, const Mem32& src)		{AppendInstr(I_CMOVCC, 0x0F4E, 0, dst, src);}
+	void cmove(const Reg32& dst, const Reg32& src)		{AppendInstr(I_CMOVCC, 0x0F44, 0, RW(dst), R(src));}
+	void cmove(const Reg32& dst, const Mem32& src)		{AppendInstr(I_CMOVCC, 0x0F44, 0, RW(dst), R(src));}
+	void cmovg(const Reg32& dst, const Reg32& src)		{AppendInstr(I_CMOVCC, 0x0F4F, 0, RW(dst), R(src));}
+	void cmovg(const Reg32& dst, const Mem32& src)		{AppendInstr(I_CMOVCC, 0x0F4F, 0, RW(dst), R(src));}
+	void cmovge(const Reg32& dst, const Reg32& src)		{AppendInstr(I_CMOVCC, 0x0F4D, 0, RW(dst), R(src));}
+	void cmovge(const Reg32& dst, const Mem32& src)		{AppendInstr(I_CMOVCC, 0x0F4D, 0, RW(dst), R(src));}
+	void cmovl(const Reg32& dst, const Reg32& src)		{AppendInstr(I_CMOVCC, 0x0F4C, 0, RW(dst), R(src));}
+	void cmovl(const Reg32& dst, const Mem32& src)		{AppendInstr(I_CMOVCC, 0x0F4C, 0, RW(dst), R(src));}
+	void cmovle(const Reg32& dst, const Reg32& src)		{AppendInstr(I_CMOVCC, 0x0F4E, 0, RW(dst), R(src));}
+	void cmovle(const Reg32& dst, const Mem32& src)		{AppendInstr(I_CMOVCC, 0x0F4E, 0, RW(dst), R(src));}
 	void cmovna(const Reg32& dst, const Reg32& src)		{cmovbe(dst, src);}
 	void cmovna(const Reg32& dst, const Mem32& src)		{cmovbe(dst, src);}
 	void cmovnae(const Reg32& dst, const Reg32& src)	{cmovb(dst, src);}
@@ -1837,8 +1837,8 @@ struct Frontend
 	void cmovnbe(const Reg32& dst, const Mem32& src)	{cmova(dst, src);}
 	void cmovnc(const Reg32& dst, const Reg32& src)		{cmovae(dst, src);}
 	void cmovnc(const Reg32& dst, const Mem32& src)		{cmovae(dst, src);}
-	void cmovne(const Reg32& dst, const Reg32& src)		{AppendInstr(I_CMOVCC, 0x0F45, 0, dst, src);}
-	void cmovne(const Reg32& dst, const Mem32& src)		{AppendInstr(I_CMOVCC, 0x0F45, 0, dst, src);}
+	void cmovne(const Reg32& dst, const Reg32& src)		{AppendInstr(I_CMOVCC, 0x0F45, 0, RW(dst), R(src));}
+	void cmovne(const Reg32& dst, const Mem32& src)		{AppendInstr(I_CMOVCC, 0x0F45, 0, RW(dst), R(src));}
 	void cmovng(const Reg32& dst, const Reg32& src)		{cmovle(dst, src);}
 	void cmovng(const Reg32& dst, const Mem32& src)		{cmovle(dst, src);}
 	void cmovnge(const Reg32& dst, const Reg32& src)	{cmovl(dst, src);}
@@ -1847,47 +1847,47 @@ struct Frontend
 	void cmovnl(const Reg32& dst, const Mem32& src)		{cmovge(dst, src);}
 	void cmovnle(const Reg32& dst, const Reg32& src)	{cmovg(dst, src);}
 	void cmovnle(const Reg32& dst, const Mem32& src)	{cmovg(dst, src);}
-	void cmovno(const Reg32& dst, const Reg32& src)		{AppendInstr(I_CMOVCC, 0x0F41, 0, dst, src);}
-	void cmovno(const Reg32& dst, const Mem32& src)		{AppendInstr(I_CMOVCC, 0x0F41, 0, dst, src);}
-	void cmovnp(const Reg32& dst, const Reg32& src)		{AppendInstr(I_CMOVCC, 0x0F4B, 0, dst, src);}
-	void cmovnp(const Reg32& dst, const Mem32& src)		{AppendInstr(I_CMOVCC, 0x0F4B, 0, dst, src);}
-	void cmovns(const Reg32& dst, const Reg32& src)		{AppendInstr(I_CMOVCC, 0x0F49, 0, dst, src);}
-	void cmovns(const Reg32& dst, const Mem32& src)		{AppendInstr(I_CMOVCC, 0x0F49, 0, dst, src);}
+	void cmovno(const Reg32& dst, const Reg32& src)		{AppendInstr(I_CMOVCC, 0x0F41, 0, RW(dst), R(src));}
+	void cmovno(const Reg32& dst, const Mem32& src)		{AppendInstr(I_CMOVCC, 0x0F41, 0, RW(dst), R(src));}
+	void cmovnp(const Reg32& dst, const Reg32& src)		{AppendInstr(I_CMOVCC, 0x0F4B, 0, RW(dst), R(src));}
+	void cmovnp(const Reg32& dst, const Mem32& src)		{AppendInstr(I_CMOVCC, 0x0F4B, 0, RW(dst), R(src));}
+	void cmovns(const Reg32& dst, const Reg32& src)		{AppendInstr(I_CMOVCC, 0x0F49, 0, RW(dst), R(src));}
+	void cmovns(const Reg32& dst, const Mem32& src)		{AppendInstr(I_CMOVCC, 0x0F49, 0, RW(dst), R(src));}
 	void cmovnz(const Reg32& dst, const Reg32& src)		{cmovne(dst, src);}
 	void cmovnz(const Reg32& dst, const Mem32& src)		{cmovne(dst, src);}
-	void cmovo(const Reg32& dst, const Reg32& src)		{AppendInstr(I_CMOVCC, 0x0F40, 0, dst, src);}
-	void cmovo(const Reg32& dst, const Mem32& src)		{AppendInstr(I_CMOVCC, 0x0F40, 0, dst, src);}
-	void cmovp(const Reg32& dst, const Reg32& src)		{AppendInstr(I_CMOVCC, 0x0F4A, 0, dst, src);}
-	void cmovp(const Reg32& dst, const Mem32& src)		{AppendInstr(I_CMOVCC, 0x0F4A, 0, dst, src);}
+	void cmovo(const Reg32& dst, const Reg32& src)		{AppendInstr(I_CMOVCC, 0x0F40, 0, RW(dst), R(src));}
+	void cmovo(const Reg32& dst, const Mem32& src)		{AppendInstr(I_CMOVCC, 0x0F40, 0, RW(dst), R(src));}
+	void cmovp(const Reg32& dst, const Reg32& src)		{AppendInstr(I_CMOVCC, 0x0F4A, 0, RW(dst), R(src));}
+	void cmovp(const Reg32& dst, const Mem32& src)		{AppendInstr(I_CMOVCC, 0x0F4A, 0, RW(dst), R(src));}
 	void cmovpe(const Reg32& dst, const Reg32& src)		{cmovp(dst, src);}
 	void cmovpe(const Reg32& dst, const Mem32& src)		{cmovp(dst, src);}
 	void cmovpo(const Reg32& dst, const Reg32& src)		{cmovnp(dst, src);}
 	void cmovpo(const Reg32& dst, const Mem32& src)		{cmovnp(dst, src);}
-	void cmovs(const Reg32& dst, const Reg32& src)		{AppendInstr(I_CMOVCC, 0x0F48, 0, dst, src);}
-	void cmovs(const Reg32& dst, const Mem32& src)		{AppendInstr(I_CMOVCC, 0x0F48, 0, dst, src);}
+	void cmovs(const Reg32& dst, const Reg32& src)		{AppendInstr(I_CMOVCC, 0x0F48, 0, RW(dst), R(src));}
+	void cmovs(const Reg32& dst, const Mem32& src)		{AppendInstr(I_CMOVCC, 0x0F48, 0, RW(dst), R(src));}
 	void cmovz(const Reg32& dst, const Reg32& src)		{cmove(dst, src);}
 	void cmovz(const Reg32& dst, const Mem32& src)		{cmove(dst, src);}
 #ifdef JITASM64
-	void cmova(const Reg64& dst, const Reg64& src)		{AppendInstr(I_CMOVCC, 0x0F47, E_REXW_PREFIX, dst, src);}
-	void cmova(const Reg64& dst, const Mem64& src)		{AppendInstr(I_CMOVCC, 0x0F47, E_REXW_PREFIX, dst, src);}
-	void cmovae(const Reg64& dst, const Reg64& src)		{AppendInstr(I_CMOVCC, 0x0F43, E_REXW_PREFIX, dst, src);}
-	void cmovae(const Reg64& dst, const Mem64& src)		{AppendInstr(I_CMOVCC, 0x0F43, E_REXW_PREFIX, dst, src);}
-	void cmovb(const Reg64& dst, const Reg64& src)		{AppendInstr(I_CMOVCC, 0x0F42, E_REXW_PREFIX, dst, src);}
-	void cmovb(const Reg64& dst, const Mem64& src)		{AppendInstr(I_CMOVCC, 0x0F42, E_REXW_PREFIX, dst, src);}
-	void cmovbe(const Reg64& dst, const Reg64& src)		{AppendInstr(I_CMOVCC, 0x0F46, E_REXW_PREFIX, dst, src);}
-	void cmovbe(const Reg64& dst, const Mem64& src)		{AppendInstr(I_CMOVCC, 0x0F46, E_REXW_PREFIX, dst, src);}
+	void cmova(const Reg64& dst, const Reg64& src)		{AppendInstr(I_CMOVCC, 0x0F47, E_REXW_PREFIX, RW(dst), R(src));}
+	void cmova(const Reg64& dst, const Mem64& src)		{AppendInstr(I_CMOVCC, 0x0F47, E_REXW_PREFIX, RW(dst), R(src));}
+	void cmovae(const Reg64& dst, const Reg64& src)		{AppendInstr(I_CMOVCC, 0x0F43, E_REXW_PREFIX, RW(dst), R(src));}
+	void cmovae(const Reg64& dst, const Mem64& src)		{AppendInstr(I_CMOVCC, 0x0F43, E_REXW_PREFIX, RW(dst), R(src));}
+	void cmovb(const Reg64& dst, const Reg64& src)		{AppendInstr(I_CMOVCC, 0x0F42, E_REXW_PREFIX, RW(dst), R(src));}
+	void cmovb(const Reg64& dst, const Mem64& src)		{AppendInstr(I_CMOVCC, 0x0F42, E_REXW_PREFIX, RW(dst), R(src));}
+	void cmovbe(const Reg64& dst, const Reg64& src)		{AppendInstr(I_CMOVCC, 0x0F46, E_REXW_PREFIX, RW(dst), R(src));}
+	void cmovbe(const Reg64& dst, const Mem64& src)		{AppendInstr(I_CMOVCC, 0x0F46, E_REXW_PREFIX, RW(dst), R(src));}
 	void cmovc(const Reg64& dst, const Reg64& src)		{cmovb(dst, src);}
 	void cmovc(const Reg64& dst, const Mem64& src)		{cmovb(dst, src);}
-	void cmove(const Reg64& dst, const Reg64& src)		{AppendInstr(I_CMOVCC, 0x0F44, E_REXW_PREFIX, dst, src);}
-	void cmove(const Reg64& dst, const Mem64& src)		{AppendInstr(I_CMOVCC, 0x0F44, E_REXW_PREFIX, dst, src);}
-	void cmovg(const Reg64& dst, const Reg64& src)		{AppendInstr(I_CMOVCC, 0x0F4F, E_REXW_PREFIX, dst, src);}
-	void cmovg(const Reg64& dst, const Mem64& src)		{AppendInstr(I_CMOVCC, 0x0F4F, E_REXW_PREFIX, dst, src);}
-	void cmovge(const Reg64& dst, const Reg64& src)		{AppendInstr(I_CMOVCC, 0x0F4D, E_REXW_PREFIX, dst, src);}
-	void cmovge(const Reg64& dst, const Mem64& src)		{AppendInstr(I_CMOVCC, 0x0F4D, E_REXW_PREFIX, dst, src);}
-	void cmovl(const Reg64& dst, const Reg64& src)		{AppendInstr(I_CMOVCC, 0x0F4C, E_REXW_PREFIX, dst, src);}
-	void cmovl(const Reg64& dst, const Mem64& src)		{AppendInstr(I_CMOVCC, 0x0F4C, E_REXW_PREFIX, dst, src);}
-	void cmovle(const Reg64& dst, const Reg64& src)		{AppendInstr(I_CMOVCC, 0x0F4E, E_REXW_PREFIX, dst, src);}
-	void cmovle(const Reg64& dst, const Mem64& src)		{AppendInstr(I_CMOVCC, 0x0F4E, E_REXW_PREFIX, dst, src);}
+	void cmove(const Reg64& dst, const Reg64& src)		{AppendInstr(I_CMOVCC, 0x0F44, E_REXW_PREFIX, RW(dst), R(src));}
+	void cmove(const Reg64& dst, const Mem64& src)		{AppendInstr(I_CMOVCC, 0x0F44, E_REXW_PREFIX, RW(dst), R(src));}
+	void cmovg(const Reg64& dst, const Reg64& src)		{AppendInstr(I_CMOVCC, 0x0F4F, E_REXW_PREFIX, RW(dst), R(src));}
+	void cmovg(const Reg64& dst, const Mem64& src)		{AppendInstr(I_CMOVCC, 0x0F4F, E_REXW_PREFIX, RW(dst), R(src));}
+	void cmovge(const Reg64& dst, const Reg64& src)		{AppendInstr(I_CMOVCC, 0x0F4D, E_REXW_PREFIX, RW(dst), R(src));}
+	void cmovge(const Reg64& dst, const Mem64& src)		{AppendInstr(I_CMOVCC, 0x0F4D, E_REXW_PREFIX, RW(dst), R(src));}
+	void cmovl(const Reg64& dst, const Reg64& src)		{AppendInstr(I_CMOVCC, 0x0F4C, E_REXW_PREFIX, RW(dst), R(src));}
+	void cmovl(const Reg64& dst, const Mem64& src)		{AppendInstr(I_CMOVCC, 0x0F4C, E_REXW_PREFIX, RW(dst), R(src));}
+	void cmovle(const Reg64& dst, const Reg64& src)		{AppendInstr(I_CMOVCC, 0x0F4E, E_REXW_PREFIX, RW(dst), R(src));}
+	void cmovle(const Reg64& dst, const Mem64& src)		{AppendInstr(I_CMOVCC, 0x0F4E, E_REXW_PREFIX, RW(dst), R(src));}
 	void cmovna(const Reg64& dst, const Reg64& src)		{cmovbe(dst, src);}
 	void cmovna(const Reg64& dst, const Mem64& src)		{cmovbe(dst, src);}
 	void cmovnae(const Reg64& dst, const Reg64& src)	{cmovb(dst, src);}
@@ -1898,8 +1898,8 @@ struct Frontend
 	void cmovnbe(const Reg64& dst, const Mem64& src)	{cmova(dst, src);}
 	void cmovnc(const Reg64& dst, const Reg64& src)		{cmovae(dst, src);}
 	void cmovnc(const Reg64& dst, const Mem64& src)		{cmovae(dst, src);}
-	void cmovne(const Reg64& dst, const Reg64& src)		{AppendInstr(I_CMOVCC, 0x0F45, E_REXW_PREFIX, dst, src);}
-	void cmovne(const Reg64& dst, const Mem64& src)		{AppendInstr(I_CMOVCC, 0x0F45, E_REXW_PREFIX, dst, src);}
+	void cmovne(const Reg64& dst, const Reg64& src)		{AppendInstr(I_CMOVCC, 0x0F45, E_REXW_PREFIX, RW(dst), R(src));}
+	void cmovne(const Reg64& dst, const Mem64& src)		{AppendInstr(I_CMOVCC, 0x0F45, E_REXW_PREFIX, RW(dst), R(src));}
 	void cmovng(const Reg64& dst, const Reg64& src)		{cmovle(dst, src);}
 	void cmovng(const Reg64& dst, const Mem64& src)		{cmovle(dst, src);}
 	void cmovnge(const Reg64& dst, const Reg64& src)	{cmovl(dst, src);}
@@ -1908,24 +1908,24 @@ struct Frontend
 	void cmovnl(const Reg64& dst, const Mem64& src)		{cmovge(dst, src);}
 	void cmovnle(const Reg64& dst, const Reg64& src)	{cmovg(dst, src);}
 	void cmovnle(const Reg64& dst, const Mem64& src)	{cmovg(dst, src);}
-	void cmovno(const Reg64& dst, const Reg64& src)		{AppendInstr(I_CMOVCC, 0x0F41, E_REXW_PREFIX, dst, src);}
-	void cmovno(const Reg64& dst, const Mem64& src)		{AppendInstr(I_CMOVCC, 0x0F41, E_REXW_PREFIX, dst, src);}
-	void cmovnp(const Reg64& dst, const Reg64& src)		{AppendInstr(I_CMOVCC, 0x0F4B, E_REXW_PREFIX, dst, src);}
-	void cmovnp(const Reg64& dst, const Mem64& src)		{AppendInstr(I_CMOVCC, 0x0F4B, E_REXW_PREFIX, dst, src);}
-	void cmovns(const Reg64& dst, const Reg64& src)		{AppendInstr(I_CMOVCC, 0x0F49, E_REXW_PREFIX, dst, src);}
-	void cmovns(const Reg64& dst, const Mem64& src)		{AppendInstr(I_CMOVCC, 0x0F49, E_REXW_PREFIX, dst, src);}
+	void cmovno(const Reg64& dst, const Reg64& src)		{AppendInstr(I_CMOVCC, 0x0F41, E_REXW_PREFIX, RW(dst), R(src));}
+	void cmovno(const Reg64& dst, const Mem64& src)		{AppendInstr(I_CMOVCC, 0x0F41, E_REXW_PREFIX, RW(dst), R(src));}
+	void cmovnp(const Reg64& dst, const Reg64& src)		{AppendInstr(I_CMOVCC, 0x0F4B, E_REXW_PREFIX, RW(dst), R(src));}
+	void cmovnp(const Reg64& dst, const Mem64& src)		{AppendInstr(I_CMOVCC, 0x0F4B, E_REXW_PREFIX, RW(dst), R(src));}
+	void cmovns(const Reg64& dst, const Reg64& src)		{AppendInstr(I_CMOVCC, 0x0F49, E_REXW_PREFIX, RW(dst), R(src));}
+	void cmovns(const Reg64& dst, const Mem64& src)		{AppendInstr(I_CMOVCC, 0x0F49, E_REXW_PREFIX, RW(dst), R(src));}
 	void cmovnz(const Reg64& dst, const Reg64& src)		{cmovne(dst, src);}
 	void cmovnz(const Reg64& dst, const Mem64& src)		{cmovne(dst, src);}
-	void cmovo(const Reg64& dst, const Reg64& src)		{AppendInstr(I_CMOVCC, 0x0F40, E_REXW_PREFIX, dst, src);}
-	void cmovo(const Reg64& dst, const Mem64& src)		{AppendInstr(I_CMOVCC, 0x0F40, E_REXW_PREFIX, dst, src);}
-	void cmovp(const Reg64& dst, const Reg64& src)		{AppendInstr(I_CMOVCC, 0x0F4A, E_REXW_PREFIX, dst, src);}
-	void cmovp(const Reg64& dst, const Mem64& src)		{AppendInstr(I_CMOVCC, 0x0F4A, E_REXW_PREFIX, dst, src);}
+	void cmovo(const Reg64& dst, const Reg64& src)		{AppendInstr(I_CMOVCC, 0x0F40, E_REXW_PREFIX, RW(dst), R(src));}
+	void cmovo(const Reg64& dst, const Mem64& src)		{AppendInstr(I_CMOVCC, 0x0F40, E_REXW_PREFIX, RW(dst), R(src));}
+	void cmovp(const Reg64& dst, const Reg64& src)		{AppendInstr(I_CMOVCC, 0x0F4A, E_REXW_PREFIX, RW(dst), R(src));}
+	void cmovp(const Reg64& dst, const Mem64& src)		{AppendInstr(I_CMOVCC, 0x0F4A, E_REXW_PREFIX, RW(dst), R(src));}
 	void cmovpe(const Reg64& dst, const Reg64& src)		{cmovp(dst, src);}
 	void cmovpe(const Reg64& dst, const Mem64& src)		{cmovp(dst, src);}
 	void cmovpo(const Reg64& dst, const Reg64& src)		{cmovnp(dst, src);}
 	void cmovpo(const Reg64& dst, const Mem64& src)		{cmovnp(dst, src);}
-	void cmovs(const Reg64& dst, const Reg64& src)		{AppendInstr(I_CMOVCC, 0x0F48, E_REXW_PREFIX, dst, src);}
-	void cmovs(const Reg64& dst, const Mem64& src)		{AppendInstr(I_CMOVCC, 0x0F48, E_REXW_PREFIX, dst, src);}
+	void cmovs(const Reg64& dst, const Reg64& src)		{AppendInstr(I_CMOVCC, 0x0F48, E_REXW_PREFIX, RW(dst), R(src));}
+	void cmovs(const Reg64& dst, const Mem64& src)		{AppendInstr(I_CMOVCC, 0x0F48, E_REXW_PREFIX, RW(dst), R(src));}
 	void cmovz(const Reg64& dst, const Reg64& src)		{cmove(dst, src);}
 	void cmovz(const Reg64& dst, const Mem64& src)		{cmove(dst, src);}
 #endif
