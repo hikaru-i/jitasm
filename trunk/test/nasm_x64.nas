@@ -248,7 +248,7 @@ nasm_test_avx_d:
 	vdpps xmm1, xmm2, oword [edx], 5
 	vdpps ymm1, ymm2, ymm3, 5
 	vdpps ymm1, ymm2, yword [edx], 5
-	;vextractf128 xmm1, ymm2, 5
-	;vextractf128 oword [edx], ymm2, 5
+	vextractf128 xmm1, xmm2, 1			; vextractf128 xmm1, ymm2, 1
+	vextractf128 oword [edx], xmm2, 1	; vextractf128 oword [edx], ymm2, 1
 	vextractps eax, xmm2, 5
 	vextractps [eax], xmm2, 5
