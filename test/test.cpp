@@ -4288,8 +4288,8 @@ struct test_avx_d : jitasm::function<void, test_avx_d>
 		vdpps(xmm1, xmm2, xmmword_ptr[edx], 5);
 		vdpps(ymm1, ymm2, ymm3, 5);
 		vdpps(ymm1, ymm2, ymmword_ptr[edx], 5);
-		//vextractf128(xmm1, ymm2, 5);	// nasmÇ≈ÉGÉâÅ[Ç…Ç»ÇÈ
-		//vextractf128(xmmword_ptr[edx], ymm2, 5);
+		vextractf128(xmm1, ymm2, 1);
+		vextractf128(xmmword_ptr[edx], ymm2, 1);
 		vextractps(eax, xmm2, 5);
 		vextractps(dword_ptr[eax], xmm2, 5);
 	}
