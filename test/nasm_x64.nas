@@ -198,11 +198,11 @@ nasm_test_avx_b:
 	vcvtsd2ss xmm1, xmm2, xmm2
 	vcvtsd2ss xmm1, xmm2, [edx]
 	vcvtsi2sd xmm1, xmm2, ebx
-	vcvtsi2sd xmm1, xmm2, [edx]
+	vcvtsi2sd xmm1, xmm2, dword [edx]
 	vcvtsi2sd xmm1, xmm2, rbx
 	vcvtsi2sd xmm1, xmm2, qword [edx]
 	vcvtsi2ss xmm1, xmm2, ebx
-	vcvtsi2ss xmm1, xmm2, [edx]
+	vcvtsi2ss xmm1, xmm2, dword [edx]
 	vcvtsi2ss xmm1, xmm2, rbx
 	vcvtsi2ss xmm1, xmm2, qword [edx]
 	vcvtss2sd xmm1, xmm2, xmm2
@@ -227,3 +227,28 @@ nasm_test_avx_b:
 	vcvttss2si ecx, [edx]
 	vcvttss2si rcx, xmm2
 	vcvttss2si rcx, [edx]
+
+global	nasm_test_avx_d
+nasm_test_avx_d:
+	vdivpd xmm1, xmm2, xmm3
+	vdivpd xmm1, xmm2, oword [edx]
+	vdivpd ymm1, ymm2, ymm3
+	vdivpd ymm1, ymm2, yword [edx]
+	vdivps xmm1, xmm2, xmm3
+	vdivps xmm1, xmm2, oword [edx]
+	vdivps ymm1, ymm2, ymm3
+	vdivps ymm1, ymm2, yword [edx]
+	vdivsd xmm1, xmm2, xmm3
+	vdivsd xmm1, xmm2, [edx]
+	vdivss xmm1, xmm2, xmm3
+	vdivss xmm1, xmm2, [edx]
+	vdppd xmm1, xmm2, xmm3, 5
+	vdppd xmm1, xmm2, oword [edx], 5
+	vdpps xmm1, xmm2, xmm3, 5
+	vdpps xmm1, xmm2, oword [edx], 5
+	vdpps ymm1, ymm2, ymm3, 5
+	vdpps ymm1, ymm2, yword [edx], 5
+	;vextractf128 xmm1, ymm2, 5
+	;vextractf128 oword [edx], ymm2, 5
+	vextractps eax, xmm2, 5
+	vextractps [eax], xmm2, 5

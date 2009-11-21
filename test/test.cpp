@@ -4270,6 +4270,28 @@ struct test_avx_d : jitasm::function<void, test_avx_d>
 {
 	void naked_main()
 	{
+		vdivpd(xmm1, xmm2, xmm3);
+		vdivpd(xmm1, xmm2, xmmword_ptr[edx]);
+		vdivpd(ymm1, ymm2, ymm3);
+		vdivpd(ymm1, ymm2, ymmword_ptr[edx]);
+		vdivps(xmm1, xmm2, xmm3);
+		vdivps(xmm1, xmm2, xmmword_ptr[edx]);
+		vdivps(ymm1, ymm2, ymm3);
+		vdivps(ymm1, ymm2, ymmword_ptr[edx]);
+		vdivsd(xmm1, xmm2, xmm3);
+		vdivsd(xmm1, xmm2, qword_ptr[edx]);
+		vdivss(xmm1, xmm2, xmm3);
+		vdivss(xmm1, xmm2, dword_ptr[edx]);
+		vdppd(xmm1, xmm2, xmm3, 5);
+		vdppd(xmm1, xmm2, xmmword_ptr[edx], 5);
+		vdpps(xmm1, xmm2, xmm3, 5);
+		vdpps(xmm1, xmm2, xmmword_ptr[edx], 5);
+		vdpps(ymm1, ymm2, ymm3, 5);
+		vdpps(ymm1, ymm2, ymmword_ptr[edx], 5);
+		//vextractf128(xmm1, ymm2, 5);	// nasmÇ≈ÉGÉâÅ[Ç…Ç»ÇÈ
+		//vextractf128(xmmword_ptr[edx], ymm2, 5);
+		vextractps(eax, xmm2, 5);
+		vextractps(dword_ptr[eax], xmm2, 5);
 	}
 };
 
@@ -4647,6 +4669,7 @@ void test_avx_instructions()
 {
 	TEST_N(test_avx_a);
 	TEST_N(test_avx_b);
+	TEST_N(test_avx_d);
 }
 
 void test_register_allocation()
