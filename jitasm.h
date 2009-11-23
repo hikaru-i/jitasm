@@ -1951,31 +1951,31 @@ struct Frontend
 	void cmp(const Mem64& lhs, const Reg64& rhs)	{AppendInstr(I_CMP, 0x39, E_REXW_PREFIX, R(rhs), R(lhs));}
 	void cmp(const Reg64& lhs, const Mem64& rhs)	{AppendInstr(I_CMP, 0x3B, E_REXW_PREFIX, R(lhs), R(rhs));}
 #endif
-	void cmpsb()		{AppendInstr(I_CMPS_B, 0xA6, 0);}
-	void cmpsw()		{AppendInstr(I_CMPS_W, 0xA7, E_OPERAND_SIZE_PREFIX);}
-	void cmpsd()		{AppendInstr(I_CMPS_D, 0xA7, 0);}
+	void cmpsb()		{AppendInstr(I_CMPS_B, 0xA6, 0, Dummy(RW(edi)), Dummy(RW(esi)));}
+	void cmpsw()		{AppendInstr(I_CMPS_W, 0xA7, E_OPERAND_SIZE_PREFIX, Dummy(RW(edi)), Dummy(RW(esi)));}
+	void cmpsd()		{AppendInstr(I_CMPS_D, 0xA7, 0, Dummy(RW(edi)), Dummy(RW(esi)));}
 #ifdef JITASM64
-	void cmpsq()		{AppendInstr(I_CMPS_Q, 0xA7, E_REXW_PREFIX);}
+	void cmpsq()		{AppendInstr(I_CMPS_Q, 0xA7, E_REXW_PREFIX, Dummy(RW(rdi)), Dummy(RW(rsi)));}
 #endif
-	void cmpxchg(const Reg8& dst, const Reg8& src)		{AppendInstr(I_CMPXCHG, 0x0FB0, 0, src, dst);}
-	void cmpxchg(const Mem8& dst, const Reg8& src)		{AppendInstr(I_CMPXCHG, 0x0FB0, 0, src, dst);}
-	void cmpxchg(const Reg16& dst, const Reg16& src)	{AppendInstr(I_CMPXCHG, 0x0FB1, E_OPERAND_SIZE_PREFIX, src, dst);}
-	void cmpxchg(const Mem16& dst, const Reg16& src)	{AppendInstr(I_CMPXCHG, 0x0FB1, E_OPERAND_SIZE_PREFIX, src, dst);}
-	void cmpxchg(const Reg32& dst, const Reg32& src)	{AppendInstr(I_CMPXCHG, 0x0FB1, 0, src, dst);}
-	void cmpxchg(const Mem32& dst, const Reg32& src)	{AppendInstr(I_CMPXCHG, 0x0FB1, 0, src, dst);}
+	void cmpxchg(const Reg8& dst, const Reg8& src)		{AppendInstr(I_CMPXCHG, 0x0FB0, 0, R(src), RW(dst), Dummy(RW(al)));}
+	void cmpxchg(const Mem8& dst, const Reg8& src)		{AppendInstr(I_CMPXCHG, 0x0FB0, 0, R(src), RW(dst), Dummy(RW(al)));}
+	void cmpxchg(const Reg16& dst, const Reg16& src)	{AppendInstr(I_CMPXCHG, 0x0FB1, E_OPERAND_SIZE_PREFIX, R(src), RW(dst), Dummy(RW(ax)));}
+	void cmpxchg(const Mem16& dst, const Reg16& src)	{AppendInstr(I_CMPXCHG, 0x0FB1, E_OPERAND_SIZE_PREFIX, R(src), RW(dst), Dummy(RW(ax)));}
+	void cmpxchg(const Reg32& dst, const Reg32& src)	{AppendInstr(I_CMPXCHG, 0x0FB1, 0, R(src), RW(dst), Dummy(RW(eax)));}
+	void cmpxchg(const Mem32& dst, const Reg32& src)	{AppendInstr(I_CMPXCHG, 0x0FB1, 0, R(src), RW(dst), Dummy(RW(eax)));}
 #ifdef JITASM64
-	void cmpxchg(const Reg64& dst, const Reg64& src)	{AppendInstr(I_CMPXCHG, 0x0FB1, E_REXW_PREFIX, src, dst);}
-	void cmpxchg(const Mem64& dst, const Reg64& src)	{AppendInstr(I_CMPXCHG, 0x0FB1, E_REXW_PREFIX, src, dst);}
+	void cmpxchg(const Reg64& dst, const Reg64& src)	{AppendInstr(I_CMPXCHG, 0x0FB1, E_REXW_PREFIX, R(src), RW(dst), Dummy(RW(rax)));}
+	void cmpxchg(const Mem64& dst, const Reg64& src)	{AppendInstr(I_CMPXCHG, 0x0FB1, E_REXW_PREFIX, R(src), RW(dst), Dummy(RW(rax)));}
 #endif
-	void cmpxchg8b(const Mem64& dst)	{AppendInstr(I_CMPXCHG8B, 0x0FC7, 0, Imm8(1), dst);}
+	void cmpxchg8b(const Mem64& dst)	{AppendInstr(I_CMPXCHG8B, 0x0FC7, 0, Imm8(1), RW(dst), Dummy(RW(edx)), Dummy(RW(eax)), Dummy(R(ecx)), Dummy(R(ebx)));}
 #ifdef JITASM64
-	void cmpxchg16b(const Mem128& dst)	{AppendInstr(I_CMPXCHG16B, 0x0FC7, E_REXW_PREFIX, Imm8(1), dst);}
+	void cmpxchg16b(const Mem128& dst)	{AppendInstr(I_CMPXCHG16B, 0x0FC7, E_REXW_PREFIX, Imm8(1), RW(dst), Dummy(RW(rdx)), Dummy(RW(rax)), Dummy(R(rcx)), Dummy(R(rbx)));}
 #endif
-	void cpuid()	{AppendInstr(I_CPUID, 0x0FA2, 0);}
-	void cwd()		{AppendInstr(I_CWD, 0x99, E_OPERAND_SIZE_PREFIX);}
-	void cdq()		{AppendInstr(I_CDQ, 0x99, 0);}
+	void cpuid()	{AppendInstr(I_CPUID, 0x0FA2, 0, Dummy(RW(eax)), Dummy(RW(ecx)), Dummy(W(ebx)), Dummy(W(edx)));}
+	void cwd()		{AppendInstr(I_CWD, 0x99, E_OPERAND_SIZE_PREFIX, Dummy(W(dx)), Dummy(R(ax)));}
+	void cdq()		{AppendInstr(I_CDQ, 0x99, 0, Dummy(W(edx)), Dummy(R(eax)));}
 #ifdef JITASM64
-	void cqo()		{AppendInstr(I_CQO, 0x99, E_REXW_PREFIX);}
+	void cqo()		{AppendInstr(I_CQO, 0x99, E_REXW_PREFIX, Dummy(W(rdx)), Dummy(R(rax)));}
 #endif
 	void dec(const Reg8& dst)	{AppendInstr(I_DEC, 0xFE, 0, Imm8(1), RW(dst));}
 	void dec(const Mem8& dst)	{AppendInstr(I_DEC, 0xFE, 0, Imm8(1), RW(dst));}
@@ -1990,27 +1990,27 @@ struct Frontend
 	void dec(const Reg64& dst)	{AppendInstr(I_DEC, 0xFF, E_REXW_PREFIX, Imm8(1), RW(dst));}
 	void dec(const Mem64& dst)	{AppendInstr(I_DEC, 0xFF, E_REXW_PREFIX, Imm8(1), RW(dst));}
 #endif
-	void div(const Reg8& dst)	{AppendInstr(I_DIV, 0xF6, 0, Imm8(6), dst);}
-	void div(const Mem8& dst)	{AppendInstr(I_DIV, 0xF6, 0, Imm8(6), dst);}
-	void div(const Reg16& dst)	{AppendInstr(I_DIV, 0xF7, E_OPERAND_SIZE_PREFIX, Imm8(6), dst);}
-	void div(const Mem16& dst)	{AppendInstr(I_DIV, 0xF7, E_OPERAND_SIZE_PREFIX, Imm8(6), dst);}
-	void div(const Reg32& dst)	{AppendInstr(I_DIV, 0xF7, 0, Imm8(6), dst);}
-	void div(const Mem32& dst)	{AppendInstr(I_DIV, 0xF7, 0, Imm8(6), dst);}
+	void div(const Reg8& src)	{AppendInstr(I_DIV, 0xF6, 0, Imm8(6), R(src), Dummy(RW(ax)));}
+	void div(const Mem8& src)	{AppendInstr(I_DIV, 0xF6, 0, Imm8(6), R(src), Dummy(RW(ax)));}
+	void div(const Reg16& src)	{AppendInstr(I_DIV, 0xF7, E_OPERAND_SIZE_PREFIX, Imm8(6), R(src), Dummy(RW(ax)), Dummy(RW(dx)));}
+	void div(const Mem16& src)	{AppendInstr(I_DIV, 0xF7, E_OPERAND_SIZE_PREFIX, Imm8(6), R(src), Dummy(RW(ax)), Dummy(RW(dx)));}
+	void div(const Reg32& src)	{AppendInstr(I_DIV, 0xF7, 0, Imm8(6), R(src), Dummy(RW(eax)), Dummy(RW(edx)));}
+	void div(const Mem32& src)	{AppendInstr(I_DIV, 0xF7, 0, Imm8(6), R(src), Dummy(RW(eax)), Dummy(RW(edx)));}
 #ifdef JITASM64
-	void div(const Reg64& dst)	{AppendInstr(I_DIV, 0xF7, E_REXW_PREFIX, Imm8(6), dst);}
-	void div(const Mem64& dst)	{AppendInstr(I_DIV, 0xF7, E_REXW_PREFIX, Imm8(6), dst);}
+	void div(const Reg64& src)	{AppendInstr(I_DIV, 0xF7, E_REXW_PREFIX, Imm8(6), R(src), Dummy(RW(rax)), Dummy(RW(rdx)));}
+	void div(const Mem64& src)	{AppendInstr(I_DIV, 0xF7, E_REXW_PREFIX, Imm8(6), R(src), Dummy(RW(rax)), Dummy(RW(rdx)));}
 #endif
-	void enter(const Imm16& imm16, const Imm8& imm8) {AppendInstr(I_ENTER, 0xC8, 0, imm16, imm8);}
+	void enter(const Imm16& imm16, const Imm8& imm8) {AppendInstr(I_ENTER, 0xC8, 0, imm16, imm8, Dummy(RW(esp)), Dummy(RW(ebp)));}
 	void hlt()	{AppendInstr(I_HLT, 0xF4, 0);}
-	void idiv(const Reg8& dst)	{AppendInstr(I_IDIV, 0xF6, 0, Imm8(7), dst);}
-	void idiv(const Mem8& dst)	{AppendInstr(I_IDIV, 0xF6, 0, Imm8(7), dst);}
-	void idiv(const Reg16& dst)	{AppendInstr(I_IDIV, 0xF7, E_OPERAND_SIZE_PREFIX, Imm8(7), dst);}
-	void idiv(const Mem16& dst)	{AppendInstr(I_IDIV, 0xF7, E_OPERAND_SIZE_PREFIX, Imm8(7), dst);}
-	void idiv(const Reg32& dst)	{AppendInstr(I_IDIV, 0xF7, 0, Imm8(7), dst);}
-	void idiv(const Mem32& dst)	{AppendInstr(I_IDIV, 0xF7, 0, Imm8(7), dst);}
+	void idiv(const Reg8& src)	{AppendInstr(I_IDIV, 0xF6, 0, Imm8(7), R(src), Dummy(RW(ax)));}
+	void idiv(const Mem8& src)	{AppendInstr(I_IDIV, 0xF6, 0, Imm8(7), R(src), Dummy(RW(ax)));}
+	void idiv(const Reg16& src)	{AppendInstr(I_IDIV, 0xF7, E_OPERAND_SIZE_PREFIX, Imm8(7), R(src), Dummy(RW(ax)), Dummy(RW(dx)));}
+	void idiv(const Mem16& src)	{AppendInstr(I_IDIV, 0xF7, E_OPERAND_SIZE_PREFIX, Imm8(7), R(src), Dummy(RW(ax)), Dummy(RW(dx)));}
+	void idiv(const Reg32& src)	{AppendInstr(I_IDIV, 0xF7, 0, Imm8(7), R(src), Dummy(RW(eax)), Dummy(RW(edx)));}
+	void idiv(const Mem32& src)	{AppendInstr(I_IDIV, 0xF7, 0, Imm8(7), R(src), Dummy(RW(eax)), Dummy(RW(edx)));}
 #ifdef JITASM64
-	void idiv(const Reg64& dst)	{AppendInstr(I_IDIV, 0xF7, E_REXW_PREFIX, Imm8(7), dst);}
-	void idiv(const Mem64& dst)	{AppendInstr(I_IDIV, 0xF7, E_REXW_PREFIX, Imm8(7), dst);}
+	void idiv(const Reg64& src)	{AppendInstr(I_IDIV, 0xF7, E_REXW_PREFIX, Imm8(7), R(src), Dummy(RW(rax)), Dummy(RW(rdx)));}
+	void idiv(const Mem64& src)	{AppendInstr(I_IDIV, 0xF7, E_REXW_PREFIX, Imm8(7), R(src), Dummy(RW(rax)), Dummy(RW(rdx)));}
 #endif
 	void imul(const Reg8& src)										{AppendInstr(I_IMUL, 0xF6, 0, Imm8(5), R(src), Dummy(RW(ax)));}
 	void imul(const Mem8& src)										{AppendInstr(I_IMUL, 0xF6, 0, Imm8(5), R(src), Dummy(RW(ax)));}
@@ -2037,12 +2037,12 @@ struct Frontend
 	void imul(const Reg64& dst, const Mem64& src, const Imm32& imm)	{AppendInstr(I_IMUL, detail::IsInt8(imm.GetImm()) ? 0x6B : 0x69, E_REXW_PREFIX, W(dst), R(src), detail::ImmXor8(imm));}
 	void imul(const Reg64& dst, const Imm32& imm)					{imul(dst, dst, imm);}
 #endif
-	void in(const Reg8_al& dst, const Imm8& src)		{AppendInstr(I_IN, 0xE4, 0, src); avoid_unused_warn(dst);}
-	void in(const Reg16_ax& dst, const Imm8& src)		{AppendInstr(I_IN, 0xE5, E_OPERAND_SIZE_PREFIX, src); avoid_unused_warn(dst);}
-	void in(const Reg32_eax& dst, const Imm8& src)		{AppendInstr(I_IN, 0xE5, 0, src); avoid_unused_warn(dst);}
-	void in(const Reg8_al& dst, const Reg16_dx& src)	{AppendInstr(I_IN, 0xEC, 0); avoid_unused_warn(dst, src);}
-	void in(const Reg16_ax& dst, const Reg16_dx& src)	{AppendInstr(I_IN, 0xED, E_OPERAND_SIZE_PREFIX); avoid_unused_warn(dst, src);}
-	void in(const Reg32_eax& dst, const Reg16_dx& src)	{AppendInstr(I_IN, 0xED, 0); avoid_unused_warn(dst, src);}
+	void in(const Reg8_al& dst, const Imm8& src)		{AppendInstr(I_IN, 0xE4, 0, src, Dummy(W(dst)));}
+	void in(const Reg16_ax& dst, const Imm8& src)		{AppendInstr(I_IN, 0xE5, E_OPERAND_SIZE_PREFIX, src, Dummy(W(dst)));}
+	void in(const Reg32_eax& dst, const Imm8& src)		{AppendInstr(I_IN, 0xE5, 0, src, Dummy(W(dst)));}
+	void in(const Reg8_al& dst, const Reg16_dx& src)	{AppendInstr(I_IN, 0xEC, 0, Dummy(R(src)), Dummy(W(dst)));}
+	void in(const Reg16_ax& dst, const Reg16_dx& src)	{AppendInstr(I_IN, 0xED, E_OPERAND_SIZE_PREFIX, Dummy(R(src)), Dummy(W(dst)));}
+	void in(const Reg32_eax& dst, const Reg16_dx& src)	{AppendInstr(I_IN, 0xED, 0, Dummy(R(src)), Dummy(W(dst)));}
 	void inc(const Reg8& dst)	{AppendInstr(I_INC, 0xFE, 0, Imm8(0), RW(dst));}
 	void inc(const Mem8& dst)	{AppendInstr(I_INC, 0xFE, 0, Imm8(0), RW(dst));}
 	void inc(const Mem16& dst)	{AppendInstr(I_INC, 0xFF, E_OPERAND_SIZE_PREFIX, Imm8(0), RW(dst));}
