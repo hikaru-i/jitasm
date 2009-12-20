@@ -2584,57 +2584,57 @@ struct Frontend
 	void syscall()	{AppendInstr(I_SYSCALL, 0x0F05, 0);}
 	void sysret()	{AppendInstr(I_SYSRET, 0x0F07, 0);}
 #endif
-	void test(const Reg8& dst, const Imm8& imm)		{AppendInstr(I_TEST, 0xF6, E_SPECIAL, Imm8(0), dst, imm);}
-	void test(const Mem8& dst, const Imm8& imm)		{AppendInstr(I_TEST, 0xF6, 0, Imm8(0), dst, imm);}
-	void test(const Reg16& dst, const Imm16& imm)	{AppendInstr(I_TEST, 0xF7, E_OPERAND_SIZE_PREFIX | E_SPECIAL, Imm8(0), dst, imm);}
-	void test(const Mem16& dst, const Imm16& imm)	{AppendInstr(I_TEST, 0xF7, E_OPERAND_SIZE_PREFIX, Imm8(0), dst, imm);}
-	void test(const Reg32& dst, const Imm32& imm)	{AppendInstr(I_TEST, 0xF7, E_SPECIAL, Imm8(0), dst, imm);}
-	void test(const Mem32& dst, const Imm32& imm)	{AppendInstr(I_TEST, 0xF7, 0, Imm8(0), dst, imm);}
-	void test(const Reg8& dst, const Reg8& src)		{AppendInstr(I_TEST, 0x84, 0, dst, src);}
-	void test(const Mem8& dst, const Reg8& src)		{AppendInstr(I_TEST, 0x84, 0, src, dst);}
-	void test(const Reg16& dst, const Reg16& src)	{AppendInstr(I_TEST, 0x85, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void test(const Mem16& dst, const Reg16& src)	{AppendInstr(I_TEST, 0x85, E_OPERAND_SIZE_PREFIX, src, dst);}
-	void test(const Reg32& dst, const Reg32& src)	{AppendInstr(I_TEST, 0x85, 0, dst, src);}
-	void test(const Mem32& dst, const Reg32& src)	{AppendInstr(I_TEST, 0x85, 0, src, dst);}
+	void test(const Reg8& src1, const Imm8& src2)		{AppendInstr(I_TEST, 0xF6, E_SPECIAL, Imm8(0), src1, src2);}
+	void test(const Mem8& src1, const Imm8& src2)		{AppendInstr(I_TEST, 0xF6, 0, Imm8(0), src1, src2);}
+	void test(const Reg16& src1, const Imm16& src2)	{AppendInstr(I_TEST, 0xF7, E_OPERAND_SIZE_PREFIX | E_SPECIAL, Imm8(0), src1, src2);}
+	void test(const Mem16& src1, const Imm16& src2)	{AppendInstr(I_TEST, 0xF7, E_OPERAND_SIZE_PREFIX, Imm8(0), src1, src2);}
+	void test(const Reg32& src1, const Imm32& src2)	{AppendInstr(I_TEST, 0xF7, E_SPECIAL, Imm8(0), src1, src2);}
+	void test(const Mem32& src1, const Imm32& src2)	{AppendInstr(I_TEST, 0xF7, 0, Imm8(0), src1, src2);}
+	void test(const Reg8& src1, const Reg8& src2)		{AppendInstr(I_TEST, 0x84, 0, src1, src2);}
+	void test(const Mem8& src1, const Reg8& src2)		{AppendInstr(I_TEST, 0x84, 0, src2, src1);}
+	void test(const Reg16& src1, const Reg16& src2)	{AppendInstr(I_TEST, 0x85, E_OPERAND_SIZE_PREFIX, src1, src2);}
+	void test(const Mem16& src1, const Reg16& src2)	{AppendInstr(I_TEST, 0x85, E_OPERAND_SIZE_PREFIX, src2, src1);}
+	void test(const Reg32& src1, const Reg32& src2)	{AppendInstr(I_TEST, 0x85, 0, src1, src2);}
+	void test(const Mem32& src1, const Reg32& src2)	{AppendInstr(I_TEST, 0x85, 0, src2, src1);}
 #ifdef JITASM64
-	void test(const Reg64& dst, const Imm32& imm)	{AppendInstr(I_TEST, 0xF7, E_REXW_PREFIX | E_SPECIAL, Imm8(0), dst, imm);}
-	void test(const Mem64& dst, const Imm32& imm)	{AppendInstr(I_TEST, 0xF7, E_REXW_PREFIX, Imm8(0), dst, imm);}
-	void test(const Reg64& dst, const Reg64& src)	{AppendInstr(I_TEST, 0x85, E_REXW_PREFIX, dst, src);}
-	void test(const Mem64& dst, const Reg64& src)	{AppendInstr(I_TEST, 0x85, E_REXW_PREFIX, src, dst);}
+	void test(const Reg64& src1, const Imm32& src2)	{AppendInstr(I_TEST, 0xF7, E_REXW_PREFIX | E_SPECIAL, Imm8(0), src1, src2);}
+	void test(const Mem64& src1, const Imm32& src2)	{AppendInstr(I_TEST, 0xF7, E_REXW_PREFIX, Imm8(0), src1, src2);}
+	void test(const Reg64& src1, const Reg64& src2)	{AppendInstr(I_TEST, 0x85, E_REXW_PREFIX, src1, src2);}
+	void test(const Mem64& src1, const Reg64& src2)	{AppendInstr(I_TEST, 0x85, E_REXW_PREFIX, src2, src1);}
 #endif
-	void ud2()		{AppendInstr(I_UD2, 0x0F0B, 0);}
-	void verr(const Reg16& dst)	{AppendInstr(I_VERR, 0x0F00, 0, Imm8(4), dst);}
-	void verr(const Mem16& dst)	{AppendInstr(I_VERR, 0x0F00, 0, Imm8(4), dst);}
-	void verw(const Reg16& dst)	{AppendInstr(I_VERW, 0x0F00, 0, Imm8(5), dst);}
-	void verw(const Mem16& dst)	{AppendInstr(I_VERW, 0x0F00, 0, Imm8(5), dst);}
-	void wait()		{AppendInstr(I_WAIT, 0x9B, 0);}
-	void wbinvd()	{AppendInstr(I_WBINVD, 0x0F09, 0);}
-	void wrmsr()	{AppendInstr(I_WRMSR, 0x0F30, 0);}
-	void xadd(const Reg8& dst, const Reg8& src)		{AppendInstr(I_XADD, 0x0FC0, 0, src, dst);}
-	void xadd(const Mem8& dst, const Reg8& src)		{AppendInstr(I_XADD, 0x0FC0, 0, src, dst);}
-	void xadd(const Reg16& dst, const Reg16& src)	{AppendInstr(I_XADD, 0x0FC1, E_OPERAND_SIZE_PREFIX, src, dst);}
-	void xadd(const Mem16& dst, const Reg16& src)	{AppendInstr(I_XADD, 0x0FC1, E_OPERAND_SIZE_PREFIX, src, dst);}
-	void xadd(const Reg32& dst, const Reg32& src)	{AppendInstr(I_XADD, 0x0FC1, 0, src, dst);}
-	void xadd(const Mem32& dst, const Reg32& src)	{AppendInstr(I_XADD, 0x0FC1, 0, src, dst);}
+	void ud2()					{AppendInstr(I_UD2, 0x0F0B, 0);}
+	void verr(const Reg16& src)	{AppendInstr(I_VERR, 0x0F00, 0, Imm8(4), R(src));}
+	void verr(const Mem16& src)	{AppendInstr(I_VERR, 0x0F00, 0, Imm8(4), R(src));}
+	void verw(const Reg16& src)	{AppendInstr(I_VERW, 0x0F00, 0, Imm8(5), R(src));}
+	void verw(const Mem16& src)	{AppendInstr(I_VERW, 0x0F00, 0, Imm8(5), R(src));}
+	void wait()					{AppendInstr(I_WAIT, 0x9B, 0);}
+	void wbinvd()				{AppendInstr(I_WBINVD, 0x0F09, 0);}
+	void wrmsr()				{AppendInstr(I_WRMSR, 0x0F30, 0, Dummy(R(ecx)), Dummy(R(edx)), Dummy(R(eax)));}
+	void xadd(const Reg8& dst, const Reg8& src)		{AppendInstr(I_XADD, 0x0FC0, 0, RW(src), RW(dst));}
+	void xadd(const Mem8& dst, const Reg8& src)		{AppendInstr(I_XADD, 0x0FC0, 0, RW(src), RW(dst));}
+	void xadd(const Reg16& dst, const Reg16& src)	{AppendInstr(I_XADD, 0x0FC1, E_OPERAND_SIZE_PREFIX, RW(src), RW(dst));}
+	void xadd(const Mem16& dst, const Reg16& src)	{AppendInstr(I_XADD, 0x0FC1, E_OPERAND_SIZE_PREFIX, RW(src), RW(dst));}
+	void xadd(const Reg32& dst, const Reg32& src)	{AppendInstr(I_XADD, 0x0FC1, 0, RW(src), RW(dst));}
+	void xadd(const Mem32& dst, const Reg32& src)	{AppendInstr(I_XADD, 0x0FC1, 0, RW(src), RW(dst));}
 #ifdef JITASM64
-	void xadd(const Reg64& dst, const Reg64& src)	{AppendInstr(I_XADD, 0x0FC1, E_REXW_PREFIX, src, dst);}
-	void xadd(const Mem64& dst, const Reg64& src)	{AppendInstr(I_XADD, 0x0FC1, E_REXW_PREFIX, src, dst);}
+	void xadd(const Reg64& dst, const Reg64& src)	{AppendInstr(I_XADD, 0x0FC1, E_REXW_PREFIX, RW(src), RW(dst));}
+	void xadd(const Mem64& dst, const Reg64& src)	{AppendInstr(I_XADD, 0x0FC1, E_REXW_PREFIX, RW(src), RW(dst));}
 #endif
-	void xchg(const Reg8& dst, const Reg8& src)		{AppendInstr(I_XCHG, 0x86, 0, dst, src);}
-	void xchg(const Mem8& dst, const Reg8& src)		{AppendInstr(I_XCHG, 0x86, 0, src, dst);}
-	void xchg(const Reg8& dst, const Mem8& src)		{AppendInstr(I_XCHG, 0x86, 0, dst, src);}
-	void xchg(const Reg16& dst, const Reg16& src)	{AppendInstr(I_XCHG, 0x87, E_OPERAND_SIZE_PREFIX | E_SPECIAL, dst, src);}
-	void xchg(const Mem16& dst, const Reg16& src)	{AppendInstr(I_XCHG, 0x87, E_OPERAND_SIZE_PREFIX, src, dst);}
-	void xchg(const Reg16& dst, const Mem16& src)	{AppendInstr(I_XCHG, 0x87, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void xchg(const Reg32& dst, const Reg32& src)	{AppendInstr(I_XCHG, 0x87, E_SPECIAL, dst, src);}
-	void xchg(const Mem32& dst, const Reg32& src)	{AppendInstr(I_XCHG, 0x87, 0, src, dst);}
-	void xchg(const Reg32& dst, const Mem32& src)	{AppendInstr(I_XCHG, 0x87, 0, dst, src);}
+	void xchg(const Reg8& dst, const Reg8& src)		{AppendInstr(I_XCHG, 0x86, 0, RW(dst), RW(src));}
+	void xchg(const Mem8& dst, const Reg8& src)		{AppendInstr(I_XCHG, 0x86, 0, RW(src), RW(dst));}
+	void xchg(const Reg8& dst, const Mem8& src)		{AppendInstr(I_XCHG, 0x86, 0, RW(dst), RW(src));}
+	void xchg(const Reg16& dst, const Reg16& src)	{AppendInstr(I_XCHG, 0x87, E_OPERAND_SIZE_PREFIX | E_SPECIAL, RW(dst), RW(src));}
+	void xchg(const Mem16& dst, const Reg16& src)	{AppendInstr(I_XCHG, 0x87, E_OPERAND_SIZE_PREFIX, RW(src), RW(dst));}
+	void xchg(const Reg16& dst, const Mem16& src)	{AppendInstr(I_XCHG, 0x87, E_OPERAND_SIZE_PREFIX, RW(dst), RW(src));}
+	void xchg(const Reg32& dst, const Reg32& src)	{AppendInstr(I_XCHG, 0x87, E_SPECIAL, RW(dst), RW(src));}
+	void xchg(const Mem32& dst, const Reg32& src)	{AppendInstr(I_XCHG, 0x87, 0, RW(src), RW(dst));}
+	void xchg(const Reg32& dst, const Mem32& src)	{AppendInstr(I_XCHG, 0x87, 0, RW(dst), RW(src));}
 #ifdef JITASM64
-	void xchg(const Reg64& dst, const Reg64& src)	{AppendInstr(I_XCHG, 0x87, E_REXW_PREFIX | E_SPECIAL, dst, src);}
-	void xchg(const Mem64& dst, const Reg64& src)	{AppendInstr(I_XCHG, 0x87, E_REXW_PREFIX, src, dst);}
-	void xchg(const Reg64& dst, const Mem64& src)	{AppendInstr(I_XCHG, 0x87, E_REXW_PREFIX, dst, src);}
+	void xchg(const Reg64& dst, const Reg64& src)	{AppendInstr(I_XCHG, 0x87, E_REXW_PREFIX | E_SPECIAL, RW(dst), RW(src));}
+	void xchg(const Mem64& dst, const Reg64& src)	{AppendInstr(I_XCHG, 0x87, E_REXW_PREFIX, RW(src), RW(dst));}
+	void xchg(const Reg64& dst, const Mem64& src)	{AppendInstr(I_XCHG, 0x87, E_REXW_PREFIX, RW(dst), RW(src));}
 #endif
-	void xlatb()				{AppendInstr(I_XLATB, 0xD7, 0);}
+	void xlatb()									{AppendInstr(I_XLATB, 0xD7, Dummy(RW(al)), Dummy(R(ebx)));}
 	void xor(const Reg8& dst, const Imm8& imm)		{AppendInstr(I_XOR, 0x80, E_SPECIAL, Imm8(6), RW(dst), imm);}
 	void xor(const Mem8& dst, const Imm8& imm)		{AppendInstr(I_XOR, 0x80, 0, Imm8(6), RW(dst), imm);}
 	void xor(const Reg16& dst, const Imm16& imm)	{AppendInstr(I_XOR, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_OPERAND_SIZE_PREFIX | E_SPECIAL, Imm8(6), RW(dst), detail::ImmXor8(imm));}
