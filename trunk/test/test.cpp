@@ -2034,15 +2034,15 @@ struct test_gpi_b : jitasm::function<void, test_gpi_b>
 		clts();
 #endif
 		cmc();
-		cmpxchg(bl, dl);
-		cmpxchg(byte_ptr[esp], dl);
-		cmpxchg(bx, dx);
-		cmpxchg(word_ptr[eax], dx);
-		cmpxchg(ebx, edx);
-		cmpxchg(dword_ptr[ecx], edx);
+		cmpxchg(bl, dl, al);
+		cmpxchg(byte_ptr[esp], dl, al);
+		cmpxchg(bx, dx, ax);
+		cmpxchg(word_ptr[eax], dx, ax);
+		cmpxchg(ebx, edx, eax);
+		cmpxchg(dword_ptr[ecx], edx, eax);
 #ifdef JITASM64
-		cmpxchg(rbx, r11);
-		cmpxchg(qword_ptr[ecx], r11);
+		cmpxchg(rbx, r11, rax);
+		cmpxchg(qword_ptr[ecx], r11, rax);
 #endif
 		cmpxchg8b(qword_ptr[ecx]);
 #ifdef JITASM64
