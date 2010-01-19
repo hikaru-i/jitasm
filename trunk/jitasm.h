@@ -2056,19 +2056,19 @@ struct Frontend
 	void inc(const Reg64& dst)	{AppendInstr(I_INC, 0xFF, E_REXW_PREFIX, Imm8(0), RW(dst));}
 	void inc(const Mem64& dst)	{AppendInstr(I_INC, 0xFF, E_REXW_PREFIX, Imm8(0), RW(dst));}
 #endif
-	void insb()		{AppendInstr(I_INS_B, 0x6C, 0);}
-	void insw()		{AppendInstr(I_INS_W, 0x6D, E_OPERAND_SIZE_PREFIX);}
-	void insd()		{AppendInstr(I_INS_D, 0x6D, 0);}
-	void rep_insb()	{AppendInstr(I_INS_B, 0x6C, E_REP_PREFIX);}
-	void rep_insw()	{AppendInstr(I_INS_W, 0x6D, E_REP_PREFIX | E_OPERAND_SIZE_PREFIX);}
-	void rep_insd()	{AppendInstr(I_INS_D, 0x6D, E_REP_PREFIX);}
+	void insb()					{AppendInstr(I_INS_B, 0x6C, 0, Dummy(R(dx)), Dummy(R(edi)));}
+	void insw()					{AppendInstr(I_INS_W, 0x6D, E_OPERAND_SIZE_PREFIX, Dummy(R(dx)), Dummy(R(edi)));}
+	void insd()					{AppendInstr(I_INS_D, 0x6D, 0, Dummy(R(dx)), Dummy(R(edi)));}
+	void rep_insb()				{AppendInstr(I_INS_B, 0x6C, E_REP_PREFIX, Dummy(R(dx)), Dummy(R(edi)), Dummy(R(ecx)));}
+	void rep_insw()				{AppendInstr(I_INS_W, 0x6D, E_REP_PREFIX | E_OPERAND_SIZE_PREFIX, Dummy(R(dx)), Dummy(R(edi)), Dummy(R(ecx)));}
+	void rep_insd()				{AppendInstr(I_INS_D, 0x6D, E_REP_PREFIX, Dummy(R(dx)), Dummy(R(edi)), Dummy(R(ecx)));}
 	void int3()					{AppendInstr(I_INT3, 0xCC, 0);}
 	void intn(const Imm8& n)	{AppendInstr(I_INTN, 0xCD, 0, n);}
 #ifndef JITASM64
 	void into()					{AppendInstr(I_INTO, 0xCE, 0);}
 #endif
-	void invd()	{AppendInstr(I_INVD, 0x0F08, 0);}
-	template<class Ty> void invlpg(const MemT<Ty>& dst)	{AppendInstr(I_INVLPG, 0x0F01, 0, Imm8(7), dst);}
+	void invd()					{AppendInstr(I_INVD, 0x0F08, 0);}
+	template<class Ty> void invlpg(const MemT<Ty>& dst)	{AppendInstr(I_INVLPG, 0x0F01, 0, Imm8(7), R(dst));}
 	void iret()		{AppendInstr(I_IRET, 0xCF, E_OPERAND_SIZE_PREFIX);}
 	void iretd()	{AppendInstr(I_IRETD, 0xCF, 0);}
 #ifdef JITASM64
@@ -2112,51 +2112,51 @@ struct Frontend
 	void jpo(const std::string& label_name)		{jnp(label_name);}
 	void js(const std::string& label_name)		{AppendJcc(JCC_S, GetLabelID(label_name));}
 	void jz(const std::string& label_name)		{je(label_name);}
-	void lar(const Reg16& dst, const Reg16& src)	{AppendInstr(I_LAR, 0x0F02, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void lar(const Reg16& dst, const Mem16& src)	{AppendInstr(I_LAR, 0x0F02, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void lar(const Reg32& dst, const Reg32& src)	{AppendInstr(I_LAR, 0x0F02, 0, dst, src);}
-	void lar(const Reg32& dst, const Mem16& src)	{AppendInstr(I_LAR, 0x0F02, 0, dst, src);}
+	void lar(const Reg16& dst, const Reg16& src)	{AppendInstr(I_LAR, 0x0F02, E_OPERAND_SIZE_PREFIX, W(dst), R(src));}
+	void lar(const Reg16& dst, const Mem16& src)	{AppendInstr(I_LAR, 0x0F02, E_OPERAND_SIZE_PREFIX, W(dst), R(src));}
+	void lar(const Reg32& dst, const Reg32& src)	{AppendInstr(I_LAR, 0x0F02, 0, W(dst), R(src));}
+	void lar(const Reg32& dst, const Mem16& src)	{AppendInstr(I_LAR, 0x0F02, 0, W(dst), R(src));}
 #ifdef JITASM64
-	void lar(const Reg64& dst, const Reg64& src)	{AppendInstr(I_LAR, 0x0F02, E_REXW_PREFIX, dst, src);}
-	void lar(const Reg64& dst, const Mem16& src)	{AppendInstr(I_LAR, 0x0F02, E_REXW_PREFIX, dst, src);}
+	void lar(const Reg64& dst, const Reg64& src)	{AppendInstr(I_LAR, 0x0F02, E_REXW_PREFIX, W(dst), R(src));}
+	void lar(const Reg64& dst, const Mem16& src)	{AppendInstr(I_LAR, 0x0F02, E_REXW_PREFIX, W(dst), R(src));}
 #endif
-	template<class Ty> void lea(const Reg16& dst, const MemT<Ty>& src)	{AppendInstr(I_LEA, 0x8D, E_OPERAND_SIZE_PREFIX, dst, src);}
-	template<class Ty> void lea(const Reg32& dst, const MemT<Ty>& src)	{AppendInstr(I_LEA, 0x8D, 0, dst, src);}
+	template<class Ty> void lea(const Reg16& dst, const MemT<Ty>& src)	{AppendInstr(I_LEA, 0x8D, E_OPERAND_SIZE_PREFIX, W(dst), R(src));}
+	template<class Ty> void lea(const Reg32& dst, const MemT<Ty>& src)	{AppendInstr(I_LEA, 0x8D, 0, W(dst), R(src));}
 #ifdef JITASM64
-	template<class Ty> void lea(const Reg64& dst, const MemT<Ty>& src)	{AppendInstr(I_LEA, 0x8D, E_REXW_PREFIX, dst, src);}
+	template<class Ty> void lea(const Reg64& dst, const MemT<Ty>& src)	{AppendInstr(I_LEA, 0x8D, E_REXW_PREFIX, W(dst), R(src));}
 #endif
-	void leave()		{AppendInstr(I_LEAVE, 0xC9, 0);}
+	void leave()		{AppendInstr(I_LEAVE, 0xC9, 0, Dummy(W(esp)), Dummy(RW(ebp)));}
 	//lgdt
 	//lidt
-	void lldt(const Reg16& src)	{AppendInstr(I_LLDT, 0x0F00, 0, Imm8(2), src);}
-	void lldt(const Mem16& src)	{AppendInstr(I_LLDT, 0x0F00, 0, Imm8(2), src);}
-	void lmsw(const Reg16& src)	{AppendInstr(I_LMSW, 0x0F01, 0, Imm8(6), src);}
-	void lmsw(const Mem16& src)	{AppendInstr(I_LMSW, 0x0F01, 0, Imm8(6), src);}
-	void lodsb()		{AppendInstr(I_LODS_B, 0xAC, 0);}
-	void lodsw()		{AppendInstr(I_LODS_W, 0xAD, E_OPERAND_SIZE_PREFIX);}
-	void lodsd()		{AppendInstr(I_LODS_D, 0xAD, 0);}
+	void lldt(const Reg16& src)	{AppendInstr(I_LLDT, 0x0F00, 0, Imm8(2), R(src));}
+	void lldt(const Mem16& src)	{AppendInstr(I_LLDT, 0x0F00, 0, Imm8(2), R(src));}
+	void lmsw(const Reg16& src)	{AppendInstr(I_LMSW, 0x0F01, 0, Imm8(6), R(src));}
+	void lmsw(const Mem16& src)	{AppendInstr(I_LMSW, 0x0F01, 0, Imm8(6), R(src));}
+	void lodsb()		{AppendInstr(I_LODS_B, 0xAC, 0, Dummy(W(al)), Dummy(RW(esi)));}
+	void lodsw()		{AppendInstr(I_LODS_W, 0xAD, E_OPERAND_SIZE_PREFIX, Dummy(W(ax)), Dummy(RW(esi)));}
+	void lodsd()		{AppendInstr(I_LODS_D, 0xAD, 0, Dummy(W(eax)), Dummy(RW(esi)));}
 #ifdef JITASM64
-	void lodsq()		{AppendInstr(I_LODS_Q, 0xAD, E_REXW_PREFIX);}
+	void lodsq()		{AppendInstr(I_LODS_Q, 0xAD, E_REXW_PREFIX, Dummy(W(rax)), Dummy(RW(rsi)));}
 #endif
-	void rep_lodsb()	{AppendInstr(I_LODS_B, 0xAC, E_REP_PREFIX);}
-	void rep_lodsw()	{AppendInstr(I_LODS_W, 0xAD, E_REP_PREFIX | E_OPERAND_SIZE_PREFIX);}
-	void rep_lodsd()	{AppendInstr(I_LODS_D, 0xAD, E_REP_PREFIX);}
+	void rep_lodsb()	{AppendInstr(I_LODS_B, 0xAC, E_REP_PREFIX, Dummy(W(al)), Dummy(RW(esi)), Dummy(R(ecx)));}
+	void rep_lodsw()	{AppendInstr(I_LODS_W, 0xAD, E_REP_PREFIX | E_OPERAND_SIZE_PREFIX, Dummy(W(ax)), Dummy(RW(esi)), Dummy(R(ecx)));}
+	void rep_lodsd()	{AppendInstr(I_LODS_D, 0xAD, E_REP_PREFIX, Dummy(W(eax)), Dummy(RW(esi)), Dummy(R(ecx)));}
 #ifdef JITASM64
-	void rep_lodsq()	{AppendInstr(I_LODS_Q, 0xAD, E_REP_PREFIX | E_REXW_PREFIX);}
+	void rep_lodsq()	{AppendInstr(I_LODS_Q, 0xAD, E_REP_PREFIX | E_REXW_PREFIX, Dummy(W(rax)), Dummy(RW(rsi)), Dummy(R(rcx)));}
 #endif
-	void loop(const std::string& label_name)	{AppendInstr(I_LOOP, 0xE2, E_SPECIAL, Imm64(GetLabelID(label_name)));}	// short jump only
-	void loope(const std::string& label_name)	{AppendInstr(I_LOOP, 0xE1, E_SPECIAL, Imm64(GetLabelID(label_name)));}	// short jump only
-	void loopne(const std::string& label_name)	{AppendInstr(I_LOOP, 0xE0, E_SPECIAL, Imm64(GetLabelID(label_name)));}	// short jump only
-	void lsl(const Reg16& dst, const Reg16& src)	{AppendInstr(I_LSL, 0x0F03, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void lsl(const Reg16& dst, const Mem16& src)	{AppendInstr(I_LSL, 0x0F03, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void lsl(const Reg32& dst, const Reg32& src)	{AppendInstr(I_LSL, 0x0F03, 0, dst, src);}
-	void lsl(const Reg32& dst, const Mem16& src)	{AppendInstr(I_LSL, 0x0F03, 0, dst, src);}
+	void loop(const std::string& label_name)		{AppendInstr(I_LOOP, 0xE2, E_SPECIAL, Imm64(GetLabelID(label_name)), Dummy(RW(ecx)));}	// short jump only
+	void loope(const std::string& label_name)		{AppendInstr(I_LOOP, 0xE1, E_SPECIAL, Imm64(GetLabelID(label_name)), Dummy(RW(ecx)));}	// short jump only
+	void loopne(const std::string& label_name)		{AppendInstr(I_LOOP, 0xE0, E_SPECIAL, Imm64(GetLabelID(label_name)), Dummy(RW(ecx)));}	// short jump only
+	void lsl(const Reg16& dst, const Reg16& src)	{AppendInstr(I_LSL, 0x0F03, E_OPERAND_SIZE_PREFIX, RW(dst), R(src));}
+	void lsl(const Reg16& dst, const Mem16& src)	{AppendInstr(I_LSL, 0x0F03, E_OPERAND_SIZE_PREFIX, RW(dst), R(src));}
+	void lsl(const Reg32& dst, const Reg32& src)	{AppendInstr(I_LSL, 0x0F03, 0, RW(dst), R(src));}
+	void lsl(const Reg32& dst, const Mem16& src)	{AppendInstr(I_LSL, 0x0F03, 0, RW(dst), R(src));}
 #ifdef JITASM64
-	void lsl(const Reg64& dst, const Reg32& src)	{AppendInstr(I_LSL, 0x0F03, E_REXW_PREFIX, dst, src);}
-	void lsl(const Reg64& dst, const Mem16& src)	{AppendInstr(I_LSL, 0x0F03, E_REXW_PREFIX, dst, src);}
+	void lsl(const Reg64& dst, const Reg32& src)	{AppendInstr(I_LSL, 0x0F03, E_REXW_PREFIX, RW(dst), R(src));}
+	void lsl(const Reg64& dst, const Mem16& src)	{AppendInstr(I_LSL, 0x0F03, E_REXW_PREFIX, RW(dst), R(src));}
 #endif
-	void ltr(const Reg16& dst)	{AppendInstr(I_LTR, 0x0F00, 0, Imm8(3), dst);}
-	void ltr(const Mem16& dst)	{AppendInstr(I_LTR, 0x0F00, 0, Imm8(3), dst);}
+	void ltr(const Reg16& src)	{AppendInstr(I_LTR, 0x0F00, 0, Imm8(3), R(src));}
+	void ltr(const Mem16& src)	{AppendInstr(I_LTR, 0x0F00, 0, Imm8(3), R(src));}
 	void mov(const Reg8& dst, const Reg8& src)		{AppendInstr(I_MOV, 0x8A, 0, W(dst), R(src));}
 	void mov(const Mem8& dst, const Reg8& src)		{AppendInstr(I_MOV, 0x88, E_SPECIAL, R(src), W(dst));}
 	void mov(const Reg16& dst, const Reg16& src)	{AppendInstr(I_MOV, 0x8B, E_OPERAND_SIZE_PREFIX, W(dst), R(src));}
