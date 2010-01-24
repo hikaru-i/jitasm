@@ -359,28 +359,39 @@ struct test_rcl : jitasm::function<void, test_rcl>
 {
 	void naked_main()
 	{
+		rcl(al, cl);
 		rcl(al, 1);
 		rcl(al, 2);
 		rcl(al, (jitasm::uint8) -1);
+		rcl(ax, cl);
 		rcl(ax, 1);
 		rcl(ax, 2);
+		rcl(eax, cl);
 		rcl(eax, 1);
 		rcl(eax, 2);
+		rcl(byte_ptr[eax], cl);
 		rcl(byte_ptr[eax], 1);
 		rcl(byte_ptr[eax], 2);
+		rcl(word_ptr[eax], cl);
 		rcl(word_ptr[eax], 1);
 		rcl(word_ptr[eax], 2);
+		rcl(dword_ptr[eax], cl);
 		rcl(dword_ptr[eax], 1);
 		rcl(dword_ptr[eax], 2);
 #ifdef JITASM64
+		rcl(r8b, cl);
 		rcl(r8b, 1);
 		rcl(r8b, 2);
+		rcl(r8w, cl);
 		rcl(r8w, 1);
 		rcl(r8w, 2);
+		rcl(r8d, cl);
 		rcl(r8d, 1);
 		rcl(r8d, 2);
+		rcl(r8, cl);
 		rcl(r8, 1);
 		rcl(r8, 2);
+		rcl(qword_ptr[rax], cl);
 		rcl(qword_ptr[rax], 1);
 		rcl(qword_ptr[rax], 2);
 #endif
@@ -395,28 +406,39 @@ struct test_rcr : jitasm::function<void, test_rcr>
 {
 	void naked_main()
 	{
+		rcr(al, cl);
 		rcr(al, 1);
 		rcr(al, 2);
 		rcr(al, (jitasm::uint8) -1);
+		rcr(ax, cl);
 		rcr(ax, 1);
 		rcr(ax, 2);
+		rcr(eax, cl);
 		rcr(eax, 1);
 		rcr(eax, 2);
+		rcr(byte_ptr[eax], cl);
 		rcr(byte_ptr[eax], 1);
 		rcr(byte_ptr[eax], 2);
+		rcr(word_ptr[eax], cl);
 		rcr(word_ptr[eax], 1);
 		rcr(word_ptr[eax], 2);
+		rcr(dword_ptr[eax], cl);
 		rcr(dword_ptr[eax], 1);
 		rcr(dword_ptr[eax], 2);
 #ifdef JITASM64
+		rcr(r8b, cl);
 		rcr(r8b, 1);
 		rcr(r8b, 2);
+		rcr(r8w, cl);
 		rcr(r8w, 1);
 		rcr(r8w, 2);
+		rcr(r8d, cl);
 		rcr(r8d, 1);
 		rcr(r8d, 2);
+		rcr(r8, cl);
 		rcr(r8, 1);
 		rcr(r8, 2);
+		rcr(qword_ptr[rax], cl);
 		rcr(qword_ptr[rax], 1);
 		rcr(qword_ptr[rax], 2);
 #endif
@@ -431,28 +453,39 @@ struct test_rol : jitasm::function<void, test_rol>
 {
 	void naked_main()
 	{
+		rol(al, cl);
 		rol(al, 1);
 		rol(al, 2);
 		rol(al, (jitasm::uint8) -1);
+		rol(ax, cl);
 		rol(ax, 1);
 		rol(ax, 2);
+		rol(eax, cl);
 		rol(eax, 1);
 		rol(eax, 2);
+		rol(byte_ptr[eax], cl);
 		rol(byte_ptr[eax], 1);
 		rol(byte_ptr[eax], 2);
+		rol(word_ptr[eax], cl);
 		rol(word_ptr[eax], 1);
 		rol(word_ptr[eax], 2);
+		rol(dword_ptr[eax], cl);
 		rol(dword_ptr[eax], 1);
 		rol(dword_ptr[eax], 2);
 #ifdef JITASM64
+		rol(r8b, cl);
 		rol(r8b, 1);
 		rol(r8b, 2);
+		rol(r8w, cl);
 		rol(r8w, 1);
 		rol(r8w, 2);
+		rol(r8d, cl);
 		rol(r8d, 1);
 		rol(r8d, 2);
+		rol(r8, cl);
 		rol(r8, 1);
 		rol(r8, 2);
+		rol(qword_ptr[rax], cl);
 		rol(qword_ptr[rax], 1);
 		rol(qword_ptr[rax], 2);
 #endif
@@ -467,28 +500,39 @@ struct test_ror : jitasm::function<void, test_ror>
 {
 	void naked_main()
 	{
+		ror(al, cl);
 		ror(al, 1);
 		ror(al, 2);
 		ror(al, (jitasm::uint8) -1);
+		ror(ax, cl);
 		ror(ax, 1);
 		ror(ax, 2);
+		ror(eax, cl);
 		ror(eax, 1);
 		ror(eax, 2);
+		ror(byte_ptr[eax], cl);
 		ror(byte_ptr[eax], 1);
 		ror(byte_ptr[eax], 2);
+		ror(word_ptr[eax], cl);
 		ror(word_ptr[eax], 1);
 		ror(word_ptr[eax], 2);
+		ror(dword_ptr[eax], cl);
 		ror(dword_ptr[eax], 1);
 		ror(dword_ptr[eax], 2);
 #ifdef JITASM64
+		ror(r8b, cl);
 		ror(r8b, 1);
 		ror(r8b, 2);
+		ror(r8w, cl);
 		ror(r8w, 1);
 		ror(r8w, 2);
+		ror(r8d, cl);
 		ror(r8d, 1);
 		ror(r8d, 2);
+		ror(r8, cl);
 		ror(r8, 1);
 		ror(r8, 2);
+		ror(qword_ptr[rax], cl);
 		ror(qword_ptr[rax], 1);
 		ror(qword_ptr[rax], 2);
 #endif

@@ -168,28 +168,39 @@ masm_test_shr endp
 ; RCL
 ;----------------------------------------
 masm_test_rcl proc
+	rcl al, cl
 	rcl al, 1
 	rcl al, 2
 	rcl al, -1
+	rcl ax, cl
 	rcl ax, 1
 	rcl ax, 2
+	rcl eax, cl
 	rcl eax, 1
 	rcl eax, 2
+	rcl byte ptr[eax], cl
 	rcl byte ptr[eax], 1
 	rcl byte ptr[eax], 2
+	rcl word ptr[eax], cl
 	rcl word ptr[eax], 1
 	rcl word ptr[eax], 2
+	rcl dword ptr[eax], cl
 	rcl dword ptr[eax], 1
 	rcl dword ptr[eax], 2
 
+	rcl r8b, cl
 	rcl r8b, 1
 	rcl r8b, 2
+	rcl r8w, cl
 	rcl r8w, 1
 	rcl r8w, 2
+	rcl r8d, cl
 	rcl r8d, 1
 	rcl r8d, 2
+	rcl r8, cl
 	rcl r8, 1
 	rcl r8, 2
+	rcl qword ptr[rax], cl
 	rcl qword ptr[rax], 1
 	rcl qword ptr[rax], 2
 masm_test_rcl endp
@@ -198,28 +209,39 @@ masm_test_rcl endp
 ; RCR
 ;----------------------------------------
 masm_test_rcr proc
+	rcr al, cl
 	rcr al, 1
 	rcr al, 2
 	rcr al, -1
+	rcr ax, cl
 	rcr ax, 1
 	rcr ax, 2
+	rcr eax, cl
 	rcr eax, 1
 	rcr eax, 2
+	rcr byte ptr[eax], cl
 	rcr byte ptr[eax], 1
 	rcr byte ptr[eax], 2
+	rcr word ptr[eax], cl
 	rcr word ptr[eax], 1
 	rcr word ptr[eax], 2
+	rcr dword ptr[eax], cl
 	rcr dword ptr[eax], 1
 	rcr dword ptr[eax], 2
 
+	rcr r8b, cl
 	rcr r8b, 1
 	rcr r8b, 2
+	rcr r8w, cl
 	rcr r8w, 1
 	rcr r8w, 2
+	rcr r8d, cl
 	rcr r8d, 1
 	rcr r8d, 2
+	rcr r8, cl
 	rcr r8, 1
 	rcr r8, 2
+	rcr qword ptr[rax], cl
 	rcr qword ptr[rax], 1
 	rcr qword ptr[rax], 2
 masm_test_rcr endp
@@ -228,28 +250,39 @@ masm_test_rcr endp
 ; ROL
 ;----------------------------------------
 masm_test_rol proc
+	rol al, cl
 	rol al, 1
 	rol al, 2
 	rol al, -1
+	rol ax, cl
 	rol ax, 1
 	rol ax, 2
+	rol eax, cl
 	rol eax, 1
 	rol eax, 2
+	rol byte ptr[eax], cl
 	rol byte ptr[eax], 1
 	rol byte ptr[eax], 2
+	rol word ptr[eax], cl
 	rol word ptr[eax], 1
 	rol word ptr[eax], 2
+	rol dword ptr[eax], cl
 	rol dword ptr[eax], 1
 	rol dword ptr[eax], 2
 
+	rol r8b, cl
 	rol r8b, 1
 	rol r8b, 2
+	rol r8w, cl
 	rol r8w, 1
 	rol r8w, 2
+	rol r8d, cl
 	rol r8d, 1
 	rol r8d, 2
+	rol r8, cl
 	rol r8, 1
 	rol r8, 2
+	rol qword ptr[rax], cl
 	rol qword ptr[rax], 1
 	rol qword ptr[rax], 2
 masm_test_rol endp
@@ -258,28 +291,39 @@ masm_test_rol endp
 ; ROR
 ;----------------------------------------
 masm_test_ror proc
+	ror al, cl
 	ror al, 1
 	ror al, 2
 	ror al, -1
+	ror ax, cl
 	ror ax, 1
 	ror ax, 2
+	ror eax, cl
 	ror eax, 1
 	ror eax, 2
+	ror byte ptr[eax], cl
 	ror byte ptr[eax], 1
 	ror byte ptr[eax], 2
+	ror word ptr[eax], cl
 	ror word ptr[eax], 1
 	ror word ptr[eax], 2
+	ror dword ptr[eax], cl
 	ror dword ptr[eax], 1
 	ror dword ptr[eax], 2
 
+	ror r8b, cl
 	ror r8b, 1
 	ror r8b, 2
+	ror r8w, cl
 	ror r8w, 1
 	ror r8w, 2
+	ror r8d, cl
 	ror r8d, 1
 	ror r8d, 2
+	ror r8, cl
 	ror r8, 1
 	ror r8, 2
+	ror qword ptr[rax], cl
 	ror qword ptr[rax], 1
 	ror qword ptr[rax], 2
 masm_test_ror endp

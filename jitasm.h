@@ -2338,39 +2338,71 @@ struct Frontend
 	void pushf()	{AppendInstr(I_PUSHF, 0x9C, E_OPERAND_SIZE_PREFIX, Dummy(RW(esp)));}
 	void pushfq()	{AppendInstr(I_PUSHFQ, 0x9C, 0, Dummy(RW(esp)));}
 #endif
- 	void rcl(const Reg8& dst, const Imm8& shift)	{shift.GetImm() == 1 ? AppendInstr(I_RCL, 0xD0, 0, Imm8(2), RW(dst)) : AppendInstr(I_RCL, 0xC0, 0, Imm8(2), RW(dst), shift);}
-	void rcl(const Mem8& dst, const Imm8& shift)	{shift.GetImm() == 1 ? AppendInstr(I_RCL, 0xD0, 0, Imm8(2), RW(dst)) : AppendInstr(I_RCL, 0xC0, 0, Imm8(2), RW(dst), shift);}
-	void rcr(const Reg8& dst, const Imm8& shift)	{shift.GetImm() == 1 ? AppendInstr(I_RCR, 0xD0, 0, Imm8(3), RW(dst)) : AppendInstr(I_RCR, 0xC0, 0, Imm8(3), RW(dst), shift);}
-	void rcr(const Mem8& dst, const Imm8& shift)	{shift.GetImm() == 1 ? AppendInstr(I_RCR, 0xD0, 0, Imm8(3), RW(dst)) : AppendInstr(I_RCR, 0xC0, 0, Imm8(3), RW(dst), shift);}
-	void rol(const Reg8& dst, const Imm8& shift)	{shift.GetImm() == 1 ? AppendInstr(I_ROL, 0xD0, 0, Imm8(0), RW(dst)) : AppendInstr(I_ROL, 0xC0, 0, Imm8(0), RW(dst), shift);}
-	void rol(const Mem8& dst, const Imm8& shift)	{shift.GetImm() == 1 ? AppendInstr(I_ROL, 0xD0, 0, Imm8(0), RW(dst)) : AppendInstr(I_ROL, 0xC0, 0, Imm8(0), RW(dst), shift);}
-	void ror(const Reg8& dst, const Imm8& shift)	{shift.GetImm() == 1 ? AppendInstr(I_ROR, 0xD0, 0, Imm8(1), RW(dst)) : AppendInstr(I_ROR, 0xC0, 0, Imm8(1), RW(dst), shift);}
-	void ror(const Mem8& dst, const Imm8& shift)	{shift.GetImm() == 1 ? AppendInstr(I_ROR, 0xD0, 0, Imm8(1), RW(dst)) : AppendInstr(I_ROR, 0xC0, 0, Imm8(1), RW(dst), shift);}
-	void rcl(const Reg16& dst, const Imm8& shift)	{shift.GetImm() == 1 ? AppendInstr(I_RCL, 0xD1, E_OPERAND_SIZE_PREFIX, Imm8(2), RW(dst)) : AppendInstr(I_RCL, 0xC1, E_OPERAND_SIZE_PREFIX, Imm8(2), RW(dst), shift);}
-	void rcl(const Mem16& dst, const Imm8& shift)	{shift.GetImm() == 1 ? AppendInstr(I_RCL, 0xD1, E_OPERAND_SIZE_PREFIX, Imm8(2), RW(dst)) : AppendInstr(I_RCL, 0xC1, E_OPERAND_SIZE_PREFIX, Imm8(2), RW(dst), shift);}
-	void rcr(const Reg16& dst, const Imm8& shift)	{shift.GetImm() == 1 ? AppendInstr(I_RCR, 0xD1, E_OPERAND_SIZE_PREFIX, Imm8(3), RW(dst)) : AppendInstr(I_RCR, 0xC1, E_OPERAND_SIZE_PREFIX, Imm8(3), RW(dst), shift);}
-	void rcr(const Mem16& dst, const Imm8& shift)	{shift.GetImm() == 1 ? AppendInstr(I_RCR, 0xD1, E_OPERAND_SIZE_PREFIX, Imm8(3), RW(dst)) : AppendInstr(I_RCR, 0xC1, E_OPERAND_SIZE_PREFIX, Imm8(3), RW(dst), shift);}
-	void rol(const Reg16& dst, const Imm8& shift)	{shift.GetImm() == 1 ? AppendInstr(I_ROL, 0xD1, E_OPERAND_SIZE_PREFIX, Imm8(0), RW(dst)) : AppendInstr(I_ROL, 0xC1, E_OPERAND_SIZE_PREFIX, Imm8(0), RW(dst), shift);}
-	void rol(const Mem16& dst, const Imm8& shift)	{shift.GetImm() == 1 ? AppendInstr(I_ROL, 0xD1, E_OPERAND_SIZE_PREFIX, Imm8(0), RW(dst)) : AppendInstr(I_ROL, 0xC1, E_OPERAND_SIZE_PREFIX, Imm8(0), RW(dst), shift);}
-	void ror(const Reg16& dst, const Imm8& shift)	{shift.GetImm() == 1 ? AppendInstr(I_ROR, 0xD1, E_OPERAND_SIZE_PREFIX, Imm8(1), RW(dst)) : AppendInstr(I_ROR, 0xC1, E_OPERAND_SIZE_PREFIX, Imm8(1), RW(dst), shift);}
-	void ror(const Mem16& dst, const Imm8& shift)	{shift.GetImm() == 1 ? AppendInstr(I_ROR, 0xD1, E_OPERAND_SIZE_PREFIX, Imm8(1), RW(dst)) : AppendInstr(I_ROR, 0xC1, E_OPERAND_SIZE_PREFIX, Imm8(1), RW(dst), shift);}
-	void rcl(const Reg32& dst, const Imm8& shift)	{shift.GetImm() == 1 ? AppendInstr(I_RCL, 0xD1, 0, Imm8(2), RW(dst)) : AppendInstr(I_RCL, 0xC1, 0, Imm8(2), RW(dst), shift);}
-	void rcl(const Mem32& dst, const Imm8& shift)	{shift.GetImm() == 1 ? AppendInstr(I_RCL, 0xD1, 0, Imm8(2), RW(dst)) : AppendInstr(I_RCL, 0xC1, 0, Imm8(2), RW(dst), shift);}
-	void rcr(const Reg32& dst, const Imm8& shift)	{shift.GetImm() == 1 ? AppendInstr(I_RCR, 0xD1, 0, Imm8(3), RW(dst)) : AppendInstr(I_RCR, 0xC1, 0, Imm8(3), RW(dst), shift);}
-	void rcr(const Mem32& dst, const Imm8& shift)	{shift.GetImm() == 1 ? AppendInstr(I_RCR, 0xD1, 0, Imm8(3), RW(dst)) : AppendInstr(I_RCR, 0xC1, 0, Imm8(3), RW(dst), shift);}
-	void rol(const Reg32& dst, const Imm8& shift)	{shift.GetImm() == 1 ? AppendInstr(I_ROL, 0xD1, 0, Imm8(0), RW(dst)) : AppendInstr(I_ROL, 0xC1, 0, Imm8(0), RW(dst), shift);}
-	void rol(const Mem32& dst, const Imm8& shift)	{shift.GetImm() == 1 ? AppendInstr(I_ROL, 0xD1, 0, Imm8(0), RW(dst)) : AppendInstr(I_ROL, 0xC1, 0, Imm8(0), RW(dst), shift);}
-	void ror(const Reg32& dst, const Imm8& shift)	{shift.GetImm() == 1 ? AppendInstr(I_ROR, 0xD1, 0, Imm8(1), RW(dst)) : AppendInstr(I_ROR, 0xC1, 0, Imm8(1), RW(dst), shift);}
-	void ror(const Mem32& dst, const Imm8& shift)	{shift.GetImm() == 1 ? AppendInstr(I_ROR, 0xD1, 0, Imm8(1), RW(dst)) : AppendInstr(I_ROR, 0xC1, 0, Imm8(1), RW(dst), shift);}
+	void rcl(const Reg8& dst, const Reg8_cl& shift)		{AppendInstr(I_RCL, 0xD2, 0, Imm8(2), RW(dst), Dummy(R(shift)));}
+	void rcl(const Mem8& dst, const Reg8_cl& shift)		{AppendInstr(I_RCL, 0xD2, 0, Imm8(2), RW(dst), Dummy(R(shift)));}
+ 	void rcl(const Reg8& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_RCL, 0xD0, 0, Imm8(2), RW(dst)) : AppendInstr(I_RCL, 0xC0, 0, Imm8(2), RW(dst), shift);}
+	void rcl(const Mem8& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_RCL, 0xD0, 0, Imm8(2), RW(dst)) : AppendInstr(I_RCL, 0xC0, 0, Imm8(2), RW(dst), shift);}
+	void rcr(const Reg8& dst, const Reg8_cl& shift)		{AppendInstr(I_RCR, 0xD2, 0, Imm8(3), RW(dst), Dummy(R(shift)));}
+	void rcr(const Mem8& dst, const Reg8_cl& shift)		{AppendInstr(I_RCR, 0xD2, 0, Imm8(3), RW(dst), Dummy(R(shift)));}
+	void rcr(const Reg8& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_RCR, 0xD0, 0, Imm8(3), RW(dst)) : AppendInstr(I_RCR, 0xC0, 0, Imm8(3), RW(dst), shift);}
+	void rcr(const Mem8& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_RCR, 0xD0, 0, Imm8(3), RW(dst)) : AppendInstr(I_RCR, 0xC0, 0, Imm8(3), RW(dst), shift);}
+	void rol(const Reg8& dst, const Reg8_cl& shift)		{AppendInstr(I_ROL, 0xD2, 0, Imm8(0), RW(dst), Dummy(R(shift)));}
+	void rol(const Mem8& dst, const Reg8_cl& shift)		{AppendInstr(I_ROL, 0xD2, 0, Imm8(0), RW(dst), Dummy(R(shift)));}
+	void rol(const Reg8& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_ROL, 0xD0, 0, Imm8(0), RW(dst)) : AppendInstr(I_ROL, 0xC0, 0, Imm8(0), RW(dst), shift);}
+	void rol(const Mem8& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_ROL, 0xD0, 0, Imm8(0), RW(dst)) : AppendInstr(I_ROL, 0xC0, 0, Imm8(0), RW(dst), shift);}
+	void ror(const Reg8& dst, const Reg8_cl& shift)		{AppendInstr(I_ROR, 0xD2, 0, Imm8(1), RW(dst), Dummy(R(shift)));}
+	void ror(const Mem8& dst, const Reg8_cl& shift)		{AppendInstr(I_ROR, 0xD2, 0, Imm8(1), RW(dst), Dummy(R(shift)));}
+	void ror(const Reg8& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_ROR, 0xD0, 0, Imm8(1), RW(dst)) : AppendInstr(I_ROR, 0xC0, 0, Imm8(1), RW(dst), shift);}
+	void ror(const Mem8& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_ROR, 0xD0, 0, Imm8(1), RW(dst)) : AppendInstr(I_ROR, 0xC0, 0, Imm8(1), RW(dst), shift);}
+	void rcl(const Reg16& dst, const Reg8_cl& shift)	{AppendInstr(I_RCL, 0xD3, E_OPERAND_SIZE_PREFIX, Imm8(2), RW(dst), Dummy(R(shift)));}
+	void rcl(const Mem16& dst, const Reg8_cl& shift)	{AppendInstr(I_RCL, 0xD3, E_OPERAND_SIZE_PREFIX, Imm8(2), RW(dst), Dummy(R(shift)));}
+	void rcl(const Reg16& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_RCL, 0xD1, E_OPERAND_SIZE_PREFIX, Imm8(2), RW(dst)) : AppendInstr(I_RCL, 0xC1, E_OPERAND_SIZE_PREFIX, Imm8(2), RW(dst), shift);}
+	void rcl(const Mem16& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_RCL, 0xD1, E_OPERAND_SIZE_PREFIX, Imm8(2), RW(dst)) : AppendInstr(I_RCL, 0xC1, E_OPERAND_SIZE_PREFIX, Imm8(2), RW(dst), shift);}
+	void rcr(const Reg16& dst, const Reg8_cl& shift)	{AppendInstr(I_RCR, 0xD3, E_OPERAND_SIZE_PREFIX, Imm8(3), RW(dst), Dummy(R(shift)));}
+	void rcr(const Mem16& dst, const Reg8_cl& shift)	{AppendInstr(I_RCR, 0xD3, E_OPERAND_SIZE_PREFIX, Imm8(3), RW(dst), Dummy(R(shift)));}
+	void rcr(const Reg16& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_RCR, 0xD1, E_OPERAND_SIZE_PREFIX, Imm8(3), RW(dst)) : AppendInstr(I_RCR, 0xC1, E_OPERAND_SIZE_PREFIX, Imm8(3), RW(dst), shift);}
+	void rcr(const Mem16& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_RCR, 0xD1, E_OPERAND_SIZE_PREFIX, Imm8(3), RW(dst)) : AppendInstr(I_RCR, 0xC1, E_OPERAND_SIZE_PREFIX, Imm8(3), RW(dst), shift);}
+	void rol(const Reg16& dst, const Reg8_cl& shift)	{AppendInstr(I_ROL, 0xD3, E_OPERAND_SIZE_PREFIX, Imm8(0), RW(dst), Dummy(R(shift)));}
+	void rol(const Mem16& dst, const Reg8_cl& shift)	{AppendInstr(I_ROL, 0xD3, E_OPERAND_SIZE_PREFIX, Imm8(0), RW(dst), Dummy(R(shift)));}
+	void rol(const Reg16& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_ROL, 0xD1, E_OPERAND_SIZE_PREFIX, Imm8(0), RW(dst)) : AppendInstr(I_ROL, 0xC1, E_OPERAND_SIZE_PREFIX, Imm8(0), RW(dst), shift);}
+	void rol(const Mem16& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_ROL, 0xD1, E_OPERAND_SIZE_PREFIX, Imm8(0), RW(dst)) : AppendInstr(I_ROL, 0xC1, E_OPERAND_SIZE_PREFIX, Imm8(0), RW(dst), shift);}
+	void ror(const Reg16& dst, const Reg8_cl& shift)	{AppendInstr(I_ROR, 0xD3, E_OPERAND_SIZE_PREFIX, Imm8(1), RW(dst), Dummy(R(shift)));}
+	void ror(const Mem16& dst, const Reg8_cl& shift)	{AppendInstr(I_ROR, 0xD3, E_OPERAND_SIZE_PREFIX, Imm8(1), RW(dst), Dummy(R(shift)));}
+	void ror(const Reg16& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_ROR, 0xD1, E_OPERAND_SIZE_PREFIX, Imm8(1), RW(dst)) : AppendInstr(I_ROR, 0xC1, E_OPERAND_SIZE_PREFIX, Imm8(1), RW(dst), shift);}
+	void ror(const Mem16& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_ROR, 0xD1, E_OPERAND_SIZE_PREFIX, Imm8(1), RW(dst)) : AppendInstr(I_ROR, 0xC1, E_OPERAND_SIZE_PREFIX, Imm8(1), RW(dst), shift);}
+	void rcl(const Reg32& dst, const Reg8_cl& shift)	{AppendInstr(I_RCL, 0xD3, 0, Imm8(2), RW(dst), Dummy(R(shift)));}
+	void rcl(const Mem32& dst, const Reg8_cl& shift)	{AppendInstr(I_RCL, 0xD3, 0, Imm8(2), RW(dst), Dummy(R(shift)));}
+	void rcl(const Reg32& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_RCL, 0xD1, 0, Imm8(2), RW(dst)) : AppendInstr(I_RCL, 0xC1, 0, Imm8(2), RW(dst), shift);}
+	void rcl(const Mem32& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_RCL, 0xD1, 0, Imm8(2), RW(dst)) : AppendInstr(I_RCL, 0xC1, 0, Imm8(2), RW(dst), shift);}
+	void rcr(const Reg32& dst, const Reg8_cl& shift)	{AppendInstr(I_RCR, 0xD3, 0, Imm8(3), RW(dst), Dummy(R(shift)));}
+	void rcr(const Mem32& dst, const Reg8_cl& shift)	{AppendInstr(I_RCR, 0xD3, 0, Imm8(3), RW(dst), Dummy(R(shift)));}
+	void rcr(const Reg32& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_RCR, 0xD1, 0, Imm8(3), RW(dst)) : AppendInstr(I_RCR, 0xC1, 0, Imm8(3), RW(dst), shift);}
+	void rcr(const Mem32& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_RCR, 0xD1, 0, Imm8(3), RW(dst)) : AppendInstr(I_RCR, 0xC1, 0, Imm8(3), RW(dst), shift);}
+	void rol(const Reg32& dst, const Reg8_cl& shift)	{AppendInstr(I_ROL, 0xD3, 0, Imm8(0), RW(dst), Dummy(R(shift)));}
+	void rol(const Mem32& dst, const Reg8_cl& shift)	{AppendInstr(I_ROL, 0xD3, 0, Imm8(0), RW(dst), Dummy(R(shift)));}
+	void rol(const Reg32& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_ROL, 0xD1, 0, Imm8(0), RW(dst)) : AppendInstr(I_ROL, 0xC1, 0, Imm8(0), RW(dst), shift);}
+	void rol(const Mem32& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_ROL, 0xD1, 0, Imm8(0), RW(dst)) : AppendInstr(I_ROL, 0xC1, 0, Imm8(0), RW(dst), shift);}
+	void ror(const Reg32& dst, const Reg8_cl& shift)	{AppendInstr(I_ROR, 0xD3, 0, Imm8(1), RW(dst), Dummy(R(shift)));}
+	void ror(const Mem32& dst, const Reg8_cl& shift)	{AppendInstr(I_ROR, 0xD3, 0, Imm8(1), RW(dst), Dummy(R(shift)));}
+	void ror(const Reg32& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_ROR, 0xD1, 0, Imm8(1), RW(dst)) : AppendInstr(I_ROR, 0xC1, 0, Imm8(1), RW(dst), shift);}
+	void ror(const Mem32& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_ROR, 0xD1, 0, Imm8(1), RW(dst)) : AppendInstr(I_ROR, 0xC1, 0, Imm8(1), RW(dst), shift);}
 #ifdef JITASM64
-	void rcl(const Reg64& dst, const Imm8& shift)	{shift.GetImm() == 1 ? AppendInstr(I_RCL, 0xD1, E_REXW_PREFIX, Imm8(2), RW(dst)) : AppendInstr(I_RCL, 0xC1, E_REXW_PREFIX, Imm8(2), RW(dst), shift);}
-	void rcl(const Mem64& dst, const Imm8& shift)	{shift.GetImm() == 1 ? AppendInstr(I_RCL, 0xD1, E_REXW_PREFIX, Imm8(2), RW(dst)) : AppendInstr(I_RCL, 0xC1, E_REXW_PREFIX, Imm8(2), RW(dst), shift);}
-	void rcr(const Reg64& dst, const Imm8& shift)	{shift.GetImm() == 1 ? AppendInstr(I_RCR, 0xD1, E_REXW_PREFIX, Imm8(3), RW(dst)) : AppendInstr(I_RCR, 0xC1, E_REXW_PREFIX, Imm8(3), RW(dst), shift);}
-	void rcr(const Mem64& dst, const Imm8& shift)	{shift.GetImm() == 1 ? AppendInstr(I_RCR, 0xD1, E_REXW_PREFIX, Imm8(3), RW(dst)) : AppendInstr(I_RCR, 0xC1, E_REXW_PREFIX, Imm8(3), RW(dst), shift);}
-	void rol(const Reg64& dst, const Imm8& shift)	{shift.GetImm() == 1 ? AppendInstr(I_ROL, 0xD1, E_REXW_PREFIX, Imm8(0), RW(dst)) : AppendInstr(I_ROL, 0xC1, E_REXW_PREFIX, Imm8(0), RW(dst), shift);}
-	void rol(const Mem64& dst, const Imm8& shift)	{shift.GetImm() == 1 ? AppendInstr(I_ROL, 0xD1, E_REXW_PREFIX, Imm8(0), RW(dst)) : AppendInstr(I_ROL, 0xC1, E_REXW_PREFIX, Imm8(0), RW(dst), shift);}
-	void ror(const Reg64& dst, const Imm8& shift)	{shift.GetImm() == 1 ? AppendInstr(I_ROR, 0xD1, E_REXW_PREFIX, Imm8(1), RW(dst)) : AppendInstr(I_ROR, 0xC1, E_REXW_PREFIX, Imm8(1), RW(dst), shift);}
-	void ror(const Mem64& dst, const Imm8& shift)	{shift.GetImm() == 1 ? AppendInstr(I_ROR, 0xD1, E_REXW_PREFIX, Imm8(1), RW(dst)) : AppendInstr(I_ROR, 0xC1, E_REXW_PREFIX, Imm8(1), RW(dst), shift);}
+	void rcl(const Reg64& dst, const Reg8_cl& shift)	{AppendInstr(I_RCL, 0xD3, E_REXW_PREFIX, Imm8(2), RW(dst), Dummy(R(shift)));}
+	void rcl(const Mem64& dst, const Reg8_cl& shift)	{AppendInstr(I_RCL, 0xD3, E_REXW_PREFIX, Imm8(2), RW(dst), Dummy(R(shift)));}
+	void rcl(const Reg64& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_RCL, 0xD1, E_REXW_PREFIX, Imm8(2), RW(dst)) : AppendInstr(I_RCL, 0xC1, E_REXW_PREFIX, Imm8(2), RW(dst), shift);}
+	void rcl(const Mem64& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_RCL, 0xD1, E_REXW_PREFIX, Imm8(2), RW(dst)) : AppendInstr(I_RCL, 0xC1, E_REXW_PREFIX, Imm8(2), RW(dst), shift);}
+	void rcr(const Reg64& dst, const Reg8_cl& shift)	{AppendInstr(I_RCR, 0xD3, E_REXW_PREFIX, Imm8(3), RW(dst), Dummy(R(shift)));}
+	void rcr(const Mem64& dst, const Reg8_cl& shift)	{AppendInstr(I_RCR, 0xD3, E_REXW_PREFIX, Imm8(3), RW(dst), Dummy(R(shift)));}
+	void rcr(const Reg64& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_RCR, 0xD1, E_REXW_PREFIX, Imm8(3), RW(dst)) : AppendInstr(I_RCR, 0xC1, E_REXW_PREFIX, Imm8(3), RW(dst), shift);}
+	void rcr(const Mem64& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_RCR, 0xD1, E_REXW_PREFIX, Imm8(3), RW(dst)) : AppendInstr(I_RCR, 0xC1, E_REXW_PREFIX, Imm8(3), RW(dst), shift);}
+	void rol(const Reg64& dst, const Reg8_cl& shift)	{AppendInstr(I_ROL, 0xD3, E_REXW_PREFIX, Imm8(0), RW(dst), Dummy(R(shift)));}
+	void rol(const Mem64& dst, const Reg8_cl& shift)	{AppendInstr(I_ROL, 0xD3, E_REXW_PREFIX, Imm8(0), RW(dst), Dummy(R(shift)));}
+	void rol(const Reg64& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_ROL, 0xD1, E_REXW_PREFIX, Imm8(0), RW(dst)) : AppendInstr(I_ROL, 0xC1, E_REXW_PREFIX, Imm8(0), RW(dst), shift);}
+	void rol(const Mem64& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_ROL, 0xD1, E_REXW_PREFIX, Imm8(0), RW(dst)) : AppendInstr(I_ROL, 0xC1, E_REXW_PREFIX, Imm8(0), RW(dst), shift);}
+	void ror(const Reg64& dst, const Reg8_cl& shift)	{AppendInstr(I_ROR, 0xD3, E_REXW_PREFIX, Imm8(1), RW(dst), Dummy(R(shift)));}
+	void ror(const Mem64& dst, const Reg8_cl& shift)	{AppendInstr(I_ROR, 0xD3, E_REXW_PREFIX, Imm8(1), RW(dst), Dummy(R(shift)));}
+	void ror(const Reg64& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_ROR, 0xD1, E_REXW_PREFIX, Imm8(1), RW(dst)) : AppendInstr(I_ROR, 0xC1, E_REXW_PREFIX, Imm8(1), RW(dst), shift);}
+	void ror(const Mem64& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_ROR, 0xD1, E_REXW_PREFIX, Imm8(1), RW(dst)) : AppendInstr(I_ROR, 0xC1, E_REXW_PREFIX, Imm8(1), RW(dst), shift);}
 #endif
 	void rdmsr()	{AppendInstr(I_RDMSR, 0x0F32, 0);}
 	void rdpmc()	{AppendInstr(I_RDMSR, 0x0F33, 0);}
@@ -2382,48 +2414,48 @@ struct Frontend
 	void sal(const Mem8& dst, const Reg8_cl& shift)		{shl(dst, shift);}
 	void sal(const Reg8& dst, const Imm8& shift)		{shl(dst, shift);}
 	void sal(const Mem8& dst, const Imm8& shift)		{shl(dst, shift);}
-	void sar(const Reg8& dst, const Reg8_cl& shift)		{AppendInstr(I_SAR, 0xD2, 0, Imm8(7), W(dst), Dummy(R(cl)));}
-	void sar(const Mem8& dst, const Reg8_cl& shift)		{AppendInstr(I_SAR, 0xD2, 0, Imm8(7), W(dst), Dummy(R(cl)));}
+	void sar(const Reg8& dst, const Reg8_cl& shift)		{AppendInstr(I_SAR, 0xD2, 0, Imm8(7), RW(dst), Dummy(R(shift)));}
+	void sar(const Mem8& dst, const Reg8_cl& shift)		{AppendInstr(I_SAR, 0xD2, 0, Imm8(7), RW(dst), Dummy(R(shift)));}
 	void sar(const Reg8& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_SAR, 0xD0, 0, Imm8(7), dst) : AppendInstr(I_SAR, 0xC0, 0, Imm8(7), dst, shift);}
 	void sar(const Mem8& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_SAR, 0xD0, 0, Imm8(7), dst) : AppendInstr(I_SAR, 0xC0, 0, Imm8(7), dst, shift);}
-	void shl(const Reg8& dst, const Reg8_cl& shift)		{AppendInstr(I_SHL, 0xD2, 0, Imm8(4), W(dst), Dummy(R(cl)));}
-	void shl(const Mem8& dst, const Reg8_cl& shift)		{AppendInstr(I_SHL, 0xD2, 0, Imm8(4), W(dst), Dummy(R(cl)));}
+	void shl(const Reg8& dst, const Reg8_cl& shift)		{AppendInstr(I_SHL, 0xD2, 0, Imm8(4), RW(dst), Dummy(R(shift)));}
+	void shl(const Mem8& dst, const Reg8_cl& shift)		{AppendInstr(I_SHL, 0xD2, 0, Imm8(4), RW(dst), Dummy(R(shift)));}
 	void shl(const Reg8& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_SHL, 0xD0, 0, Imm8(4), dst) : AppendInstr(I_SHL, 0xC0, 0, Imm8(4), dst, shift);}
 	void shl(const Mem8& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_SHL, 0xD0, 0, Imm8(4), dst) : AppendInstr(I_SHL, 0xC0, 0, Imm8(4), dst, shift);}
-	void shr(const Reg8& dst, const Reg8_cl& shift)		{AppendInstr(I_SHR, 0xD2, 0, Imm8(5), W(dst), Dummy(R(cl)));}
-	void shr(const Mem8& dst, const Reg8_cl& shift)		{AppendInstr(I_SHR, 0xD2, 0, Imm8(5), W(dst), Dummy(R(cl)));}
+	void shr(const Reg8& dst, const Reg8_cl& shift)		{AppendInstr(I_SHR, 0xD2, 0, Imm8(5), RW(dst), Dummy(R(shift)));}
+	void shr(const Mem8& dst, const Reg8_cl& shift)		{AppendInstr(I_SHR, 0xD2, 0, Imm8(5), RW(dst), Dummy(R(shift)));}
 	void shr(const Reg8& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_SHR, 0xD0, 0, Imm8(5), dst) : AppendInstr(I_SHR, 0xC0, 0, Imm8(5), dst, shift);}
 	void shr(const Mem8& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_SHR, 0xD0, 0, Imm8(5), dst) : AppendInstr(I_SHR, 0xC0, 0, Imm8(5), dst, shift);}
 	void sal(const Reg16& dst, const Reg8_cl& shift)	{shl(dst, shift);}
 	void sal(const Mem16& dst, const Reg8_cl& shift)	{shl(dst, shift);}
 	void sal(const Reg16& dst, const Imm8& shift)		{shl(dst, shift);}
 	void sal(const Mem16& dst, const Imm8& shift)		{shl(dst, shift);}
-	void sar(const Reg16& dst, const Reg8_cl& shift)	{AppendInstr(I_SAR, 0xD3, E_OPERAND_SIZE_PREFIX, Imm8(7), W(dst), Dummy(R(cl)));}
-	void sar(const Mem16& dst, const Reg8_cl& shift)	{AppendInstr(I_SAR, 0xD3, E_OPERAND_SIZE_PREFIX, Imm8(7), W(dst), Dummy(R(cl)));}
+	void sar(const Reg16& dst, const Reg8_cl& shift)	{AppendInstr(I_SAR, 0xD3, E_OPERAND_SIZE_PREFIX, Imm8(7), RW(dst), Dummy(R(shift)));}
+	void sar(const Mem16& dst, const Reg8_cl& shift)	{AppendInstr(I_SAR, 0xD3, E_OPERAND_SIZE_PREFIX, Imm8(7), RW(dst), Dummy(R(shift)));}
 	void sar(const Reg16& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_SAR, 0xD1, E_OPERAND_SIZE_PREFIX, Imm8(7), dst) : AppendInstr(I_SAR, 0xC1, E_OPERAND_SIZE_PREFIX, Imm8(7), dst, shift);}
 	void sar(const Mem16& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_SAR, 0xD1, E_OPERAND_SIZE_PREFIX, Imm8(7), dst) : AppendInstr(I_SAR, 0xC1, E_OPERAND_SIZE_PREFIX, Imm8(7), dst, shift);}
-	void shl(const Reg16& dst, const Reg8_cl& shift)	{AppendInstr(I_SHL, 0xD3, E_OPERAND_SIZE_PREFIX, Imm8(4), W(dst), Dummy(R(cl)));}
-	void shl(const Mem16& dst, const Reg8_cl& shift)	{AppendInstr(I_SHL, 0xD3, E_OPERAND_SIZE_PREFIX, Imm8(4), W(dst), Dummy(R(cl)));}
+	void shl(const Reg16& dst, const Reg8_cl& shift)	{AppendInstr(I_SHL, 0xD3, E_OPERAND_SIZE_PREFIX, Imm8(4), RW(dst), Dummy(R(shift)));}
+	void shl(const Mem16& dst, const Reg8_cl& shift)	{AppendInstr(I_SHL, 0xD3, E_OPERAND_SIZE_PREFIX, Imm8(4), RW(dst), Dummy(R(shift)));}
 	void shl(const Reg16& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_SHL, 0xD1, E_OPERAND_SIZE_PREFIX, Imm8(4), dst) : AppendInstr(I_SHL, 0xC1, E_OPERAND_SIZE_PREFIX, Imm8(4), dst, shift);}
 	void shl(const Mem16& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_SHL, 0xD1, E_OPERAND_SIZE_PREFIX, Imm8(4), dst) : AppendInstr(I_SHL, 0xC1, E_OPERAND_SIZE_PREFIX, Imm8(4), dst, shift);}
-	void shr(const Reg16& dst, const Reg8_cl& shift)	{AppendInstr(I_SHR, 0xD3, E_OPERAND_SIZE_PREFIX, Imm8(5), W(dst), Dummy(R(cl)));}
-	void shr(const Mem16& dst, const Reg8_cl& shift)	{AppendInstr(I_SHR, 0xD3, E_OPERAND_SIZE_PREFIX, Imm8(5), W(dst), Dummy(R(cl)));}
+	void shr(const Reg16& dst, const Reg8_cl& shift)	{AppendInstr(I_SHR, 0xD3, E_OPERAND_SIZE_PREFIX, Imm8(5), RW(dst), Dummy(R(shift)));}
+	void shr(const Mem16& dst, const Reg8_cl& shift)	{AppendInstr(I_SHR, 0xD3, E_OPERAND_SIZE_PREFIX, Imm8(5), RW(dst), Dummy(R(shift)));}
 	void shr(const Reg16& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_SHR, 0xD1, E_OPERAND_SIZE_PREFIX, Imm8(5), dst) : AppendInstr(I_SHR, 0xC1, E_OPERAND_SIZE_PREFIX, Imm8(5), dst, shift);}
 	void shr(const Mem16& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_SHR, 0xD1, E_OPERAND_SIZE_PREFIX, Imm8(5), dst) : AppendInstr(I_SHR, 0xC1, E_OPERAND_SIZE_PREFIX, Imm8(5), dst, shift);}
 	void sal(const Reg32& dst, const Reg8_cl& shift)	{shl(dst, shift);}
 	void sal(const Mem32& dst, const Reg8_cl& shift)	{shl(dst, shift);}
 	void sal(const Reg32& dst, const Imm8& shift)		{shl(dst, shift);}
 	void sal(const Mem32& dst, const Imm8& shift)		{shl(dst, shift);}
-	void sar(const Reg32& dst, const Reg8_cl& shift)	{AppendInstr(I_SAR, 0xD3, 0, Imm8(7), W(dst), Dummy(R(cl)));}
-	void sar(const Mem32& dst, const Reg8_cl& shift)	{AppendInstr(I_SAR, 0xD3, 0, Imm8(7), W(dst), Dummy(R(cl)));}
+	void sar(const Reg32& dst, const Reg8_cl& shift)	{AppendInstr(I_SAR, 0xD3, 0, Imm8(7), RW(dst), Dummy(R(shift)));}
+	void sar(const Mem32& dst, const Reg8_cl& shift)	{AppendInstr(I_SAR, 0xD3, 0, Imm8(7), RW(dst), Dummy(R(shift)));}
 	void sar(const Reg32& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_SAR, 0xD1, 0, Imm8(7), dst) : AppendInstr(I_SAR, 0xC1, 0, Imm8(7), dst, shift);}
 	void sar(const Mem32& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_SAR, 0xD1, 0, Imm8(7), dst) : AppendInstr(I_SAR, 0xC1, 0, Imm8(7), dst, shift);}
-	void shl(const Reg32& dst, const Reg8_cl& shift)	{AppendInstr(I_SHL, 0xD3, 0, Imm8(4), W(dst), Dummy(R(cl)));}
-	void shl(const Mem32& dst, const Reg8_cl& shift)	{AppendInstr(I_SHL, 0xD3, 0, Imm8(4), W(dst), Dummy(R(cl)));}
+	void shl(const Reg32& dst, const Reg8_cl& shift)	{AppendInstr(I_SHL, 0xD3, 0, Imm8(4), RW(dst), Dummy(R(shift)));}
+	void shl(const Mem32& dst, const Reg8_cl& shift)	{AppendInstr(I_SHL, 0xD3, 0, Imm8(4), RW(dst), Dummy(R(shift)));}
 	void shl(const Reg32& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_SHL, 0xD1, 0, Imm8(4), dst) : AppendInstr(I_SHL, 0xC1, 0, Imm8(4), dst, shift);}
 	void shl(const Mem32& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_SHL, 0xD1, 0, Imm8(4), dst) : AppendInstr(I_SHL, 0xC1, 0, Imm8(4), dst, shift);}
-	void shr(const Reg32& dst, const Reg8_cl& shift)	{AppendInstr(I_SHR, 0xD3, 0, Imm8(5), W(dst), Dummy(R(cl)));}
-	void shr(const Mem32& dst, const Reg8_cl& shift)	{AppendInstr(I_SHR, 0xD3, 0, Imm8(5), W(dst), Dummy(R(cl)));}
+	void shr(const Reg32& dst, const Reg8_cl& shift)	{AppendInstr(I_SHR, 0xD3, 0, Imm8(5), RW(dst), Dummy(R(shift)));}
+	void shr(const Mem32& dst, const Reg8_cl& shift)	{AppendInstr(I_SHR, 0xD3, 0, Imm8(5), RW(dst), Dummy(R(shift)));}
 	void shr(const Reg32& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_SHR, 0xD1, 0, Imm8(5), dst) : AppendInstr(I_SHR, 0xC1, 0, Imm8(5), dst, shift);}
 	void shr(const Mem32& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_SHR, 0xD1, 0, Imm8(5), dst) : AppendInstr(I_SHR, 0xC1, 0, Imm8(5), dst, shift);}
 #ifdef JITASM64
@@ -2431,16 +2463,16 @@ struct Frontend
 	void sal(const Mem64& dst, const Reg8_cl& shift)	{shl(dst, shift);}
 	void sal(const Reg64& dst, const Imm8& shift)		{shl(dst, shift);}
 	void sal(const Mem64& dst, const Imm8& shift)		{shl(dst, shift);}
-	void sar(const Reg64& dst, const Reg8_cl& shift)	{AppendInstr(I_SAR, 0xD3, E_REXW_PREFIX, Imm8(7), W(dst), Dummy(R(cl)));}
-	void sar(const Mem64& dst, const Reg8_cl& shift)	{AppendInstr(I_SAR, 0xD3, E_REXW_PREFIX, Imm8(7), W(dst), Dummy(R(cl)));}
+	void sar(const Reg64& dst, const Reg8_cl& shift)	{AppendInstr(I_SAR, 0xD3, E_REXW_PREFIX, Imm8(7), RW(dst), Dummy(R(shift)));}
+	void sar(const Mem64& dst, const Reg8_cl& shift)	{AppendInstr(I_SAR, 0xD3, E_REXW_PREFIX, Imm8(7), RW(dst), Dummy(R(shift)));}
 	void sar(const Reg64& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_SAR, 0xD1, E_REXW_PREFIX, Imm8(7), dst) : AppendInstr(I_SAR, 0xC1, E_REXW_PREFIX, Imm8(7), dst, shift);}
 	void sar(const Mem64& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_SAR, 0xD1, E_REXW_PREFIX, Imm8(7), dst) : AppendInstr(I_SAR, 0xC1, E_REXW_PREFIX, Imm8(7), dst, shift);}
-	void shl(const Reg64& dst, const Reg8_cl& shift)	{AppendInstr(I_SHL, 0xD3, E_REXW_PREFIX, Imm8(4), W(dst), Dummy(R(cl)));}
-	void shl(const Mem64& dst, const Reg8_cl& shift)	{AppendInstr(I_SHL, 0xD3, E_REXW_PREFIX, Imm8(4), W(dst), Dummy(R(cl)));}
+	void shl(const Reg64& dst, const Reg8_cl& shift)	{AppendInstr(I_SHL, 0xD3, E_REXW_PREFIX, Imm8(4), RW(dst), Dummy(R(shift)));}
+	void shl(const Mem64& dst, const Reg8_cl& shift)	{AppendInstr(I_SHL, 0xD3, E_REXW_PREFIX, Imm8(4), RW(dst), Dummy(R(shift)));}
 	void shl(const Reg64& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_SHL, 0xD1, E_REXW_PREFIX, Imm8(4), dst) : AppendInstr(I_SHL, 0xC1, E_REXW_PREFIX, Imm8(4), dst, shift);}
 	void shl(const Mem64& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_SHL, 0xD1, E_REXW_PREFIX, Imm8(4), dst) : AppendInstr(I_SHL, 0xC1, E_REXW_PREFIX, Imm8(4), dst, shift);}
-	void shr(const Reg64& dst, const Reg8_cl& shift)	{AppendInstr(I_SHR, 0xD3, E_REXW_PREFIX, Imm8(5), W(dst), Dummy(R(cl)));}
-	void shr(const Mem64& dst, const Reg8_cl& shift)	{AppendInstr(I_SHR, 0xD3, E_REXW_PREFIX, Imm8(5), W(dst), Dummy(R(cl)));}
+	void shr(const Reg64& dst, const Reg8_cl& shift)	{AppendInstr(I_SHR, 0xD3, E_REXW_PREFIX, Imm8(5), RW(dst), Dummy(R(shift)));}
+	void shr(const Mem64& dst, const Reg8_cl& shift)	{AppendInstr(I_SHR, 0xD3, E_REXW_PREFIX, Imm8(5), RW(dst), Dummy(R(shift)));}
 	void shr(const Reg64& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_SHR, 0xD1, E_REXW_PREFIX, Imm8(5), dst) : AppendInstr(I_SHR, 0xC1, E_REXW_PREFIX, Imm8(5), dst, shift);}
 	void shr(const Mem64& dst, const Imm8& shift)		{shift.GetImm() == 1 ? AppendInstr(I_SHR, 0xD1, E_REXW_PREFIX, Imm8(5), dst) : AppendInstr(I_SHR, 0xC1, E_REXW_PREFIX, Imm8(5), dst, shift);}
 #endif
