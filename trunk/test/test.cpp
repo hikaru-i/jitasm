@@ -2163,12 +2163,12 @@ struct test_gpi_e : jitasm::function<void, test_gpi_e>
 		in(al, dx);
 		in(ax, dx);
 		in(eax, dx);
-		insb();
-		insw();
-		insd();
-		rep_insb();
-		rep_insw();
-		rep_insd();
+		insb(zdi, dx);
+		insw(zdi, dx);
+		insd(zdi, dx);
+		rep_insb(zdi, dx, zcx);
+		rep_insw(zdi, dx, zcx);
+		rep_insd(zdi, dx, zcx);
 		int3();
 		intn(1);
 #ifndef JITASM64
@@ -2223,12 +2223,12 @@ struct test_gpi_e : jitasm::function<void, test_gpi_e>
 		out(dx, al);
 		out(dx, ax);
 		out(dx, eax);
-		outsb();
-		outsw();
-		outsd();
-		rep_outsb();
-		rep_outsw();
-		rep_outsd();
+		outsb(dx, zsi);
+		outsw(dx, zsi);
+		outsd(dx, zsi);
+		rep_outsb(dx, zsi, zcx);
+		rep_outsw(dx, zsi, zcx);
+		rep_outsd(dx, zsi, zcx);
 #ifndef JITASM64
 		popa();
 		popad();
