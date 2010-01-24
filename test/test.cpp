@@ -171,28 +171,39 @@ struct test_sal : jitasm::function<void, test_sal>
 {
 	void naked_main()
 	{
+		sal(al, cl);
 		sal(al, 1);
 		sal(al, 2);
 		sal(al, (jitasm::uint8) -1);
+		sal(ax, cl);
 		sal(ax, 1);
 		sal(ax, 2);
+		sal(eax, cl);
 		sal(eax, 1);
 		sal(eax, 2);
+		sal(byte_ptr[eax], cl);
 		sal(byte_ptr[eax], 1);
 		sal(byte_ptr[eax], 2);
+		sal(word_ptr[eax], cl);
 		sal(word_ptr[eax], 1);
 		sal(word_ptr[eax], 2);
+		sal(dword_ptr[eax], cl);
 		sal(dword_ptr[eax], 1);
 		sal(dword_ptr[eax], 2);
 #ifdef JITASM64
+		sal(r8b, cl);
 		sal(r8b, 1);
 		sal(r8b, 2);
+		sal(r8w, cl);
 		sal(r8w, 1);
 		sal(r8w, 2);
+		sal(r8d, cl);
 		sal(r8d, 1);
 		sal(r8d, 2);
+		sal(r8, cl);
 		sal(r8, 1);
 		sal(r8, 2);
+		sal(qword_ptr[rax], cl);
 		sal(qword_ptr[rax], 1);
 		sal(qword_ptr[rax], 2);
 #endif
@@ -207,28 +218,39 @@ struct test_sar : jitasm::function<void, test_sar>
 {
 	void naked_main()
 	{
+		sar(al, cl);
 		sar(al, 1);
 		sar(al, 2);
 		sar(al, (jitasm::uint8) -1);
+		sar(ax, cl);
 		sar(ax, 1);
 		sar(ax, 2);
+		sar(eax, cl);
 		sar(eax, 1);
 		sar(eax, 2);
+		sar(byte_ptr[eax], cl);
 		sar(byte_ptr[eax], 1);
 		sar(byte_ptr[eax], 2);
+		sar(word_ptr[eax], cl);
 		sar(word_ptr[eax], 1);
 		sar(word_ptr[eax], 2);
+		sar(dword_ptr[eax], cl);
 		sar(dword_ptr[eax], 1);
 		sar(dword_ptr[eax], 2);
 #ifdef JITASM64
+		sar(r8b, cl);
 		sar(r8b, 1);
 		sar(r8b, 2);
+		sar(r8w, cl);
 		sar(r8w, 1);
 		sar(r8w, 2);
+		sar(r8d, cl);
 		sar(r8d, 1);
 		sar(r8d, 2);
+		sar(r8, cl);
 		sar(r8, 1);
 		sar(r8, 2);
+		sar(qword_ptr[rax], cl);
 		sar(qword_ptr[rax], 1);
 		sar(qword_ptr[rax], 2);
 #endif
@@ -243,28 +265,39 @@ struct test_shl : jitasm::function<void, test_shl>
 {
 	void naked_main()
 	{
+		shl(al, cl);
 		shl(al, 1);
 		shl(al, 2);
 		shl(al, (jitasm::uint8) -1);
+		shl(ax, cl);
 		shl(ax, 1);
 		shl(ax, 2);
+		shl(eax, cl);
 		shl(eax, 1);
 		shl(eax, 2);
+		shl(byte_ptr[eax], cl);
 		shl(byte_ptr[eax], 1);
 		shl(byte_ptr[eax], 2);
+		shl(word_ptr[eax], cl);
 		shl(word_ptr[eax], 1);
 		shl(word_ptr[eax], 2);
+		shl(dword_ptr[eax], cl);
 		shl(dword_ptr[eax], 1);
 		shl(dword_ptr[eax], 2);
 #ifdef JITASM64
+		shl(r8b, cl);
 		shl(r8b, 1);
 		shl(r8b, 2);
+		shl(r8w, cl);
 		shl(r8w, 1);
 		shl(r8w, 2);
+		shl(r8d, cl);
 		shl(r8d, 1);
 		shl(r8d, 2);
+		shl(r8, cl);
 		shl(r8, 1);
 		shl(r8, 2);
+		shl(qword_ptr[rax], cl);
 		shl(qword_ptr[rax], 1);
 		shl(qword_ptr[rax], 2);
 #endif
@@ -279,28 +312,39 @@ struct test_shr : jitasm::function<void, test_shr>
 {
 	void naked_main()
 	{
+		shr(al, cl);
 		shr(al, 1);
 		shr(al, 2);
 		shr(al, (jitasm::uint8) -1);
+		shr(ax, cl);
 		shr(ax, 1);
 		shr(ax, 2);
+		shr(eax, cl);
 		shr(eax, 1);
 		shr(eax, 2);
+		shr(byte_ptr[eax], cl);
 		shr(byte_ptr[eax], 1);
 		shr(byte_ptr[eax], 2);
+		shr(word_ptr[eax], cl);
 		shr(word_ptr[eax], 1);
 		shr(word_ptr[eax], 2);
+		shr(dword_ptr[eax], cl);
 		shr(dword_ptr[eax], 1);
 		shr(dword_ptr[eax], 2);
 #ifdef JITASM64
+		shr(r8b, cl);
 		shr(r8b, 1);
 		shr(r8b, 2);
+		shr(r8w, cl);
 		shr(r8w, 1);
 		shr(r8w, 2);
+		shr(r8d, cl);
 		shr(r8d, 1);
 		shr(r8d, 2);
+		shr(r8, cl);
 		shr(r8, 1);
 		shr(r8, 2);
+		shr(qword_ptr[rax], cl);
 		shr(qword_ptr[rax], 1);
 		shr(qword_ptr[rax], 2);
 #endif
