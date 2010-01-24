@@ -1323,6 +1323,7 @@ masm_test_gpi_e proc
 	db 09h
 	db 0Fh	;wrmsr
 	db 30h
+	xgetbv
 	xlatb
 masm_test_gpi_e endp
 

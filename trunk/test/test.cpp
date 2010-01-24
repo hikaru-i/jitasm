@@ -2243,6 +2243,7 @@ struct test_gpi_e : jitasm::function<void, test_gpi_e>
 #endif
 		wbinvd();
 		wrmsr();
+		xgetbv();
 		xlatb();
 	}
 };
@@ -4292,6 +4293,29 @@ struct test_avx_d : jitasm::function<void, test_avx_d>
 		vextractf128(xmmword_ptr[edx], ymm2, 1);
 		vextractps(eax, xmm2, 5);
 		vextractps(dword_ptr[eax], xmm2, 5);
+		vhaddpd(xmm1, xmm2, xmm3);
+		vhaddpd(xmm1, xmm2, xmmword_ptr[edx]);
+		vhaddpd(ymm1, ymm2, ymm3);
+		vhaddpd(ymm1, ymm2, ymmword_ptr[edx]);
+		vhaddps(xmm1, xmm2, xmm3);
+		vhaddps(xmm1, xmm2, xmmword_ptr[edx]);
+		vhaddps(ymm1, ymm2, ymm3);
+		vhaddps(ymm1, ymm2, ymmword_ptr[edx]);
+		vhsubpd(xmm1, xmm2, xmm3);
+		vhsubpd(xmm1, xmm2, xmmword_ptr[edx]);
+		vhsubpd(ymm1, ymm2, ymm3);
+		vhsubpd(ymm1, ymm2, ymmword_ptr[edx]);
+		vhsubps(xmm1, xmm2, xmm3);
+		vhsubps(xmm1, xmm2, xmmword_ptr[edx]);
+		vhsubps(ymm1, ymm2, ymm3);
+		vhsubps(ymm1, ymm2, ymmword_ptr[edx]);
+		vinsertf128(ymm1, ymm2, xmm3, 1);
+		vinsertf128(ymm1, ymm2, xmmword_ptr[edx], 1);
+		vinsertps(xmm1, xmm2, xmm3, 1);
+		vinsertps(xmm1, xmm2, dword_ptr[edx], 1);
+		vlddqu(xmm1, xmmword_ptr[edx]);
+		vlddqu(ymm1, ymmword_ptr[edx]);
+		vldmxcsr(dword_ptr[edx]);
 	}
 };
 
