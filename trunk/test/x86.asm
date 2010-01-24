@@ -8,17 +8,23 @@
 ; SAL
 ;----------------------------------------
 masm_test_sal proc
+	sal al, cl
 	sal al, 1
 	sal al, 2
 	sal al, -1
+	sal ax, cl
 	sal ax, 1
 	sal ax, 2
+	sal eax, cl
 	sal eax, 1
 	sal eax, 2
+	sal byte ptr[eax], cl
 	sal byte ptr[eax], 1
 	sal byte ptr[eax], 2
+	sal word ptr[eax], cl
 	sal word ptr[eax], 1
 	sal word ptr[eax], 2
+	sal dword ptr[eax], cl
 	sal dword ptr[eax], 1
 	sal dword ptr[eax], 2
 masm_test_sal endp
@@ -27,17 +33,23 @@ masm_test_sal endp
 ; SAR
 ;----------------------------------------
 masm_test_sar proc
+	sar al, cl
 	sar al, 1
 	sar al, 2
 	sar al, -1
+	sar ax, cl
 	sar ax, 1
 	sar ax, 2
+	sar eax, cl
 	sar eax, 1
 	sar eax, 2
+	sar byte ptr[eax], cl
 	sar byte ptr[eax], 1
 	sar byte ptr[eax], 2
+	sar word ptr[eax], cl
 	sar word ptr[eax], 1
 	sar word ptr[eax], 2
+	sar dword ptr[eax], cl
 	sar dword ptr[eax], 1
 	sar dword ptr[eax], 2
 masm_test_sar endp
@@ -46,17 +58,23 @@ masm_test_sar endp
 ; SHL
 ;----------------------------------------
 masm_test_shl proc
+	shl al, cl
 	shl al, 1
 	shl al, 2
 	shl al, -1
+	shl ax, cl
 	shl ax, 1
 	shl ax, 2
+	shl eax, cl
 	shl eax, 1
 	shl eax, 2
+	shl byte ptr[eax], cl
 	shl byte ptr[eax], 1
 	shl byte ptr[eax], 2
+	shl word ptr[eax], cl
 	shl word ptr[eax], 1
 	shl word ptr[eax], 2
+	shl dword ptr[eax], cl
 	shl dword ptr[eax], 1
 	shl dword ptr[eax], 2
 masm_test_shl endp
@@ -65,17 +83,23 @@ masm_test_shl endp
 ; SHR
 ;----------------------------------------
 masm_test_shr proc
+	shr al, cl
 	shr al, 1
 	shr al, 2
 	shr al, -1
+	shr ax, cl
 	shr ax, 1
 	shr ax, 2
+	shr eax, cl
 	shr eax, 1
 	shr eax, 2
+	shr byte ptr[eax], cl
 	shr byte ptr[eax], 1
 	shr byte ptr[eax], 2
+	shr word ptr[eax], cl
 	shr word ptr[eax], 1
 	shr word ptr[eax], 2
+	shr dword ptr[eax], cl
 	shr dword ptr[eax], 1
 	shr dword ptr[eax], 2
 masm_test_shr endp
