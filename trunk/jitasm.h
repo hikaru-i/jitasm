@@ -2412,54 +2412,54 @@ struct Frontend
 	void shr(const Reg64& dst, const Imm8& shift)	{shift.GetImm() == 1 ? AppendInstr(I_SHR, 0xD1, E_REXW_PREFIX, Imm8(5), dst) : AppendInstr(I_SHR, 0xC1, E_REXW_PREFIX, Imm8(5), dst, shift);}
 	void shr(const Mem64& dst, const Imm8& shift)	{shift.GetImm() == 1 ? AppendInstr(I_SHR, 0xD1, E_REXW_PREFIX, Imm8(5), dst) : AppendInstr(I_SHR, 0xC1, E_REXW_PREFIX, Imm8(5), dst, shift);}
 #endif
-	void sbb(const Reg8& dst, const Imm8& imm)		{AppendInstr(I_SBB, 0x80, E_SPECIAL, Imm8(3), dst, imm);}
-	void sbb(const Mem8& dst, const Imm8& imm)		{AppendInstr(I_SBB, 0x80, 0, Imm8(3), dst, imm);}
-	void sbb(const Reg16& dst, const Imm16& imm)	{AppendInstr(I_SBB, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_OPERAND_SIZE_PREFIX | E_SPECIAL, Imm8(3), dst, detail::ImmXor8(imm));}
-	void sbb(const Mem16& dst, const Imm16& imm)	{AppendInstr(I_SBB, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_OPERAND_SIZE_PREFIX, Imm8(3), dst, detail::ImmXor8(imm));}
-	void sbb(const Reg32& dst, const Imm32& imm)	{AppendInstr(I_SBB, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_SPECIAL, Imm8(3), dst, detail::ImmXor8(imm));}
-	void sbb(const Mem32& dst, const Imm32& imm)	{AppendInstr(I_SBB, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, 0, Imm8(3), dst, detail::ImmXor8(imm));}
-	void sbb(const Reg8& dst, const Reg8& src)		{AppendInstr(I_SBB, 0x18, 0, src, dst);}
-	void sbb(const Mem8& dst, const Reg8& src)		{AppendInstr(I_SBB, 0x18, 0, src, dst);}
-	void sbb(const Reg8& dst, const Mem8& src)		{AppendInstr(I_SBB, 0x1A, 0, dst, src);}
-	void sbb(const Reg16& dst, const Reg16& src)	{AppendInstr(I_SBB, 0x19, E_OPERAND_SIZE_PREFIX, src, dst);}
-	void sbb(const Mem16& dst, const Reg16& src)	{AppendInstr(I_SBB, 0x19, E_OPERAND_SIZE_PREFIX, src, dst);}
-	void sbb(const Reg16& dst, const Mem16& src)	{AppendInstr(I_SBB, 0x1B, E_OPERAND_SIZE_PREFIX, dst, src);}
-	void sbb(const Reg32& dst, const Reg32& src)	{AppendInstr(I_SBB, 0x19, 0, src, dst);}
-	void sbb(const Mem32& dst, const Reg32& src)	{AppendInstr(I_SBB, 0x19, 0, src, dst);}
-	void sbb(const Reg32& dst, const Mem32& src)	{AppendInstr(I_SBB, 0x1B, 0, dst, src);}
+	void sbb(const Reg8& dst, const Imm8& imm)		{AppendInstr(I_SBB, 0x80, E_SPECIAL, Imm8(3), RW(dst), imm);}
+	void sbb(const Mem8& dst, const Imm8& imm)		{AppendInstr(I_SBB, 0x80, 0, Imm8(3), RW(dst), imm);}
+	void sbb(const Reg16& dst, const Imm16& imm)	{AppendInstr(I_SBB, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_OPERAND_SIZE_PREFIX | E_SPECIAL, Imm8(3), RW(dst), detail::ImmXor8(imm));}
+	void sbb(const Mem16& dst, const Imm16& imm)	{AppendInstr(I_SBB, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_OPERAND_SIZE_PREFIX, Imm8(3), RW(dst), detail::ImmXor8(imm));}
+	void sbb(const Reg32& dst, const Imm32& imm)	{AppendInstr(I_SBB, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_SPECIAL, Imm8(3), RW(dst), detail::ImmXor8(imm));}
+	void sbb(const Mem32& dst, const Imm32& imm)	{AppendInstr(I_SBB, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, 0, Imm8(3), RW(dst), detail::ImmXor8(imm));}
+	void sbb(const Reg8& dst, const Reg8& src)		{AppendInstr(I_SBB, 0x18, 0, R(src), RW(dst));}
+	void sbb(const Mem8& dst, const Reg8& src)		{AppendInstr(I_SBB, 0x18, 0, R(src), RW(dst));}
+	void sbb(const Reg8& dst, const Mem8& src)		{AppendInstr(I_SBB, 0x1A, 0, RW(dst), R(src));}
+	void sbb(const Reg16& dst, const Reg16& src)	{AppendInstr(I_SBB, 0x19, E_OPERAND_SIZE_PREFIX, R(src), RW(dst));}
+	void sbb(const Mem16& dst, const Reg16& src)	{AppendInstr(I_SBB, 0x19, E_OPERAND_SIZE_PREFIX, R(src), RW(dst));}
+	void sbb(const Reg16& dst, const Mem16& src)	{AppendInstr(I_SBB, 0x1B, E_OPERAND_SIZE_PREFIX, RW(dst), R(src));}
+	void sbb(const Reg32& dst, const Reg32& src)	{AppendInstr(I_SBB, 0x19, 0, R(src), RW(dst));}
+	void sbb(const Mem32& dst, const Reg32& src)	{AppendInstr(I_SBB, 0x19, 0, R(src), RW(dst));}
+	void sbb(const Reg32& dst, const Mem32& src)	{AppendInstr(I_SBB, 0x1B, 0, RW(dst), R(src));}
 #ifdef JITASM64
-	void sbb(const Reg64& dst, const Imm32& imm)	{AppendInstr(I_SBB, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_REXW_PREFIX | E_SPECIAL, Imm8(3), dst, detail::ImmXor8(imm));}
-	void sbb(const Mem64& dst, const Imm32& imm)	{AppendInstr(I_SBB, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_REXW_PREFIX, Imm8(3), dst, detail::ImmXor8(imm));}
-	void sbb(const Reg64& dst, const Reg64& src)	{AppendInstr(I_SBB, 0x19, E_REXW_PREFIX, src, dst);}
-	void sbb(const Mem64& dst, const Reg64& src)	{AppendInstr(I_SBB, 0x19, E_REXW_PREFIX, src, dst);}
-	void sbb(const Reg64& dst, const Mem64& src)	{AppendInstr(I_SBB, 0x1B, E_REXW_PREFIX, dst, src);}
+	void sbb(const Reg64& dst, const Imm32& imm)	{AppendInstr(I_SBB, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_REXW_PREFIX | E_SPECIAL, Imm8(3), RW(dst), detail::ImmXor8(imm));}
+	void sbb(const Mem64& dst, const Imm32& imm)	{AppendInstr(I_SBB, detail::IsInt8(imm.GetImm()) ? 0x83 : 0x81, E_REXW_PREFIX, Imm8(3), RW(dst), detail::ImmXor8(imm));}
+	void sbb(const Reg64& dst, const Reg64& src)	{AppendInstr(I_SBB, 0x19, E_REXW_PREFIX, R(src), RW(dst));}
+	void sbb(const Mem64& dst, const Reg64& src)	{AppendInstr(I_SBB, 0x19, E_REXW_PREFIX, R(src), RW(dst));}
+	void sbb(const Reg64& dst, const Mem64& src)	{AppendInstr(I_SBB, 0x1B, E_REXW_PREFIX, RW(dst), R(src));}
 #endif
-	void scasb()		{AppendInstr(I_SCAS_B, 0xAE, 0);}
-	void scasw()		{AppendInstr(I_SCAS_W, 0xAF, E_OPERAND_SIZE_PREFIX);}
-	void scasd()		{AppendInstr(I_SCAS_D, 0xAF, 0);}
+	void scasb()		{AppendInstr(I_SCAS_B, 0xAE, 0, Dummy(R(al)), Dummy(RW(edi)));}
+	void scasw()		{AppendInstr(I_SCAS_W, 0xAF, E_OPERAND_SIZE_PREFIX, Dummy(R(ax)), Dummy(RW(edi)));}
+	void scasd()		{AppendInstr(I_SCAS_D, 0xAF, 0, Dummy(R(eax)), Dummy(RW(edi)));}
 #ifdef JITASM64
-	void scasq()		{AppendInstr(I_SCAS_Q, 0xAF, E_REXW_PREFIX);}
+	void scasq()		{AppendInstr(I_SCAS_Q, 0xAF, E_REXW_PREFIX, Dummy(R(rax)), Dummy(RW(rdi)));}
 #endif
-	void seta(const Reg8& dst)		{AppendInstr(I_SETCC, 0x0F97, 0, Imm8(0), dst);}
-	void seta(const Mem8& dst)		{AppendInstr(I_SETCC, 0x0F97, 0, Imm8(0), dst);}
-	void setae(const Reg8& dst)		{AppendInstr(I_SETCC, 0x0F93, 0, Imm8(0), dst);}
-	void setae(const Mem8& dst)		{AppendInstr(I_SETCC, 0x0F93, 0, Imm8(0), dst);}
-	void setb(const Reg8& dst)		{AppendInstr(I_SETCC, 0x0F92, 0, Imm8(0), dst);}
-	void setb(const Mem8& dst)		{AppendInstr(I_SETCC, 0x0F92, 0, Imm8(0), dst);}
-	void setbe(const Reg8& dst)		{AppendInstr(I_SETCC, 0x0F96, 0, Imm8(0), dst);}
-	void setbe(const Mem8& dst)		{AppendInstr(I_SETCC, 0x0F96, 0, Imm8(0), dst);}
+	void seta(const Reg8& dst)		{AppendInstr(I_SETCC, 0x0F97, 0, Imm8(0), W(dst));}
+	void seta(const Mem8& dst)		{AppendInstr(I_SETCC, 0x0F97, 0, Imm8(0), W(dst));}
+	void setae(const Reg8& dst)		{AppendInstr(I_SETCC, 0x0F93, 0, Imm8(0), W(dst));}
+	void setae(const Mem8& dst)		{AppendInstr(I_SETCC, 0x0F93, 0, Imm8(0), W(dst));}
+	void setb(const Reg8& dst)		{AppendInstr(I_SETCC, 0x0F92, 0, Imm8(0), W(dst));}
+	void setb(const Mem8& dst)		{AppendInstr(I_SETCC, 0x0F92, 0, Imm8(0), W(dst));}
+	void setbe(const Reg8& dst)		{AppendInstr(I_SETCC, 0x0F96, 0, Imm8(0), W(dst));}
+	void setbe(const Mem8& dst)		{AppendInstr(I_SETCC, 0x0F96, 0, Imm8(0), W(dst));}
 	void setc(const Reg8& dst)		{setb(dst);}
 	void setc(const Mem8& dst)		{setb(dst);}
-	void sete(const Reg8& dst)		{AppendInstr(I_SETCC, 0x0F94, 0, Imm8(0), dst);}
-	void sete(const Mem8& dst)		{AppendInstr(I_SETCC, 0x0F94, 0, Imm8(0), dst);}
-	void setg(const Reg8& dst)		{AppendInstr(I_SETCC, 0x0F9F, 0, Imm8(0), dst);}
-	void setg(const Mem8& dst)		{AppendInstr(I_SETCC, 0x0F9F, 0, Imm8(0), dst);}
-	void setge(const Reg8& dst)		{AppendInstr(I_SETCC, 0x0F9D, 0, Imm8(0), dst);}
-	void setge(const Mem8& dst)		{AppendInstr(I_SETCC, 0x0F9D, 0, Imm8(0), dst);}
-	void setl(const Reg8& dst)		{AppendInstr(I_SETCC, 0x0F9C, 0, Imm8(0), dst);}
-	void setl(const Mem8& dst)		{AppendInstr(I_SETCC, 0x0F9C, 0, Imm8(0), dst);}
-	void setle(const Reg8& dst)		{AppendInstr(I_SETCC, 0x0F9E, 0, Imm8(0), dst);}
-	void setle(const Mem8& dst)		{AppendInstr(I_SETCC, 0x0F9E, 0, Imm8(0), dst);}
+	void sete(const Reg8& dst)		{AppendInstr(I_SETCC, 0x0F94, 0, Imm8(0), W(dst));}
+	void sete(const Mem8& dst)		{AppendInstr(I_SETCC, 0x0F94, 0, Imm8(0), W(dst));}
+	void setg(const Reg8& dst)		{AppendInstr(I_SETCC, 0x0F9F, 0, Imm8(0), W(dst));}
+	void setg(const Mem8& dst)		{AppendInstr(I_SETCC, 0x0F9F, 0, Imm8(0), W(dst));}
+	void setge(const Reg8& dst)		{AppendInstr(I_SETCC, 0x0F9D, 0, Imm8(0), W(dst));}
+	void setge(const Mem8& dst)		{AppendInstr(I_SETCC, 0x0F9D, 0, Imm8(0), W(dst));}
+	void setl(const Reg8& dst)		{AppendInstr(I_SETCC, 0x0F9C, 0, Imm8(0), W(dst));}
+	void setl(const Mem8& dst)		{AppendInstr(I_SETCC, 0x0F9C, 0, Imm8(0), W(dst));}
+	void setle(const Reg8& dst)		{AppendInstr(I_SETCC, 0x0F9E, 0, Imm8(0), W(dst));}
+	void setle(const Mem8& dst)		{AppendInstr(I_SETCC, 0x0F9E, 0, Imm8(0), W(dst));}
 	void setna(const Reg8& dst)		{setbe(dst);}
 	void setna(const Mem8& dst)		{setbe(dst);}
 	void setnae(const Reg8& dst)	{setb(dst);}
@@ -2470,8 +2470,8 @@ struct Frontend
 	void setnbe(const Mem8& dst)	{seta(dst);}
 	void setnc(const Reg8& dst)		{setae(dst);}
 	void setnc(const Mem8& dst)		{setae(dst);}
-	void setne(const Reg8& dst)		{AppendInstr(I_SETCC, 0x0F95, 0, Imm8(0), dst);}
-	void setne(const Mem8& dst)		{AppendInstr(I_SETCC, 0x0F95, 0, Imm8(0), dst);}
+	void setne(const Reg8& dst)		{AppendInstr(I_SETCC, 0x0F95, 0, Imm8(0), W(dst));}
+	void setne(const Mem8& dst)		{AppendInstr(I_SETCC, 0x0F95, 0, Imm8(0), W(dst));}
 	void setng(const Reg8& dst)		{setle(dst);}
 	void setng(const Mem8& dst)		{setle(dst);}
 	void setnge(const Reg8& dst)	{setl(dst);}
@@ -2480,24 +2480,24 @@ struct Frontend
 	void setnl(const Mem8& dst)		{setge(dst);}
 	void setnle(const Reg8& dst)	{setg(dst);}
 	void setnle(const Mem8& dst)	{setg(dst);}
-	void setno(const Reg8& dst)		{AppendInstr(I_SETCC, 0x0F91, 0, Imm8(0), dst);}
-	void setno(const Mem8& dst)		{AppendInstr(I_SETCC, 0x0F91, 0, Imm8(0), dst);}
-	void setnp(const Reg8& dst)		{AppendInstr(I_SETCC, 0x0F9B, 0, Imm8(0), dst);}
-	void setnp(const Mem8& dst)		{AppendInstr(I_SETCC, 0x0F9B, 0, Imm8(0), dst);}
-	void setns(const Reg8& dst)		{AppendInstr(I_SETCC, 0x0F99, 0, Imm8(0), dst);}
-	void setns(const Mem8& dst)		{AppendInstr(I_SETCC, 0x0F99, 0, Imm8(0), dst);}
+	void setno(const Reg8& dst)		{AppendInstr(I_SETCC, 0x0F91, 0, Imm8(0), W(dst));}
+	void setno(const Mem8& dst)		{AppendInstr(I_SETCC, 0x0F91, 0, Imm8(0), W(dst));}
+	void setnp(const Reg8& dst)		{AppendInstr(I_SETCC, 0x0F9B, 0, Imm8(0), W(dst));}
+	void setnp(const Mem8& dst)		{AppendInstr(I_SETCC, 0x0F9B, 0, Imm8(0), W(dst));}
+	void setns(const Reg8& dst)		{AppendInstr(I_SETCC, 0x0F99, 0, Imm8(0), W(dst));}
+	void setns(const Mem8& dst)		{AppendInstr(I_SETCC, 0x0F99, 0, Imm8(0), W(dst));}
 	void setnz(const Reg8& dst)		{setne(dst);}
 	void setnz(const Mem8& dst)		{setne(dst);}
-	void seto(const Reg8& dst)		{AppendInstr(I_SETCC, 0x0F90, 0, Imm8(0), dst);}
-	void seto(const Mem8& dst)		{AppendInstr(I_SETCC, 0x0F90, 0, Imm8(0), dst);}
-	void setp(const Reg8& dst)		{AppendInstr(I_SETCC, 0x0F9A, 0, Imm8(0), dst);}
-	void setp(const Mem8& dst)		{AppendInstr(I_SETCC, 0x0F9A, 0, Imm8(0), dst);}
+	void seto(const Reg8& dst)		{AppendInstr(I_SETCC, 0x0F90, 0, Imm8(0), W(dst));}
+	void seto(const Mem8& dst)		{AppendInstr(I_SETCC, 0x0F90, 0, Imm8(0), W(dst));}
+	void setp(const Reg8& dst)		{AppendInstr(I_SETCC, 0x0F9A, 0, Imm8(0), W(dst));}
+	void setp(const Mem8& dst)		{AppendInstr(I_SETCC, 0x0F9A, 0, Imm8(0), W(dst));}
 	void setpe(const Reg8& dst)		{setp(dst);}
 	void setpe(const Mem8& dst)		{setp(dst);}
 	void setpo(const Reg8& dst)		{setnp(dst);}
 	void setpo(const Mem8& dst)		{setnp(dst);}
-	void sets(const Reg8& dst)		{AppendInstr(I_SETCC, 0x0F98, 0, Imm8(0), dst);}
-	void sets(const Mem8& dst)		{AppendInstr(I_SETCC, 0x0F98, 0, Imm8(0), dst);}
+	void sets(const Reg8& dst)		{AppendInstr(I_SETCC, 0x0F98, 0, Imm8(0), W(dst));}
+	void sets(const Mem8& dst)		{AppendInstr(I_SETCC, 0x0F98, 0, Imm8(0), W(dst));}
 	void setz(const Reg8& dst)		{sete(dst);}
 	void setz(const Mem8& dst)		{sete(dst);}
 	void shld(const Reg16& dst, const Reg16& src, const Imm8& place)	{AppendInstr(I_SHLD, 0x0FA4, E_OPERAND_SIZE_PREFIX, R(src), RW(dst), place);}
