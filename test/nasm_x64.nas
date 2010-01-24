@@ -252,3 +252,26 @@ nasm_test_avx_d:
 	vextractf128 oword [edx], xmm2, 1	; vextractf128 oword [edx], ymm2, 1
 	vextractps eax, xmm2, 5
 	vextractps [eax], xmm2, 5
+	vhaddpd xmm1, xmm2, xmm3
+	vhaddpd xmm1, xmm2, oword [edx]
+	vhaddpd ymm1, ymm2, ymm3
+	vhaddpd ymm1, ymm2, yword [edx]
+	vhaddps xmm1, xmm2, xmm3
+	vhaddps xmm1, xmm2, oword [edx]
+	vhaddps ymm1, ymm2, ymm3
+	vhaddps ymm1, ymm2, yword [edx]
+	vhsubpd xmm1, xmm2, xmm3
+	vhsubpd xmm1, xmm2, oword [edx]
+	vhsubpd ymm1, ymm2, ymm3
+	vhsubpd ymm1, ymm2, yword [edx]
+	vhsubps xmm1, xmm2, xmm3
+	vhsubps xmm1, xmm2, oword [edx]
+	vhsubps ymm1, ymm2, ymm3
+	vhsubps ymm1, ymm2, yword [edx]
+	vinsertf128 ymm1, ymm2, xmm3, 1
+	vinsertf128 ymm1, ymm2, oword [edx], 1
+	vinsertps xmm1, xmm2, xmm3, 1
+	vinsertps xmm1, xmm2, [edx], 1
+	vlddqu xmm1, oword [edx]
+	vlddqu ymm1, yword [edx]
+	vldmxcsr [edx]

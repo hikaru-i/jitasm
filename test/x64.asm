@@ -1776,6 +1776,7 @@ masm_test_gpi_e proc
 	xadd qword ptr[esp], rdx
 	wbinvd
 	wrmsr
+	xgetbv
 	xlatb
 masm_test_gpi_e endp
 
