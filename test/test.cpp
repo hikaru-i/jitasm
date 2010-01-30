@@ -1547,35 +1547,35 @@ struct test_movs : jitasm::function<void, test_movs>
 {
 	void naked_main()
 	{
-		movsb();
-		movsw();
-		movsd();
+		movsb(zdi, zsi);
+		movsw(zdi, zsi);
+		movsd(zdi, zsi);
 		rep_movsb();
 		rep_movsw();
 		rep_movsd();
 #ifdef JITASM64
-		movsq();
+		movsq(rdi, rsi);
 		rep_movsq();
 #endif
-		lodsb();
-		lodsw();
-		lodsd();
-		rep_lodsb();
-		rep_lodsw();
-		rep_lodsd();
+		lodsb(al, zsi);
+		lodsw(ax, zsi);
+		lodsd(eax, zsi);
+		rep_lodsb(al, zsi, zcx);
+		rep_lodsw(ax, zsi, zcx);
+		rep_lodsd(eax, zsi, zcx);
 #ifdef JITASM64
-		lodsq();
-		rep_lodsq();
+		lodsq(rax, rsi);
+		rep_lodsq(rax, rsi, rcx);
 #endif
-		stosb();
-		stosw();
-		stosd();
-		rep_stosb();
-		rep_stosw();
-		rep_stosd();
+		stosb(zdi, al);
+		stosw(zdi, ax);
+		stosd(zdi, eax);
+		rep_stosb(zdi, al, zcx);
+		rep_stosw(zdi, ax, zcx);
+		rep_stosd(zdi, eax, zcx);
 #ifdef JITASM64
-		stosq();
-		rep_stosq();
+		stosq(zdi, rax);
+		rep_stosq(zdi, rax, rcx);
 #endif
 		cmpsb();
 		cmpsw();
