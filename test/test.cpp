@@ -7,7 +7,11 @@
 #define _TOSTR(s) #s
 #define TOSTR(s) _TOSTR(s)
 #define TEST_M(func_name) {test_impl<func_name>(TOSTR(func_name), masm_ ## func_name);}
+#if defined(NASM_TEST)
 #define TEST_N(func_name) {test_impl<func_name>(TOSTR(func_name), nasm_ ## func_name);}
+#else
+#define TEST_N(func_name)
+#endif
 #define TEST_EQUAL(actual, expected) {test_equal_impl(TOSTR(actual), (actual), (expected));}
 
 size_t	g_test_succeeded = 0;
@@ -4408,6 +4412,19 @@ struct test_avx_d : jitasm::function<void, test_avx_d>
 };
 
 //----------------------------------------
+// AVX R~
+//----------------------------------------
+extern "C" void nasm_test_avx_r();
+struct test_avx_r : jitasm::function<void, test_avx_r>
+{
+	void naked_main()
+	{
+		vzeroall();
+		vzeroupper();
+	}
+};
+
+//----------------------------------------
 // Register allocation
 //----------------------------------------
 struct test_register_allocation1 : jitasm::function_cdecl<void, test_register_allocation1>
@@ -4782,6 +4799,8 @@ void test_avx_instructions()
 	TEST_N(test_avx_a);
 	TEST_N(test_avx_b);
 	TEST_N(test_avx_d);
+
+	TEST_N(test_avx_r);
 }
 
 void test_register_allocation()

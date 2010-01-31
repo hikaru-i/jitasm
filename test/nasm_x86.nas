@@ -223,3 +223,9 @@ _nasm_test_avx_d:
 	vlddqu xmm1, oword [edx]
 	vlddqu ymm1, yword [edx]
 	vldmxcsr [edx]
+
+
+global	_nasm_test_avx_r
+_nasm_test_avx_r:
+	vzeroall
+	vzeroupper
