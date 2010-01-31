@@ -652,7 +652,7 @@ enum InstrID
 	I_PXOR, I_RCPPS, I_RCPSS, I_ROUNDPS, I_ROUNDPD, I_ROUNDSS, I_ROUNDSD, I_RSQRTPS, I_RSQRTSS, I_SFENCE, I_SHUFPS, I_SHUFPD, I_SQRTPS, I_SQRTSS, I_SQRTPD, I_SQRTSD, I_STMXCSR, 
 	I_SUBPS, I_SUBSS, I_SUBPD, I_SUBSD, I_UCOMISS, I_UCOMISD, I_UNPCKHPS, I_UNPCKHPD, I_UNPCKLPS, I_UNPCKLPD, I_XORPS, I_XORPD,
 
-	I_VBROADCASTSS, I_VBROADCASTSD, I_VBROADCASTF128, I_VEXTRACTF128, I_VINSERTF128,
+	I_VBROADCASTSS, I_VBROADCASTSD, I_VBROADCASTF128, I_VEXTRACTF128, I_VINSERTF128, I_VZEROALL, I_VZEROUPPER,
 
 	I_AESENC, I_AESENCLAST, I_AESDEC, I_AESDECLAST, I_AESIMC, I_AESKEYGENASSIST,
 
@@ -3945,6 +3945,9 @@ struct Frontend
 	void vxorps(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2)	{AppendInstr(I_XORPS, 0x57, E_VEX_256 | E_VEX_0F, W(dst), R(src2), R(src1));}
 	void vxorps(const YmmReg& dst, const YmmReg& src1, const Mem256& src2)	{AppendInstr(I_XORPS, 0x57, E_VEX_256 | E_VEX_0F, W(dst), R(src2), R(src1));}
 
+	void vzeroall()		{AppendInstr(I_VZEROUPPER, 0x77, E_VEX_256 | E_VEX_0F);}
+	void vzeroupper()	{AppendInstr(I_VZEROUPPER, 0x77, E_VEX_128 | E_VEX_0F);}
+
 	struct ControlState
 	{
 		size_t label1;
@@ -5261,6 +5264,12 @@ namespace compiler
 					it->GetLifetime(R_TYPE_GP).AddUsePoint(instr_offset, RegID::CreatePhysicalRegID(R_TYPE_GP, ESI), type, O_SIZE_32, 0xFFFFFFFF);
 					it->GetLifetime(R_TYPE_GP).AddUsePoint(instr_offset, RegID::CreatePhysicalRegID(R_TYPE_GP, EDI), type, O_SIZE_32, 0xFFFFFFFF);
 					it->GetLifetime(R_TYPE_GP).AddUsePoint(instr_offset, RegID::CreatePhysicalRegID(R_TYPE_GP, ESP), static_cast<OpdType>(O_TYPE_REG | O_TYPE_READ | O_TYPE_WRITE), O_SIZE_32, 0xFFFFFFFF);
+				} else if (instr.GetID() == I_VZEROALL || instr.GetID() == I_VZEROUPPER) {
+					// Add use point of vzeroall/vzeroupper
+					const OpdType type = static_cast<OpdType>(O_TYPE_REG | (instr.GetID() == I_VZEROALL ? O_TYPE_WRITE : O_TYPE_READ | O_TYPE_WRITE));
+					for (int j = 0; j < NUM_OF_PHYSICAL_REG; ++j) {
+						it->GetLifetime(R_TYPE_YMM).AddUsePoint(instr_offset, RegID::CreatePhysicalRegID(R_TYPE_YMM, static_cast<PhysicalRegID>(YMM0 + j)), type, O_SIZE_256, 0xFFFFFFFF);
+					}
 				} else {
 					// Add each use point of all operands
 					for (size_t j = 0; j < Instr::MAX_OPERAND_COUNT; ++j) {
