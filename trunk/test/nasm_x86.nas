@@ -224,6 +224,28 @@ _nasm_test_avx_d:
 	vlddqu ymm1, yword [edx]
 	vldmxcsr [edx]
 
+	vorpd xmm1, xmm2, xmm3
+	vorpd xmm1, xmm2, oword [edx]
+	vorpd ymm1, ymm2, ymm3
+	vorpd ymm1, ymm2, yword [edx]
+	vorps xmm1, xmm2, xmm3
+	vorps xmm1, xmm2, oword [edx]
+	vorps ymm1, ymm2, ymm3
+	vorps ymm1, ymm2, yword [edx]
+	vpabsb xmm1, xmm2
+	vpabsb xmm1, oword [edx]
+	vpabsw xmm1, xmm2
+	vpabsw xmm1, oword [edx]
+	vpabsd xmm1, xmm2
+	vpabsd xmm1, oword [edx]
+	vpacksswb xmm1, xmm2, xmm3
+	vpacksswb xmm1, xmm2, oword [edx]
+	vpackssdw xmm1, xmm2, xmm3
+	vpackssdw xmm1, xmm2, oword [edx]
+	vpackuswb xmm1, xmm2, xmm3
+	vpackuswb xmm1, xmm2, oword [edx]
+	vpackusdw xmm1, xmm2, xmm3
+	vpackusdw xmm1, xmm2, oword [edx]
 
 global	_nasm_test_avx_r
 _nasm_test_avx_r:
