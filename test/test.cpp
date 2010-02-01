@@ -4408,6 +4408,29 @@ struct test_avx_d : jitasm::function<void, test_avx_d>
 		vlddqu(xmm1, xmmword_ptr[edx]);
 		vlddqu(ymm1, ymmword_ptr[edx]);
 		vldmxcsr(dword_ptr[edx]);
+
+		vorpd(xmm1, xmm2, xmm3);
+		vorpd(xmm1, xmm2, xmmword_ptr[edx]);
+		vorpd(ymm1, ymm2, ymm3);
+		vorpd(ymm1, ymm2, ymmword_ptr[edx]);
+		vorps(xmm1, xmm2, xmm3);
+		vorps(xmm1, xmm2, xmmword_ptr[edx]);
+		vorps(ymm1, ymm2, ymm3);
+		vorps(ymm1, ymm2, ymmword_ptr[edx]);
+		vpabsb(xmm1, xmm2);
+		vpabsb(xmm1, xmmword_ptr[edx]);
+		vpabsw(xmm1, xmm2);
+		vpabsw(xmm1, xmmword_ptr[edx]);
+		vpabsd(xmm1, xmm2);
+		vpabsd(xmm1, xmmword_ptr[edx]);
+		vpacksswb(xmm1, xmm2, xmm3);
+		vpacksswb(xmm1, xmm2, xmmword_ptr[edx]);
+		vpackssdw(xmm1, xmm2, xmm3);
+		vpackssdw(xmm1, xmm2, xmmword_ptr[edx]);
+		vpackuswb(xmm1, xmm2, xmm3);
+		vpackuswb(xmm1, xmm2, xmmword_ptr[edx]);
+		vpackusdw(xmm1, xmm2, xmm3);
+		vpackusdw(xmm1, xmm2, xmmword_ptr[edx]);
 	}
 };
 
