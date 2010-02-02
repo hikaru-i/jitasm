@@ -246,6 +246,22 @@ _nasm_test_avx_d:
 	vpackuswb xmm1, xmm2, oword [edx]
 	vpackusdw xmm1, xmm2, xmm3
 	vpackusdw xmm1, xmm2, oword [edx]
+	vpaddb xmm1, xmm2, xmm3
+	vpaddb xmm1, xmm2, oword [edx]
+	vpaddw xmm1, xmm2, xmm3
+	vpaddw xmm1, xmm2, oword [edx]
+	vpaddd xmm1, xmm2, xmm3
+	vpaddd xmm1, xmm2, oword [edx]
+	vpaddq xmm1, xmm2, xmm3
+	vpaddq xmm1, xmm2, oword [edx]
+	vpaddsb xmm1, xmm2, xmm3
+	vpaddsb xmm1, xmm2, oword [edx]
+	vpaddsw xmm1, xmm2, xmm3
+	vpaddsw xmm1, xmm2, oword [edx]
+	vpaddusb xmm1, xmm2, xmm3
+	vpaddusb xmm1, xmm2, oword [edx]
+	vpaddusw xmm1, xmm2, xmm3
+	vpaddusw xmm1, xmm2, oword [edx]
 
 global	_nasm_test_avx_r
 _nasm_test_avx_r:
