@@ -3962,6 +3962,22 @@ struct Frontend
 	void vpackuswb(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_PACKUSWB, 0x67, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
 	void vpackusdw(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_PACKUSDW, 0x2B, E_VEX_128 | E_VEX_66_0F38, W(dst), R(src2), R(src1));}
 	void vpackusdw(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_PACKUSDW, 0x2B, E_VEX_128 | E_VEX_66_0F38, W(dst), R(src2), R(src1));}
+	void vpaddb(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)		{AppendInstr(I_PADDB, 0xFC, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
+	void vpaddb(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)		{AppendInstr(I_PADDB, 0xFC, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
+	void vpaddw(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)		{AppendInstr(I_PADDW, 0xFD, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
+	void vpaddw(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)		{AppendInstr(I_PADDW, 0xFD, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
+	void vpaddd(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)		{AppendInstr(I_PADDD, 0xFE, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
+	void vpaddd(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)		{AppendInstr(I_PADDD, 0xFE, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
+	void vpaddq(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)		{AppendInstr(I_PADDQ, 0xD4, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
+	void vpaddq(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)		{AppendInstr(I_PADDQ, 0xD4, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
+	void vpaddsb(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)		{AppendInstr(I_PADDSB, 0xEC, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
+	void vpaddsb(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)		{AppendInstr(I_PADDSB, 0xEC, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
+	void vpaddsw(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)		{AppendInstr(I_PADDSW, 0xED, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
+	void vpaddsw(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)		{AppendInstr(I_PADDSW, 0xED, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
+	void vpaddusb(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_PADDUSB, 0xDC, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
+	void vpaddusb(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_PADDUSB, 0xDC, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
+	void vpaddusw(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_PADDUSW, 0xDD, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
+	void vpaddusw(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_PADDUSW, 0xDD, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
 
 	void vxorps(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_XORPS, 0x57, E_VEX_128 | E_VEX_0F, W(dst), R(src2), R(src1));}
 	void vxorps(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_XORPS, 0x57, E_VEX_128 | E_VEX_0F, W(dst), R(src2), R(src1));}

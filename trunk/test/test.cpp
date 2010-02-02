@@ -4431,6 +4431,22 @@ struct test_avx_d : jitasm::function<void, test_avx_d>
 		vpackuswb(xmm1, xmm2, xmmword_ptr[edx]);
 		vpackusdw(xmm1, xmm2, xmm3);
 		vpackusdw(xmm1, xmm2, xmmword_ptr[edx]);
+		vpaddb(xmm1, xmm2, xmm3);
+		vpaddb(xmm1, xmm2, xmmword_ptr[edx]);
+		vpaddw(xmm1, xmm2, xmm3);
+		vpaddw(xmm1, xmm2, xmmword_ptr[edx]);
+		vpaddd(xmm1, xmm2, xmm3);
+		vpaddd(xmm1, xmm2, xmmword_ptr[edx]);
+		vpaddq(xmm1, xmm2, xmm3);
+		vpaddq(xmm1, xmm2, xmmword_ptr[edx]);
+		vpaddsb(xmm1, xmm2, xmm3);
+		vpaddsb(xmm1, xmm2, xmmword_ptr[edx]);
+		vpaddsw(xmm1, xmm2, xmm3);
+		vpaddsw(xmm1, xmm2, xmmword_ptr[edx]);
+		vpaddusb(xmm1, xmm2, xmm3);
+		vpaddusb(xmm1, xmm2, xmmword_ptr[edx]);
+		vpaddusw(xmm1, xmm2, xmm3);
+		vpaddusw(xmm1, xmm2, xmmword_ptr[edx]);
 	}
 };
 
