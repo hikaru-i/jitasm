@@ -314,6 +314,18 @@ nasm_test_avx_d:
 	vpaddusb xmm1, xmm2, oword [edx]
 	vpaddusw xmm1, xmm2, xmm3
 	vpaddusw xmm1, xmm2, oword [edx]
+	vpalignr xmm1, xmm2, xmm3, 1
+	vpalignr xmm1, xmm2, oword [edx], 1
+	vpand xmm1, xmm2, xmm3
+	vpand xmm1, xmm2, oword [edx]
+	vpandn xmm1, xmm2, xmm3
+	vpandn xmm1, xmm2, oword [edx]
+	vpavgb xmm1, xmm2, xmm3
+	vpavgb xmm1, xmm2, oword [edx]
+	vpavgw xmm1, xmm2, xmm3
+	vpavgw xmm1, xmm2, oword [edx]
+	vpblendvb xmm1, xmm2, oword [edx], xmm4
+	vpblendvb xmm1, xmm2, xmm3, xmm4
 
 global	nasm_test_avx_r
 nasm_test_avx_r:
