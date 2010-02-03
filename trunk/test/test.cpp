@@ -4447,6 +4447,18 @@ struct test_avx_d : jitasm::function<void, test_avx_d>
 		vpaddusb(xmm1, xmm2, xmmword_ptr[edx]);
 		vpaddusw(xmm1, xmm2, xmm3);
 		vpaddusw(xmm1, xmm2, xmmword_ptr[edx]);
+		vpalignr(xmm1, xmm2, xmm3, 1);
+		vpalignr(xmm1, xmm2, xmmword_ptr[edx], 1);
+		vpand(xmm1, xmm2, xmm3);
+		vpand(xmm1, xmm2, xmmword_ptr[edx]);
+		vpandn(xmm1, xmm2, xmm3);
+		vpandn(xmm1, xmm2, xmmword_ptr[edx]);
+		vpavgb(xmm1, xmm2, xmm3);
+		vpavgb(xmm1, xmm2, xmmword_ptr[edx]);
+		vpavgw(xmm1, xmm2, xmm3);
+		vpavgw(xmm1, xmm2, xmmword_ptr[edx]);
+		vpblendvb(xmm1, xmm2, xmmword_ptr[edx], xmm4);
+		vpblendvb(xmm1, xmm2, xmm3, xmm4);
 	}
 };
 
