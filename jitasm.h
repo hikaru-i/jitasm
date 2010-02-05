@@ -949,14 +949,14 @@ struct Backend
 		if ((opd1.IsImm() || opd1.IsReg()) && (opd2.IsReg() || opd2.IsMem())) {	// ModR/M
 			const detail::Opd& reg = opd1;
 			const detail::Opd& r_m = opd2;
-			const detail::Opd& vex = opd4.IsReg() ? opd4 : opd3.IsReg() ? opd3 : detail::Opd();
+			const detail::Opd& vex = opd3;
 			EncodePrefixes(instr.encoding_flag_, reg, r_m, vex);
 			EncodeOpcode(opcode);
 			EncodeModRM((uint8) (reg.IsImm() ? reg.GetImm() : reg.GetReg().id), r_m);
 
-			// Encode 4th operand
-			if (opd4.IsReg() && opd3.IsReg()) {
-				EncodeImm(Imm8(static_cast<uint8>(opd3.GetReg().id << 4)));
+			// /is4
+			if (opd4.IsReg()) {
+				EncodeImm(Imm8(static_cast<uint8>(opd4.GetReg().id << 4)));
 			}
 		} else {
 			const detail::Opd& reg = detail::Opd();
@@ -3795,38 +3795,38 @@ struct Frontend
 	void vandnps(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_ANDNPS, 0x55, E_VEX_128 | E_VEX_0F, W(dst), R(src2), R(src1));}
 	void vandnps(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2)	{AppendInstr(I_ANDNPS, 0x55, E_VEX_256 | E_VEX_0F, W(dst), R(src2), R(src1));}
 	void vandnps(const YmmReg& dst, const YmmReg& src1, const Mem256& src2)	{AppendInstr(I_ANDNPS, 0x55, E_VEX_256 | E_VEX_0F, W(dst), R(src2), R(src1));}
-	void vblendpd(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2, const Imm8& mask)	{AppendInstr(I_BLENDPD, 0x0D, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), mask, R(src1));}
-	void vblendpd(const XmmReg& dst, const XmmReg& src1, const Mem128& src2, const Imm8& mask)	{AppendInstr(I_BLENDPD, 0x0D, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), mask, R(src1));}
-	void vblendpd(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2, const Imm8& mask)	{AppendInstr(I_BLENDPD, 0x0D, E_VEX_256 | E_VEX_66_0F3A, W(dst), R(src2), mask, R(src1));}
-	void vblendpd(const YmmReg& dst, const YmmReg& src1, const Mem256& src2, const Imm8& mask)	{AppendInstr(I_BLENDPD, 0x0D, E_VEX_256 | E_VEX_66_0F3A, W(dst), R(src2), mask, R(src1));}
-	void vblendps(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2, const Imm8& mask)	{AppendInstr(I_BLENDPS, 0x0C, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), mask, R(src1));}
-	void vblendps(const XmmReg& dst, const XmmReg& src1, const Mem128& src2, const Imm8& mask)	{AppendInstr(I_BLENDPS, 0x0C, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), mask, R(src1));}
-	void vblendps(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2, const Imm8& mask)	{AppendInstr(I_BLENDPS, 0x0C, E_VEX_256 | E_VEX_66_0F3A, W(dst), R(src2), mask, R(src1));}
-	void vblendps(const YmmReg& dst, const YmmReg& src1, const Mem256& src2, const Imm8& mask)	{AppendInstr(I_BLENDPS, 0x0C, E_VEX_256 | E_VEX_66_0F3A, W(dst), R(src2), mask, R(src1));}
-	void vblendvpd(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2, const XmmReg& mask)	{AppendInstr(I_BLENDVPD, 0x4B, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), R(mask), R(src1));}
-	void vblendvpd(const XmmReg& dst, const XmmReg& src1, const Mem128& src2, const XmmReg& mask)	{AppendInstr(I_BLENDVPD, 0x4B, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), R(mask), R(src1));}
-	void vblendvpd(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2, const YmmReg& mask)	{AppendInstr(I_BLENDVPD, 0x4B, E_VEX_256 | E_VEX_66_0F3A, W(dst), R(src2), R(mask), R(src1));}
-	void vblendvpd(const YmmReg& dst, const YmmReg& src1, const Mem256& src2, const YmmReg& mask)	{AppendInstr(I_BLENDVPD, 0x4B, E_VEX_256 | E_VEX_66_0F3A, W(dst), R(src2), R(mask), R(src1));}
-	void vblendvps(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2, const XmmReg& mask)	{AppendInstr(I_BLENDVPS, 0x4A, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), R(mask), R(src1));}
-	void vblendvps(const XmmReg& dst, const XmmReg& src1, const Mem128& src2, const XmmReg& mask)	{AppendInstr(I_BLENDVPS, 0x4A, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), R(mask), R(src1));}
-	void vblendvps(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2, const YmmReg& mask)	{AppendInstr(I_BLENDVPS, 0x4A, E_VEX_256 | E_VEX_66_0F3A, W(dst), R(src2), R(mask), R(src1));}
-	void vblendvps(const YmmReg& dst, const YmmReg& src1, const Mem256& src2, const YmmReg& mask)	{AppendInstr(I_BLENDVPS, 0x4A, E_VEX_256 | E_VEX_66_0F3A, W(dst), R(src2), R(mask), R(src1));}
+	void vblendpd(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2, const Imm8& mask)	{AppendInstr(I_BLENDPD, 0x0D, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), R(src1), mask);}
+	void vblendpd(const XmmReg& dst, const XmmReg& src1, const Mem128& src2, const Imm8& mask)	{AppendInstr(I_BLENDPD, 0x0D, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), R(src1), mask);}
+	void vblendpd(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2, const Imm8& mask)	{AppendInstr(I_BLENDPD, 0x0D, E_VEX_256 | E_VEX_66_0F3A, W(dst), R(src2), R(src1), mask);}
+	void vblendpd(const YmmReg& dst, const YmmReg& src1, const Mem256& src2, const Imm8& mask)	{AppendInstr(I_BLENDPD, 0x0D, E_VEX_256 | E_VEX_66_0F3A, W(dst), R(src2), R(src1), mask);}
+	void vblendps(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2, const Imm8& mask)	{AppendInstr(I_BLENDPS, 0x0C, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), R(src1), mask);}
+	void vblendps(const XmmReg& dst, const XmmReg& src1, const Mem128& src2, const Imm8& mask)	{AppendInstr(I_BLENDPS, 0x0C, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), R(src1), mask);}
+	void vblendps(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2, const Imm8& mask)	{AppendInstr(I_BLENDPS, 0x0C, E_VEX_256 | E_VEX_66_0F3A, W(dst), R(src2), R(src1), mask);}
+	void vblendps(const YmmReg& dst, const YmmReg& src1, const Mem256& src2, const Imm8& mask)	{AppendInstr(I_BLENDPS, 0x0C, E_VEX_256 | E_VEX_66_0F3A, W(dst), R(src2), R(src1), mask);}
+	void vblendvpd(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2, const XmmReg& mask)	{AppendInstr(I_BLENDVPD, 0x4B, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), R(src1), R(mask));}
+	void vblendvpd(const XmmReg& dst, const XmmReg& src1, const Mem128& src2, const XmmReg& mask)	{AppendInstr(I_BLENDVPD, 0x4B, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), R(src1), R(mask));}
+	void vblendvpd(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2, const YmmReg& mask)	{AppendInstr(I_BLENDVPD, 0x4B, E_VEX_256 | E_VEX_66_0F3A, W(dst), R(src2), R(src1), R(mask));}
+	void vblendvpd(const YmmReg& dst, const YmmReg& src1, const Mem256& src2, const YmmReg& mask)	{AppendInstr(I_BLENDVPD, 0x4B, E_VEX_256 | E_VEX_66_0F3A, W(dst), R(src2), R(src1), R(mask));}
+	void vblendvps(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2, const XmmReg& mask)	{AppendInstr(I_BLENDVPS, 0x4A, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), R(src1), R(mask));}
+	void vblendvps(const XmmReg& dst, const XmmReg& src1, const Mem128& src2, const XmmReg& mask)	{AppendInstr(I_BLENDVPS, 0x4A, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), R(src1), R(mask));}
+	void vblendvps(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2, const YmmReg& mask)	{AppendInstr(I_BLENDVPS, 0x4A, E_VEX_256 | E_VEX_66_0F3A, W(dst), R(src2), R(src1), R(mask));}
+	void vblendvps(const YmmReg& dst, const YmmReg& src1, const Mem256& src2, const YmmReg& mask)	{AppendInstr(I_BLENDVPS, 0x4A, E_VEX_256 | E_VEX_66_0F3A, W(dst), R(src2), R(src1), R(mask));}
 	void vbroadcastss(const XmmReg& dst, const Mem32& src)	{AppendInstr(I_VBROADCASTSS, 0x18, E_VEX_128 | E_VEX_66_0F38, W(dst), R(src));}
 	void vbroadcastss(const YmmReg& dst, const Mem32& src)	{AppendInstr(I_VBROADCASTSS, 0x18, E_VEX_256 | E_VEX_66_0F38, W(dst), R(src));}
 	void vbroadcastsd(const YmmReg& dst, const Mem64 src)	{AppendInstr(I_VBROADCASTSD, 0x19, E_VEX_256 | E_VEX_66_0F38, W(dst), R(src));}
 	void vbroadcastf128(const YmmReg& dst, const Mem128& src)	{AppendInstr(I_VBROADCASTF128, 0x1A, E_VEX_256 | E_VEX_66_0F38, W(dst), R(src));}
-	void vcmppd(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2, const Imm8& imm)	{AppendInstr(I_CMPPD, 0xC2, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), imm, R(src1));}
-	void vcmppd(const XmmReg& dst, const XmmReg& src1, const Mem128& src2, const Imm8& imm)	{AppendInstr(I_CMPPD, 0xC2, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), imm, R(src1));}
-	void vcmppd(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2, const Imm8& imm)	{AppendInstr(I_CMPPD, 0xC2, E_VEX_256 | E_VEX_66_0F, W(dst), R(src2), imm, R(src1));}
-	void vcmppd(const YmmReg& dst, const YmmReg& src1, const Mem256& src2, const Imm8& imm)	{AppendInstr(I_CMPPD, 0xC2, E_VEX_256 | E_VEX_66_0F, W(dst), R(src2), imm, R(src1));}
-	void vcmpps(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2, const Imm8& imm)	{AppendInstr(I_CMPPS, 0xC2, E_VEX_128 | E_VEX_0F, W(dst), R(src2), imm, R(src1));}
-	void vcmpps(const XmmReg& dst, const XmmReg& src1, const Mem128& src2, const Imm8& imm)	{AppendInstr(I_CMPPS, 0xC2, E_VEX_128 | E_VEX_0F, W(dst), R(src2), imm, R(src1));}
-	void vcmpps(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2, const Imm8& imm)	{AppendInstr(I_CMPPS, 0xC2, E_VEX_256 | E_VEX_0F, W(dst), R(src2), imm, R(src1));}
-	void vcmpps(const YmmReg& dst, const YmmReg& src1, const Mem256& src2, const Imm8& imm)	{AppendInstr(I_CMPPS, 0xC2, E_VEX_256 | E_VEX_0F, W(dst), R(src2), imm, R(src1));}
-	void vcmpsd(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2, const Imm8& imm)	{AppendInstr(I_CMPSD, 0xC2, E_VEX_128 | E_VEX_F2_0F, W(dst), R(src2), imm, R(src1));}
-	void vcmpsd(const XmmReg& dst, const XmmReg& src1, const Mem64& src2, const Imm8& imm)	{AppendInstr(I_CMPSD, 0xC2, E_VEX_128 | E_VEX_F2_0F, W(dst), R(src2), imm, R(src1));}
-	void vcmpss(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2, const Imm8& imm)	{AppendInstr(I_CMPSS, 0xC2, E_VEX_128 | E_VEX_F3_0F, W(dst), R(src2), imm, R(src1));}
-	void vcmpss(const XmmReg& dst, const XmmReg& src1, const Mem32& src2, const Imm8& imm)	{AppendInstr(I_CMPSS, 0xC2, E_VEX_128 | E_VEX_F3_0F, W(dst), R(src2), imm, R(src1));}
+	void vcmppd(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2, const Imm8& imm)	{AppendInstr(I_CMPPD, 0xC2, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1), imm);}
+	void vcmppd(const XmmReg& dst, const XmmReg& src1, const Mem128& src2, const Imm8& imm)	{AppendInstr(I_CMPPD, 0xC2, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1), imm);}
+	void vcmppd(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2, const Imm8& imm)	{AppendInstr(I_CMPPD, 0xC2, E_VEX_256 | E_VEX_66_0F, W(dst), R(src2), R(src1), imm);}
+	void vcmppd(const YmmReg& dst, const YmmReg& src1, const Mem256& src2, const Imm8& imm)	{AppendInstr(I_CMPPD, 0xC2, E_VEX_256 | E_VEX_66_0F, W(dst), R(src2), R(src1), imm);}
+	void vcmpps(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2, const Imm8& imm)	{AppendInstr(I_CMPPS, 0xC2, E_VEX_128 | E_VEX_0F, W(dst), R(src2), R(src1), imm);}
+	void vcmpps(const XmmReg& dst, const XmmReg& src1, const Mem128& src2, const Imm8& imm)	{AppendInstr(I_CMPPS, 0xC2, E_VEX_128 | E_VEX_0F, W(dst), R(src2), R(src1), imm);}
+	void vcmpps(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2, const Imm8& imm)	{AppendInstr(I_CMPPS, 0xC2, E_VEX_256 | E_VEX_0F, W(dst), R(src2), R(src1), imm);}
+	void vcmpps(const YmmReg& dst, const YmmReg& src1, const Mem256& src2, const Imm8& imm)	{AppendInstr(I_CMPPS, 0xC2, E_VEX_256 | E_VEX_0F, W(dst), R(src2), R(src1), imm);}
+	void vcmpsd(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2, const Imm8& imm)	{AppendInstr(I_CMPSD, 0xC2, E_VEX_128 | E_VEX_F2_0F, W(dst), R(src2), R(src1), imm);}
+	void vcmpsd(const XmmReg& dst, const XmmReg& src1, const Mem64& src2, const Imm8& imm)	{AppendInstr(I_CMPSD, 0xC2, E_VEX_128 | E_VEX_F2_0F, W(dst), R(src2), R(src1), imm);}
+	void vcmpss(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2, const Imm8& imm)	{AppendInstr(I_CMPSS, 0xC2, E_VEX_128 | E_VEX_F3_0F, W(dst), R(src2), R(src1), imm);}
+	void vcmpss(const XmmReg& dst, const XmmReg& src1, const Mem32& src2, const Imm8& imm)	{AppendInstr(I_CMPSS, 0xC2, E_VEX_128 | E_VEX_F3_0F, W(dst), R(src2), R(src1), imm);}
 	void vcomisd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_COMISD, 0x2F, E_VEX_128 | E_VEX_66_0F, W(dst), R(src));}
 	void vcomisd(const XmmReg& dst, const Mem64& src)	{AppendInstr(I_COMISD, 0x2F, E_VEX_128 | E_VEX_66_0F, W(dst), R(src));}
 	void vcomiss(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_COMISS, 0x2F, E_VEX_128 | E_VEX_0F, W(dst), R(src));}
@@ -3915,12 +3915,12 @@ struct Frontend
 	void vdivsd(const XmmReg& dst, const XmmReg& src1, const Mem64& src2)	{AppendInstr(I_DIVSD, 0x5E, E_VEX_128 | E_VEX_F2_0F, W(dst), R(src2), R(src1));}
 	void vdivss(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_DIVSS, 0x5E, E_VEX_128 | E_VEX_F3_0F, W(dst), R(src2), R(src1));}
 	void vdivss(const XmmReg& dst, const XmmReg& src1, const Mem32& src2)	{AppendInstr(I_DIVSS, 0x5E, E_VEX_128 | E_VEX_F3_0F, W(dst), R(src2), R(src1));}
-	void vdppd(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2, const Imm8& mask)	{AppendInstr(I_DPPD, 0x41, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), mask, R(src1));}
-	void vdppd(const XmmReg& dst, const XmmReg& src1, const Mem128& src2, const Imm8& mask)	{AppendInstr(I_DPPD, 0x41, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), mask, R(src1));}
-	void vdpps(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2, const Imm8& mask)	{AppendInstr(I_DPPS, 0x40, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), mask, R(src1));}
-	void vdpps(const XmmReg& dst, const XmmReg& src1, const Mem128& src2, const Imm8& mask)	{AppendInstr(I_DPPS, 0x40, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), mask, R(src1));}
-	void vdpps(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2, const Imm8& mask)	{AppendInstr(I_DPPS, 0x40, E_VEX_256 | E_VEX_66_0F3A, W(dst), R(src2), mask, R(src1));}
-	void vdpps(const YmmReg& dst, const YmmReg& src1, const Mem256& src2, const Imm8& mask)	{AppendInstr(I_DPPS, 0x40, E_VEX_256 | E_VEX_66_0F3A, W(dst), R(src2), mask, R(src1));}
+	void vdppd(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2, const Imm8& mask)	{AppendInstr(I_DPPD, 0x41, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), R(src1), mask);}
+	void vdppd(const XmmReg& dst, const XmmReg& src1, const Mem128& src2, const Imm8& mask)	{AppendInstr(I_DPPD, 0x41, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), R(src1), mask);}
+	void vdpps(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2, const Imm8& mask)	{AppendInstr(I_DPPS, 0x40, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), R(src1), mask);}
+	void vdpps(const XmmReg& dst, const XmmReg& src1, const Mem128& src2, const Imm8& mask)	{AppendInstr(I_DPPS, 0x40, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), R(src1), mask);}
+	void vdpps(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2, const Imm8& mask)	{AppendInstr(I_DPPS, 0x40, E_VEX_256 | E_VEX_66_0F3A, W(dst), R(src2), R(src1), mask);}
+	void vdpps(const YmmReg& dst, const YmmReg& src1, const Mem256& src2, const Imm8& mask)	{AppendInstr(I_DPPS, 0x40, E_VEX_256 | E_VEX_66_0F3A, W(dst), R(src2), R(src1), mask);}
 	void vextractf128(const XmmReg& dst, const YmmReg& src, const Imm8& i)	{AppendInstr(I_VEXTRACTF128, 0x19, E_VEX_256 | E_VEX_66_0F3A, R(src), W(dst), i);}
 	void vextractf128(const Mem128& dst, const YmmReg& src, const Imm8& i)	{AppendInstr(I_VEXTRACTF128, 0x19, E_VEX_256 | E_VEX_66_0F3A, R(src), W(dst), i);}
 	void vextractps(const Reg32& dst, const XmmReg& src, const Imm8& i)		{AppendInstr(I_EXTRACTPS, 0x17, E_VEX_128 | E_VEX_66_0F3A, R(src), W(dst), i);}
@@ -4004,8 +4004,8 @@ struct Frontend
 	void vpavgb(const XmmReg& dst, const XmmReg& src1, const Mem128& src2) 	{AppendInstr(I_PAVGB, 0xE0, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
 	void vpavgw(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2) 	{AppendInstr(I_PAVGW, 0xE3, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
 	void vpavgw(const XmmReg& dst, const XmmReg& src1, const Mem128& src2) 	{AppendInstr(I_PAVGW, 0xE3, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
-	void vpblendvb(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2, const XmmReg& mask) 	{AppendInstr(I_PBLENDVB, 0x4C, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), R(mask), R(src1));}
-	void vpblendvb(const XmmReg& dst, const XmmReg& src1, const Mem128& src2, const XmmReg& mask) 	{AppendInstr(I_PBLENDVB, 0x4C, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), R(mask), R(src1));}
+	void vpblendvb(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2, const XmmReg& mask) 	{AppendInstr(I_PBLENDVB, 0x4C, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), R(src1), R(mask));}
+	void vpblendvb(const XmmReg& dst, const XmmReg& src1, const Mem128& src2, const XmmReg& mask) 	{AppendInstr(I_PBLENDVB, 0x4C, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), R(src1), R(mask));}
 
 	void vxorps(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_XORPS, 0x57, E_VEX_128 | E_VEX_0F, W(dst), R(src2), R(src1));}
 	void vxorps(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_XORPS, 0x57, E_VEX_128 | E_VEX_0F, W(dst), R(src2), R(src1));}
