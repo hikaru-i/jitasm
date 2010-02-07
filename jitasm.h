@@ -31,14 +31,37 @@
 #ifndef JITASM_H
 #define JITASM_H
 
-#include <windows.h>
+#if defined(_WIN32)
+#define JITASM_WIN
+#endif
+
+#if (defined(_WIN64) && (defined(_M_AMD64) || defined(_M_X64))) || defined(__x86_64__)
+#define JITASM64
+#endif
+
+#if defined(__GNUC__)
+#define JITASM_GCC
+#endif
+
 #include <string>
 #include <deque>
 #include <vector>
 #include <set>
 #include <map>
 #include <algorithm>
+#include <string.h>
+
+#if defined(JITASM_WIN)
+#include <windows.h>
 #include <intrin.h>
+#else
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/mman.h>
+#include <mmintrin.h>
+#include <xmmintrin.h>
+#include <emmintrin.h>
+#endif
 
 #pragma warning( push )
 #pragma warning( disable : 4127 )	// conditional expression is constant.
@@ -53,36 +76,48 @@
 
 //#define JITASM_DEBUG_DUMP
 #ifdef JITASM_DEBUG_DUMP
-#define JITASM_TRACE	jitasm::detail::Trace
-//#define JITASM_TRACE	printf
+	#if defined(JITASM_GCC)
+	#define JITASM_TRACE	printf
+	#else
+	#define JITASM_TRACE	jitasm::detail::Trace
+	#endif
+#elif defined(JITASM_GCC)
+	#define JITASM_TRACE(...)	((void)0)
 #else
-#define JITASM_TRACE	__noop
-#endif
-
-#if defined(_WIN64) && (defined(_M_AMD64) || defined(_M_X64))
-#define JITASM64
+	#define JITASM_TRACE	__noop
 #endif
 
 namespace jitasm
 {
 
-typedef signed __int8		sint8;
-typedef signed __int16		sint16;
-typedef signed __int32		sint32;
+typedef signed char			sint8;
+typedef signed short		sint16;
+typedef signed int			sint32;
+typedef unsigned char		uint8;
+typedef unsigned short		uint16;
+typedef unsigned int		uint32;
+#if defined(JITASM_GCC)
+typedef signed long long	sint64;
+typedef unsigned long long	uint64;
+#else
 typedef signed __int64		sint64;
-typedef unsigned __int8		uint8;
-typedef unsigned __int16	uint16;
-typedef unsigned __int32	uint32;
 typedef unsigned __int64	uint64;
+#endif
 
 template<typename T> inline void avoid_unused_warn(const T&) {}
 template<typename T, typename U> inline void avoid_unused_warn(const T&, const U&) {}
 
 namespace detail
 {
-	inline long interlocked_increment(long *addend)				{ return ::InterlockedIncrement(addend); }
-	inline long interlocked_decrement(long *addend)				{ return ::InterlockedDecrement(addend); }
-	inline long interlocked_exchange(long *target, long value)	{ return ::InterlockedExchange(target, value); }
+#if defined(JITASM_WIN)
+	inline long interlocked_increment(long *addend)				{ return _InterlockedIncrement(addend); }
+	inline long interlocked_decrement(long *addend)				{ return _InterlockedDecrement(addend); }
+	inline long interlocked_exchange(long *target, long value)	{ return _InterlockedExchange(target, value); }
+#elif defined(JITASM_GCC)
+	inline long interlocked_increment(long *addend)				{ return __sync_add_and_fetch(addend, 1); }
+	inline long interlocked_decrement(long *addend)				{ return __sync_sub_and_fetch(addend, 1); }
+	inline long interlocked_exchange(long *target, long value)	{ return __sync_lock_test_and_set(target, value); }
+#endif
 }	// namespace detail
 
 /// Physical register ID
@@ -1106,20 +1141,26 @@ namespace detail
 	inline uint32 bit_scan_forward(uint32 x)
 	{
 		JITASM_ASSERT(x != 0);
+#if defined(JITASM_GCC)
+		return __builtin_ctz(x);
+#else
 		unsigned long index;
 		_BitScanForward(&index, x);
-		//index = __builtin_ctz(x);		// for gcc
 		return index;
+#endif
 	}
 
 	/// The bit position of the last bit 1.
 	inline uint32 bit_scan_reverse(uint32 x)
 	{
 		JITASM_ASSERT(x != 0);
+#if defined(JITASM_GCC)
+		return __builtin_clz(x);
+#else
 		unsigned long index;
 		_BitScanReverse(&index, x);
-		//index = __builtin_clz(x);		// for gcc
 		return index;
+#endif
 	}
 
 	/// Prior iterator
@@ -1140,15 +1181,15 @@ namespace detail
 		Range() : std::pair<It, It>() {}
 		Range(const It& f, const It& s) : std::pair<It, It>(f, s) {}
 		Range(T& container) : std::pair<It, It>(container.begin(), container.end()) {}
-		bool empty() const {return first == second;}
-		size_t size() const {return std::distance(first, second);}
+		bool empty() const {return this->first == this->second;}
+		size_t size() const {return std::distance(this->first, this->second);}
 	};
 
 	/// Const iterator range
 	template<class T> struct ConstRange : Range<T, typename T::const_iterator> {
-		ConstRange() : Range<T, Iterator>() {}
-		ConstRange(const Iterator& f, const Iterator& s) : Range<T, Iterator>(f, s) {}
-		ConstRange(const T& container) : Range<T, Iterator>(container.begin(), container.end()) {}
+		ConstRange() : Range<T, typename T::const_iterator>() {}
+		ConstRange(const typename T::const_iterator& f, const typename T::const_iterator& s) : Range<T, typename T::const_iterator>(f, s) {}
+		ConstRange(const T& container) : Range<T, typename T::const_iterator>(container.begin(), container.end()) {}
 	};
 
 	inline void append_num(std::string& str, size_t num)
@@ -1158,6 +1199,7 @@ namespace detail
 		str.append(1, static_cast<char>('0' + num % 10));
 	}
 
+#if defined(JITASM_WIN)
 	/// Debug trace
 	inline void Trace(const char *format, ...)
 	{
@@ -1168,6 +1210,7 @@ namespace detail
 		va_end(args);
 		::OutputDebugStringA(szBuf);
 	}
+#endif
 
 	/// Executable code buffer
 	class CodeBuffer
@@ -1184,24 +1227,43 @@ namespace detail
 		size_t GetCodeSize() const {return codesize_;}
 		size_t GetBufferSize() const {return buffsize_;}
 
-		void Reset(size_t codesize)
+		bool Reset(size_t codesize)
 		{
 			if (pbuff_) {
+#if defined(JITASM_WIN)
 				::VirtualFree(pbuff_, 0, MEM_RELEASE);
+#else
+				munmap(pbuff_, buffsize_);
+#endif
 				pbuff_ = NULL;
 				codesize_ = 0;
 				buffsize_ = 0;
 			}
 			if (codesize) {
+#if defined(JITASM_WIN)
 				void* pbuff = ::VirtualAlloc(NULL, codesize, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
-				if (pbuff == NULL) JITASM_ASSERT(0);
+				if (!pbuff) {
+					JITASM_ASSERT(0);
+					return false;
+				}
 				MEMORY_BASIC_INFORMATION info;
 				::VirtualQuery(pbuff, &info, sizeof(info));
+				buffsize_ = info.RegionSize;
+#else
+				int pagesize = getpagesize();
+				size_t buffsize = (codesize + pagesize - 1) / pagesize * pagesize;
+				void* pbuff = mmap(NULL, buffsize, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+				if (!pbuff) {
+					JITASM_ASSERT(0);
+					return false;
+				}
+				buffsize_ = buffsize;
+#endif
 
 				pbuff_ = pbuff;
 				codesize_ = codesize;
-				buffsize_ = info.RegionSize;
 			}
+			return true;
 		}
 	};
 
@@ -4614,7 +4676,7 @@ namespace compiler
 						const std::vector<int> *cost_;
 						LessCost(const std::vector<int> *cost) : cost_(cost) {}
 						int get_cost(size_t i) const {return i < cost_->size() ? cost_->at(i) : 0;}
-						bool operator()(size_t lhs, size_t rhs) const {return get_cost(lhs) < get_cost(rhs);}
+						bool operator()(uint32 lhs, uint32 rhs) const {return get_cost(lhs) < get_cost(rhs);}
 					};
 					std::sort(live_vars.begin(), live_vars.end(), LessCost(&cur_spill_cost));
 
