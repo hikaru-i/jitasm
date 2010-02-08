@@ -1110,6 +1110,7 @@ struct Backend
 			case I_MOV:		EncodeMOV(instr); break;
 			case I_TEST:	EncodeTEST(instr); break;
 			case I_XCHG:	EncodeXCHG(instr); break;
+			default:		JITASM_ASSERT(0); break;
 			}
 		} else {
 			Encode(instr);
@@ -4622,6 +4623,13 @@ namespace compiler
 			}
 		}
 
+		struct LessCost {
+			const std::vector<int> *cost_;
+			LessCost(const std::vector<int> *cost) : cost_(cost) {}
+			int get_cost(size_t i) const {return i < cost_->size() ? cost_->at(i) : 0;}
+			bool operator()(uint32 lhs, uint32 rhs) const {return get_cost(lhs) < get_cost(rhs);}
+		};
+
 		/// Spill identification
 		void SpillIdentification(uint32 available_reg_count, const std::vector<int>& total_spill_cost, int freq, const Interval *last_interval, std::vector<VarAttribute>& var_attrs)
 		{
@@ -4672,12 +4680,6 @@ namespace compiler
 					}
 
 					// Spill from the smallest cost
-					struct LessCost {
-						const std::vector<int> *cost_;
-						LessCost(const std::vector<int> *cost) : cost_(cost) {}
-						int get_cost(size_t i) const {return i < cost_->size() ? cost_->at(i) : 0;}
-						bool operator()(uint32 lhs, uint32 rhs) const {return get_cost(lhs) < get_cost(rhs);}
-					};
 					std::sort(live_vars.begin(), live_vars.end(), LessCost(&cur_spill_cost));
 
 					// Mark spilled variable.
@@ -4712,6 +4714,57 @@ namespace compiler
 			}
 		}
 
+		struct LessAssignOrder {
+			Interval *interval;
+			const Interval *prior_interval;
+			LessAssignOrder(Interval *cur, const Interval *prior) : interval(cur), prior_interval(prior) {}
+			bool has_constraints(size_t v) const {return v < interval->reg_assignables.size() ? interval->reg_assignables[v] != 0xFFFFFFFF : false;}
+			uint32 num_of_assignable(size_t v) const {return v < interval->reg_assignables.size() ? detail::Count1Bits(interval->reg_assignables[v]) : 32;}
+			bool operator()(size_t lhs, size_t rhs) const {
+				// is there any register constraints or not
+				const bool lhs_has_constraints = has_constraints(lhs);
+				const bool rhs_has_constraints = has_constraints(rhs);
+				if (lhs_has_constraints != rhs_has_constraints) {
+					return lhs_has_constraints;
+				}
+
+				if (lhs_has_constraints) {
+					// is the register which has constraints used in this interval or not
+					const bool lhs_used = interval->use.get_bit(lhs);
+					const bool rhs_used = interval->use.get_bit(rhs);
+					if (lhs_used != rhs_used) {
+						return lhs_used;
+					}
+
+					// compare number of assignable registers
+					const uint32 lhs_num_of_assignable = num_of_assignable(lhs);
+					const uint32 rhs_num_of_assignable = num_of_assignable(rhs);
+					if (lhs_num_of_assignable != rhs_num_of_assignable) {
+						return lhs_num_of_assignable < rhs_num_of_assignable;
+					}
+				}
+
+				// physical register or symbolic register
+				const int lhs_sym_reg = (lhs < NUM_OF_PHYSICAL_REG ? 0 : 1);
+				const int rhs_sym_reg = (rhs < NUM_OF_PHYSICAL_REG ? 0 : 1);
+				if (lhs_sym_reg != rhs_sym_reg) {
+					return lhs_sym_reg < rhs_sym_reg;
+				}
+
+				if (prior_interval) {
+					// is the variable assigned register in prior interval or not
+					const bool lhs_prior_reg = !prior_interval->spill.get_bit(lhs) && prior_interval->liveness.get_bit(lhs);
+					const bool rhs_prior_reg = !prior_interval->spill.get_bit(rhs) && prior_interval->liveness.get_bit(rhs);
+					if (lhs_prior_reg != rhs_prior_reg) {
+						return lhs_prior_reg;
+					}
+				}
+
+				// compare register id
+				return lhs < rhs;
+			}
+		};
+
 		/// Assign register in basic block
 		/**
 		 * \param[in] available_reg	Available physical register mask
@@ -4737,57 +4790,6 @@ namespace compiler
 						l &= ~(1 << index);
 					}
 				}
-
-				struct LessAssignOrder {
-					Interval *interval;
-					const Interval *prior_interval;
-					LessAssignOrder(Interval *cur, const Interval *prior) : interval(cur), prior_interval(prior) {}
-					bool has_constraints(size_t v) const {return v < interval->reg_assignables.size() ? interval->reg_assignables[v] != 0xFFFFFFFF : false;}
-					uint32 num_of_assignable(size_t v) const {return v < interval->reg_assignables.size() ? detail::Count1Bits(interval->reg_assignables[v]) : 32;}
-					bool operator()(size_t lhs, size_t rhs) const {
-						// is there any register constraints or not
-						const bool lhs_has_constraints = has_constraints(lhs);
-						const bool rhs_has_constraints = has_constraints(rhs);
-						if (lhs_has_constraints != rhs_has_constraints) {
-							return lhs_has_constraints;
-						}
-
-						if (lhs_has_constraints) {
-							// is the register which has constraints used in this interval or not
-							const bool lhs_used = interval->use.get_bit(lhs);
-							const bool rhs_used = interval->use.get_bit(rhs);
-							if (lhs_used != rhs_used) {
-								return lhs_used;
-							}
-
-							// compare number of assignable registers
-							const uint32 lhs_num_of_assignable = num_of_assignable(lhs);
-							const uint32 rhs_num_of_assignable = num_of_assignable(rhs);
-							if (lhs_num_of_assignable != rhs_num_of_assignable) {
-								return lhs_num_of_assignable < rhs_num_of_assignable;
-							}
-						}
-
-						// physical register or symbolic register
-						const int lhs_sym_reg = (lhs < NUM_OF_PHYSICAL_REG ? 0 : 1);
-						const int rhs_sym_reg = (rhs < NUM_OF_PHYSICAL_REG ? 0 : 1);
-						if (lhs_sym_reg != rhs_sym_reg) {
-							return lhs_sym_reg < rhs_sym_reg;
-						}
-
-						if (prior_interval) {
-							// is the variable assigned register in prior interval or not
-							const bool lhs_prior_reg = !prior_interval->spill.get_bit(lhs) && prior_interval->liveness.get_bit(lhs);
-							const bool rhs_prior_reg = !prior_interval->spill.get_bit(rhs) && prior_interval->liveness.get_bit(rhs);
-							if (lhs_prior_reg != rhs_prior_reg) {
-								return lhs_prior_reg;
-							}
-						}
-
-						// compare register id
-						return lhs < rhs;
-					}
-				};
 
 				if (!live_vars.empty()) {
 					cur_interval->assignment_table.resize(live_vars.back() + 1, -1);
@@ -4913,6 +4915,13 @@ namespace compiler
 		Lifetime& GetLifetime(RegType type) {return lifetime[GetRegFamily(type)];}
 		/// Get variable lifetime
 		const Lifetime& GetLifetime(RegType type) const {return lifetime[GetRegFamily(type)];}
+
+		struct less
+		{
+			bool operator()(BasicBlock *lhs, BasicBlock *rhs) { return lhs->instr_begin < rhs->instr_begin; }
+			bool operator()(BasicBlock *lhs, size_t rhs) { return lhs->instr_begin < rhs; }
+			bool operator()(size_t lhs, BasicBlock *rhs) { return lhs < rhs->instr_begin; }
+		};
 	};
 
 	/**
@@ -5006,12 +5015,11 @@ namespace compiler
 	class ControlFlowGraph
 	{
 	public:
-		typedef std::set<BasicBlock> BlockSet;
 		typedef std::deque<BasicBlock *> BlockList;
 
 	private:
-		BlockSet blocks_;
-		std::deque<BasicBlock *> depth_first_blocks_;
+		BlockList blocks_;
+		BlockList depth_first_blocks_;
 
 		void MakeDepthFirstBlocks(BasicBlock *block)
 		{
@@ -5025,6 +5033,14 @@ namespace compiler
 			}
 			depth_first_blocks_.push_front(block);
 		}
+
+		struct sort_backedge {
+			bool operator()(const std::pair<size_t, size_t>& lhs, const std::pair<size_t, size_t>& rhs) const {
+				if (lhs.second < rhs.second) return true;						// smaller depth loop header first
+				if (lhs.second == rhs.second) return lhs.first > rhs.first;		// larger depth of end of loop first if same loop header
+				return false;
+			}
+		};
 
 		void DetectLoops()
 		{
@@ -5046,13 +5062,6 @@ namespace compiler
 			}
 
 			// Merge loops with the same loop header
-			struct sort_backedge {
-				bool operator()(const std::pair<size_t, size_t>& lhs, const std::pair<size_t, size_t>& rhs) const {
-					if (lhs.second < rhs.second) return true;						// smaller depth loop header first
-					if (lhs.second == rhs.second) return lhs.first > rhs.first;		// larger depth of end of loop first if same loop header
-					return false;
-				}
-			};
 			std::sort(backedges.begin(), backedges.end(), sort_backedge());
 			if (backedges.size() >= 2) {
 				std::vector< std::pair<size_t, size_t> >::iterator it = backedges.begin() + 1;
@@ -5074,56 +5083,72 @@ namespace compiler
 			}
 		}
 
-		BlockSet::iterator initialize(size_t num_of_instructions) {
-			blocks_.clear();
-			depth_first_blocks_.clear();
-			BlockSet::iterator enter_block = blocks_.insert(BasicBlock(0, num_of_instructions)).first;
+		BlockList::iterator initialize(size_t num_of_instructions) {
+			clear();
+			blocks_.resize(num_of_instructions > 0 ? 2 : 1);
+			BasicBlock *enter_block = new BasicBlock(0, num_of_instructions);
+			blocks_[0] = enter_block;
 			if (num_of_instructions > 0) {
-				BlockSet::iterator exit_block = blocks_.insert(BasicBlock(num_of_instructions, num_of_instructions)).first;	// exit block
-				enter_block->successor[0] = &*exit_block;
-				exit_block->predecessor.push_back(&*enter_block);
+				// exit block
+				BasicBlock *exit_block = new BasicBlock(num_of_instructions, num_of_instructions);
+				blocks_[1] = exit_block;
+				enter_block->successor[0] = exit_block;
+				exit_block->predecessor.push_back(enter_block);
 			}
-			return enter_block;
+			return blocks_.begin();
 		}
 
 		/// Split basic block
-		BlockSet::iterator split(BlockSet::iterator target_block, size_t instr_idx) {
+		BlockList::iterator split(BlockList::iterator target_block_it, size_t instr_idx) {
+			BasicBlock *target_block = *target_block_it;
 			if (target_block->instr_begin == instr_idx)
-				return target_block;
+				return target_block_it;
 
-			BlockSet::iterator new_block = blocks_.insert(detail::next(target_block), BasicBlock(instr_idx, target_block->instr_end));
-			JITASM_ASSERT(detail::next(target_block) == new_block);
+			BasicBlock *new_block = new BasicBlock(instr_idx, target_block->instr_end);
 			new_block->successor[0] = target_block->successor[0];
 			new_block->successor[1] = target_block->successor[1];
-			new_block->predecessor.push_back(&*target_block);
-			target_block->successor[0] = &*new_block;
+			new_block->predecessor.push_back(target_block);
+			target_block->successor[0] = new_block;
 			target_block->successor[1] = NULL;
 			target_block->instr_end = instr_idx;
 
 			// replace predecessor of successors
-			if (new_block->successor[0]) new_block->successor[0]->ReplacePredecessor(&*target_block, &*new_block);
-			if (new_block->successor[1]) new_block->successor[1]->ReplacePredecessor(&*target_block, &*new_block);
+			if (new_block->successor[0]) new_block->successor[0]->ReplacePredecessor(target_block, new_block);
+			if (new_block->successor[1]) new_block->successor[1]->ReplacePredecessor(target_block, new_block);
 
-			return new_block;
+			return blocks_.insert(detail::next(target_block_it), new_block);
 		}
 
 	public:
-		BlockSet::iterator get_block(size_t instr_idx) {
-			BlockSet::iterator it = blocks_.upper_bound(BasicBlock(instr_idx, instr_idx));
+		~ControlFlowGraph()
+		{
+			clear();
+		}
+
+		BlockList::iterator get_block(size_t instr_idx) {
+			BlockList::iterator it = std::upper_bound(blocks_.begin(), blocks_.end(), instr_idx, BasicBlock::less());
 			return it != blocks_.begin() ? --it : blocks_.end();
 		}
 
-		BlockSet::iterator get_exit_block() {
-			BlockSet::iterator it = blocks_.end();
-			return --it;
+		BlockList::iterator get_exit_block() {
+			return detail::prior(blocks_.end());
 		}
 
 		size_t size() { return blocks_.size(); }
 
-		BlockSet::iterator begin() { return blocks_.begin(); }
-		BlockSet::iterator end() { return blocks_.end(); }
-		BlockSet::const_iterator begin() const { return blocks_.begin(); }
-		BlockSet::const_iterator end() const { return blocks_.end(); }
+		void clear()
+		{
+			for (BlockList::iterator it = blocks_.begin(); it != blocks_.end(); ++it) {
+				delete *it;
+			}
+			blocks_.clear();
+			depth_first_blocks_.clear();
+		}
+
+		BlockList::iterator begin() { return blocks_.begin(); }
+		BlockList::iterator end() { return blocks_.end(); }
+		BlockList::const_iterator begin() const { return blocks_.begin(); }
+		BlockList::const_iterator end() const { return blocks_.end(); }
 		BlockList::iterator dfs_begin() { return depth_first_blocks_.begin(); }
 		BlockList::iterator dfs_end() { return depth_first_blocks_.end(); }
 
@@ -5131,31 +5156,32 @@ namespace compiler
 		{
 			printf("digraph CFG {\n");
 			printf("\tnode[shape=box];\n");
-			for (BlockSet::const_iterator it = blocks_.begin(); it != blocks_.end(); ++it) {
+			for (BlockList::const_iterator it = blocks_.begin(); it != blocks_.end(); ++it) {
+				BasicBlock *block = *it;
 				std::string live_in = "live in:";
 				std::string live_out = "live out:";
 				for (size_t reg_family = 0; reg_family < 3; ++reg_family) {
-					for (size_t i = 0; i < it->lifetime[reg_family].live_in.size_bit(); ++i) {
-						if (it->lifetime[reg_family].live_in.get_bit(i)) {
+					for (size_t i = 0; i < block->lifetime[reg_family].live_in.size_bit(); ++i) {
+						if (block->lifetime[reg_family].live_in.get_bit(i)) {
 							live_in.append(" ");
 							live_in.append(GetRegName(static_cast<RegType>(reg_family + (i < NUM_OF_PHYSICAL_REG ? R_TYPE_GP : R_TYPE_SYMBOLIC_GP)), i));
 						}
 					}
-					for (size_t i = 0; i < it->lifetime[reg_family].live_out.size_bit(); ++i) {
-						if (it->lifetime[reg_family].live_out.get_bit(i)) {
+					for (size_t i = 0; i < block->lifetime[reg_family].live_out.size_bit(); ++i) {
+						if (block->lifetime[reg_family].live_out.get_bit(i)) {
 							live_out.append(" ");
 							live_out.append(GetRegName(static_cast<RegType>(reg_family + (i < NUM_OF_PHYSICAL_REG ? R_TYPE_GP : R_TYPE_SYMBOLIC_GP)), i));
 						}
 					}
 				}
-				printf("\tnode%d[label=\"Block%d\\ninstruction %d - %d\\nloop depth %d\\n%s\\n%s\"];\n", it->instr_begin, it->depth, it->instr_begin, it->instr_end - 1, it->loop_depth, live_in.c_str(), live_out.c_str());
+				printf("\tnode%d[label=\"Block%d\\ninstruction %d - %d\\nloop depth %d\\n%s\\n%s\"];\n", block->instr_begin, block->depth, block->instr_begin, block->instr_end - 1, block->loop_depth, live_in.c_str(), live_out.c_str());
 				int constraint = 0;
-				if (it->successor[0]) printf("\t\"node%d\" -> \"node%d\" [constraint=%s];\n", it->instr_begin, it->successor[0]->instr_begin, constraint == 0 ? "true" : "false");
-				if (it->successor[1]) printf("\t\"node%d\" -> \"node%d\" [constraint=%s];\n", it->instr_begin, it->successor[1]->instr_begin, constraint == 0 ? "true" : "false");
-				//if (it->dfs_parent) printf("\t\"node%d\" -> \"node%d\" [color=\"#ff0000\"];\n", it->instr_begin, it->dfs_parent->instr_begin);
-				//if (it->immediate_dominator) printf("\t\"node%d\" -> \"node%d\" [constraint=false, color=\"#0000ff\"];\n", it->instr_begin, it->immediate_dominator->instr_begin);
-				//for (size_t i = 0; i < it->predecessor.size(); ++i) {
-				//	printf("\t\"node%d\" -> \"node%d\" [constraint=false, color=\"#808080\"];\n", it->instr_begin, it->predecessor[i]->instr_begin);
+				if (block->successor[0]) printf("\t\"node%d\" -> \"node%d\" [constraint=%s];\n", block->instr_begin, block->successor[0]->instr_begin, constraint == 0 ? "true" : "false");
+				if (block->successor[1]) printf("\t\"node%d\" -> \"node%d\" [constraint=%s];\n", block->instr_begin, block->successor[1]->instr_begin, constraint == 0 ? "true" : "false");
+				//if (block->dfs_parent) printf("\t\"node%d\" -> \"node%d\" [color=\"#ff0000\"];\n", block->instr_begin, block->dfs_parent->instr_begin);
+				//if (block->immediate_dominator) printf("\t\"node%d\" -> \"node%d\" [constraint=false, color=\"#0000ff\"];\n", block->instr_begin, block->immediate_dominator->instr_begin);
+				//for (size_t i = 0; i < block->predecessor.size(); ++i) {
+				//	printf("\t\"node%d\" -> \"node%d\" [constraint=false, color=\"#808080\"];\n", block->instr_begin, block->predecessor[i]->instr_begin);
 				//}
 			}
 			printf("}\n");
@@ -5164,32 +5190,36 @@ namespace compiler
 		/// Build control flow graph from instruction list
 		void Build(const Frontend& f)
 		{
-			typedef BlockSet::iterator BlockIterator;
-			BlockIterator cur_block = initialize(f.instrs_.size());
+			initialize(f.instrs_.size());
+			size_t block_idx = 0;
 			for (size_t instr_idx = 0; instr_idx < f.instrs_.size(); ++instr_idx) {
+				BasicBlock *cur_block = blocks_[block_idx];
 				InstrID instr_id = f.instrs_[instr_idx].GetID();
 				if (Frontend::IsJump(instr_id) || instr_id == I_RET || instr_id == I_IRET) {
 					// Jump instruction always terminate basic block
-					BlockIterator next_block;
+					BlockList::iterator next_block;
 					if (instr_idx + 1 < cur_block->instr_end) {
 						// Split basic block
-						next_block = split(cur_block, instr_idx + 1);
+						split(blocks_.begin() + block_idx, instr_idx + 1);
+						++block_idx;
 					}
 					else {
 						// Already splitted
-						next_block = detail::next(cur_block);
+						++block_idx;
 					}
 
 					// Set successors of current block
 					if (instr_id == I_RET || instr_id == I_IRET) {
 						if (cur_block->successor[0])
-							cur_block->successor[0]->RemovePredecessor(&*cur_block);
-						cur_block->successor[0] = &*get_exit_block();
-						get_exit_block()->predecessor.push_back(&*cur_block);
+							cur_block->successor[0]->RemovePredecessor(cur_block);
+						cur_block->successor[0] = *get_exit_block();
+						(*get_exit_block())->predecessor.push_back(cur_block);
 					}
 					else {
 						const size_t jump_to = f.GetJumpTo(f.instrs_[instr_idx]);	// jump target instruction index
-						BlockIterator jump_target = split(get_block(jump_to), jump_to);
+						BlockList::iterator jump_to_block = get_block(jump_to);
+						if (static_cast<size_t>(std::distance(blocks_.begin(), jump_to_block)) < block_idx) ++block_idx;		// Adjust block_idx for split
+						BasicBlock *jump_target = *split(jump_to_block, jump_to);
 
 						// Update cur_block if split cur_block
 						if (jump_target->instr_begin <= instr_idx && instr_idx < jump_target->instr_end) {
@@ -5198,25 +5228,23 @@ namespace compiler
 
 						if (instr_id == I_JMP) {
 							if (cur_block->successor[0])
-								cur_block->successor[0]->RemovePredecessor(&*cur_block);
-							cur_block->successor[0] = &*jump_target;
-							jump_target->predecessor.push_back(&*cur_block);
+								cur_block->successor[0]->RemovePredecessor(cur_block);
+							cur_block->successor[0] = jump_target;
+							jump_target->predecessor.push_back(cur_block);
 						}
 						else {
 							JITASM_ASSERT(instr_id == I_JCC || instr_id == I_LOOP);
 							if (cur_block->successor[1])
-								cur_block->successor[1]->RemovePredecessor(&*cur_block);
-							cur_block->successor[1] = &*jump_target;
-							jump_target->predecessor.push_back(&*cur_block);
+								cur_block->successor[1]->RemovePredecessor(cur_block);
+							cur_block->successor[1] = jump_target;
+							jump_target->predecessor.push_back(cur_block);
 						}
 					}
-
-					cur_block = next_block;
 				}
 			}
 
 			// Make depth first orderd list
-			MakeDepthFirstBlocks(&*get_block(0));
+			MakeDepthFirstBlocks(*get_block(0));
 
 			// Numbering depth
 			for (size_t i = 0; i < depth_first_blocks_.size(); ++i) {
@@ -5230,7 +5258,7 @@ namespace compiler
 		/// Build dummy control flow graph which has enter and exit blocks.
 		void BuildDummy(const Frontend& f)
 		{
-			BasicBlock *enter_block = &*initialize(f.instrs_.size());
+			BasicBlock *enter_block = *initialize(f.instrs_.size());
 			BasicBlock *exit_block = enter_block->successor[0];
 
 			enter_block->depth = 0;
@@ -5350,17 +5378,18 @@ namespace compiler
 		std::vector<BasicBlock *> update_target;
 		update_target.reserve(cfg.size());
 
-		for (ControlFlowGraph::BlockSet::iterator it = cfg.begin(); it != cfg.end(); ++it) {
+		for (ControlFlowGraph::BlockList::iterator it = cfg.begin(); it != cfg.end(); ++it) {
+			BasicBlock *block = *it;
 			// Scanning instructions of basic block and make register lifetime table
-			for (size_t i = it->instr_begin; i != it->instr_end; ++i) {
-				const size_t instr_offset = i - it->instr_begin;
+			for (size_t i = block->instr_begin; i != block->instr_end; ++i) {
+				const size_t instr_offset = i - block->instr_begin;
 				const Instr& instr = f.instrs_[i];
 				if (instr.GetID() == I_COMPILER_DECLARE_REG_ARG) {
 					// Declare function argument on register
 					const detail::Opd& opd0 = instr.GetOpd(0);
 					const RegID& reg = opd0.GetReg();
 					const detail::Opd& opd1 = instr.GetOpd(1);
-					it->GetLifetime(reg.type).AddUsePoint(instr_offset, reg, opd0.opdtype_, opd0.GetSize(), opd0.reg_assignable_);
+					block->GetLifetime(reg.type).AddUsePoint(instr_offset, reg, opd0.opdtype_, opd0.GetSize(), opd0.reg_assignable_);
 					if (opd1.IsMem()) {
 						var_manager.SetSpillSlot(reg.type, reg.id, Addr(opd1.GetBase(), opd1.GetDisp()));
 					}
@@ -5369,35 +5398,35 @@ namespace compiler
 					const detail::Opd& opd0 = instr.GetOpd(0);
 					const RegID& reg = opd0.GetReg();
 					const detail::Opd& opd1 = instr.GetOpd(1);
-					it->GetLifetime(reg.type).AddUsePoint(instr_offset, reg, static_cast<OpdType>(O_TYPE_MEM | O_TYPE_WRITE), opd0.GetSize(), opd0.reg_assignable_);
+					block->GetLifetime(reg.type).AddUsePoint(instr_offset, reg, static_cast<OpdType>(O_TYPE_MEM | O_TYPE_WRITE), opd0.GetSize(), opd0.reg_assignable_);
 					var_manager.SetSpillSlot(reg.type, reg.id, Addr(opd1.GetBase(), opd1.GetDisp()));
 				} else if (instr.GetID() == I_COMPILER_DECLARE_RESULT_REG) {
 					// Declare function result on register
 					const detail::Opd& opd0 = instr.GetOpd(0);
 					const RegID& reg = opd0.GetReg();
-					it->GetLifetime(reg.type).AddUsePoint(instr_offset, reg, opd0.opdtype_, opd0.GetSize(), opd0.reg_assignable_);
+					block->GetLifetime(reg.type).AddUsePoint(instr_offset, reg, opd0.opdtype_, opd0.GetSize(), opd0.reg_assignable_);
 				} else if (IsBreakDependenceInstr(instr)) {
 					// Add only 1 use point if the instruction that break register dependence
 					const detail::Opd& opd = instr.GetOpd(0);
 					const RegID& reg = opd.GetReg();
-					it->GetLifetime(reg.type).AddUsePoint(instr_offset, reg, static_cast<OpdType>(O_TYPE_REG | O_TYPE_WRITE), opd.GetSize(), opd.reg_assignable_);
+					block->GetLifetime(reg.type).AddUsePoint(instr_offset, reg, static_cast<OpdType>(O_TYPE_REG | O_TYPE_WRITE), opd.GetSize(), opd.reg_assignable_);
 					var_manager.UpdateVarSize(reg.type, reg.id, opd.GetSize() / 8);
 				} else if (instr.GetID() == I_PUSHAD || instr.GetID() == I_POPAD) {
 					// Add use point of pushad/popad
 					const OpdType type = static_cast<OpdType>(O_TYPE_REG | (instr.GetID() == I_PUSHAD ? O_TYPE_READ : O_TYPE_WRITE));
-					it->GetLifetime(R_TYPE_GP).AddUsePoint(instr_offset, RegID::CreatePhysicalRegID(R_TYPE_GP, EAX), type, O_SIZE_32, 0xFFFFFFFF);
-					it->GetLifetime(R_TYPE_GP).AddUsePoint(instr_offset, RegID::CreatePhysicalRegID(R_TYPE_GP, ECX), type, O_SIZE_32, 0xFFFFFFFF);
-					it->GetLifetime(R_TYPE_GP).AddUsePoint(instr_offset, RegID::CreatePhysicalRegID(R_TYPE_GP, EDX), type, O_SIZE_32, 0xFFFFFFFF);
-					it->GetLifetime(R_TYPE_GP).AddUsePoint(instr_offset, RegID::CreatePhysicalRegID(R_TYPE_GP, EBX), type, O_SIZE_32, 0xFFFFFFFF);
-					it->GetLifetime(R_TYPE_GP).AddUsePoint(instr_offset, RegID::CreatePhysicalRegID(R_TYPE_GP, EBP), type, O_SIZE_32, 0xFFFFFFFF);
-					it->GetLifetime(R_TYPE_GP).AddUsePoint(instr_offset, RegID::CreatePhysicalRegID(R_TYPE_GP, ESI), type, O_SIZE_32, 0xFFFFFFFF);
-					it->GetLifetime(R_TYPE_GP).AddUsePoint(instr_offset, RegID::CreatePhysicalRegID(R_TYPE_GP, EDI), type, O_SIZE_32, 0xFFFFFFFF);
-					it->GetLifetime(R_TYPE_GP).AddUsePoint(instr_offset, RegID::CreatePhysicalRegID(R_TYPE_GP, ESP), static_cast<OpdType>(O_TYPE_REG | O_TYPE_READ | O_TYPE_WRITE), O_SIZE_32, 0xFFFFFFFF);
+					block->GetLifetime(R_TYPE_GP).AddUsePoint(instr_offset, RegID::CreatePhysicalRegID(R_TYPE_GP, EAX), type, O_SIZE_32, 0xFFFFFFFF);
+					block->GetLifetime(R_TYPE_GP).AddUsePoint(instr_offset, RegID::CreatePhysicalRegID(R_TYPE_GP, ECX), type, O_SIZE_32, 0xFFFFFFFF);
+					block->GetLifetime(R_TYPE_GP).AddUsePoint(instr_offset, RegID::CreatePhysicalRegID(R_TYPE_GP, EDX), type, O_SIZE_32, 0xFFFFFFFF);
+					block->GetLifetime(R_TYPE_GP).AddUsePoint(instr_offset, RegID::CreatePhysicalRegID(R_TYPE_GP, EBX), type, O_SIZE_32, 0xFFFFFFFF);
+					block->GetLifetime(R_TYPE_GP).AddUsePoint(instr_offset, RegID::CreatePhysicalRegID(R_TYPE_GP, EBP), type, O_SIZE_32, 0xFFFFFFFF);
+					block->GetLifetime(R_TYPE_GP).AddUsePoint(instr_offset, RegID::CreatePhysicalRegID(R_TYPE_GP, ESI), type, O_SIZE_32, 0xFFFFFFFF);
+					block->GetLifetime(R_TYPE_GP).AddUsePoint(instr_offset, RegID::CreatePhysicalRegID(R_TYPE_GP, EDI), type, O_SIZE_32, 0xFFFFFFFF);
+					block->GetLifetime(R_TYPE_GP).AddUsePoint(instr_offset, RegID::CreatePhysicalRegID(R_TYPE_GP, ESP), static_cast<OpdType>(O_TYPE_REG | O_TYPE_READ | O_TYPE_WRITE), O_SIZE_32, 0xFFFFFFFF);
 				} else if (instr.GetID() == I_VZEROALL || instr.GetID() == I_VZEROUPPER) {
 					// Add use point of vzeroall/vzeroupper
 					const OpdType type = static_cast<OpdType>(O_TYPE_REG | (instr.GetID() == I_VZEROALL ? O_TYPE_WRITE : O_TYPE_READ | O_TYPE_WRITE));
 					for (int j = 0; j < NUM_OF_PHYSICAL_REG; ++j) {
-						it->GetLifetime(R_TYPE_YMM).AddUsePoint(instr_offset, RegID::CreatePhysicalRegID(R_TYPE_YMM, static_cast<PhysicalRegID>(YMM0 + j)), type, O_SIZE_256, 0xFFFFFFFF);
+						block->GetLifetime(R_TYPE_YMM).AddUsePoint(instr_offset, RegID::CreatePhysicalRegID(R_TYPE_YMM, static_cast<PhysicalRegID>(YMM0 + j)), type, O_SIZE_256, 0xFFFFFFFF);
 					}
 				} else {
 					// Add each use point of all operands
@@ -5406,18 +5435,18 @@ namespace compiler
 						if (opd.IsGpReg() || opd.IsMmxReg() || opd.IsXmmReg() || opd.IsYmmReg()) {
 							// Register operand
 							const RegID& reg = opd.GetReg();
-							it->GetLifetime(reg.type).AddUsePoint(instr_offset, reg, opd.opdtype_, opd.GetSize(), opd.reg_assignable_);
+							block->GetLifetime(reg.type).AddUsePoint(instr_offset, reg, opd.opdtype_, opd.GetSize(), opd.reg_assignable_);
 							var_manager.UpdateVarSize(reg.type, reg.id, opd.GetSize() / 8);
 						} else if (opd.IsMem()) {
 							// Memory operand
 							const RegID& base = opd.GetBase();
 							if (!base.IsInvalid()) {
-								it->GetLifetime(R_TYPE_GP).AddUsePoint(instr_offset, base, static_cast<OpdType>(O_TYPE_REG | O_TYPE_READ), opd.GetAddressSize(), 0xFFFFFFFF);
+								block->GetLifetime(R_TYPE_GP).AddUsePoint(instr_offset, base, static_cast<OpdType>(O_TYPE_REG | O_TYPE_READ), opd.GetAddressSize(), 0xFFFFFFFF);
 								var_manager.UpdateVarSize(R_TYPE_GP, base.id, opd.GetAddressSize() / 8);
 							}
 							const RegID& index = opd.GetIndex();
 							if (!index.IsInvalid()) {
-								it->GetLifetime(R_TYPE_GP).AddUsePoint(instr_offset, index, static_cast<OpdType>(O_TYPE_REG | O_TYPE_READ), opd.GetAddressSize(), 0xFFFFFFFF);
+								block->GetLifetime(R_TYPE_GP).AddUsePoint(instr_offset, index, static_cast<OpdType>(O_TYPE_REG | O_TYPE_READ), opd.GetAddressSize(), 0xFFFFFFFF);
 								var_manager.UpdateVarSize(R_TYPE_GP, index.id, opd.GetAddressSize() / 8);
 							}
 						}
@@ -5427,7 +5456,7 @@ namespace compiler
 
 			// Make GEN and KILL set
 			for (size_t reg_family = 0; reg_family < 3; ++reg_family) {
-				Lifetime& lifetime = it->lifetime[reg_family];
+				Lifetime& lifetime = block->lifetime[reg_family];
 				const size_t num_of_used_reg = lifetime.use_points.size();
 				for (size_t i = 0; i < num_of_used_reg; ++i) {
 					if (!lifetime.use_points[i].empty()) {
@@ -5442,7 +5471,7 @@ namespace compiler
 				}
 			}
 
-			update_target.push_back(&*it);
+			update_target.push_back(block);
 		}
 
 		while (!update_target.empty()) {
@@ -5490,9 +5519,9 @@ namespace compiler
 		const uint32 available_reg_count = detail::Count1Bits(available_reg);
 
 		std::vector<int> total_spill_cost;
-		for (ControlFlowGraph::BlockSet::iterator block = cfg.begin(); block != cfg.end(); ++block) {
-			block->lifetime[reg_family].BuildIntervals();
-			block->lifetime[reg_family].GetSpillCost(block->GetFrequency(), total_spill_cost);
+		for (ControlFlowGraph::BlockList::iterator block = cfg.begin(); block != cfg.end(); ++block) {
+			(*block)->lifetime[reg_family].BuildIntervals();
+			(*block)->lifetime[reg_family].GetSpillCost((*block)->GetFrequency(), total_spill_cost);
 		}
 
 		uint32 used_reg = 0;
@@ -5707,6 +5736,68 @@ namespace compiler
 		}
 	};
 
+	struct Operations {
+		int move[NUM_OF_PHYSICAL_REG];
+		int load[NUM_OF_PHYSICAL_REG];
+		int store[NUM_OF_PHYSICAL_REG];
+		uint8 size[NUM_OF_PHYSICAL_REG];
+		std::pair<const Lifetime::Interval *, const Lifetime::Interval *> interval;
+		const std::vector<VarAttribute> *var_attrs;
+
+		Operations(const Lifetime::Interval *first, const Lifetime::Interval *second, const std::vector<VarAttribute> *vattrs) : interval(first, second), var_attrs(vattrs) {
+			for (size_t i = 0; i < NUM_OF_PHYSICAL_REG; ++i) {move[i] = load[i] = store[i] = -1;}
+		}
+
+		void operator()(size_t var) {
+			if (interval.second->liveness.get_bit(var)) {
+				const bool first_spill = interval.first->spill.get_bit(var);
+				const bool second_spill = interval.second->spill.get_bit(var);
+				if (!first_spill) {
+					const int first_reg = interval.first->assignment_table[var];
+					if (!second_spill) {
+						// register -> register
+						move[first_reg] = interval.second->assignment_table[var];
+						size[first_reg] = var_attrs->at(var).size;
+					} else {
+						// register -> stack
+						store[first_reg] = static_cast<int>(var);
+					}
+				} else {
+					if (!second_spill) {
+						// stack -> register
+						load[interval.second->assignment_table[var]] = static_cast<int>(var);
+					} else {
+						// stack -> stack
+						// do nothing
+					}
+				}
+			}
+		}
+	};
+
+
+	template<class RegOp>
+	struct MoveGenerator {
+		int *moves_;
+		uint8 *sizes_;
+		RegOp *reg_operator_;
+		MoveGenerator(int *moves, uint8 *sizes, RegOp *reg_operator) : moves_(moves), sizes_(sizes), reg_operator_(reg_operator) {}
+		void operator()(const int *scc, size_t count) {
+			if (count > 1) {
+				for (size_t i = 0; i < count - 1; ++i) {
+					const int r = scc[i];
+					JITASM_ASSERT(r != moves_[r] && moves_[r] != -1);
+					reg_operator_->Swap(static_cast<PhysicalRegID>(moves_[r]), static_cast<PhysicalRegID>(r), sizes_[r]);
+					JITASM_TRACE("Swap%d %d <-> %d\n", sizes_[r] * 8, moves_[r], r);
+				}
+			} else if (moves_[scc[0]] != scc[0] && moves_[scc[0]] != -1) {
+				const int r = scc[0];
+				reg_operator_->Move(static_cast<PhysicalRegID>(moves_[r]), static_cast<PhysicalRegID>(r), sizes_[r]);
+				JITASM_TRACE("Move%d %d -> %d\n", sizes_[r] * 8, r, moves_[r]);
+			}
+		}
+	};
+
 	/// Generate inter-interval instructions
 	/**
 	 * - Move register
@@ -5720,45 +5811,6 @@ namespace compiler
 		first_interval.Dump(true);
 #endif
 
-		struct Operations {
-			int move[NUM_OF_PHYSICAL_REG];
-			int load[NUM_OF_PHYSICAL_REG];
-			int store[NUM_OF_PHYSICAL_REG];
-			uint8 size[NUM_OF_PHYSICAL_REG];
-			std::pair<const Lifetime::Interval *, const Lifetime::Interval *> interval;
-			const std::vector<VarAttribute> *var_attrs;
-
-			Operations(const Lifetime::Interval *first, const Lifetime::Interval *second, const std::vector<VarAttribute> *vattrs) : interval(first, second), var_attrs(vattrs) {
-				for (size_t i = 0; i < NUM_OF_PHYSICAL_REG; ++i) {move[i] = load[i] = store[i] = -1;}
-			}
-
-			void operator()(size_t var) {
-				if (interval.second->liveness.get_bit(var)) {
-					const bool first_spill = interval.first->spill.get_bit(var);
-					const bool second_spill = interval.second->spill.get_bit(var);
-					if (!first_spill) {
-						const int first_reg = interval.first->assignment_table[var];
-						if (!second_spill) {
-							// register -> register
-							move[first_reg] = interval.second->assignment_table[var];
-							size[first_reg] = var_attrs->at(var).size;
-						} else {
-							// register -> stack
-							store[first_reg] = static_cast<int>(var);
-						}
-					} else {
-						if (!second_spill) {
-							// stack -> register
-							load[interval.second->assignment_table[var]] = static_cast<int>(var);
-						} else {
-							// stack -> stack
-							// do nothing
-						}
-					}
-				}
-			}
-		};
-
 		Operations ops(&first_interval, &second_interval, &var_attrs);
 		first_interval.liveness.query_bit_indexes(ops);
 
@@ -5771,28 +5823,8 @@ namespace compiler
 		}
 
 		// Move instructions
-		struct MoveGenerator {
-			int *moves_;
-			uint8 *sizes_;
-			RegOp *reg_operator_;
-			MoveGenerator(int *moves, uint8 *sizes, RegOp *reg_operator) : moves_(moves), sizes_(sizes), reg_operator_(reg_operator) {}
-			void operator()(const int *scc, size_t count) {
-				if (count > 1) {
-					for (size_t i = 0; i < count - 1; ++i) {
-						const int r = scc[i];
-						JITASM_ASSERT(r != moves_[r] && moves_[r] != -1);
-						reg_operator_->Swap(static_cast<PhysicalRegID>(moves_[r]), static_cast<PhysicalRegID>(r), sizes_[r]);
-						JITASM_TRACE("Swap%d %d <-> %d\n", sizes_[r] * 8, moves_[r], r);
-					}
-				} else if (moves_[scc[0]] != scc[0] && moves_[scc[0]] != -1) {
-					const int r = scc[0];
-					reg_operator_->Move(static_cast<PhysicalRegID>(moves_[r]), static_cast<PhysicalRegID>(r), sizes_[r]);
-					JITASM_TRACE("Move%d %d -> %d\n", sizes_[r] * 8, r, moves_[r]);
-				}
-			}
-		};
 		SCCFinder scc_finder(ops.move);
-		scc_finder(MoveGenerator(ops.move, ops.size, &reg_operator));
+		scc_finder(MoveGenerator<RegOp>(ops.move, ops.size, &reg_operator));
 
 		// Load instructions
 		for (size_t r = 0; r < NUM_OF_PHYSICAL_REG; ++r) {
@@ -5928,6 +5960,13 @@ namespace compiler
 		f.ret();
 	}
 
+	struct OrderedLabel {
+		size_t id;
+		size_t instr_idx;
+		OrderedLabel(size_t id_, size_t instr_idx_) : id(id_), instr_idx(instr_idx_) {}
+		bool operator<(const OrderedLabel& rhs) const {return instr_idx < rhs.instr_idx;}
+	};
+
 	/// Rewrite instructions
 	/**
 	 * - Replace symbolic register to physical register
@@ -5937,12 +5976,6 @@ namespace compiler
 	inline void RewriteInstructions(Frontend& f, const ControlFlowGraph& cfg, const VariableManager& var_manager, const uint32 (&preserved_reg)[3], const Addr& preserved_reg_stack)
 	{
 		// Prepare instruction number ordered labels for adjusting label position
-		struct OrderedLabel {
-			size_t id;
-			size_t instr_idx;
-			OrderedLabel(size_t id_, size_t instr_idx_) : id(id_), instr_idx(instr_idx_) {}
-			bool operator<(const OrderedLabel& rhs) const {return instr_idx < rhs.instr_idx;}
-		};
 		std::vector<OrderedLabel> orderd_labels;	// instruction number order
 		orderd_labels.reserve(f.labels_.size());
 		for (size_t i = 0; i < f.labels_.size(); ++i) {
@@ -5957,7 +5990,8 @@ namespace compiler
 		org_instrs.swap(f.instrs_);
 		f.instrs_.reserve(org_instrs.size());
 
-		for (ControlFlowGraph::BlockSet::const_iterator block = cfg.begin(); block != cfg.end(); ++block) {
+		for (ControlFlowGraph::BlockList::const_iterator it = cfg.begin(); it != cfg.end(); ++it) {
+			const BasicBlock *block = *it;
 			JITASM_TRACE("\n==== Block%d ====\n", block->depth);
 			if (block->depth == (size_t)-1) {
 				// Eliminate unreachable code block
@@ -6056,7 +6090,7 @@ namespace compiler
 				}
 
 				JITASM_TRACE("==== Edge to Block%d\n", block->successor[0]->depth);
-				GenerateInterBlockInstr(&*block, block->successor[0], f, var_manager);
+				GenerateInterBlockInstr(block, block->successor[0], f, var_manager);
 
 				// Add last instruction if it is jump
 				if (Frontend::IsJump(jump_instr.GetID())) {
@@ -6072,12 +6106,12 @@ namespace compiler
 				Frontend::InstrList temp_instrs;
 				temp_instrs.swap(f.instrs_);
 				JITASM_TRACE("==== Edge to Block%d\n", block->successor[1]->depth);
-				GenerateInterBlockInstr(&*block, block->successor[1], f, var_manager);
+				GenerateInterBlockInstr(block, block->successor[1], f, var_manager);
 				temp_instrs.swap(f.instrs_);
 
 				// Insert inter-block instructions between current block and successor 0
 				JITASM_TRACE("==== Edge to Block%d\n", block->successor[0]->depth);
-				GenerateInterBlockInstr(&*block, block->successor[0], f, var_manager);
+				GenerateInterBlockInstr(block, block->successor[0], f, var_manager);
 
 				if (!temp_instrs.empty()) {
 					// Insert inter-block instructions between current block and successor 1 and change jump flow
@@ -6998,7 +7032,7 @@ namespace detail {
 					f_->mov(f_->qword_ptr[arg_info_.addr], Reg64(arg_info_.reg_id));
 				}
 #endif
-				return addr_;
+				return arg_info_.addr;
 			}
 			operator Reg8 () {
 				Reg8 reg;
@@ -7027,7 +7061,7 @@ namespace detail {
 					f_->mov(f_->qword_ptr[arg_info_.addr], Reg64(arg_info_.reg_id));
 				}
 #endif
-				return addr_;
+				return arg_info_.addr;
 			}
 			operator Reg16 () {
 				Reg16 reg;
