@@ -46,7 +46,6 @@
 #include <string>
 #include <deque>
 #include <vector>
-#include <set>
 #include <map>
 #include <algorithm>
 #include <string.h>
@@ -105,7 +104,6 @@ typedef unsigned __int64	uint64;
 #endif
 
 template<typename T> inline void avoid_unused_warn(const T&) {}
-template<typename T, typename U> inline void avoid_unused_warn(const T&, const U&) {}
 
 namespace detail
 {
@@ -4627,7 +4625,7 @@ namespace compiler
 			const std::vector<int> *cost_;
 			LessCost(const std::vector<int> *cost) : cost_(cost) {}
 			int get_cost(size_t i) const {return i < cost_->size() ? cost_->at(i) : 0;}
-			bool operator()(uint32 lhs, uint32 rhs) const {return get_cost(lhs) < get_cost(rhs);}
+			bool operator()(size_t lhs, size_t rhs) const {return get_cost(lhs) < get_cost(rhs);}
 		};
 
 		/// Spill identification
@@ -6979,23 +6977,23 @@ namespace detail {
 		template<class R, class A1>
 		ArgInfo ArgInfo1()	{ return ArgInfo(Addr(RegID::CreatePhysicalRegID(R_TYPE_GP, EBP), SIZE_OF_GP_REG * (2 + ResultT<R>::ArgR)), static_cast<PhysicalRegID>(ArgTraits<ResultT<R>::ArgR + 0, A1>::reg_id)); }
 		template<class R, class A1, class A2>
-		ArgInfo ArgInfo2()	{ return ArgInfo1<R, A1>().Next< ArgTraits<ResultT<R>::ArgR + 0, A1> >(ArgTraits<ResultT<R>::ArgR + 1, A2>::reg_id); }
+		ArgInfo ArgInfo2()	{ return ArgInfo(ArgInfo1<R, A1>()).Next< ArgTraits<ResultT<R>::ArgR + 0, A1> >(ArgTraits<ResultT<R>::ArgR + 1, A2>::reg_id); }
 		template<class R, class A1, class A2, class A3>
-		ArgInfo ArgInfo3()	{ return ArgInfo2<R, A1, A2>().Next< ArgTraits<ResultT<R>::ArgR + 1, A2> >(ArgTraits<ResultT<R>::ArgR + 2, A3>::reg_id); }
+		ArgInfo ArgInfo3()	{ return ArgInfo(ArgInfo2<R, A1, A2>()).Next< ArgTraits<ResultT<R>::ArgR + 1, A2> >(ArgTraits<ResultT<R>::ArgR + 2, A3>::reg_id); }
 		template<class R, class A1, class A2, class A3, class A4>
-		ArgInfo ArgInfo4()	{ return ArgInfo3<R, A1, A2, A3>().Next< ArgTraits<ResultT<R>::ArgR + 2, A3> >(ArgTraits<ResultT<R>::ArgR + 3, A4>::reg_id); }
+		ArgInfo ArgInfo4()	{ return ArgInfo(ArgInfo3<R, A1, A2, A3>()).Next< ArgTraits<ResultT<R>::ArgR + 2, A3> >(ArgTraits<ResultT<R>::ArgR + 3, A4>::reg_id); }
 		template<class R, class A1, class A2, class A3, class A4, class A5>
-		ArgInfo ArgInfo5()	{ return ArgInfo4<R, A1, A2, A3, A4>().Next< ArgTraits<ResultT<R>::ArgR + 3, A4> >(ArgTraits<ResultT<R>::ArgR + 4, A5>::reg_id); }
+		ArgInfo ArgInfo5()	{ return ArgInfo(ArgInfo4<R, A1, A2, A3, A4>()).Next< ArgTraits<ResultT<R>::ArgR + 3, A4> >(ArgTraits<ResultT<R>::ArgR + 4, A5>::reg_id); }
 		template<class R, class A1, class A2, class A3, class A4, class A5, class A6>
-		ArgInfo ArgInfo6()	{ return ArgInfo5<R, A1, A2, A3, A4, A5>().Next< ArgTraits<ResultT<R>::ArgR + 4, A5> >(ArgTraits<ResultT<R>::ArgR + 5, A6>::reg_id); }
+		ArgInfo ArgInfo6()	{ return ArgInfo(ArgInfo5<R, A1, A2, A3, A4, A5>()).Next< ArgTraits<ResultT<R>::ArgR + 4, A5> >(ArgTraits<ResultT<R>::ArgR + 5, A6>::reg_id); }
 		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7>
-		ArgInfo ArgInfo7()	{ return ArgInfo6<R, A1, A2, A3, A4, A5, A6>().Next< ArgTraits<ResultT<R>::ArgR + 5, A6> >(ArgTraits<ResultT<R>::ArgR + 6, A7>::reg_id); }
+		ArgInfo ArgInfo7()	{ return ArgInfo(ArgInfo6<R, A1, A2, A3, A4, A5, A6>()).Next< ArgTraits<ResultT<R>::ArgR + 5, A6> >(ArgTraits<ResultT<R>::ArgR + 6, A7>::reg_id); }
 		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8>
-		ArgInfo ArgInfo8()	{ return ArgInfo7<R, A1, A2, A3, A4, A5, A6, A7>().Next< ArgTraits<ResultT<R>::ArgR + 6, A7> >(ArgTraits<ResultT<R>::ArgR + 7, A8>::reg_id); }
+		ArgInfo ArgInfo8()	{ return ArgInfo(ArgInfo7<R, A1, A2, A3, A4, A5, A6, A7>()).Next< ArgTraits<ResultT<R>::ArgR + 6, A7> >(ArgTraits<ResultT<R>::ArgR + 7, A8>::reg_id); }
 		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9>
-		ArgInfo ArgInfo9()	{ return ArgInfo8<R, A1, A2, A3, A4, A5, A6, A7, A8>().Next< ArgTraits<ResultT<R>::ArgR + 7, A8> >(ArgTraits<ResultT<R>::ArgR + 8, A9>::reg_id); }
+		ArgInfo ArgInfo9()	{ return ArgInfo(ArgInfo8<R, A1, A2, A3, A4, A5, A6, A7, A8>()).Next< ArgTraits<ResultT<R>::ArgR + 7, A8> >(ArgTraits<ResultT<R>::ArgR + 8, A9>::reg_id); }
 		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9, class A10>
-		ArgInfo ArgInfo10()	{ return ArgInfo9<R, A1, A2, A3, A4, A5, A6, A7, A8, A9>().Next< ArgTraits<ResultT<R>::ArgR + 8, A9> >(ArgTraits<ResultT<R>::ArgR + 9, A10>::reg_id); }
+		ArgInfo ArgInfo10()	{ return ArgInfo(ArgInfo9<R, A1, A2, A3, A4, A5, A6, A7, A8, A9>()).Next< ArgTraits<ResultT<R>::ArgR + 8, A9> >(ArgTraits<ResultT<R>::ArgR + 9, A10>::reg_id); }
 
 		/// Function argument
 		template<class T, size_t Size = sizeof(T)>
@@ -7224,7 +7222,7 @@ template<
 	class A10 = detail::ArgNone>
 struct function_cdecl : Frontend
 {
-	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10);
+	typedef R (*FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10);
 	typedef detail::ResultT<R> Result;	///< main function result type
 	typename detail::ResultTraits<R>::ResultPtr result_ptr;
 
@@ -7254,7 +7252,7 @@ struct function_cdecl : Frontend
 template<class Derived, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9, class A10>
 struct function_cdecl<void, Derived, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10> : Frontend
 {
-	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10);
+	typedef void (*FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10);
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
@@ -7279,7 +7277,7 @@ struct function_cdecl<void, Derived, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10> : 
 template<class R, class Derived, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9>
 struct function_cdecl<R, Derived, A1, A2, A3, A4, A5, A6, A7, A8, A9, detail::ArgNone> : Frontend
 {
-	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8, A9);
+	typedef R (*FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8, A9);
 	typedef detail::ResultT<R> Result;	///< main function result type
 	typename detail::ResultTraits<R>::ResultPtr result_ptr;
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
@@ -7307,7 +7305,7 @@ struct function_cdecl<R, Derived, A1, A2, A3, A4, A5, A6, A7, A8, A9, detail::Ar
 template<class Derived, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9>
 struct function_cdecl<void, Derived, A1, A2, A3, A4, A5, A6, A7, A8, A9, detail::ArgNone> : Frontend
 {
-	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8, A9);
+	typedef void (*FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8, A9);
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
@@ -7331,7 +7329,7 @@ struct function_cdecl<void, Derived, A1, A2, A3, A4, A5, A6, A7, A8, A9, detail:
 template<class R, class Derived, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8>
 struct function_cdecl<R, Derived, A1, A2, A3, A4, A5, A6, A7, A8, detail::ArgNone, detail::ArgNone> : Frontend
 {
-	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8);
+	typedef R (*FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8);
 	typedef detail::ResultT<R> Result;	///< main function result type
 	typename detail::ResultTraits<R>::ResultPtr result_ptr;
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
@@ -7358,7 +7356,7 @@ struct function_cdecl<R, Derived, A1, A2, A3, A4, A5, A6, A7, A8, detail::ArgNon
 template<class Derived, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8>
 struct function_cdecl<void, Derived, A1, A2, A3, A4, A5, A6, A7, A8, detail::ArgNone, detail::ArgNone> : Frontend
 {
-	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8);
+	typedef void (*FuncPtr)(A1, A2, A3, A4, A5, A6, A7, A8);
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
@@ -7381,7 +7379,7 @@ struct function_cdecl<void, Derived, A1, A2, A3, A4, A5, A6, A7, A8, detail::Arg
 template<class R, class Derived, class A1, class A2, class A3, class A4, class A5, class A6, class A7>
 struct function_cdecl<R, Derived, A1, A2, A3, A4, A5, A6, A7, detail::ArgNone, detail::ArgNone, detail::ArgNone> : Frontend
 {
-	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7);
+	typedef R (*FuncPtr)(A1, A2, A3, A4, A5, A6, A7);
 	typedef detail::ResultT<R> Result;	///< main function result type
 	typename detail::ResultTraits<R>::ResultPtr result_ptr;
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
@@ -7407,7 +7405,7 @@ struct function_cdecl<R, Derived, A1, A2, A3, A4, A5, A6, A7, detail::ArgNone, d
 template<class Derived, class A1, class A2, class A3, class A4, class A5, class A6, class A7>
 struct function_cdecl<void, Derived, A1, A2, A3, A4, A5, A6, A7, detail::ArgNone, detail::ArgNone, detail::ArgNone> : Frontend
 {
-	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6, A7);
+	typedef void (*FuncPtr)(A1, A2, A3, A4, A5, A6, A7);
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
@@ -7429,7 +7427,7 @@ struct function_cdecl<void, Derived, A1, A2, A3, A4, A5, A6, A7, detail::ArgNone
 template<class R, class Derived, class A1, class A2, class A3, class A4, class A5, class A6>
 struct function_cdecl<R, Derived, A1, A2, A3, A4, A5, A6, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : Frontend
 {
-	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6);
+	typedef R (*FuncPtr)(A1, A2, A3, A4, A5, A6);
 	typedef detail::ResultT<R> Result;	///< main function result type
 	typename detail::ResultTraits<R>::ResultPtr result_ptr;
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
@@ -7454,7 +7452,7 @@ struct function_cdecl<R, Derived, A1, A2, A3, A4, A5, A6, detail::ArgNone, detai
 template<class Derived, class A1, class A2, class A3, class A4, class A5, class A6>
 struct function_cdecl<void, Derived, A1, A2, A3, A4, A5, A6, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : Frontend
 {
-	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4, A5, A6);
+	typedef void (*FuncPtr)(A1, A2, A3, A4, A5, A6);
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
@@ -7475,7 +7473,7 @@ struct function_cdecl<void, Derived, A1, A2, A3, A4, A5, A6, detail::ArgNone, de
 template<class R, class Derived, class A1, class A2, class A3, class A4, class A5>
 struct function_cdecl<R, Derived, A1, A2, A3, A4, A5, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : Frontend
 {
-	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4, A5);
+	typedef R (*FuncPtr)(A1, A2, A3, A4, A5);
 	typedef detail::ResultT<R> Result;	///< main function result type
 	typename detail::ResultTraits<R>::ResultPtr result_ptr;
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
@@ -7499,7 +7497,7 @@ struct function_cdecl<R, Derived, A1, A2, A3, A4, A5, detail::ArgNone, detail::A
 template<class Derived, class A1, class A2, class A3, class A4, class A5>
 struct function_cdecl<void, Derived, A1, A2, A3, A4, A5, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : Frontend
 {
-	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4, A5);
+	typedef void (*FuncPtr)(A1, A2, A3, A4, A5);
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
@@ -7519,7 +7517,7 @@ struct function_cdecl<void, Derived, A1, A2, A3, A4, A5, detail::ArgNone, detail
 template<class R, class Derived, class A1, class A2, class A3, class A4>
 struct function_cdecl<R, Derived, A1, A2, A3, A4, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : Frontend
 {
-	typedef R (__cdecl *FuncPtr)(A1, A2, A3, A4);
+	typedef R (*FuncPtr)(A1, A2, A3, A4);
 	typedef detail::ResultT<R> Result;	///< main function result type
 	typename detail::ResultTraits<R>::ResultPtr result_ptr;
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
@@ -7542,7 +7540,7 @@ struct function_cdecl<R, Derived, A1, A2, A3, A4, detail::ArgNone, detail::ArgNo
 template<class Derived, class A1, class A2, class A3, class A4>
 struct function_cdecl<void, Derived, A1, A2, A3, A4, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : Frontend
 {
-	typedef void (__cdecl *FuncPtr)(A1, A2, A3, A4);
+	typedef void (*FuncPtr)(A1, A2, A3, A4);
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
@@ -7561,7 +7559,7 @@ struct function_cdecl<void, Derived, A1, A2, A3, A4, detail::ArgNone, detail::Ar
 template<class R, class Derived, class A1, class A2, class A3>
 struct function_cdecl<R, Derived, A1, A2, A3, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : Frontend
 {
-	typedef R (__cdecl *FuncPtr)(A1, A2, A3);
+	typedef R (*FuncPtr)(A1, A2, A3);
 	typedef detail::ResultT<R> Result;	///< main function result type
 	typename detail::ResultTraits<R>::ResultPtr result_ptr;
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
@@ -7583,7 +7581,7 @@ struct function_cdecl<R, Derived, A1, A2, A3, detail::ArgNone, detail::ArgNone, 
 template<class Derived, class A1, class A2, class A3>
 struct function_cdecl<void, Derived, A1, A2, A3, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : Frontend
 {
-	typedef void (__cdecl *FuncPtr)(A1, A2, A3);
+	typedef void (*FuncPtr)(A1, A2, A3);
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
@@ -7601,7 +7599,7 @@ struct function_cdecl<void, Derived, A1, A2, A3, detail::ArgNone, detail::ArgNon
 template<class R, class Derived, class A1, class A2>
 struct function_cdecl<R, Derived, A1, A2, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : Frontend
 {
-	typedef R (__cdecl *FuncPtr)(A1, A2);
+	typedef R (*FuncPtr)(A1, A2);
 	typedef detail::ResultT<R> Result;	///< main function result type
 	typename detail::ResultTraits<R>::ResultPtr result_ptr;
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
@@ -7622,7 +7620,7 @@ struct function_cdecl<R, Derived, A1, A2, detail::ArgNone, detail::ArgNone, deta
 template<class Derived, class A1, class A2>
 struct function_cdecl<void, Derived, A1, A2, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : Frontend
 {
-	typedef void (__cdecl *FuncPtr)(A1, A2);
+	typedef void (*FuncPtr)(A1, A2);
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
@@ -7639,7 +7637,7 @@ struct function_cdecl<void, Derived, A1, A2, detail::ArgNone, detail::ArgNone, d
 template<class R, class Derived, class A1>
 struct function_cdecl<R, Derived, A1, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : Frontend
 {
-	typedef R (__cdecl *FuncPtr)(A1);
+	typedef R (*FuncPtr)(A1);
 	typedef detail::ResultT<R> Result;	///< main function result type
 	typename detail::ResultTraits<R>::ResultPtr result_ptr;
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
@@ -7657,7 +7655,7 @@ struct function_cdecl<R, Derived, A1, detail::ArgNone, detail::ArgNone, detail::
 template<class Derived, class A1>
 struct function_cdecl<void, Derived, A1, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : Frontend
 {
-	typedef void (__cdecl *FuncPtr)(A1);
+	typedef void (*FuncPtr)(A1);
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
@@ -7672,7 +7670,7 @@ struct function_cdecl<void, Derived, A1, detail::ArgNone, detail::ArgNone, detai
 template<class R, class Derived>
 struct function_cdecl<R, Derived, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : Frontend
 {
-	typedef R (__cdecl *FuncPtr)();
+	typedef R (*FuncPtr)();
 	typedef detail::ResultT<R> Result;	///< main function result type
 	typename detail::ResultTraits<R>::ResultPtr result_ptr;
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
@@ -7689,7 +7687,7 @@ struct function_cdecl<R, Derived, detail::ArgNone, detail::ArgNone, detail::ArgN
 template<class Derived>
 struct function_cdecl<void, Derived, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone, detail::ArgNone> : Frontend
 {
-	typedef void (__cdecl *FuncPtr)();
+	typedef void (*FuncPtr)();
 	operator FuncPtr() { return (FuncPtr)GetCode(); }
 	void InternalMain() {static_cast<Derived *>(this)->naked_main();}
 	void naked_main() {
