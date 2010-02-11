@@ -7003,9 +7003,9 @@ namespace detail {
 #ifdef JITASM64
 			Arg(Frontend& f, const ArgInfo& arg_info) : addr_(Reg()) {
 				if (arg_info.reg_id != INVALID) {
-					f.DeclareRegArg(addr_.reg_, Reg(arg_info.reg_id), f.ptr[arg_info.addr]);
+					f.DeclareRegArg(Reg(addr_.reg_), Reg(arg_info.reg_id), f.ptr[arg_info.addr]);
 				} else {
-					f.DeclareStackArg(addr_.reg_, f.ptr[arg_info.addr]);
+					f.DeclareStackArg(Reg(addr_.reg_), f.ptr[arg_info.addr]);
 				}
 			}
 #else
