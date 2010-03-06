@@ -1154,7 +1154,7 @@ namespace detail
 	{
 		JITASM_ASSERT(x != 0);
 #if defined(JITASM_GCC)
-		return __builtin_clz(x);
+		return 31 - __builtin_clz(x);
 #else
 		unsigned long index;
 		_BitScanReverse(&index, x);
@@ -5393,9 +5393,10 @@ namespace compiler
 					}
 				} else if (instr.GetID() == I_COMPILER_DECLARE_STACK_ARG) {
 					// Declare function argument on stack
-					const detail::Opd& opd0 = instr.GetOpd(0);
+					// The register variable starts "spill" state by O_TYPE_MEM of AddUsePoint
+					const detail::Opd& opd0 = instr.GetOpd(0);	// Register variable.
 					const RegID& reg = opd0.GetReg();
-					const detail::Opd& opd1 = instr.GetOpd(1);
+					const detail::Opd& opd1 = instr.GetOpd(1);	// Argument
 					block->GetLifetime(reg.type).AddUsePoint(instr_offset, reg, static_cast<OpdType>(O_TYPE_MEM | O_TYPE_WRITE), opd0.GetSize(), opd0.reg_assignable_);
 					var_manager.SetSpillSlot(reg.type, reg.id, Addr(opd1.GetBase(), opd1.GetDisp()));
 				} else if (instr.GetID() == I_COMPILER_DECLARE_RESULT_REG) {
@@ -6201,6 +6202,12 @@ namespace compiler
 		// Allocate stack for spill variable
 		var_manager.AllocSpillSlots(f.stack_manager_);
 
+		// ebx(rbx) does not include in used_physical_reg
+		// because ebx(rbx) is going to be modified in prolog.
+		if (f.stack_manager_.GetSize() > 0) {
+			preserved_reg[0] |= (1 << EBX);
+		}
+
 		RewriteInstructions(f, cfg, var_manager, preserved_reg, preserved_reg_stack);
 	}
 
@@ -6394,28 +6401,20 @@ namespace detail {
 
 #ifdef _MMINTRIN_H_INCLUDED
 	// specialization for __m64
-	template<> struct ArgTraits_cdecl<0, __m64, 8> {enum {stack_size = 0, flag = ARG_IN_MMX | ARG_TYPE_VALUE, reg_id = MM0};};
-	template<> struct ArgTraits_cdecl<1, __m64, 8> {enum {stack_size = 0, flag = ARG_IN_MMX | ARG_TYPE_VALUE, reg_id = MM1};};
-	template<> struct ArgTraits_cdecl<2, __m64, 8> {enum {stack_size = 0, flag = ARG_IN_MMX | ARG_TYPE_VALUE, reg_id = MM2};};
+	template<int N> struct ArgTraits_cdecl<N, __m64, 8> {enum {stack_size = 0, flag = ARG_IN_MMX | ARG_TYPE_VALUE, reg_id = MM0};};
 #endif
 
 #ifdef _INCLUDED_MM2
 	// specialization for __m128
-	template<> struct ArgTraits_cdecl<0, __m128, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_SP | ARG_TYPE_VALUE, reg_id = XMM0};};
-	template<> struct ArgTraits_cdecl<1, __m128, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_SP | ARG_TYPE_VALUE, reg_id = XMM1};};
-	template<> struct ArgTraits_cdecl<2, __m128, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_SP | ARG_TYPE_VALUE, reg_id = XMM2};};
+	template<int N> struct ArgTraits_cdecl<N, __m128, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_SP | ARG_TYPE_VALUE, reg_id = XMM0};};
 #endif
 
 #ifdef _INCLUDED_EMM
 	// specialization for __m128d
-	template<> struct ArgTraits_cdecl<0, __m128d, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_DP | ARG_TYPE_VALUE, reg_id = XMM0};};
-	template<> struct ArgTraits_cdecl<1, __m128d, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_DP | ARG_TYPE_VALUE, reg_id = XMM1};};
-	template<> struct ArgTraits_cdecl<2, __m128d, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_DP | ARG_TYPE_VALUE, reg_id = XMM2};};
+	template<int N> struct ArgTraits_cdecl<N, __m128d, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_DP | ARG_TYPE_VALUE, reg_id = XMM0};};
 
 	// specialization for __m128i
-	template<> struct ArgTraits_cdecl<0, __m128i, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_DP | ARG_TYPE_VALUE, reg_id = XMM0};};
-	template<> struct ArgTraits_cdecl<1, __m128i, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_DP | ARG_TYPE_VALUE, reg_id = XMM1};};
-	template<> struct ArgTraits_cdecl<2, __m128i, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_DP | ARG_TYPE_VALUE, reg_id = XMM2};};
+	template<int N> struct ArgTraits_cdecl<N, __m128i, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_DP | ARG_TYPE_VALUE, reg_id = XMM0};};
 #endif
 
 
@@ -6499,12 +6498,14 @@ namespace detail {
 	{
 		Addr addr;
 		PhysicalRegID reg_id;
-		uint32 count_mmx;
-		uint32 count_xmm;
+		uint32 flag;
+		uint32 index_gp;
+		uint32 index_mmx;
+		uint32 index_xmm;
 
-		ArgInfo(const Addr& addr_, PhysicalRegID reg_id_, uint32 count_mmx_ = 0, uint32 count_xmm_ = 0) : addr(addr_), reg_id(reg_id_), count_mmx(count_mmx_), count_xmm(count_xmm_) {}
+		ArgInfo(const Addr& addr_, PhysicalRegID reg_id_, uint32 flg, uint32 idx_gp = 0, uint32 idx_mmx = 0, uint32 idx_xmm_ = 0) : addr(addr_), reg_id(reg_id_), flag(flg), index_gp(idx_gp), index_mmx(idx_mmx), index_xmm(idx_xmm_) {}
 		template<class Traits> ArgInfo Next(int reg_id_) const {
-			return ArgInfo(addr + Traits::stack_size, static_cast<PhysicalRegID>(reg_id_), count_mmx + (Traits::flag & ARG_IN_MMX ? 1 : 0), count_xmm + (Traits::flag & (ARG_IN_XMM_SP | ARG_IN_XMM_DP) ? 1 : 0));
+			return ArgInfo(addr + Traits::stack_size, static_cast<PhysicalRegID>(reg_id_), Traits::flag, index_gp + (Traits::flag & ARG_IN_REG ? 1 : 0), index_mmx + (Traits::flag & ARG_IN_MMX ? 1 : 0), index_xmm + (Traits::flag & (ARG_IN_XMM_SP | ARG_IN_XMM_DP) ? 1 : 0));
 		}
 	};
 
@@ -6965,17 +6966,17 @@ namespace detail {
 		{
 			if (ResultT<R>::ArgR) {
 #ifdef JITASM64
-				return ArgInfo(Addr(RegID::CreatePhysicalRegID(R_TYPE_GP, RBP), SIZE_OF_GP_REG * 2), RCX);
+				return ArgInfo(Addr(RegID::CreatePhysicalRegID(R_TYPE_GP, RBP), SIZE_OF_GP_REG * 2), RCX, ARG_IN_REG | ARG_TYPE_PTR);
 #else
-				return ArgInfo(Addr(RegID::CreatePhysicalRegID(R_TYPE_GP, EBP), SIZE_OF_GP_REG * 2), INVALID);
+				return ArgInfo(Addr(RegID::CreatePhysicalRegID(R_TYPE_GP, EBP), SIZE_OF_GP_REG * 2), INVALID, ARG_IN_STACK | ARG_TYPE_PTR);
 #endif
 			} else {
-				return ArgInfo(Addr(RegID::Invalid(), 0), INVALID);
+				return ArgInfo(Addr(RegID::Invalid(), 0), INVALID, 0);
 			}
 		}
 
 		template<class R, class A1>
-		ArgInfo ArgInfo1()	{ return ArgInfo(Addr(RegID::CreatePhysicalRegID(R_TYPE_GP, EBP), SIZE_OF_GP_REG * (2 + ResultT<R>::ArgR)), static_cast<PhysicalRegID>(ArgTraits<ResultT<R>::ArgR + 0, A1>::reg_id)); }
+		ArgInfo ArgInfo1()	{ return ArgInfo(Addr(RegID::CreatePhysicalRegID(R_TYPE_GP, EBP), SIZE_OF_GP_REG * (2 + ResultT<R>::ArgR)), static_cast<PhysicalRegID>(ArgTraits<ResultT<R>::ArgR + 0, A1>::reg_id), ArgTraits<ResultT<R>::ArgR + 0, A1>::flag); }
 		template<class R, class A1, class A2>
 		ArgInfo ArgInfo2()	{ return ArgInfo(ArgInfo1<R, A1>()).Next< ArgTraits<ResultT<R>::ArgR + 0, A1> >(ArgTraits<ResultT<R>::ArgR + 1, A2>::reg_id); }
 		template<class R, class A1, class A2, class A3>
@@ -7186,21 +7187,96 @@ namespace detail {
 
 #ifdef _MMINTRIN_H_INCLUDED
 		// specialization for __m64
-		//template<>
-		//struct Arg<__m64, 8>
-		//{
-		//};
+		template<>
+		struct Arg<__m64, 8>
+		{
+			Frontend *f_;
+			ArgInfo arg_info_;
+
+			Arg(Frontend& f, const ArgInfo& arg_info) : f_(&f), arg_info_(arg_info) {}
+			operator Addr () {
+#ifdef JITASM64
+				// Dump to shadow space when x64 argument on register
+				if (arg_info_.reg_id != INVALID) {
+					f_->movq(f_->qword_ptr[arg_info_.addr], Reg64(arg_info_.reg_id));
+				}
+				return arg_info_.addr;
+#else
+				Addr addr = f_->stack_manager_.Alloc(8, 8);
+				f_->movq(f_->qword_ptr[addr], MmxReg(static_cast<PhysicalRegID>(arg_info_.index_mmx)));
+				return addr;
+#endif
+			}
+			operator MmxReg () {
+				MmxReg reg;
+				if (arg_info_.reg_id == INVALID) {
+					f_->DeclareStackArg(reg, f_->qword_ptr[arg_info_.addr]);	// argument on stack
+				} else {
+					// argument on register
+#ifdef JITASM64
+					f_->movq(reg, Reg64(arg_info_.reg_id);
+#else
+					f_->DeclareRegArg(reg, MmxReg(static_cast<PhysicalRegID>(arg_info_.index_mmx)));
+#endif
+				}
+				return reg;
+			}
+		};
 #endif	// _MMINTRIN_H_INCLUDED
 
 #ifdef _INCLUDED_MM2
 		// specialization for __m128
-		//template<> struct Arg<__m128, 16> {};
+		template<>
+		struct Arg<__m128, 16>
+		{
+			Frontend *f_;
+			ArgInfo arg_info_;
+
+			Arg(Frontend& f, const ArgInfo& arg_info) : f_(&f), arg_info_(arg_info) {}
+			operator Addr () {
+#ifdef JITASM64
+				Reg64 ptr;
+				if (arg_info_.reg_id != INVALID) {
+					f_->DeclareRegArg(ptr, Reg64(arg_info_.reg_id));		// argument on register
+				} else {
+					f_->mov(ptr, f_->qword_ptr[arg_info_.addr]);
+				}
+				return f_->xmmword_ptr[ptr];
+#else
+				Addr addr = f_->stack_manager_.Alloc(16, 16);
+				f_->movdqa(f_->xmmword_ptr[addr], XmmReg(arg_info_.reg_id));
+				return addr;
+#endif
+			}
+			operator XmmReg () {
+				XmmReg reg;
+#ifdef JITASM64
+				if (arg_info_.reg_id != INVALID) {
+					// argument pointer on register
+					f_->movdqa(reg, f_->xmmword_ptr[Reg64(arg_info_.reg_id)]);
+				} else {
+					// argument pointer on stack
+					Reg64 ptr;
+					f_->mov(ptr, f_->qword_ptr[arg_info_.addr]);
+					f_->movdqa(reg, f_->xmmword_ptr[ptr]);
+				}
+#else
+				f_->DeclareRegArg(reg, XmmReg(static_cast<PhysicalRegID>(arg_info_.index_xmm)));
+#endif
+				return reg;
+			}
+		};
 #endif	// _INCLUDED_MM2
 
 #ifdef _INCLUDED_EMM
 		// specialization for __m128d, __m128i
-		//template<> struct Arg<__m128d, 16> {};
-		//template<> struct Arg<__m128i, 16> {};
+		template<> struct Arg<__m128d, 16> : Arg<__m128, 16> {
+			Arg(Frontend& f, const ArgInfo& arg_info) : Arg<__m128, 16>(f, arg_info) {}
+		};
+
+		template<> struct Arg<__m128i, 16> : Arg<__m128, 16> {
+			Arg(Frontend& f, const ArgInfo& arg_info) : Arg<__m128, 16>(f, arg_info) {}
+		};
 #endif	// _INCLUDED_EMM
 	}	// namespace calling_convention_cdecl
 
