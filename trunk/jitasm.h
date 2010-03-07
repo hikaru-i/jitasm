@@ -1446,15 +1446,21 @@ struct Frontend
 	void DeclareRegArg(const detail::Opd& var, const detail::Opd& arg, const detail::Opd& spill_slot = detail::Opd())
 	{
 		JITASM_ASSERT(var.IsReg() && arg.IsReg());
-		AppendInstr(I_COMPILER_DECLARE_REG_ARG, 0, E_SPECIAL, Dummy(W(var), arg), spill_slot);
+		// Insert special instruction after Prolog
+		InstrList::iterator it = instrs_.begin();
+		if (!instrs_.empty() && instrs_[0].GetID() == I_COMPILER_PROLOG) ++it;
 		// The arg is passed as register constraint of the var.
+		instrs_.insert(it, Instr(I_COMPILER_DECLARE_REG_ARG, 0, E_SPECIAL, Dummy(W(var), arg), spill_slot));
 	}
 
 	/// Declare variable of the function argument on stack
 	void DeclareStackArg(const detail::Opd& var, const detail::Opd& arg)
 	{
 		JITASM_ASSERT(var.IsReg() && arg.IsMem());
-		AppendInstr(I_COMPILER_DECLARE_STACK_ARG, 0, E_SPECIAL, W(var), R(arg));
+		// Insert special instruction after Prolog
+		InstrList::iterator it = instrs_.begin();
+		if (!instrs_.empty() && instrs_[0].GetID() == I_COMPILER_PROLOG) ++it;
+		instrs_.insert(it, Instr(I_COMPILER_DECLARE_STACK_ARG, 0, E_SPECIAL, W(var), R(arg)));
 	}
 
 	/// Declare variable of the function result on register
@@ -6504,8 +6510,30 @@ namespace detail {
 		uint32 index_xmm;
 
 		ArgInfo(const Addr& addr_, PhysicalRegID reg_id_, uint32 flg, uint32 idx_gp = 0, uint32 idx_mmx = 0, uint32 idx_xmm_ = 0) : addr(addr_), reg_id(reg_id_), flag(flg), index_gp(idx_gp), index_mmx(idx_mmx), index_xmm(idx_xmm_) {}
-		template<class Traits> ArgInfo Next(int reg_id_) const {
-			return ArgInfo(addr + Traits::stack_size, static_cast<PhysicalRegID>(reg_id_), Traits::flag, index_gp + (Traits::flag & ARG_IN_REG ? 1 : 0), index_mmx + (Traits::flag & ARG_IN_MMX ? 1 : 0), index_xmm + (Traits::flag & (ARG_IN_XMM_SP | ARG_IN_XMM_DP) ? 1 : 0));
+
+		template<class CurArgTraits, class NextArgTraits> ArgInfo Next() const {
+			ArgInfo next_arg_info(addr + CurArgTraits::stack_size, static_cast<PhysicalRegID>(NextArgTraits::reg_id), NextArgTraits::flag, index_gp, index_mmx, index_xmm);
+			if (CurArgTraits::flag & ARG_IN_REG) next_arg_info.index_gp++;
+			if (CurArgTraits::flag & ARG_IN_MMX) next_arg_info.index_mmx++;
+			if (CurArgTraits::flag & (ARG_IN_XMM_SP | ARG_IN_XMM_DP)) next_arg_info.index_xmm++;
+
+#ifndef JITASM64
+			if (NextArgTraits::flag & ARG_IN_MMX) {
+				if (next_arg_info.index_mmx < 3) {
+					next_arg_info.reg_id = static_cast<PhysicalRegID>(next_arg_info.reg_id + next_arg_info.index_mmx);
+				} else {
+					next_arg_info.reg_id = INVALID;
+				}
+			}
+			if (CurArgTraits::flag & ARG_IN_MMX) {
+				if (reg_id == INVALID) {
+					// This _m64 argument is passed on stack
+					next_arg_info.addr = next_arg_info.addr + 8;
+				}
+			}
+#endif
+
+			return next_arg_info;
 		}
 	};
 
@@ -6978,23 +7006,23 @@ namespace detail {
 		template<class R, class A1>
 		ArgInfo ArgInfo1()	{ return ArgInfo(Addr(RegID::CreatePhysicalRegID(R_TYPE_GP, EBP), SIZE_OF_GP_REG * (2 + ResultT<R>::ArgR)), static_cast<PhysicalRegID>(ArgTraits<ResultT<R>::ArgR + 0, A1>::reg_id), ArgTraits<ResultT<R>::ArgR + 0, A1>::flag); }
 		template<class R, class A1, class A2>
-		ArgInfo ArgInfo2()	{ return ArgInfo(ArgInfo1<R, A1>()).Next< ArgTraits<ResultT<R>::ArgR + 0, A1> >(ArgTraits<ResultT<R>::ArgR + 1, A2>::reg_id); }
+		ArgInfo ArgInfo2()	{ return ArgInfo(ArgInfo1<R, A1>()).Next< ArgTraits<ResultT<R>::ArgR + 0, A1>, ArgTraits<ResultT<R>::ArgR + 1, A2> >(); }
 		template<class R, class A1, class A2, class A3>
-		ArgInfo ArgInfo3()	{ return ArgInfo(ArgInfo2<R, A1, A2>()).Next< ArgTraits<ResultT<R>::ArgR + 1, A2> >(ArgTraits<ResultT<R>::ArgR + 2, A3>::reg_id); }
+		ArgInfo ArgInfo3()	{ return ArgInfo(ArgInfo2<R, A1, A2>()).Next< ArgTraits<ResultT<R>::ArgR + 1, A2>, ArgTraits<ResultT<R>::ArgR + 2, A3> >(); }
 		template<class R, class A1, class A2, class A3, class A4>
-		ArgInfo ArgInfo4()	{ return ArgInfo(ArgInfo3<R, A1, A2, A3>()).Next< ArgTraits<ResultT<R>::ArgR + 2, A3> >(ArgTraits<ResultT<R>::ArgR + 3, A4>::reg_id); }
+		ArgInfo ArgInfo4()	{ return ArgInfo(ArgInfo3<R, A1, A2, A3>()).Next< ArgTraits<ResultT<R>::ArgR + 2, A3>, ArgTraits<ResultT<R>::ArgR + 3, A4> >(); }
 		template<class R, class A1, class A2, class A3, class A4, class A5>
-		ArgInfo ArgInfo5()	{ return ArgInfo(ArgInfo4<R, A1, A2, A3, A4>()).Next< ArgTraits<ResultT<R>::ArgR + 3, A4> >(ArgTraits<ResultT<R>::ArgR + 4, A5>::reg_id); }
+		ArgInfo ArgInfo5()	{ return ArgInfo(ArgInfo4<R, A1, A2, A3, A4>()).Next< ArgTraits<ResultT<R>::ArgR + 3, A4>, ArgTraits<ResultT<R>::ArgR + 4, A5> >(); }
 		template<class R, class A1, class A2, class A3, class A4, class A5, class A6>
-		ArgInfo ArgInfo6()	{ return ArgInfo(ArgInfo5<R, A1, A2, A3, A4, A5>()).Next< ArgTraits<ResultT<R>::ArgR + 4, A5> >(ArgTraits<ResultT<R>::ArgR + 5, A6>::reg_id); }
+		ArgInfo ArgInfo6()	{ return ArgInfo(ArgInfo5<R, A1, A2, A3, A4, A5>()).Next< ArgTraits<ResultT<R>::ArgR + 4, A5>, ArgTraits<ResultT<R>::ArgR + 5, A6> >(); }
 		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7>
-		ArgInfo ArgInfo7()	{ return ArgInfo(ArgInfo6<R, A1, A2, A3, A4, A5, A6>()).Next< ArgTraits<ResultT<R>::ArgR + 5, A6> >(ArgTraits<ResultT<R>::ArgR + 6, A7>::reg_id); }
+		ArgInfo ArgInfo7()	{ return ArgInfo(ArgInfo6<R, A1, A2, A3, A4, A5, A6>()).Next< ArgTraits<ResultT<R>::ArgR + 5, A6>, ArgTraits<ResultT<R>::ArgR + 6, A7> >(); }
 		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8>
-		ArgInfo ArgInfo8()	{ return ArgInfo(ArgInfo7<R, A1, A2, A3, A4, A5, A6, A7>()).Next< ArgTraits<ResultT<R>::ArgR + 6, A7> >(ArgTraits<ResultT<R>::ArgR + 7, A8>::reg_id); }
+		ArgInfo ArgInfo8()	{ return ArgInfo(ArgInfo7<R, A1, A2, A3, A4, A5, A6, A7>()).Next< ArgTraits<ResultT<R>::ArgR + 6, A7>, ArgTraits<ResultT<R>::ArgR + 7, A8> >(); }
 		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9>
-		ArgInfo ArgInfo9()	{ return ArgInfo(ArgInfo8<R, A1, A2, A3, A4, A5, A6, A7, A8>()).Next< ArgTraits<ResultT<R>::ArgR + 7, A8> >(ArgTraits<ResultT<R>::ArgR + 8, A9>::reg_id); }
+		ArgInfo ArgInfo9()	{ return ArgInfo(ArgInfo8<R, A1, A2, A3, A4, A5, A6, A7, A8>()).Next< ArgTraits<ResultT<R>::ArgR + 7, A8>, ArgTraits<ResultT<R>::ArgR + 8, A9> >(); }
 		template<class R, class A1, class A2, class A3, class A4, class A5, class A6, class A7, class A8, class A9, class A10>
-		ArgInfo ArgInfo10()	{ return ArgInfo(ArgInfo9<R, A1, A2, A3, A4, A5, A6, A7, A8, A9>()).Next< ArgTraits<ResultT<R>::ArgR + 8, A9> >(ArgTraits<ResultT<R>::ArgR + 9, A10>::reg_id); }
+		ArgInfo ArgInfo10()	{ return ArgInfo(ArgInfo9<R, A1, A2, A3, A4, A5, A6, A7, A8, A9>()).Next< ArgTraits<ResultT<R>::ArgR + 8, A9>, ArgTraits<ResultT<R>::ArgR + 9, A10> >(); }
 
 		/// Function argument
 		template<class T, size_t Size = sizeof(T)>
@@ -7202,9 +7230,13 @@ namespace detail {
 				}
 				return arg_info_.addr;
 #else
-				Addr addr = f_->stack_manager_.Alloc(8, 8);
-				f_->movq(f_->qword_ptr[addr], MmxReg(static_cast<PhysicalRegID>(arg_info_.index_mmx)));
-				return addr;
+				if (arg_info_.reg_id != INVALID) {
+					Addr addr = f_->stack_manager_.Alloc(8, 8);
+					f_->movq(f_->qword_ptr[addr], MmxReg(arg_info_.reg_id));
+					return addr;
+				} else {
+					return arg_info_.addr;
+				}
 #endif
 			}
 			operator MmxReg () {
@@ -7216,7 +7248,7 @@ namespace detail {
 #ifdef JITASM64
 					f_->movq(reg, Reg64(arg_info_.reg_id);
 #else
-					f_->DeclareRegArg(reg, MmxReg(static_cast<PhysicalRegID>(arg_info_.index_mmx)));
+					f_->DeclareRegArg(reg, MmxReg(arg_info_.reg_id));
 #endif
 				}
 				return reg;
