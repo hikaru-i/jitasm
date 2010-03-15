@@ -47,7 +47,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="..\"
-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;NASM_TEST"
+				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;MASM_TEST;NASM_TEST"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="0"
 				RuntimeLibrary="3"
@@ -124,7 +124,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="..\"
-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;NASM_TEST"
+				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;MASM_TEST;NASM_TEST"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="0"
 				RuntimeLibrary="3"
@@ -202,7 +202,7 @@
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
 				AdditionalIncludeDirectories="..\"
-				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;NASM_TEST"
+				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;MASM_TEST;NASM_TEST"
 				BasicRuntimeChecks="0"
 				RuntimeLibrary="2"
 				BufferSecurityCheck="false"
@@ -283,7 +283,7 @@
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
 				AdditionalIncludeDirectories="..\"
-				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;NASM_TEST"
+				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;MASM_TEST;NASM_TEST"
 				BasicRuntimeChecks="0"
 				RuntimeLibrary="2"
 				BufferSecurityCheck="false"
@@ -363,7 +363,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="..\"
-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
+				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;MASM_TEST"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="0"
 				RuntimeLibrary="3"
@@ -440,7 +440,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="..\"
-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
+				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;MASM_TEST"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="0"
 				RuntimeLibrary="3"
@@ -518,7 +518,7 @@
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
 				AdditionalIncludeDirectories="..\"
-				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
+				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;MASM_TEST"
 				BasicRuntimeChecks="0"
 				RuntimeLibrary="2"
 				BufferSecurityCheck="false"
@@ -599,7 +599,7 @@
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
 				AdditionalIncludeDirectories="..\"
-				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
+				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;MASM_TEST"
 				BasicRuntimeChecks="0"
 				RuntimeLibrary="2"
 				BufferSecurityCheck="false"
@@ -821,7 +821,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\test2.cpp"
+				RelativePath=".\test_backend.cpp"
 				>
 			</File>
 			<File
@@ -984,6 +984,10 @@
 			>
 			<File
 				RelativePath="..\jitasm.h"
+				>
+			</File>
+			<File
+				RelativePath=".\test.h"
 				>
 			</File>
 		</Filter>

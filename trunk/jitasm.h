@@ -43,6 +43,10 @@
 #define JITASM_GCC
 #endif
 
+#define JITASM_MMINTRIN
+#define JITASM_XMMINTRIN
+#define JITASM_EMMINTRIN
+
 #include <string>
 #include <deque>
 #include <vector>
@@ -1423,6 +1427,8 @@ struct Frontend
 		assembled_(false)
 	{
 	}
+
+	virtual ~Frontend() {}
 
 	typedef std::vector<Instr> InstrList;
 	InstrList				instrs_;
@@ -6405,17 +6411,17 @@ namespace detail {
 		};
 	};
 
-#ifdef _MMINTRIN_H_INCLUDED
+#ifdef JITASM_MMINTRIN
 	// specialization for __m64
 	template<int N> struct ArgTraits_cdecl<N, __m64, 8> {enum {stack_size = 0, flag = ARG_IN_MMX | ARG_TYPE_VALUE, reg_id = MM0};};
 #endif
 
-#ifdef _INCLUDED_MM2
+#ifdef JITASM_XMMINTRIN
 	// specialization for __m128
 	template<int N> struct ArgTraits_cdecl<N, __m128, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_SP | ARG_TYPE_VALUE, reg_id = XMM0};};
 #endif
 
-#ifdef _INCLUDED_EMM
+#ifdef JITASM_EMMINTRIN
 	// specialization for __m128d
 	template<int N> struct ArgTraits_cdecl<N, __m128d, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_DP | ARG_TYPE_VALUE, reg_id = XMM0};};
 
@@ -6475,7 +6481,7 @@ namespace detail {
 	template<class T> struct ArgTraits_win64<2, T, 8> : ArgTraits_win64_reg<R8, ARG_IN_REG | ARG_TYPE_VALUE> {};
 	template<class T> struct ArgTraits_win64<3, T, 8> : ArgTraits_win64_reg<R9, ARG_IN_REG | ARG_TYPE_VALUE> {};
 
-#ifdef _MMINTRIN_H_INCLUDED
+#ifdef JITASM_MMINTRIN
 	// specialization for __m64
 	template<> struct ArgTraits_win64<0, __m64, 8> : ArgTraits_win64_reg<RCX, ARG_IN_REG | ARG_TYPE_VALUE> {};
 	template<> struct ArgTraits_win64<1, __m64, 8> : ArgTraits_win64_reg<RDX, ARG_IN_REG | ARG_TYPE_VALUE> {};
@@ -6819,7 +6825,7 @@ namespace detail {
 
 #ifdef JITASM64
 
-#ifdef _INCLUDED_MM2
+#ifdef JITASM_XMMINTRIN
 	// specialization for __m128
 	template<>
 	struct ResultT<__m128, 16> {
@@ -6839,9 +6845,9 @@ namespace detail {
 			}
 		}
 	};
-#endif	// _INCLUDED_MM2
+#endif	// JITASM_XMMINTRIN
 
-#ifdef _INCLUDED_EMM
+#ifdef JITASM_EMMINTRIN
 	// specialization for __m128d
 	template<>
 	struct ResultT<__m128d, 16> {
@@ -6881,11 +6887,11 @@ namespace detail {
 			}
 		}
 	};
-#endif	// _INCLUDED_EMM
+#endif	// JITASM_EMMINTRIN
 
 #else	// JITASM64
 
-#ifdef _MMINTRIN_H_INCLUDED
+#ifdef JITASM_MMINTRIN
 	// specialization for __m64
 	template<>
 	struct ResultT<__m64, 8> {
@@ -6907,9 +6913,9 @@ namespace detail {
 			}
 		}
 	};
-#endif	// _MMINTRIN_H_INCLUDED
+#endif	// JITASM_MMINTRIN
 
-#ifdef _INCLUDED_MM2
+#ifdef JITASM_XMMINTRIN
 	// specialization for __m128
 	template<>
 	struct ResultT<__m128, 16> {
@@ -6931,9 +6937,9 @@ namespace detail {
 			}
 		}
 	};
-#endif	// _INCLUDED_MM2
+#endif	// JITASM_XMMINTRIN
 
-#ifdef _INCLUDED_EMM
+#ifdef JITASM_EMMINTRIN
 	// specialization for __m128d
 	template<>
 	struct ResultT<__m128d, 16> {
@@ -6977,7 +6983,7 @@ namespace detail {
 			}
 		}
 	};
-#endif	// _INCLUDED_EMM
+#endif	// JITASM_EMMINTRIN
 
 #endif	// JITASM64
 
@@ -7213,7 +7219,7 @@ namespace detail {
 			}
 		};
 
-#ifdef _MMINTRIN_H_INCLUDED
+#ifdef JITASM_MMINTRIN
 		// specialization for __m64
 		template<>
 		struct Arg<__m64, 8>
@@ -7226,7 +7232,7 @@ namespace detail {
 #ifdef JITASM64
 				// Dump to shadow space when x64 argument on register
 				if (arg_info_.reg_id != INVALID) {
-					f_->movq(f_->qword_ptr[arg_info_.addr], Reg64(arg_info_.reg_id));
+					f_->mov(f_->qword_ptr[arg_info_.addr], Reg64(arg_info_.reg_id));
 				}
 				return arg_info_.addr;
 #else
@@ -7246,7 +7252,7 @@ namespace detail {
 				} else {
 					// argument on register
 #ifdef JITASM64
-					f_->movq(reg, Reg64(arg_info_.reg_id);
+					f_->movq(reg, Reg64(arg_info_.reg_id));
 #else
 					f_->DeclareRegArg(reg, MmxReg(arg_info_.reg_id));
 #endif
@@ -7254,9 +7260,9 @@ namespace detail {
 				return reg;
 			}
 		};
-#endif	// _MMINTRIN_H_INCLUDED
+#endif	// JITASM_MMINTRIN
 
-#ifdef _INCLUDED_MM2
+#ifdef JITASM_XMMINTRIN
 		// specialization for __m128
 		template<>
 		struct Arg<__m128, 16>
@@ -7273,7 +7279,7 @@ namespace detail {
 				} else {
 					f_->mov(ptr, f_->qword_ptr[arg_info_.addr]);
 				}
-				return f_->xmmword_ptr[ptr];
+				return ptr;
 #else
 				Addr addr = f_->stack_manager_.Alloc(16, 16);
 				f_->movdqa(f_->xmmword_ptr[addr], XmmReg(arg_info_.reg_id));
@@ -7298,9 +7304,9 @@ namespace detail {
 				return reg;
 			}
 		};
-#endif	// _INCLUDED_MM2
+#endif	// JITASM_XMMINTRIN
 
-#ifdef _INCLUDED_EMM
+#ifdef JITASM_EMMINTRIN
 		// specialization for __m128d, __m128i
 		template<> struct Arg<__m128d, 16> : Arg<__m128, 16> {
 			Arg(Frontend& f, const ArgInfo& arg_info) : Arg<__m128, 16>(f, arg_info) {}
@@ -7309,7 +7315,7 @@ namespace detail {
 		template<> struct Arg<__m128i, 16> : Arg<__m128, 16> {
 			Arg(Frontend& f, const ArgInfo& arg_info) : Arg<__m128, 16>(f, arg_info) {}
 		};
-#endif	// _INCLUDED_EMM
+#endif	// JITASM_EMMINTRIN
 	}	// namespace calling_convention_cdecl
 
 }	// namespace detail
