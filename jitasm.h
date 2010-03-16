@@ -6524,6 +6524,7 @@ namespace detail {
 			if (CurArgTraits::flag & (ARG_IN_XMM_SP | ARG_IN_XMM_DP)) next_arg_info.index_xmm++;
 
 #ifndef JITASM64
+			// __m64
 			if (NextArgTraits::flag & ARG_IN_MMX) {
 				if (next_arg_info.index_mmx < 3) {
 					next_arg_info.reg_id = static_cast<PhysicalRegID>(next_arg_info.reg_id + next_arg_info.index_mmx);
@@ -6533,8 +6534,23 @@ namespace detail {
 			}
 			if (CurArgTraits::flag & ARG_IN_MMX) {
 				if (reg_id == INVALID) {
-					// This _m64 argument is passed on stack
+					// This __m64 argument is passed on stack
 					next_arg_info.addr = next_arg_info.addr + 8;
+				}
+			}
+
+			// __m128/__m128d/__m128i
+			if (NextArgTraits::flag & (ARG_IN_XMM_SP | ARG_IN_XMM_DP)) {
+				if (next_arg_info.index_xmm < 3) {
+					next_arg_info.reg_id = static_cast<PhysicalRegID>(next_arg_info.reg_id + next_arg_info.index_xmm);
+				} else {
+					next_arg_info.reg_id = INVALID;
+				}
+			}
+			if (CurArgTraits::flag & (ARG_IN_XMM_SP | ARG_IN_XMM_DP)) {
+				if (reg_id == INVALID) {
+					// This __m128/__m128d/__m128i argument is passed on stack
+					next_arg_info.addr = next_arg_info.addr + 16;
 				}
 			}
 #endif

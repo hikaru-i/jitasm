@@ -469,7 +469,7 @@ struct test_cfg : jitasm::function_cdecl<void, test_cfg>
 	}
 };
 
-struct test_mmx_args3 : jitasm::function_cdecl<__m64, test_mmx_args3, __m64, __m64, __m64>
+struct test_m64_args3 : jitasm::function_cdecl<__m64, test_m64_args3, __m64, __m64, __m64>
 {
 	Result main(MmxReg v1, Addr v2, MmxReg v3)
 	{
@@ -481,8 +481,20 @@ struct test_mmx_args3 : jitasm::function_cdecl<__m64, test_mmx_args3, __m64, __m
 	}
 };
 
+struct test_m128_args3 : jitasm::function_cdecl<__m128, test_m128_args3, __m128, __m128, __m128>
+{
+	Result main(XmmReg v1, Addr v2, XmmReg v3)
+	{
+		XmmReg res;
+		movaps(res, v1);
+		addps(res, xmmword_ptr[v2]);
+		addps(res, v3);
+		return res;
+	}
+};
+
 #if !defined(_WIN32)
-struct test_mmx_args5 : jitasm::function_cdecl<__m64, test_mmx_args5, __m64, __m64, __m64, __m64, __m64>
+struct test_m64_args5 : jitasm::function_cdecl<__m64, test_m64_args5, __m64, __m64, __m64, __m64, __m64>
 {
 	Result main(MmxReg v1, Addr v2, MmxReg v3, MmxReg v4, Addr v5)
 	{
@@ -492,6 +504,20 @@ struct test_mmx_args5 : jitasm::function_cdecl<__m64, test_mmx_args5, __m64, __m
 		paddd(res, v3);
 		paddd(res, v4);
 		paddd(res, qword_ptr[v5]);
+		return res;
+	}
+};
+
+struct test_m128_args5 : jitasm::function_cdecl<__m128, test_m128_args5, __m128, __m128, __m128, __m128, __m128>
+{
+	Result main(XmmReg v1, Addr v2, XmmReg v3, XmmReg v4, Addr v5)
+	{
+		XmmReg res;
+		movaps(res, v1);
+		addps(res, xmmword_ptr[v2]);
+		addps(res, v3);
+		addps(res, v4);
+		addps(res, xmmword_ptr[v5]);
 		return res;
 	}
 };
@@ -556,7 +582,7 @@ void test_execute()
 		__m64 v1 = _mm_set_pi32(1, 2);
 		__m64 v2 = _mm_set_pi32(3, 4);
 		__m64 v3 = _mm_set_pi32(7, 8);
-		TEST_EQUAL(_mm_movemask_pi8(_mm_cmpeq_pi32(test_mmx_args3()(v1, v2, v3), _mm_set_pi32(11, 14))), 0xFF);
+		TEST_EQUAL(_mm_movemask_pi8(_mm_cmpeq_pi32(test_m64_args3()(v1, v2, v3), _mm_set_pi32(11, 14))), 0xFF);
 		_mm_empty();
 	}
 
@@ -571,6 +597,13 @@ void test_execute()
 	}
 #endif	// defined(_WIN32)
 #endif	// !defined(_WIN64)
+
+	{
+		__m128 v1 = _mm_set_ps(1.0f, 2.0f, 3.0f, 4.0f);
+		__m128 v2 = _mm_set_ps(5.0f, 6.0f, 7.0f, 8.0f);
+		__m128 v3 = _mm_set_ps(9.0f, 10.0f, 11.0f, 12.0f);
+		TEST_EQUAL(_mm_movemask_ps(_mm_cmpeq_ps(test_m128_args3()(v1, v2, v3), _mm_set_ps(15.0f, 18.0f, 21.0f, 24.0f))), 0x0F)
+	}
 
 	TEST_EQUAL(test_ipow1()(2, 0), 1);
 	TEST_EQUAL(test_ipow1()(2, 3), 8);
