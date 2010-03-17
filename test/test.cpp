@@ -4,7 +4,7 @@
 
 size_t	g_test_succeeded = 0;
 size_t	g_test_failed = 0;
-double	g_assemble_time = 0.0;
+int		g_assemble_time = 0;	// us
 
 
 struct test_mmx_sse2 : jitasm::function<void, test_mmx_sse2>
@@ -171,13 +171,11 @@ struct test_regalloc_reassign_physical_reg : jitasm::function<void, test_regallo
 //----------------------------------------
 // function_cdecl<char>
 //----------------------------------------
-extern "C" void masm_test_function_return_char();
-struct test_function_return_char : jitasm::function_cdecl<char, test_function_return_char>
+struct test_function_return_char : jitasm::function_cdecl<char, test_function_return_char, char>
 {
-	Result main()
+	Result main(Reg8 a1)
 	{
-		movzx(esi, cl);
-		return cl;	// mov ax, cl
+		return a1;
 	}
 };
 
@@ -185,11 +183,11 @@ struct test_function_return_char : jitasm::function_cdecl<char, test_function_re
 // function_cdecl<short>
 //----------------------------------------
 extern "C" void masm_test_function_return_short();
-struct test_function_return_short : jitasm::function_cdecl<short, test_function_return_short>
+struct test_function_return_short : jitasm::function_cdecl<short, test_function_return_short, short>
 {
-	Result main()
+	Result main(Reg16 a1)
 	{
-		return result_ptr[zsi];	// mov ax, word_ptr[zsi]
+		return a1;
 	}
 };
 
@@ -201,7 +199,7 @@ struct test_function_return_int_imm : jitasm::function_cdecl<int, test_function_
 {
 	Result main()
 	{
-		return 16;	// mov eax, 16
+		return 0x4AC396D7;	// mov eax, 0x4AC396D7
 	}
 };
 
@@ -209,10 +207,11 @@ struct test_function_return_int_imm : jitasm::function_cdecl<int, test_function_
 // function_cdecl<int> (return eax)
 //----------------------------------------
 extern "C" void masm_test_function_return_int_eax();
-struct test_function_return_int_eax : jitasm::function_cdecl<int, test_function_return_int_eax>
+struct test_function_return_int_zero : jitasm::function_cdecl<int, test_function_return_int_zero>
 {
 	Result main()
 	{
+		xor(eax, eax);
 		return eax;	// no instruction. (because mov eax, eax)
 	}
 };
@@ -233,11 +232,11 @@ struct test_function_return_float_imm : jitasm::function_cdecl<float, test_funct
 // function_cdecl<float> (return xmm)
 //----------------------------------------
 extern "C" void masm_test_function_return_float_xmm();
-struct test_function_return_float_xmm : jitasm::function_cdecl<float, test_function_return_float_xmm>
+struct test_function_return_float_xmm : jitasm::function_cdecl<float, test_function_return_float_xmm, float>
 {
-	Result main()
+	Result main(Addr a1)
 	{
-		movss(xmm7, dword_ptr[zsp]);
+		movss(xmm7, dword_ptr[a1]);
 		return xmm7;
 	}
 };
@@ -283,11 +282,11 @@ struct test_function_return_double_imm : jitasm::function_cdecl<double, test_fun
 // function_cdecl<double> (return xmm)
 //----------------------------------------
 extern "C" void masm_test_function_return_double_xmm();
-struct test_function_return_double_xmm : jitasm::function_cdecl<double, test_function_return_double_xmm>
+struct test_function_return_double_xmm : jitasm::function_cdecl<double, test_function_return_double_xmm, double>
 {
-	Result main()
+	Result main(Addr a1)
 	{
-		movsd(xmm7, qword_ptr[zsp]);
+		movsd(xmm7, qword_ptr[a1]);
 		return xmm7;
 	}
 };
@@ -327,7 +326,7 @@ struct test_function_return_m64_mm1 : jitasm::function_cdecl<__m64, test_functio
 	{
 		movd(mm1, dword_ptr[a1]);
 		punpckldq(mm1, mm1);
-		paddw(mm1, mm1);
+		paddd(mm1, mm1);
 		return mm1;
 	}
 };
@@ -336,11 +335,11 @@ struct test_function_return_m64_mm1 : jitasm::function_cdecl<__m64, test_functio
 // function_cdecl<__m64> (return ptr)
 //----------------------------------------
 extern "C" void masm_test_function_return_m64_ptr();
-struct test_function_return_m64_ptr : jitasm::function_cdecl<__m64, test_function_return_m64_ptr>
+struct test_function_return_m64_ptr : jitasm::function_cdecl<__m64, test_function_return_m64_ptr, __m64>
 {
-	Result main()
+	Result main(Addr a1)
 	{
-		return result_ptr[zsp - 8];
+		return result_ptr[a1];
 	}
 };
 
@@ -348,11 +347,11 @@ struct test_function_return_m64_ptr : jitasm::function_cdecl<__m64, test_functio
 // function_cdecl<__m128> (return xmm1)
 //----------------------------------------
 extern "C" void masm_test_function_return_m128_xmm1();
-struct test_function_return_m128_xmm1 : jitasm::function_cdecl<__m128, test_function_return_m128_xmm1>
+struct test_function_return_m128_zero : jitasm::function_cdecl<__m128, test_function_return_m128_zero>
 {
 	Result main()
 	{
-		pxor(xmm1, xmm1);
+		xorps(xmm1, xmm1);
 		return xmm1;
 	}
 };
@@ -361,11 +360,11 @@ struct test_function_return_m128_xmm1 : jitasm::function_cdecl<__m128, test_func
 // function_cdecl<__m128> (return ptr)
 //----------------------------------------
 extern "C" void masm_test_function_return_m128_ptr();
-struct test_function_return_m128_ptr : jitasm::function_cdecl<__m128, test_function_return_m128_ptr>
+struct test_function_return_m128_ptr : jitasm::function_cdecl<__m128, test_function_return_m128_ptr, __m128>
 {
-	Result main()
+	Result main(Addr a1)
 	{
-		return xmmword_ptr[zsp - 16];
+		return xmmword_ptr[a1];
 	}
 };
 
@@ -373,11 +372,11 @@ struct test_function_return_m128_ptr : jitasm::function_cdecl<__m128, test_funct
 // function_cdecl<__m128d> (return xmm1)
 //----------------------------------------
 extern "C" void masm_test_function_return_m128d_xmm1();
-struct test_function_return_m128d_xmm1 : jitasm::function_cdecl<__m128d, test_function_return_m128d_xmm1>
+struct test_function_return_m128d_zero : jitasm::function_cdecl<__m128d, test_function_return_m128d_zero>
 {
 	Result main()
 	{
-		pxor(xmm1, xmm1);
+		xorpd(xmm1, xmm1);
 		return xmm1;
 	}
 };
@@ -386,11 +385,11 @@ struct test_function_return_m128d_xmm1 : jitasm::function_cdecl<__m128d, test_fu
 // function_cdecl<__m128d> (return ptr)
 //----------------------------------------
 extern "C" void masm_test_function_return_m128d_ptr();
-struct test_function_return_m128d_ptr : jitasm::function_cdecl<__m128d, test_function_return_m128d_ptr>
+struct test_function_return_m128d_ptr : jitasm::function_cdecl<__m128d, test_function_return_m128d_ptr, __m128d>
 {
-	Result main()
+	Result main(Addr a1)
 	{
-		return xmmword_ptr[zsp - 16];
+		return xmmword_ptr[a1];
 	}
 };
 
@@ -398,7 +397,7 @@ struct test_function_return_m128d_ptr : jitasm::function_cdecl<__m128d, test_fun
 // function_cdecl<__m128i> (return xmm1)
 //----------------------------------------
 extern "C" void masm_test_function_return_m128i_xmm1();
-struct test_function_return_m128i_xmm1 : jitasm::function_cdecl<__m128i, test_function_return_m128i_xmm1>
+struct test_function_return_m128i_zero : jitasm::function_cdecl<__m128i, test_function_return_m128i_zero>
 {
 	Result main()
 	{
@@ -411,11 +410,11 @@ struct test_function_return_m128i_xmm1 : jitasm::function_cdecl<__m128i, test_fu
 // function_cdecl<__m128i> (return ptr)
 //----------------------------------------
 extern "C" void masm_test_function_return_m128i_ptr();
-struct test_function_return_m128i_ptr : jitasm::function_cdecl<__m128i, test_function_return_m128i_ptr>
+struct test_function_return_m128i_ptr : jitasm::function_cdecl<__m128i, test_function_return_m128i_ptr, __m128i>
 {
-	Result main()
+	Result main(Addr a1)
 	{
-		return xmmword_ptr[zsp - 16];
+		return xmmword_ptr[a1];
 	}
 };
 
@@ -424,28 +423,31 @@ void test_register_allocation()
 	TEST_M(test_regalloc_reassign_physical_reg);
 }
 
-void test_calling_convension()
+void test_calling_convention()
 {
-	TEST_M(test_function_return_char);
-	TEST_M(test_function_return_short);
-	TEST_M(test_function_return_int_imm);
-	TEST_M(test_function_return_int_eax);
-	TEST_M(test_function_return_float_imm);
-	TEST_M(test_function_return_float_xmm);
-	TEST_M(test_function_return_float_ptr);
-	TEST_M(test_function_return_float_st0);
-	TEST_M(test_function_return_double_imm);
-	TEST_M(test_function_return_double_xmm);
-	TEST_M(test_function_return_double_ptr);
-	TEST_M(test_function_return_double_st0);
-	TEST_M(test_function_return_m64_mm1);
-	TEST_M(test_function_return_m64_ptr);
-	TEST_M(test_function_return_m128_xmm1);
-	TEST_M(test_function_return_m128_ptr);
-	TEST_M(test_function_return_m128d_xmm1);
-	TEST_M(test_function_return_m128d_ptr);
-	TEST_M(test_function_return_m128i_xmm1);
-	TEST_M(test_function_return_m128i_ptr);
+	TEST_EQUAL((int)test_function_return_char()(0x78), (int)0x78);
+	TEST_EQUAL(test_function_return_short()(0x7A52), (short)0x7A52);
+	TEST_EQUAL(test_function_return_int_imm()(), (int)0x4AC396D7);
+	TEST_EQUAL(test_function_return_int_zero()(), 0);
+	TEST_EQUAL(test_function_return_float_imm()(), 11.0f);
+	TEST_EQUAL(test_function_return_float_xmm()(2.0f), 2.0f);
+	TEST_EQUAL(test_function_return_float_ptr()(3.0f), 3.0f);
+	TEST_EQUAL(test_function_return_float_st0()(4.0f), 4.0f);
+	TEST_EQUAL(test_function_return_double_imm()(), 11.0);
+	TEST_EQUAL(test_function_return_double_xmm()(5.0), 5.0);
+	TEST_EQUAL(test_function_return_double_ptr()(6.0), 6.0);
+	TEST_EQUAL(test_function_return_double_st0()(7.0), 7.0);
+#if !defined(_WIN64)
+	TEST_EQUAL(_mm_movemask_pi8(_mm_cmpeq_pi32(test_function_return_m64_mm1()(2), _mm_set_pi32(4, 4))), 0xFF);
+	TEST_EQUAL(_mm_movemask_pi8(_mm_cmpeq_pi32(test_function_return_m64_ptr()(_mm_set_pi32(0x12345678, 0xFEDCBA98)), _mm_set_pi32(0x12345678, 0xFEDCBA98))), 0xFF);
+	_mm_empty();
+#endif
+	TEST_EQUAL(_mm_movemask_ps(_mm_cmpeq_ps(test_function_return_m128_zero()(), _mm_setzero_ps())), 0x0F);
+	TEST_EQUAL(_mm_movemask_ps(_mm_cmpeq_ps(test_function_return_m128_ptr()(_mm_set_ps(1.0f, 2.0f, 3.0f, 4.0f)), _mm_set_ps(1.0f, 2.0f, 3.0f, 4.0f))), 0x0F);
+	TEST_EQUAL(_mm_movemask_pd(_mm_cmpeq_pd(test_function_return_m128d_zero()(), _mm_setzero_pd())), 0x03);
+	TEST_EQUAL(_mm_movemask_pd(_mm_cmpeq_pd(test_function_return_m128d_ptr()(_mm_set_pd(1.0f, 2.0f)), _mm_set_pd(1.0f, 2.0f))), 0x03);
+	TEST_EQUAL(_mm_movemask_epi8(_mm_cmpeq_epi32(test_function_return_m128i_zero()(), _mm_setzero_si128())), 0xFFFF);
+	TEST_EQUAL(_mm_movemask_epi8(_mm_cmpeq_epi32(test_function_return_m128i_ptr()(_mm_set_epi32(1, 2, 3, 4)), _mm_set_epi32(1, 2, 3, 4))), 0xFFFF);
 }
 
 struct test_cfg : jitasm::function_cdecl<void, test_cfg>
@@ -617,10 +619,10 @@ int main()
 {
 	test_backend();
 	test_register_allocation();
-	test_calling_convension();
+	test_calling_convention();
 	test_execute();
 
 	printf("TEST RESULT - %d passed, %d failed\n", g_test_succeeded, g_test_failed);
-	printf("Assemble time - %.02f us\n", g_assemble_time);
+	printf("Assemble time - %d us\n", g_assemble_time);
 	getchar();
 }
