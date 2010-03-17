@@ -17,23 +17,23 @@
 #else
 #define TEST_N(func_name)
 #endif
-#define TEST_EQUAL(actual, expected) {test_equal_impl(TOSTR(actual), (actual), (expected));}
+#define TEST_EQUAL(actual, expected) {long long int beg_time = get_time(); test_equal_impl(TOSTR(actual), (actual), (expected), beg_time);}
 
 extern size_t	g_test_succeeded;
 extern size_t	g_test_failed;
-extern double	g_assemble_time;
+extern int		g_assemble_time;	// us
 
-inline double get_time()
+inline long long int get_time()
 {
 #if defined(_WIN32)
 	LARGE_INTEGER t, f;
 	::QueryPerformanceCounter(&t);
 	::QueryPerformanceFrequency(&f);
-	return static_cast<double>(t.QuadPart) / f.QuadPart;
+	return t.QuadPart * 1000 * 1000 / f.QuadPart;
 #else
 	rusage t;
 	getrusage(RUSAGE_SELF, &t);
-	return t.ru_utime.tv_sec + static_cast<double>(t.ru_utime.tv_usec) * 1e-6;
+	return t.ru_utime.tv_sec * 1000 * 1000 + t.ru_utime.tv_usec;
 #endif
 }
 
@@ -42,10 +42,10 @@ void test_impl(const char* func_name, Fn2 fn2)
 {
 	Fn1 fn1;
 
-	const double beg_time = get_time();
+	const long long int beg_time = get_time();
 	fn1.Assemble();
-	const double end_time = get_time();
-	g_assemble_time += (end_time - beg_time) * 1000000.0;
+	const long long int end_time = get_time();
+	g_assemble_time += static_cast<int>(end_time - beg_time);
 
 	size_t size = fn1.GetCodeSize();
 
@@ -78,8 +78,11 @@ void test_impl(const char* func_name, Fn2 fn2)
 }
 
 template<class T>
-void test_equal_impl(const char* func_name, T actual, T expected)
+void test_equal_impl(const char* func_name, T actual, T expected, long long int beg_time)
 {
+	const long long int end_time = get_time();
+	g_assemble_time += static_cast<int>(end_time - beg_time);
+
 	if (actual == expected) {
 		g_test_succeeded++;
 	} else {

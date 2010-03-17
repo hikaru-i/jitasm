@@ -5398,8 +5398,14 @@ namespace compiler
 					// Declare function argument on register
 					const detail::Opd& opd0 = instr.GetOpd(0);
 					const RegID& reg = opd0.GetReg();
+					// Avoid passing operand size 8 or 16 to AddUsePoint
+					// because they are treated as partial access register and cause miss assignment of register.
+					OpdSize opd_size = opd0.GetSize();
+					if (opd_size == O_SIZE_8 || opd_size == O_SIZE_16) {
+						opd_size = O_SIZE_32;
+					}
 					const detail::Opd& opd1 = instr.GetOpd(1);
-					block->GetLifetime(reg.type).AddUsePoint(instr_offset, reg, opd0.opdtype_, opd0.GetSize(), opd0.reg_assignable_);
+					block->GetLifetime(reg.type).AddUsePoint(instr_offset, reg, opd0.opdtype_, opd_size, opd0.reg_assignable_);
 					if (opd1.IsMem()) {
 						var_manager.SetSpillSlot(reg.type, reg.id, Addr(opd1.GetBase(), opd1.GetDisp()));
 					}
@@ -5408,8 +5414,14 @@ namespace compiler
 					// The register variable starts "spill" state by O_TYPE_MEM of AddUsePoint
 					const detail::Opd& opd0 = instr.GetOpd(0);	// Register variable.
 					const RegID& reg = opd0.GetReg();
+					// Avoid passing operand size 8 or 16 to AddUsePoint
+					// because they are treated as partial access register and cause miss assignment of register.
+					OpdSize opd_size = opd0.GetSize();
+					if (opd_size == O_SIZE_8 || opd_size == O_SIZE_16) {
+						opd_size = O_SIZE_32;
+					}
 					const detail::Opd& opd1 = instr.GetOpd(1);	// Argument
-					block->GetLifetime(reg.type).AddUsePoint(instr_offset, reg, static_cast<OpdType>(O_TYPE_MEM | O_TYPE_WRITE), opd0.GetSize(), opd0.reg_assignable_);
+					block->GetLifetime(reg.type).AddUsePoint(instr_offset, reg, static_cast<OpdType>(O_TYPE_MEM | O_TYPE_WRITE), opd_size, opd0.reg_assignable_);
 					var_manager.SetSpillSlot(reg.type, reg.id, Addr(opd1.GetBase(), opd1.GetDisp()));
 				} else if (instr.GetID() == I_COMPILER_DECLARE_RESULT_REG) {
 					// Declare function result on register
@@ -6839,73 +6851,6 @@ namespace detail {
 		}
 	};
 
-#ifdef JITASM64
-
-#ifdef JITASM_XMMINTRIN
-	// specialization for __m128
-	template<>
-	struct ResultT<__m128, 16> {
-		enum { ArgR = 1 };
-		Opd128 val_;
-		ResultT() {}
-		ResultT(const XmmReg& xmm) : val_(xmm) {}
-		ResultT(const Mem128& mem) : val_(mem) {}
-		void StoreResult(Frontend& f, const ResultDest& dst)
-		{
-			f.mov(f.zax, dst.ptr);
-			if (val_.IsXmmReg()) {
-				f.movaps(f.xmmword_ptr[f.zax], static_cast<const XmmReg&>(val_));
-			} else if (val_.IsMem()) {
-				f.movaps(f.xmm0, static_cast<const Mem128&>(val_));
-				f.movaps(f.xmmword_ptr[f.zax], f.xmm0);
-			}
-		}
-	};
-#endif	// JITASM_XMMINTRIN
-
-#ifdef JITASM_EMMINTRIN
-	// specialization for __m128d
-	template<>
-	struct ResultT<__m128d, 16> {
-		enum { ArgR = 1 };
-		Opd128 val_;
-		ResultT() {}
-		ResultT(const XmmReg& xmm) : val_(xmm) {}
-		ResultT(const Mem128& mem) : val_(mem) {}
-		void StoreResult(Frontend& f, const ResultDest& dst)
-		{
-			f.mov(f.zax, dst.ptr);
-			if (val_.IsXmmReg()) {
-				f.movapd(f.xmmword_ptr[f.zax], static_cast<const XmmReg&>(val_));
-			} else if (val_.IsMem()) {
-				f.movapd(f.xmm0, static_cast<const Mem128&>(val_));
-				f.movapd(f.xmmword_ptr[f.zax], f.xmm0);
-			}
-		}
-	};
-
-	// specialization for __m128i
-	template<>
-	struct ResultT<__m128i, 16> {
-		enum { ArgR = 1 };
-		Opd128 val_;
-		ResultT() {}
-		ResultT(const XmmReg& xmm) : val_(xmm) {}
-		ResultT(const Mem128& mem) : val_(mem) {}
-		void StoreResult(Frontend& f, const ResultDest& dst)
-		{
-			f.mov(f.zax, dst.ptr);
-			if (val_.IsXmmReg()) {
-				f.movdqa(f.xmmword_ptr[f.zax], static_cast<const XmmReg&>(val_));
-			} else if (val_.IsMem()) {
-				f.movdqa(f.xmm0, static_cast<const Mem128&>(val_));
-				f.movdqa(f.xmmword_ptr[f.zax], f.xmm0);
-			}
-		}
-	};
-#endif	// JITASM_EMMINTRIN
-
-#else	// JITASM64
 
 #ifdef JITASM_MMINTRIN
 	// specialization for __m64
@@ -7001,7 +6946,6 @@ namespace detail {
 	};
 #endif	// JITASM_EMMINTRIN
 
-#endif	// JITASM64
 
 	namespace calling_convention_cdecl
 	{
