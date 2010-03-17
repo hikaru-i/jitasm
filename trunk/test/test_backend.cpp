@@ -4305,6 +4305,22 @@ struct test_avx_r : jitasm::function<void, test_avx_r>
 {
 	void naked_main()
 	{
+		vunpcklpd(xmm1, xmm2, xmm3);
+		vunpcklpd(xmm1, xmm2, xmmword_ptr[edi]);
+		vunpcklpd(ymm1, ymm2, ymm4);
+		vunpcklpd(ymm1, ymm2, ymmword_ptr[esi]);
+		vunpcklps(xmm1, xmm2, xmm3);
+		vunpcklps(xmm1, xmm2, xmmword_ptr[edi]);
+		vunpcklps(ymm1, ymm2, ymm4);
+		vunpcklps(ymm1, ymm2, ymmword_ptr[esi]);
+		vxorpd(xmm1, xmm2, xmm3);
+		vxorpd(xmm1, xmm2, xmmword_ptr[edi]);
+		vxorpd(ymm1, ymm2, ymm4);
+		vxorpd(ymm1, ymm2, ymmword_ptr[esi]);
+		vxorps(xmm1, xmm2, xmm3);
+		vxorps(xmm1, xmm2, xmmword_ptr[edi]);
+		vxorps(ymm1, ymm2, ymm4);
+		vxorps(ymm1, ymm2, ymmword_ptr[esi]);
 		vzeroall();
 		vzeroupper();
 	}

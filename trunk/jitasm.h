@@ -4080,11 +4080,22 @@ struct Frontend
 	void vpblendvb(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2, const XmmReg& mask) 	{AppendInstr(I_PBLENDVB, 0x4C, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), R(src1), R(mask));}
 	void vpblendvb(const XmmReg& dst, const XmmReg& src1, const Mem128& src2, const XmmReg& mask) 	{AppendInstr(I_PBLENDVB, 0x4C, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), R(src1), R(mask));}
 
+	void vunpcklpd(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_UNPCKLPD, 0x14, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
+	void vunpcklpd(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_UNPCKLPD, 0x14, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
+	void vunpcklpd(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2)	{AppendInstr(I_UNPCKLPD, 0x14, E_VEX_256 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
+	void vunpcklpd(const YmmReg& dst, const YmmReg& src1, const Mem256& src2)	{AppendInstr(I_UNPCKLPD, 0x14, E_VEX_256 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
+	void vunpcklps(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_UNPCKLPS, 0x14, E_VEX_128 | E_VEX_0F, W(dst), R(src2), R(src1));}
+	void vunpcklps(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_UNPCKLPS, 0x14, E_VEX_128 | E_VEX_0F, W(dst), R(src2), R(src1));}
+	void vunpcklps(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2)	{AppendInstr(I_UNPCKLPS, 0x14, E_VEX_256 | E_VEX_0F, W(dst), R(src2), R(src1));}
+	void vunpcklps(const YmmReg& dst, const YmmReg& src1, const Mem256& src2)	{AppendInstr(I_UNPCKLPS, 0x14, E_VEX_256 | E_VEX_0F, W(dst), R(src2), R(src1));}
+	void vxorpd(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_XORPS, 0x57, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
+	void vxorpd(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_XORPS, 0x57, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
+	void vxorpd(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2)	{AppendInstr(I_XORPS, 0x57, E_VEX_256 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
+	void vxorpd(const YmmReg& dst, const YmmReg& src1, const Mem256& src2)	{AppendInstr(I_XORPS, 0x57, E_VEX_256 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
 	void vxorps(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_XORPS, 0x57, E_VEX_128 | E_VEX_0F, W(dst), R(src2), R(src1));}
 	void vxorps(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_XORPS, 0x57, E_VEX_128 | E_VEX_0F, W(dst), R(src2), R(src1));}
 	void vxorps(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2)	{AppendInstr(I_XORPS, 0x57, E_VEX_256 | E_VEX_0F, W(dst), R(src2), R(src1));}
 	void vxorps(const YmmReg& dst, const YmmReg& src1, const Mem256& src2)	{AppendInstr(I_XORPS, 0x57, E_VEX_256 | E_VEX_0F, W(dst), R(src2), R(src1));}
-
 	void vzeroall()		{AppendInstr(I_VZEROUPPER, 0x77, E_VEX_256 | E_VEX_0F);}
 	void vzeroupper()	{AppendInstr(I_VZEROUPPER, 0x77, E_VEX_128 | E_VEX_0F);}
 

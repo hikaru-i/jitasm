@@ -329,5 +329,21 @@ nasm_test_avx_d:
 
 global	nasm_test_avx_r
 nasm_test_avx_r:
+	vunpcklpd xmm1, xmm2, xmm3
+	vunpcklpd xmm1, xmm2, oword [edi]
+	vunpcklpd ymm1, ymm2, ymm4
+	vunpcklpd ymm1, ymm2, yword [esi]
+	vunpcklps xmm1, xmm2, xmm3
+	vunpcklps xmm1, xmm2, oword [edi]
+	vunpcklps ymm1, ymm2, ymm4
+	vunpcklps ymm1, ymm2, yword [esi]
+	vxorpd xmm1, xmm2, xmm3
+	vxorpd xmm1, xmm2, oword [edi]
+	vxorpd ymm1, ymm2, ymm4
+	vxorpd ymm1, ymm2, yword [esi]
+	vxorps xmm1, xmm2, xmm3
+	vxorps xmm1, xmm2, oword [edi]
+	vxorps ymm1, ymm2, ymm4
+	vxorps ymm1, ymm2, yword [esi]
 	vzeroall
 	vzeroupper
