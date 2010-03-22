@@ -6525,6 +6525,61 @@ namespace detail {
 	template<> struct ArgTraits_win64<3, double, 8> : ArgTraits_win64_reg<XMM3, ARG_IN_XMM_DP | ARG_TYPE_VALUE> {};
 
 
+	/// System V ABI AMD64 argument type traits
+	template<int N, class T, int Size = sizeof(T)>
+	struct ArgTraits_linux64 {
+		enum {
+			stack_size = (Size + 8 - 1) / 8 * 8,
+			flag = ARG_IN_STACK | ARG_TYPE_VALUE,
+			reg_id = INVALID
+		};
+	};
+
+	// INTEGER class
+	struct ArgTraits_linux64_integer {
+		enum {
+			stack_size = 0,
+			flag = ARG_IN_REG | ARG_TYPE_VALUE,
+			reg_id = RDI
+		};
+	};
+
+	template<int N> struct ArgTraits_linux64<N, bool,				sizeof(bool)			  > : ArgTraits_linux64_integer {};
+	template<int N> struct ArgTraits_linux64<N, char,				sizeof(char)			  > : ArgTraits_linux64_integer {};
+	template<int N> struct ArgTraits_linux64<N, unsigned char,		sizeof(unsigned char)	  > : ArgTraits_linux64_integer {};
+	template<int N> struct ArgTraits_linux64<N, short,				sizeof(short)			  > : ArgTraits_linux64_integer {};
+	template<int N> struct ArgTraits_linux64<N, unsigned short,		sizeof(unsigned short)	  > : ArgTraits_linux64_integer {};
+	template<int N> struct ArgTraits_linux64<N, int,				sizeof(int)				  > : ArgTraits_linux64_integer {};
+	template<int N> struct ArgTraits_linux64<N, unsigned int,		sizeof(unsigned int)	  > : ArgTraits_linux64_integer {};
+	template<int N> struct ArgTraits_linux64<N, long,				sizeof(long)			  > : ArgTraits_linux64_integer {};
+	template<int N> struct ArgTraits_linux64<N, unsigned long,		sizeof(unsigned long)	  > : ArgTraits_linux64_integer {};
+	template<int N> struct ArgTraits_linux64<N, long long,			sizeof(long long)		  > : ArgTraits_linux64_integer {};
+	template<int N> struct ArgTraits_linux64<N, unsigned long long,	sizeof(unsigned long long)> : ArgTraits_linux64_integer {};
+	template<int N, class T> struct ArgTraits_linux64<N, T *,		8						  > : ArgTraits_linux64_integer {};
+
+	// SSE class
+	struct ArgTraits_linux64_sse {
+		enum {
+			stack_size = 0,
+			flag = ARG_IN_REG | ARG_TYPE_VALUE,
+			reg_id = XMM0
+		};
+	};
+
+	template<int N> struct ArgTraits_linux64<N, float,	 sizeof(float)>   : ArgTraits_linux64_sse {};
+	template<int N> struct ArgTraits_linux64<N, double,  sizeof(double)>  : ArgTraits_linux64_sse {};
+#ifdef JITASM_MMINTRIN
+	template<int N> struct ArgTraits_linux64<N, __m64,	 sizeof(__m64)>   : ArgTraits_linux64_sse {};
+#endif
+#ifdef JITASM_XMMINTRIN
+	template<int N> struct ArgTraits_linux64<N, __m128,	 sizeof(__m128)>  : ArgTraits_linux64_sse {};
+#endif
+#ifdef JITASM_EMMINTRIN
+	template<int N> struct ArgTraits_linux64<N, __m128d, sizeof(__m128d)> : ArgTraits_linux64_sse {};
+	template<int N> struct ArgTraits_linux64<N, __m128i, sizeof(__m128i)> : ArgTraits_linux64_sse {};
+#endif
+
+
 	/// Special argument type
 	struct ArgNone {};
 
@@ -6961,7 +7016,11 @@ namespace detail {
 	namespace calling_convention_cdecl
 	{
 #ifdef JITASM64
+#ifdef JITASM_WIN
 		template<int N, class T, int Size = sizeof(T)> struct ArgTraits : ArgTraits_win64<N, T, Size> {};
+#else
+		template<int N, class T, int Size = sizeof(T)> struct ArgTraits : ArgTraits_linux64<N, T, Size> {};
+#endif
 #else
 		template<int N, class T, int Size = sizeof(T)> struct ArgTraits : ArgTraits_cdecl<N, T, Size> {};
 #endif
