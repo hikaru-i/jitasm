@@ -427,13 +427,13 @@ void test_calling_convention()
 {
 	TEST_EQUAL((int)test_function_return_char()(0x78), (int)0x78);
 	TEST_EQUAL(test_function_return_short()(0x7A52), (short)0x7A52);
-	TEST_EQUAL(test_function_return_int_imm()(), (int)0x4AC396D7);
-	TEST_EQUAL(test_function_return_int_zero()(), 0);
-	TEST_EQUAL(test_function_return_float_imm()(), 11.0f);
+	TEST_EQUAL((test_function_return_int_imm())(), (int)0x4AC396D7);
+	TEST_EQUAL((test_function_return_int_zero())(), 0);
+	TEST_EQUAL((test_function_return_float_imm())(), 11.0f);
 	TEST_EQUAL(test_function_return_float_xmm()(2.0f), 2.0f);
 	TEST_EQUAL(test_function_return_float_ptr()(3.0f), 3.0f);
 	TEST_EQUAL(test_function_return_float_st0()(4.0f), 4.0f);
-	TEST_EQUAL(test_function_return_double_imm()(), 11.0);
+	TEST_EQUAL((test_function_return_double_imm())(), 11.0);
 	TEST_EQUAL(test_function_return_double_xmm()(5.0), 5.0);
 	TEST_EQUAL(test_function_return_double_ptr()(6.0), 6.0);
 	TEST_EQUAL(test_function_return_double_st0()(7.0), 7.0);
@@ -442,11 +442,11 @@ void test_calling_convention()
 	TEST_EQUAL(_mm_movemask_pi8(_mm_cmpeq_pi32(test_function_return_m64_ptr()(_mm_set_pi32(0x12345678, 0xFEDCBA98)), _mm_set_pi32(0x12345678, 0xFEDCBA98))), 0xFF);
 	_mm_empty();
 #endif
-	TEST_EQUAL(_mm_movemask_ps(_mm_cmpeq_ps(test_function_return_m128_zero()(), _mm_setzero_ps())), 0x0F);
+	TEST_EQUAL(_mm_movemask_ps(_mm_cmpeq_ps((test_function_return_m128_zero())(), _mm_setzero_ps())), 0x0F);
 	TEST_EQUAL(_mm_movemask_ps(_mm_cmpeq_ps(test_function_return_m128_ptr()(_mm_set_ps(1.0f, 2.0f, 3.0f, 4.0f)), _mm_set_ps(1.0f, 2.0f, 3.0f, 4.0f))), 0x0F);
-	TEST_EQUAL(_mm_movemask_pd(_mm_cmpeq_pd(test_function_return_m128d_zero()(), _mm_setzero_pd())), 0x03);
+	TEST_EQUAL(_mm_movemask_pd(_mm_cmpeq_pd((test_function_return_m128d_zero())(), _mm_setzero_pd())), 0x03);
 	TEST_EQUAL(_mm_movemask_pd(_mm_cmpeq_pd(test_function_return_m128d_ptr()(_mm_set_pd(1.0f, 2.0f)), _mm_set_pd(1.0f, 2.0f))), 0x03);
-	TEST_EQUAL(_mm_movemask_epi8(_mm_cmpeq_epi32(test_function_return_m128i_zero()(), _mm_setzero_si128())), 0xFFFF);
+	TEST_EQUAL(_mm_movemask_epi8(_mm_cmpeq_epi32((test_function_return_m128i_zero())(), _mm_setzero_si128())), 0xFFFF);
 	TEST_EQUAL(_mm_movemask_epi8(_mm_cmpeq_epi32(test_function_return_m128i_ptr()(_mm_set_epi32(1, 2, 3, 4)), _mm_set_epi32(1, 2, 3, 4))), 0xFFFF);
 }
 
@@ -624,5 +624,4 @@ int main()
 
 	printf("TEST RESULT - %d passed, %d failed\n", g_test_succeeded, g_test_failed);
 	printf("Assemble time - %d us\n", g_assemble_time);
-	getchar();
 }
