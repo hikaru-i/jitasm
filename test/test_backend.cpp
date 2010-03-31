@@ -1448,8 +1448,8 @@ struct test_mov_disp : jitasm::function<void, test_mov_disp>
 #ifdef JITASM64
 		mov(rax, qword_ptr[1]);
 		mov(qword_ptr[1], rax);
-		mov(rax, qword_ptr[0x100000000]);
-		mov(qword_ptr[0x100000000], rax);
+		mov(rax, qword_ptr[0x100000000LL]);
+		mov(qword_ptr[0x100000000LL], rax);
 #endif
 	}
 };
