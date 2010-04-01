@@ -1,4 +1,4 @@
-MODE		:= 32
+MODE			:= 32
 ifeq ($(shell uname -m), x86_64)
 	MODE		:= 64
 endif
@@ -16,7 +16,9 @@ else
 	CXXFLAGS	+= -m32 -march=i686 -mmmx -msse -msse2
 	LDFLAGS		+= -m32
 endif
-
+ifeq ($(DEBUG), 1)
+	CXXFLAGS	+= -g
+endif
 
 .PHONY : all
 all: $(TARGET)
