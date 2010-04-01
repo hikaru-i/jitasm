@@ -576,6 +576,32 @@ struct test_ipow2 : jitasm::function_cdecl<int, test_ipow2, int, int>
 	}
 };
 
+struct test_fibonacci : jitasm::function_cdecl<unsigned int, test_fibonacci, unsigned int>
+{
+	Result main(Reg32 n)
+	{
+		Reg32 r;
+		If(n == 0 || n == 1);
+			mov(r, 1);
+		Else();
+			Reg32 a;
+			Reg32 b;
+			Reg32 i;
+			mov(a, 1);
+			mov(b, 1);
+			mov(i, 2);
+			While(i < n);
+				mov(r, a);
+				add(r, b);
+				mov(b, a);
+				mov(a, r);
+				inc(i);
+			EndW();
+		EndIf();	
+		return r;
+	}
+};
+
 void test_execute()
 {
 	// MMX test
@@ -611,6 +637,9 @@ void test_execute()
 	TEST_EQUAL(test_ipow1()(2, 3), 8);
 	TEST_EQUAL(test_ipow2()(2, 0), 1);
 	TEST_EQUAL(test_ipow2()(2, 3), 8);
+	TEST_EQUAL(test_fibonacci()(0), 1U);
+	TEST_EQUAL(test_fibonacci()(10), 55U);
+	TEST_EQUAL(test_fibonacci()(47), 2971215073U);
 }
 
 void test_backend();
