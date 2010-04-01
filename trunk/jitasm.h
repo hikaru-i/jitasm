@@ -6420,8 +6420,9 @@ namespace detail {
 		ARG_IN_MMX		= (1<<2),	///< Argument is stored in mmx register.
 		ARG_IN_XMM_SP	= (1<<3),	///< Argument is stored in xmm register as single precision.
 		ARG_IN_XMM_DP	= (1<<4),	///< Argument is stored in xmm register as double precision.
-		ARG_TYPE_VALUE	= (1<<5),	///< Argument is value which is passed.
-		ARG_TYPE_PTR	= (1<<6)	///< Argument is pointer which is passed to.
+		ARG_IN_XMM_INT	= (1<<5),	///< Argument is stored in xmm register as integer.
+		ARG_TYPE_VALUE	= (1<<6),	///< Argument is value which is passed.
+		ARG_TYPE_PTR	= (1<<7)	///< Argument is pointer which is passed to.
 	};
 
 	/// cdecl argument type traits
@@ -6449,7 +6450,7 @@ namespace detail {
 	template<int N> struct ArgTraits_cdecl<N, __m128d, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_DP | ARG_TYPE_VALUE, reg_id = XMM0};};
 
 	// specialization for __m128i
-	template<int N> struct ArgTraits_cdecl<N, __m128i, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_DP | ARG_TYPE_VALUE, reg_id = XMM0};};
+	template<int N> struct ArgTraits_cdecl<N, __m128i, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_INT | ARG_TYPE_VALUE, reg_id = XMM0};};
 #endif
 
 
@@ -6558,25 +6559,25 @@ namespace detail {
 	template<int N, class T> struct ArgTraits_linux64<N, T *,		8						  > : ArgTraits_linux64_integer {};
 
 	// SSE class
-	struct ArgTraits_linux64_sse {
+	template<int Flag> struct ArgTraits_linux64_sse {
 		enum {
 			stack_size = 0,
-			flag = ARG_IN_REG | ARG_TYPE_VALUE,
+			flag = Flag,
 			reg_id = XMM0
 		};
 	};
 
-	template<int N> struct ArgTraits_linux64<N, float,	 sizeof(float)>   : ArgTraits_linux64_sse {};
-	template<int N> struct ArgTraits_linux64<N, double,  sizeof(double)>  : ArgTraits_linux64_sse {};
+	template<int N> struct ArgTraits_linux64<N, float,	 sizeof(float)>   : ArgTraits_linux64_sse<ARG_IN_XMM_SP | ARG_TYPE_VALUE> {};
+	template<int N> struct ArgTraits_linux64<N, double,  sizeof(double)>  : ArgTraits_linux64_sse<ARG_IN_XMM_DP | ARG_TYPE_VALUE> {};
 #ifdef JITASM_MMINTRIN
-	template<int N> struct ArgTraits_linux64<N, __m64,	 sizeof(__m64)>   : ArgTraits_linux64_sse {};
+	template<int N> struct ArgTraits_linux64<N, __m64,	 sizeof(__m64)>   : ArgTraits_linux64_sse<ARG_IN_XMM_INT | ARG_TYPE_VALUE> {};
 #endif
 #ifdef JITASM_XMMINTRIN
-	template<int N> struct ArgTraits_linux64<N, __m128,	 sizeof(__m128)>  : ArgTraits_linux64_sse {};
+	template<int N> struct ArgTraits_linux64<N, __m128,	 sizeof(__m128)>  : ArgTraits_linux64_sse<ARG_IN_XMM_SP | ARG_TYPE_VALUE> {};
 #endif
 #ifdef JITASM_EMMINTRIN
-	template<int N> struct ArgTraits_linux64<N, __m128d, sizeof(__m128d)> : ArgTraits_linux64_sse {};
-	template<int N> struct ArgTraits_linux64<N, __m128i, sizeof(__m128i)> : ArgTraits_linux64_sse {};
+	template<int N> struct ArgTraits_linux64<N, __m128d, sizeof(__m128d)> : ArgTraits_linux64_sse<ARG_IN_XMM_DP | ARG_TYPE_VALUE> {};
+	template<int N> struct ArgTraits_linux64<N, __m128i, sizeof(__m128i)> : ArgTraits_linux64_sse<ARG_IN_XMM_INT | ARG_TYPE_VALUE> {};
 #endif
 
 
@@ -6599,9 +6600,42 @@ namespace detail {
 			ArgInfo next_arg_info(addr + CurArgTraits::stack_size, static_cast<PhysicalRegID>(NextArgTraits::reg_id), NextArgTraits::flag, index_gp, index_mmx, index_xmm);
 			if (CurArgTraits::flag & ARG_IN_REG) next_arg_info.index_gp++;
 			if (CurArgTraits::flag & ARG_IN_MMX) next_arg_info.index_mmx++;
-			if (CurArgTraits::flag & (ARG_IN_XMM_SP | ARG_IN_XMM_DP)) next_arg_info.index_xmm++;
+			if (CurArgTraits::flag & (ARG_IN_XMM_SP | ARG_IN_XMM_DP | ARG_IN_XMM_INT)) next_arg_info.index_xmm++;
 
-#ifndef JITASM64
+#ifdef JITASM64
+#ifdef JITASM_WIN
+			// for Win64
+#else
+			// for x64 Linux
+			if (NextArgTraits::flag & ARG_IN_REG) {
+				const PhysicalRegID gp_regs[] = {RDI, RSI, RDX, RCX, R8, R9};
+				next_arg_info.reg_id = next_arg_info.index_gp < 6 ? gp_regs[next_arg_info.index_gp] : INVALID;
+			}
+			if (CurArgTraits::flag & ARG_IN_REG) {
+				if (reg_id == INVALID) {
+					// This register argument is passed on stack
+					next_arg_info.addr = next_arg_info.addr + 8;
+				}
+			}
+
+			// __m128/__m128d/__m128i
+			if (NextArgTraits::flag & (ARG_IN_XMM_SP | ARG_IN_XMM_DP | ARG_IN_XMM_INT)) {
+				if (next_arg_info.index_xmm < 8) {
+					next_arg_info.reg_id = static_cast<PhysicalRegID>(next_arg_info.reg_id + next_arg_info.index_xmm);
+				} else {
+					next_arg_info.reg_id = INVALID;
+				}
+			}
+			if (CurArgTraits::flag & (ARG_IN_XMM_SP | ARG_IN_XMM_DP | ARG_IN_XMM_INT)) {
+				if (reg_id == INVALID) {
+					// This __m128/__m128d/__m128i argument is passed on stack
+					next_arg_info.addr = next_arg_info.addr + 16;
+				}
+			}
+#endif
+#else
+			// for x86 Win/Linux
+
 			// __m64
 			if (NextArgTraits::flag & ARG_IN_MMX) {
 				if (next_arg_info.index_mmx < 3) {
@@ -6618,14 +6652,14 @@ namespace detail {
 			}
 
 			// __m128/__m128d/__m128i
-			if (NextArgTraits::flag & (ARG_IN_XMM_SP | ARG_IN_XMM_DP)) {
+			if (NextArgTraits::flag & (ARG_IN_XMM_SP | ARG_IN_XMM_DP | ARG_IN_XMM_INT)) {
 				if (next_arg_info.index_xmm < 3) {
 					next_arg_info.reg_id = static_cast<PhysicalRegID>(next_arg_info.reg_id + next_arg_info.index_xmm);
 				} else {
 					next_arg_info.reg_id = INVALID;
 				}
 			}
-			if (CurArgTraits::flag & (ARG_IN_XMM_SP | ARG_IN_XMM_DP)) {
+			if (CurArgTraits::flag & (ARG_IN_XMM_SP | ARG_IN_XMM_DP | ARG_IN_XMM_INT)) {
 				if (reg_id == INVALID) {
 					// This __m128/__m128d/__m128i argument is passed on stack
 					next_arg_info.addr = next_arg_info.addr + 16;
@@ -6929,6 +6963,13 @@ namespace detail {
 		ResultT(const Mem64& mem) : val_(mem) {}
 		void StoreResult(Frontend& f, const ResultDest& /*dst*/)
 		{
+#if defined(JITASM64) && !defined(JITASM_WIN)
+			if (val_.IsMmxReg()) {
+				f.movq2dq(f.xmm0, static_cast<const MmxReg&>(val_));
+			} else if (val_.IsMem()) {
+				f.movq(f.xmm0, static_cast<const Mem64&>(val_));
+			}
+#else
 			if (val_.IsMmxReg()) {
 				if (val_.GetReg().IsSymbolic()) {
 					f.DeclareResultReg(val_);
@@ -6938,6 +6979,7 @@ namespace detail {
 			} else if (val_.IsMem()) {
 				f.movq(f.mm0, static_cast<const Mem64&>(val_));
 			}
+#endif
 		}
 	};
 #endif	// JITASM_MMINTRIN
@@ -7259,33 +7301,58 @@ namespace detail {
 
 			Arg(Frontend& f, const ArgInfo& arg_info) : f_(&f), arg_info_(arg_info) {}
 			operator Addr () {
+				if (arg_info_.reg_id != INVALID) {
+					// Passed by mmx register
+					if (arg_info_.flag & ARG_IN_REG) {
+						// Win64
 #ifdef JITASM64
-				// Dump to shadow space when x64 argument on register
-				if (arg_info_.reg_id != INVALID) {
-					f_->mov(f_->qword_ptr[arg_info_.addr], Reg64(arg_info_.reg_id));
-				}
-				return arg_info_.addr;
-#else
-				if (arg_info_.reg_id != INVALID) {
-					Addr addr = f_->stack_manager_.Alloc(8, 8);
-					f_->movq(f_->qword_ptr[addr], MmxReg(arg_info_.reg_id));
-					return addr;
+						// Dump to shadow space when Win64 argument on register
+						Reg64 arg;
+						f_->DeclareRegArg(arg, Reg64(arg_info_.reg_id));
+						f_->mov(f_->qword_ptr[arg_info_.addr], arg);
+#endif
+						return arg_info_.addr;
+					} else if (arg_info_.flag & ARG_IN_XMM_INT) {
+						// x64 Linux
+						XmmReg arg;
+						f_->DeclareRegArg(arg, XmmReg(arg_info_.reg_id));
+						Addr addr = f_->stack_manager_.Alloc(8, 8);
+						f_->movq(f_->qword_ptr[addr], arg);
+						return addr;
+					} else {
+						MmxReg arg;
+						f_->DeclareRegArg(arg, MmxReg(arg_info_.reg_id));
+						Addr addr = f_->stack_manager_.Alloc(8, 8);
+						f_->movq(f_->qword_ptr[addr], arg);
+						return addr;
+					}
 				} else {
+					// Passed by stack
 					return arg_info_.addr;
 				}
-#endif
 			}
 			operator MmxReg () {
 				MmxReg reg;
-				if (arg_info_.reg_id == INVALID) {
-					f_->DeclareStackArg(reg, f_->qword_ptr[arg_info_.addr]);	// argument on stack
-				} else {
-					// argument on register
+				if (arg_info_.reg_id != INVALID) {
+					// Passed by register
+					if (arg_info_.flag & ARG_IN_REG) {
+						// Win64
 #ifdef JITASM64
-					f_->movq(reg, Reg64(arg_info_.reg_id));
-#else
-					f_->DeclareRegArg(reg, MmxReg(arg_info_.reg_id));
+						Reg64 arg;
+						f_->DeclareRegArg(arg, Reg64(arg_info_.reg_id));
+						f_->movq(reg, arg);
 #endif
+					} else if(arg_info_.flag & ARG_IN_XMM_INT) {
+						// x64 Linux
+						XmmReg arg;
+						f_->DeclareRegArg(arg, XmmReg(arg_info_.reg_id));
+						f_->movdq2q(reg, arg);
+					} else {
+						f_->DeclareRegArg(reg, MmxReg(arg_info_.reg_id));
+					}
+				} else {
+					// Passed by stack
+					f_->DeclareStackArg(reg, f_->qword_ptr[arg_info_.addr]);
 				}
 				return reg;
 			}
@@ -7302,35 +7369,42 @@ namespace detail {
 
 			Arg(Frontend& f, const ArgInfo& arg_info) : f_(&f), arg_info_(arg_info) {}
 			operator Addr () {
-#ifdef JITASM64
-				Reg64 ptr;
-				if (arg_info_.reg_id != INVALID) {
-					f_->DeclareRegArg(ptr, Reg64(arg_info_.reg_id));		// argument on register
+				if (arg_info_.flag & ARG_TYPE_PTR) {
+					Reg ptr;
+					if (arg_info_.reg_id != INVALID) {
+						f_->DeclareRegArg(ptr, Reg(arg_info_.reg_id));		// argument on register
+					} else {
+						f_->mov(ptr, f_->ptr[arg_info_.addr]);
+					}
+					return ptr;
+				} else if (arg_info_.reg_id != INVALID) {
+					Addr addr = f_->stack_manager_.Alloc(16, 16);
+					f_->movdqa(f_->xmmword_ptr[addr], XmmReg(arg_info_.reg_id));
+					return addr;
 				} else {
-					f_->mov(ptr, f_->qword_ptr[arg_info_.addr]);
+					return arg_info_.addr;
 				}
-				return ptr;
-#else
-				Addr addr = f_->stack_manager_.Alloc(16, 16);
-				f_->movdqa(f_->xmmword_ptr[addr], XmmReg(arg_info_.reg_id));
-				return addr;
-#endif
 			}
 			operator XmmReg () {
 				XmmReg reg;
-#ifdef JITASM64
-				if (arg_info_.reg_id != INVALID) {
-					// argument pointer on register
-					f_->movdqa(reg, f_->xmmword_ptr[Reg64(arg_info_.reg_id)]);
+				if (arg_info_.flag & ARG_TYPE_PTR) {
+					// Passed by pointer
+					if (arg_info_.reg_id != INVALID) {
+						// argument pointer on register
+						f_->movdqa(reg, f_->xmmword_ptr[Reg(arg_info_.reg_id)]);
+					} else {
+						// argument pointer on stack
+						Reg ptr;
+						f_->mov(ptr, f_->ptr[arg_info_.addr]);
+						f_->movdqa(reg, f_->xmmword_ptr[ptr]);
+					}
+				} else if (arg_info_.reg_id != INVALID) {
+					// Passed by xmm register
+					f_->DeclareRegArg(reg, XmmReg(arg_info_.reg_id));
 				} else {
-					// argument pointer on stack
-					Reg64 ptr;
-					f_->mov(ptr, f_->qword_ptr[arg_info_.addr]);
-					f_->movdqa(reg, f_->xmmword_ptr[ptr]);
+					// Passed by stack
+					f_->DeclareStackArg(reg, f_->xmmword_ptr[arg_info_.addr]);
 				}
-#else
-				f_->DeclareRegArg(reg, XmmReg(static_cast<PhysicalRegID>(arg_info_.index_xmm)));
-#endif
 				return reg;
 			}
 		};
