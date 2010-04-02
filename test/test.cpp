@@ -581,7 +581,9 @@ struct test_fibonacci : jitasm::function_cdecl<unsigned int, test_fibonacci, uns
 	Result main(Reg32 n)
 	{
 		Reg32 r;
-		If(n == 0 || n == 1);
+		If(n == 0);
+			mov(r, 0);
+		ElseIf(n == 1 || n == 2);
 			mov(r, 1);
 		Else();
 			Reg32 a;

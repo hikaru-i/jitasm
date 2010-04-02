@@ -5,8 +5,8 @@ endif
 
 JITASM_INCLUDE	:= ../../
 JITASM_H		:= $(JITASM_INCLUDE)jitasm.h
-TARGET			:= example1
-OBJS			:= example1.o
+TARGET			:= fibonacci
+OBJS			:= fibonacci.o
 CXX				:= g++
 CXXFLAGS		:= -fno-operator-names -I$(JITASM_INCLUDE)
 ifeq ($(MODE), 64)
@@ -27,7 +27,7 @@ all: $(TARGET)
 $(TARGET): $(OBJS)
 	$(CXX) $(LDFLAGS) -o $@ $^
 
-example1.o: example1.cpp $(JITASM_H)
+fibonacci.o: fibonacci.cpp $(JITASM_H)
 	$(CXX) $(CXXFLAGS) -o $@ -c $<
 
 .PHONY : clean
