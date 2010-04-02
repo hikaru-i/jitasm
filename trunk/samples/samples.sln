@@ -5,6 +5,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "example1", "example1\exampl
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pixel_calc", "pixel_calc\pixel_calc.vcproj", "{3F1917AE-2DBD-426E-B86E-CD0CC50812AB}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "fibonacci", "fibonacci\fibonacci.vcproj", "{39CA288F-4BF8-43F4-B34D-3268508B18D8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -27,7 +29,16 @@ Global
 		{3F1917AE-2DBD-426E-B86E-CD0CC50812AB}.Debug|x64.Build.0 = Debug|x64
 		{3F1917AE-2DBD-426E-B86E-CD0CC50812AB}.Release|Win32.ActiveCfg = Release|Win32
 		{3F1917AE-2DBD-426E-B86E-CD0CC50812AB}.Release|Win32.Build.0 = Release|Win32
-		{3F1917AE-2DBD-426E-B86E-CD0CC50812AB}.Release|x64.ActiveCfg = Release|Win32
+		{3F1917AE-2DBD-426E-B86E-CD0CC50812AB}.Release|x64.ActiveCfg = Release|x64
+		{3F1917AE-2DBD-426E-B86E-CD0CC50812AB}.Release|x64.Build.0 = Release|x64
+		{39CA288F-4BF8-43F4-B34D-3268508B18D8}.Debug|Win32.ActiveCfg = Debug|Win32
+		{39CA288F-4BF8-43F4-B34D-3268508B18D8}.Debug|Win32.Build.0 = Debug|Win32
+		{39CA288F-4BF8-43F4-B34D-3268508B18D8}.Debug|x64.ActiveCfg = Debug|x64
+		{39CA288F-4BF8-43F4-B34D-3268508B18D8}.Debug|x64.Build.0 = Debug|x64
+		{39CA288F-4BF8-43F4-B34D-3268508B18D8}.Release|Win32.ActiveCfg = Release|Win32
+		{39CA288F-4BF8-43F4-B34D-3268508B18D8}.Release|Win32.Build.0 = Release|Win32
+		{39CA288F-4BF8-43F4-B34D-3268508B18D8}.Release|x64.ActiveCfg = Release|x64
+		{39CA288F-4BF8-43F4-B34D-3268508B18D8}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
