@@ -639,7 +639,7 @@ void test_execute()
 	TEST_EQUAL(test_ipow1()(2, 3), 8);
 	TEST_EQUAL(test_ipow2()(2, 0), 1);
 	TEST_EQUAL(test_ipow2()(2, 3), 8);
-	TEST_EQUAL(test_fibonacci()(0), 1U);
+	TEST_EQUAL(test_fibonacci()(0), 0U);
 	TEST_EQUAL(test_fibonacci()(10), 55U);
 	TEST_EQUAL(test_fibonacci()(47), 2971215073U);
 }
