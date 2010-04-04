@@ -677,7 +677,7 @@
 					<Tool
 						Name="VCCustomBuildTool"
 						Description="nasm &gt; assembling..."
-						CommandLine="nasm.exe -f win64 -o $(IntDir)\$(InputName).obj $(InputPath)&#x0D;&#x0A;ndisasm.exe -b 64 &quot;$(IntDir)\$(InputName).obj&quot; &gt; &quot;$(InputDir)\$(InputName).disasm&quot;&#x0D;&#x0A;"
+						CommandLine="nasm.exe -f win64 -o &quot;$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;&#x0D;&#x0A;ndisasm.exe -b 64 &quot;$(IntDir)\$(InputName).obj&quot; &gt; &quot;$(InputDir)\$(InputName).disasm&quot;&#x0D;&#x0A;"
 						Outputs="$(IntDir)\$(InputName).obj"
 					/>
 				</FileConfiguration>
@@ -695,7 +695,7 @@
 					<Tool
 						Name="VCCustomBuildTool"
 						Description="nasm &gt; assembling..."
-						CommandLine="nasm.exe -f win64 -o $(IntDir)\$(InputName).obj $(InputPath)&#x0D;&#x0A;"
+						CommandLine="nasm.exe -f win64 -o &quot;$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;&#x0D;&#x0A;"
 						Outputs="$(IntDir)\$(InputName).obj"
 					/>
 				</FileConfiguration>
@@ -747,7 +747,7 @@
 					<Tool
 						Name="VCCustomBuildTool"
 						Description="nasm &gt; assembling..."
-						CommandLine="nasm.exe -f win32 -o $(IntDir)\$(InputName).obj $(InputPath)&#x0D;&#x0A;ndisasm.exe -b 32 &quot;$(IntDir)\$(InputName).obj&quot; &gt; &quot;$(InputDir)\$(InputName).disasm&quot;&#x0D;&#x0A;"
+						CommandLine="nasm.exe -f win32 -o &quot;$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;&#x0D;&#x0A;ndisasm.exe -b 32 &quot;$(IntDir)\$(InputName).obj&quot; &gt; &quot;$(InputDir)\$(InputName).disasm&quot;&#x0D;&#x0A;"
 						Outputs="$(IntDir)\$(InputName).obj"
 					/>
 				</FileConfiguration>
@@ -765,7 +765,7 @@
 					<Tool
 						Name="VCCustomBuildTool"
 						Description="nasm &gt; assembling..."
-						CommandLine="nasm.exe -f win32 -o $(IntDir)\$(InputName).obj $(InputPath)&#x0D;&#x0A;"
+						CommandLine="nasm.exe -f win32 -o &quot;$(IntDir)\$(InputName).obj&quot; &quot;$(InputPath)&quot;&#x0D;&#x0A;"
 						Outputs="$(IntDir)\$(InputName).obj"
 					/>
 				</FileConfiguration>
