@@ -182,7 +182,6 @@ struct test_function_return_char : jitasm::function_cdecl<char, test_function_re
 //----------------------------------------
 // function_cdecl<short>
 //----------------------------------------
-extern "C" void masm_test_function_return_short();
 struct test_function_return_short : jitasm::function_cdecl<short, test_function_return_short, short>
 {
 	Result main(Reg16 a1)
@@ -194,7 +193,6 @@ struct test_function_return_short : jitasm::function_cdecl<short, test_function_
 //----------------------------------------
 // function_cdecl<int> (return immediate)
 //----------------------------------------
-extern "C" void masm_test_function_return_int_imm();
 struct test_function_return_int_imm : jitasm::function_cdecl<int, test_function_return_int_imm>
 {
 	Result main()
@@ -206,7 +204,6 @@ struct test_function_return_int_imm : jitasm::function_cdecl<int, test_function_
 //----------------------------------------
 // function_cdecl<int> (return eax)
 //----------------------------------------
-extern "C" void masm_test_function_return_int_eax();
 struct test_function_return_int_zero : jitasm::function_cdecl<int, test_function_return_int_zero>
 {
 	Result main()
@@ -219,7 +216,6 @@ struct test_function_return_int_zero : jitasm::function_cdecl<int, test_function
 //----------------------------------------
 // function_cdecl<float> (return immediate)
 //----------------------------------------
-extern "C" void masm_test_function_return_float_imm();
 struct test_function_return_float_imm : jitasm::function_cdecl<float, test_function_return_float_imm>
 {
 	Result main()
@@ -231,7 +227,7 @@ struct test_function_return_float_imm : jitasm::function_cdecl<float, test_funct
 //----------------------------------------
 // function_cdecl<float> (return xmm)
 //----------------------------------------
-extern "C" void masm_test_function_return_float_xmm();
+#if defined(JITASM_XMMINTRIN)
 struct test_function_return_float_xmm : jitasm::function_cdecl<float, test_function_return_float_xmm, float>
 {
 	Result main(Addr a1)
@@ -240,11 +236,11 @@ struct test_function_return_float_xmm : jitasm::function_cdecl<float, test_funct
 		return xmm7;
 	}
 };
+#endif
 
 //----------------------------------------
 // function_cdecl<float, float> (return ptr)
 //----------------------------------------
-extern "C" void masm_test_function_return_float_ptr();
 struct test_function_return_float_ptr : jitasm::function_cdecl<float, test_function_return_float_ptr, float>
 {
 	Result main(Addr a1)
@@ -256,7 +252,6 @@ struct test_function_return_float_ptr : jitasm::function_cdecl<float, test_funct
 //----------------------------------------
 // function_cdecl<float, float> (return st(0))
 //----------------------------------------
-extern "C" void masm_test_function_return_float_st0();
 struct test_function_return_float_st0 : jitasm::function_cdecl<float, test_function_return_float_st0, float>
 {
 	Result main(Addr a1)
@@ -269,7 +264,6 @@ struct test_function_return_float_st0 : jitasm::function_cdecl<float, test_funct
 //----------------------------------------
 // function_cdecl<double> (return immediate)
 //----------------------------------------
-extern "C" void masm_test_function_return_double_imm();
 struct test_function_return_double_imm : jitasm::function_cdecl<double, test_function_return_double_imm>
 {
 	Result main()
@@ -281,7 +275,7 @@ struct test_function_return_double_imm : jitasm::function_cdecl<double, test_fun
 //----------------------------------------
 // function_cdecl<double> (return xmm)
 //----------------------------------------
-extern "C" void masm_test_function_return_double_xmm();
+#if defined(JITASM_EMMINTRIN)
 struct test_function_return_double_xmm : jitasm::function_cdecl<double, test_function_return_double_xmm, double>
 {
 	Result main(Addr a1)
@@ -290,11 +284,11 @@ struct test_function_return_double_xmm : jitasm::function_cdecl<double, test_fun
 		return xmm7;
 	}
 };
+#endif
 
 //----------------------------------------
 // function_cdecl<double, double> (return ptr)
 //----------------------------------------
-extern "C" void masm_test_function_return_double_ptr();
 struct test_function_return_double_ptr : jitasm::function_cdecl<double, test_function_return_double_ptr, double>
 {
 	Result main(Addr a1)
@@ -306,7 +300,6 @@ struct test_function_return_double_ptr : jitasm::function_cdecl<double, test_fun
 //----------------------------------------
 // function_cdecl<double, double> (return st(0))
 //----------------------------------------
-extern "C" void masm_test_function_return_double_st0();
 struct test_function_return_double_st0 : jitasm::function_cdecl<double, test_function_return_double_st0, double>
 {
 	Result main(Addr a1)
@@ -316,10 +309,10 @@ struct test_function_return_double_st0 : jitasm::function_cdecl<double, test_fun
 	}
 };
 
+#if defined(JITASM_MMINTRIN)
 //----------------------------------------
 // function_cdecl<__m64, int> (return mm1)
 //----------------------------------------
-extern "C" void masm_test_function_return_m64_mm1();
 struct test_function_return_m64_mm1 : jitasm::function_cdecl<__m64, test_function_return_m64_mm1, int>
 {
 	Result main(Addr a1)
@@ -334,7 +327,6 @@ struct test_function_return_m64_mm1 : jitasm::function_cdecl<__m64, test_functio
 //----------------------------------------
 // function_cdecl<__m64> (return ptr)
 //----------------------------------------
-extern "C" void masm_test_function_return_m64_ptr();
 struct test_function_return_m64_ptr : jitasm::function_cdecl<__m64, test_function_return_m64_ptr, __m64>
 {
 	Result main(Addr a1)
@@ -342,11 +334,12 @@ struct test_function_return_m64_ptr : jitasm::function_cdecl<__m64, test_functio
 		return result_ptr[a1];
 	}
 };
+#endif	// defined(JITASM_MMINTRIN)
 
+#if defined(JITASM_XMMINTRIN)
 //----------------------------------------
 // function_cdecl<__m128> (return xmm1)
 //----------------------------------------
-extern "C" void masm_test_function_return_m128_xmm1();
 struct test_function_return_m128_zero : jitasm::function_cdecl<__m128, test_function_return_m128_zero>
 {
 	Result main()
@@ -359,7 +352,6 @@ struct test_function_return_m128_zero : jitasm::function_cdecl<__m128, test_func
 //----------------------------------------
 // function_cdecl<__m128> (return ptr)
 //----------------------------------------
-extern "C" void masm_test_function_return_m128_ptr();
 struct test_function_return_m128_ptr : jitasm::function_cdecl<__m128, test_function_return_m128_ptr, __m128>
 {
 	Result main(Addr a1)
@@ -367,11 +359,12 @@ struct test_function_return_m128_ptr : jitasm::function_cdecl<__m128, test_funct
 		return xmmword_ptr[a1];
 	}
 };
+#endif
 
+#if defined(JITASM_EMMINTRIN)
 //----------------------------------------
 // function_cdecl<__m128d> (return xmm1)
 //----------------------------------------
-extern "C" void masm_test_function_return_m128d_xmm1();
 struct test_function_return_m128d_zero : jitasm::function_cdecl<__m128d, test_function_return_m128d_zero>
 {
 	Result main()
@@ -384,7 +377,6 @@ struct test_function_return_m128d_zero : jitasm::function_cdecl<__m128d, test_fu
 //----------------------------------------
 // function_cdecl<__m128d> (return ptr)
 //----------------------------------------
-extern "C" void masm_test_function_return_m128d_ptr();
 struct test_function_return_m128d_ptr : jitasm::function_cdecl<__m128d, test_function_return_m128d_ptr, __m128d>
 {
 	Result main(Addr a1)
@@ -396,7 +388,6 @@ struct test_function_return_m128d_ptr : jitasm::function_cdecl<__m128d, test_fun
 //----------------------------------------
 // function_cdecl<__m128i> (return xmm1)
 //----------------------------------------
-extern "C" void masm_test_function_return_m128i_xmm1();
 struct test_function_return_m128i_zero : jitasm::function_cdecl<__m128i, test_function_return_m128i_zero>
 {
 	Result main()
@@ -409,7 +400,6 @@ struct test_function_return_m128i_zero : jitasm::function_cdecl<__m128i, test_fu
 //----------------------------------------
 // function_cdecl<__m128i> (return ptr)
 //----------------------------------------
-extern "C" void masm_test_function_return_m128i_ptr();
 struct test_function_return_m128i_ptr : jitasm::function_cdecl<__m128i, test_function_return_m128i_ptr, __m128i>
 {
 	Result main(Addr a1)
@@ -417,6 +407,7 @@ struct test_function_return_m128i_ptr : jitasm::function_cdecl<__m128i, test_fun
 		return xmmword_ptr[a1];
 	}
 };
+#endif
 
 void test_register_allocation()
 {
@@ -427,27 +418,48 @@ void test_calling_convention()
 {
 	TEST_EQUAL((int)test_function_return_char()(0x78), (int)0x78);
 	TEST_EQUAL(test_function_return_short()(0x7A52), (short)0x7A52);
-	TEST_EQUAL((test_function_return_int_imm())(), (int)0x4AC396D7);
-	TEST_EQUAL((test_function_return_int_zero())(), 0);
-	TEST_EQUAL((test_function_return_float_imm())(), 11.0f);
+
+	test_function_return_int_imm test_function_return_int_imm_obj;
+	TEST_EQUAL(test_function_return_int_imm_obj(), (int)0x4AC396D7);
+
+	test_function_return_int_zero test_function_return_int_zero_obj;
+	TEST_EQUAL(test_function_return_int_zero_obj(), 0);
+
+	test_function_return_float_imm test_function_return_float_imm_obj;
+	TEST_EQUAL(test_function_return_float_imm_obj(), 11.0f);
+#if defined(JITASM_XMMINTRIN)
 	TEST_EQUAL(test_function_return_float_xmm()(2.0f), 2.0f);
+#endif
 	TEST_EQUAL(test_function_return_float_ptr()(3.0f), 3.0f);
 	TEST_EQUAL(test_function_return_float_st0()(4.0f), 4.0f);
-	TEST_EQUAL((test_function_return_double_imm())(), 11.0);
+	test_function_return_double_imm test_function_return_double_imm_obj;
+	TEST_EQUAL(test_function_return_double_imm_obj(), 11.0);
+#if defined(JITASM_EMMINTRIN)
 	TEST_EQUAL(test_function_return_double_xmm()(5.0), 5.0);
+#endif
 	TEST_EQUAL(test_function_return_double_ptr()(6.0), 6.0);
 	TEST_EQUAL(test_function_return_double_st0()(7.0), 7.0);
-#if !defined(_WIN64)
+#if defined(JITASM_MMINTRIN) && !defined(_WIN64)
 	TEST_EQUAL(_mm_movemask_pi8(_mm_cmpeq_pi32(test_function_return_m64_mm1()(2), _mm_set_pi32(4, 4))), 0xFF);
 	TEST_EQUAL(_mm_movemask_pi8(_mm_cmpeq_pi32(test_function_return_m64_ptr()(_mm_set_pi32(0x12345678, 0xFEDCBA98)), _mm_set_pi32(0x12345678, 0xFEDCBA98))), 0xFF);
 	_mm_empty();
 #endif
-	TEST_EQUAL(_mm_movemask_ps(_mm_cmpeq_ps((test_function_return_m128_zero())(), _mm_setzero_ps())), 0x0F);
+
+#if defined(JITASM_XMMINTRIN)
+	test_function_return_m128_zero test_function_return_m128_zero_obj;
+	TEST_EQUAL(_mm_movemask_ps(_mm_cmpeq_ps(test_function_return_m128_zero_obj(), _mm_setzero_ps())), 0x0F);
 	TEST_EQUAL(_mm_movemask_ps(_mm_cmpeq_ps(test_function_return_m128_ptr()(_mm_set_ps(1.0f, 2.0f, 3.0f, 4.0f)), _mm_set_ps(1.0f, 2.0f, 3.0f, 4.0f))), 0x0F);
-	TEST_EQUAL(_mm_movemask_pd(_mm_cmpeq_pd((test_function_return_m128d_zero())(), _mm_setzero_pd())), 0x03);
+#endif
+
+#if defined(JITASM_EMMINTRIN)
+	test_function_return_m128d_zero test_function_return_m128d_zero_obj;
+	TEST_EQUAL(_mm_movemask_pd(_mm_cmpeq_pd(test_function_return_m128d_zero_obj(), _mm_setzero_pd())), 0x03);
 	TEST_EQUAL(_mm_movemask_pd(_mm_cmpeq_pd(test_function_return_m128d_ptr()(_mm_set_pd(1.0f, 2.0f)), _mm_set_pd(1.0f, 2.0f))), 0x03);
-	TEST_EQUAL(_mm_movemask_epi8(_mm_cmpeq_epi32((test_function_return_m128i_zero())(), _mm_setzero_si128())), 0xFFFF);
+
+	test_function_return_m128i_zero test_function_return_m128i_zero_obj;
+	TEST_EQUAL(_mm_movemask_epi8(_mm_cmpeq_epi32(test_function_return_m128i_zero_obj(), _mm_setzero_si128())), 0xFFFF);
 	TEST_EQUAL(_mm_movemask_epi8(_mm_cmpeq_epi32(test_function_return_m128i_ptr()(_mm_set_epi32(1, 2, 3, 4)), _mm_set_epi32(1, 2, 3, 4))), 0xFFFF);
+#endif
 }
 
 struct test_cfg : jitasm::function_cdecl<void, test_cfg>
@@ -471,6 +483,7 @@ struct test_cfg : jitasm::function_cdecl<void, test_cfg>
 	}
 };
 
+#if defined(JITASM_MMINTRIN)
 struct test_m64_args3 : jitasm::function_cdecl<__m64, test_m64_args3, __m64, __m64, __m64>
 {
 	Result main(MmxReg v1, Addr v2, MmxReg v3)
@@ -482,7 +495,9 @@ struct test_m64_args3 : jitasm::function_cdecl<__m64, test_m64_args3, __m64, __m
 		return res;
 	}
 };
+#endif
 
+#if defined(JITASM_XMMINTRIN)
 struct test_m128_args3 : jitasm::function_cdecl<__m128, test_m128_args3, __m128, __m128, __m128>
 {
 	Result main(XmmReg v1, Addr v2, XmmReg v3)
@@ -494,8 +509,10 @@ struct test_m128_args3 : jitasm::function_cdecl<__m128, test_m128_args3, __m128,
 		return res;
 	}
 };
+#endif
 
 #if !defined(_WIN32)
+#if defined(JITASM_MMINTRIN)
 struct test_m64_args5 : jitasm::function_cdecl<__m64, test_m64_args5, __m64, __m64, __m64, __m64, __m64>
 {
 	Result main(MmxReg v1, Addr v2, MmxReg v3, MmxReg v4, Addr v5)
@@ -509,7 +526,9 @@ struct test_m64_args5 : jitasm::function_cdecl<__m64, test_m64_args5, __m64, __m
 		return res;
 	}
 };
+#endif
 
+#if defined(JITASM_XMMINTRIN)
 struct test_m128_args5 : jitasm::function_cdecl<__m128, test_m128_args5, __m128, __m128, __m128, __m128, __m128>
 {
 	Result main(XmmReg v1, Addr v2, XmmReg v3, XmmReg v4, Addr v5)
@@ -524,7 +543,9 @@ struct test_m128_args5 : jitasm::function_cdecl<__m128, test_m128_args5, __m128,
 	}
 };
 #endif
+#endif
 
+#if defined(JITASM_MMINTRIN) && defined(JITASM_XMMINTRIN) && defined(JITASM_EMMINTRIN)
 struct test_mix_args : jitasm::function_cdecl<__m128, test_mix_args, int, __m64, __m128i, __m64, __m128>
 {
 	Result main(Reg32 n, MmxReg v1, XmmReg v2, MmxReg v3, XmmReg v4)
@@ -543,6 +564,7 @@ struct test_mix_args : jitasm::function_cdecl<__m128, test_mix_args, int, __m64,
 		return res;
 	}
 };
+#endif
 
 struct test_ipow1 : jitasm::function_cdecl<int, test_ipow1, int, int>
 {
@@ -599,7 +621,7 @@ struct test_fibonacci : jitasm::function_cdecl<unsigned int, test_fibonacci, uns
 				mov(a, r);
 				inc(i);
 			EndW();
-		EndIf();	
+		EndIf();
 		return r;
 	}
 };
@@ -607,7 +629,7 @@ struct test_fibonacci : jitasm::function_cdecl<unsigned int, test_fibonacci, uns
 void test_execute()
 {
 	// MMX test
-#if !defined(_WIN64)	// VC does not support MMX intrinsics on x64.
+#if defined(JITASM_MMINTRIN) && !defined(_WIN64)	// VC does not support MMX intrinsics on x64.
 	{
 		__m64 v1 = _mm_set_pi32(1, 2);
 		__m64 v2 = _mm_set_pi32(3, 4);
@@ -626,14 +648,16 @@ void test_execute()
 		_mm_empty();
 	}
 #endif	// defined(_WIN32)
-#endif	// !defined(_WIN64)
+#endif	// defined(JITASM_MMINTRIN) && !defined(_WIN64)
 
+#if defined(JITASM_XMMINTRIN)
 	{
 		__m128 v1 = _mm_set_ps(1.0f, 2.0f, 3.0f, 4.0f);
 		__m128 v2 = _mm_set_ps(5.0f, 6.0f, 7.0f, 8.0f);
 		__m128 v3 = _mm_set_ps(9.0f, 10.0f, 11.0f, 12.0f);
 		TEST_EQUAL(_mm_movemask_ps(_mm_cmpeq_ps(test_m128_args3()(v1, v2, v3), _mm_set_ps(15.0f, 18.0f, 21.0f, 24.0f))), 0x0F)
 	}
+#endif
 
 	TEST_EQUAL(test_ipow1()(2, 0), 1);
 	TEST_EQUAL(test_ipow1()(2, 3), 8);

@@ -57,14 +57,20 @@
 #if defined(JITASM_WIN)
 #include <windows.h>
 #include <intrin.h>
-#else
+#else	// defined(JITASM_WIN)
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/mman.h>
-#include <mmintrin.h>
-#include <xmmintrin.h>
-#include <emmintrin.h>
+#if defined(JITASM_MMINTRIN)
+	#include <mmintrin.h>
 #endif
+#if defined(JITASM_XMMINTRIN)
+	#include <xmmintrin.h>
+#endif
+#if defined(JITASM_EMMINTRIN)
+	#include <emmintrin.h>
+#endif
+#endif	// defined(JITASM_WIN)
 
 #pragma warning( push )
 #pragma warning( disable : 4127 )	// conditional expression is constant.
@@ -80,6 +86,7 @@
 //#define JITASM_DEBUG_DUMP
 #ifdef JITASM_DEBUG_DUMP
 	#if defined(JITASM_GCC)
+	#include <stdio.h>
 	#define JITASM_TRACE	printf
 	#else
 	#define JITASM_TRACE	jitasm::detail::Trace
@@ -5175,8 +5182,8 @@ namespace compiler
 
 		void DumpDot() const
 		{
-			printf("digraph CFG {\n");
-			printf("\tnode[shape=box];\n");
+			JITASM_TRACE("digraph CFG {\n");
+			JITASM_TRACE("\tnode[shape=box];\n");
 			for (BlockList::const_iterator it = blocks_.begin(); it != blocks_.end(); ++it) {
 				BasicBlock *block = *it;
 				std::string live_in = "live in:";
@@ -5195,17 +5202,17 @@ namespace compiler
 						}
 					}
 				}
-				printf("\tnode%d[label=\"Block%d\\ninstruction %d - %d\\nloop depth %d\\n%s\\n%s\"];\n", block->instr_begin, block->depth, block->instr_begin, block->instr_end - 1, block->loop_depth, live_in.c_str(), live_out.c_str());
-				int constraint = 0;
-				if (block->successor[0]) printf("\t\"node%d\" -> \"node%d\" [constraint=%s];\n", block->instr_begin, block->successor[0]->instr_begin, constraint == 0 ? "true" : "false");
-				if (block->successor[1]) printf("\t\"node%d\" -> \"node%d\" [constraint=%s];\n", block->instr_begin, block->successor[1]->instr_begin, constraint == 0 ? "true" : "false");
-				//if (block->dfs_parent) printf("\t\"node%d\" -> \"node%d\" [color=\"#ff0000\"];\n", block->instr_begin, block->dfs_parent->instr_begin);
-				//if (block->immediate_dominator) printf("\t\"node%d\" -> \"node%d\" [constraint=false, color=\"#0000ff\"];\n", block->instr_begin, block->immediate_dominator->instr_begin);
+				JITASM_TRACE("\tnode%d[label=\"Block%d\\ninstruction %d - %d\\nloop depth %d\\n%s\\n%s\"];\n", block->instr_begin, block->depth, block->instr_begin, block->instr_end - 1, block->loop_depth, live_in.c_str(), live_out.c_str());
+				int constraint = 0; avoid_unused_warn(constraint);
+				if (block->successor[0]) JITASM_TRACE("\t\"node%d\" -> \"node%d\" [constraint=%s];\n", block->instr_begin, block->successor[0]->instr_begin, constraint == 0 ? "true" : "false");
+				if (block->successor[1]) JITASM_TRACE("\t\"node%d\" -> \"node%d\" [constraint=%s];\n", block->instr_begin, block->successor[1]->instr_begin, constraint == 0 ? "true" : "false");
+				//if (block->dfs_parent) JITASM_TRACE("\t\"node%d\" -> \"node%d\" [color=\"#ff0000\"];\n", block->instr_begin, block->dfs_parent->instr_begin);
+				//if (block->immediate_dominator) JITASM_TRACE("\t\"node%d\" -> \"node%d\" [constraint=false, color=\"#0000ff\"];\n", block->instr_begin, block->immediate_dominator->instr_begin);
 				//for (size_t i = 0; i < block->predecessor.size(); ++i) {
-				//	printf("\t\"node%d\" -> \"node%d\" [constraint=false, color=\"#808080\"];\n", block->instr_begin, block->predecessor[i]->instr_begin);
+				//	JITASM_TRACE("\t\"node%d\" -> \"node%d\" [constraint=false, color=\"#808080\"];\n", block->instr_begin, block->predecessor[i]->instr_begin);
 				//}
 			}
-			printf("}\n");
+			JITASM_TRACE("}\n");
 		}
 
 		/// Build control flow graph from instruction list
