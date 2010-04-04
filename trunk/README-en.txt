@@ -14,8 +14,8 @@ the new BSD license.
 
 Compiler
 ========
- - VisualC++ 2005
- - VisualC++ 2008
+ - VisualC++ 2005 or later
+ - GCC 4.1 or later
 
 How to use
 ==========
