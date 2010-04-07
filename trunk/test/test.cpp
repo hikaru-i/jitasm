@@ -638,7 +638,7 @@ void test_execute()
 		_mm_empty();
 	}
 
-#if defined(_WIN32)		// VC doest not support following parameter passing.
+#if defined(_WIN32) && defined(JITASM_XMMINTRIN) && defined(JITASM_EMMINTRIN)		// VC doest not support following parameter passing.
 	{
 		__m64 v1 = _mm_set_pi32(1, 2);
 		__m128i v2 = _mm_set_epi32(3, 4, 5, 6);

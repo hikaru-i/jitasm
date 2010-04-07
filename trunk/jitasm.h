@@ -56,11 +56,12 @@
 
 #if defined(JITASM_WIN)
 #include <windows.h>
-#include <intrin.h>
 #else	// defined(JITASM_WIN)
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/mman.h>
+#endif	// defined(JITASM_WIN)
+
 #if defined(JITASM_MMINTRIN)
 	#include <mmintrin.h>
 #endif
@@ -70,7 +71,10 @@
 #if defined(JITASM_EMMINTRIN)
 	#include <emmintrin.h>
 #endif
-#endif	// defined(JITASM_WIN)
+
+#if _MSC_VER >= 1400	// VC8 or later
+#include <intrin.h>
+#endif
 
 #pragma warning( push )
 #pragma warning( disable : 4127 )	// conditional expression is constant.
@@ -118,14 +122,14 @@ template<typename T> inline void avoid_unused_warn(const T&) {}
 
 namespace detail
 {
-#if defined(JITASM_WIN)
-	inline long interlocked_increment(long *addend)				{ return _InterlockedIncrement(addend); }
-	inline long interlocked_decrement(long *addend)				{ return _InterlockedDecrement(addend); }
-	inline long interlocked_exchange(long *target, long value)	{ return _InterlockedExchange(target, value); }
-#elif defined(JITASM_GCC)
+#if defined(JITASM_GCC)
 	inline long interlocked_increment(long *addend)				{ return __sync_add_and_fetch(addend, 1); }
 	inline long interlocked_decrement(long *addend)				{ return __sync_sub_and_fetch(addend, 1); }
 	inline long interlocked_exchange(long *target, long value)	{ return __sync_lock_test_and_set(target, value); }
+#elif defined(JITASM_WIN)
+	inline long interlocked_increment(long *addend)				{ return _InterlockedIncrement(addend); }
+	inline long interlocked_decrement(long *addend)				{ return _InterlockedDecrement(addend); }
+	inline long interlocked_exchange(long *target, long value)	{ return _InterlockedExchange(target, value); }
 #endif
 }	// namespace detail
 
@@ -1216,7 +1220,11 @@ namespace detail
 		char szBuf[256];
 		va_list args;
 		va_start(args, format);
+#if _MSC_VER >= 1400	// VC8 or later
 		_vsnprintf_s(szBuf, sizeof(szBuf) / sizeof(char), format, args);
+#else
+		vsnprintf(szBuf, sizeof(szBuf) / sizeof(char), format, args);
+#endif
 		va_end(args);
 		::OutputDebugStringA(szBuf);
 	}
@@ -5943,11 +5951,11 @@ namespace compiler
 
 #ifdef JITASM64
 		// Save xmm registers
-		uint32 reg_mask = preserved_reg[2];
-		for (size_t i = 0; reg_mask != 0; ++i) {
-			uint32 reg_id = detail::bit_scan_forward(reg_mask);
+		uint32 xmm_reg_mask = preserved_reg[2];
+		for (size_t i = 0; xmm_reg_mask != 0; ++i) {
+			uint32 reg_id = detail::bit_scan_forward(xmm_reg_mask);
 			f.movaps(f.xmmword_ptr[preserved_reg_stack + 16 * i], XmmReg(static_cast<PhysicalRegID>(reg_id)));
-			reg_mask &= ~(1 << reg_id);
+			xmm_reg_mask &= ~(1 << reg_id);
 		}
 #endif
 	}
