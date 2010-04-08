@@ -1,3 +1,8 @@
+// Workaround for issue #8
+#if defined(__APPLE__) && defined(__MACH__)		// Mac OS X
+#define JITASM_MMINTRIN 0
+#endif
+
 #include <assert.h>
 #include "jitasm.h"
 #include "test.h"
@@ -227,7 +232,7 @@ struct test_function_return_float_imm : jitasm::function_cdecl<float, test_funct
 //----------------------------------------
 // function_cdecl<float> (return xmm)
 //----------------------------------------
-#if defined(JITASM_XMMINTRIN)
+#if JITASM_XMMINTRIN
 struct test_function_return_float_xmm : jitasm::function_cdecl<float, test_function_return_float_xmm, float>
 {
 	Result main(Addr a1)
@@ -275,7 +280,7 @@ struct test_function_return_double_imm : jitasm::function_cdecl<double, test_fun
 //----------------------------------------
 // function_cdecl<double> (return xmm)
 //----------------------------------------
-#if defined(JITASM_EMMINTRIN)
+#if JITASM_EMMINTRIN
 struct test_function_return_double_xmm : jitasm::function_cdecl<double, test_function_return_double_xmm, double>
 {
 	Result main(Addr a1)
@@ -309,7 +314,7 @@ struct test_function_return_double_st0 : jitasm::function_cdecl<double, test_fun
 	}
 };
 
-#if defined(JITASM_MMINTRIN)
+#if JITASM_MMINTRIN
 //----------------------------------------
 // function_cdecl<__m64, int> (return mm1)
 //----------------------------------------
@@ -334,9 +339,9 @@ struct test_function_return_m64_ptr : jitasm::function_cdecl<__m64, test_functio
 		return result_ptr[a1];
 	}
 };
-#endif	// defined(JITASM_MMINTRIN)
+#endif	// JITASM_MMINTRIN
 
-#if defined(JITASM_XMMINTRIN)
+#if JITASM_XMMINTRIN
 //----------------------------------------
 // function_cdecl<__m128> (return xmm1)
 //----------------------------------------
@@ -361,7 +366,7 @@ struct test_function_return_m128_ptr : jitasm::function_cdecl<__m128, test_funct
 };
 #endif
 
-#if defined(JITASM_EMMINTRIN)
+#if JITASM_EMMINTRIN
 //----------------------------------------
 // function_cdecl<__m128d> (return xmm1)
 //----------------------------------------
@@ -427,31 +432,31 @@ void test_calling_convention()
 
 	test_function_return_float_imm test_function_return_float_imm_obj;
 	TEST_EQUAL(test_function_return_float_imm_obj(), 11.0f);
-#if defined(JITASM_XMMINTRIN)
+#if JITASM_XMMINTRIN
 	TEST_EQUAL(test_function_return_float_xmm()(2.0f), 2.0f);
 #endif
 	TEST_EQUAL(test_function_return_float_ptr()(3.0f), 3.0f);
 	TEST_EQUAL(test_function_return_float_st0()(4.0f), 4.0f);
 	test_function_return_double_imm test_function_return_double_imm_obj;
 	TEST_EQUAL(test_function_return_double_imm_obj(), 11.0);
-#if defined(JITASM_EMMINTRIN)
+#if JITASM_EMMINTRIN
 	TEST_EQUAL(test_function_return_double_xmm()(5.0), 5.0);
 #endif
 	TEST_EQUAL(test_function_return_double_ptr()(6.0), 6.0);
 	TEST_EQUAL(test_function_return_double_st0()(7.0), 7.0);
-#if defined(JITASM_MMINTRIN) && !defined(_WIN64)
+#if JITASM_MMINTRIN && !defined(_WIN64)
 	TEST_EQUAL(_mm_movemask_pi8(_mm_cmpeq_pi32(test_function_return_m64_mm1()(2), _mm_set_pi32(4, 4))), 0xFF);
 	TEST_EQUAL(_mm_movemask_pi8(_mm_cmpeq_pi32(test_function_return_m64_ptr()(_mm_set_pi32(0x12345678, 0xFEDCBA98)), _mm_set_pi32(0x12345678, 0xFEDCBA98))), 0xFF);
 	_mm_empty();
 #endif
 
-#if defined(JITASM_XMMINTRIN)
+#if JITASM_XMMINTRIN
 	test_function_return_m128_zero test_function_return_m128_zero_obj;
 	TEST_EQUAL(_mm_movemask_ps(_mm_cmpeq_ps(test_function_return_m128_zero_obj(), _mm_setzero_ps())), 0x0F);
 	TEST_EQUAL(_mm_movemask_ps(_mm_cmpeq_ps(test_function_return_m128_ptr()(_mm_set_ps(1.0f, 2.0f, 3.0f, 4.0f)), _mm_set_ps(1.0f, 2.0f, 3.0f, 4.0f))), 0x0F);
 #endif
 
-#if defined(JITASM_EMMINTRIN)
+#if JITASM_EMMINTRIN
 	test_function_return_m128d_zero test_function_return_m128d_zero_obj;
 	TEST_EQUAL(_mm_movemask_pd(_mm_cmpeq_pd(test_function_return_m128d_zero_obj(), _mm_setzero_pd())), 0x03);
 	TEST_EQUAL(_mm_movemask_pd(_mm_cmpeq_pd(test_function_return_m128d_ptr()(_mm_set_pd(1.0f, 2.0f)), _mm_set_pd(1.0f, 2.0f))), 0x03);
@@ -483,7 +488,7 @@ struct test_cfg : jitasm::function_cdecl<void, test_cfg>
 	}
 };
 
-#if defined(JITASM_MMINTRIN)
+#if JITASM_MMINTRIN
 struct test_m64_args3 : jitasm::function_cdecl<__m64, test_m64_args3, __m64, __m64, __m64>
 {
 	Result main(MmxReg v1, Addr v2, MmxReg v3)
@@ -497,7 +502,7 @@ struct test_m64_args3 : jitasm::function_cdecl<__m64, test_m64_args3, __m64, __m
 };
 #endif
 
-#if defined(JITASM_XMMINTRIN)
+#if JITASM_XMMINTRIN
 struct test_m128_args3 : jitasm::function_cdecl<__m128, test_m128_args3, __m128, __m128, __m128>
 {
 	Result main(XmmReg v1, Addr v2, XmmReg v3)
@@ -512,7 +517,7 @@ struct test_m128_args3 : jitasm::function_cdecl<__m128, test_m128_args3, __m128,
 #endif
 
 #if !defined(_WIN32)
-#if defined(JITASM_MMINTRIN)
+#if JITASM_MMINTRIN
 struct test_m64_args5 : jitasm::function_cdecl<__m64, test_m64_args5, __m64, __m64, __m64, __m64, __m64>
 {
 	Result main(MmxReg v1, Addr v2, MmxReg v3, MmxReg v4, Addr v5)
@@ -528,7 +533,7 @@ struct test_m64_args5 : jitasm::function_cdecl<__m64, test_m64_args5, __m64, __m
 };
 #endif
 
-#if defined(JITASM_XMMINTRIN)
+#if JITASM_XMMINTRIN
 struct test_m128_args5 : jitasm::function_cdecl<__m128, test_m128_args5, __m128, __m128, __m128, __m128, __m128>
 {
 	Result main(XmmReg v1, Addr v2, XmmReg v3, XmmReg v4, Addr v5)
@@ -545,7 +550,7 @@ struct test_m128_args5 : jitasm::function_cdecl<__m128, test_m128_args5, __m128,
 #endif
 #endif
 
-#if defined(JITASM_MMINTRIN) && defined(JITASM_XMMINTRIN) && defined(JITASM_EMMINTRIN)
+#if JITASM_MMINTRIN && JITASM_XMMINTRIN && JITASM_EMMINTRIN
 struct test_mix_args : jitasm::function_cdecl<__m128, test_mix_args, int, __m64, __m128i, __m64, __m128>
 {
 	Result main(Reg32 n, MmxReg v1, XmmReg v2, MmxReg v3, XmmReg v4)
@@ -629,7 +634,7 @@ struct test_fibonacci : jitasm::function_cdecl<unsigned int, test_fibonacci, uns
 void test_execute()
 {
 	// MMX test
-#if defined(JITASM_MMINTRIN) && !defined(_WIN64)	// VC does not support MMX intrinsics on x64.
+#if JITASM_MMINTRIN && !defined(_WIN64)	// VC does not support MMX intrinsics on x64.
 	{
 		__m64 v1 = _mm_set_pi32(1, 2);
 		__m64 v2 = _mm_set_pi32(3, 4);
@@ -638,7 +643,7 @@ void test_execute()
 		_mm_empty();
 	}
 
-#if defined(_WIN32) && defined(JITASM_XMMINTRIN) && defined(JITASM_EMMINTRIN)		// VC doest not support following parameter passing.
+#if defined(_WIN32) && JITASM_XMMINTRIN && JITASM_EMMINTRIN		// VC doest not support following parameter passing.
 	{
 		__m64 v1 = _mm_set_pi32(1, 2);
 		__m128i v2 = _mm_set_epi32(3, 4, 5, 6);
@@ -648,9 +653,9 @@ void test_execute()
 		_mm_empty();
 	}
 #endif	// defined(_WIN32)
-#endif	// defined(JITASM_MMINTRIN) && !defined(_WIN64)
+#endif	// JITASM_MMINTRIN && !defined(_WIN64)
 
-#if defined(JITASM_XMMINTRIN)
+#if JITASM_XMMINTRIN
 	{
 		__m128 v1 = _mm_set_ps(1.0f, 2.0f, 3.0f, 4.0f);
 		__m128 v2 = _mm_set_ps(5.0f, 6.0f, 7.0f, 8.0f);
