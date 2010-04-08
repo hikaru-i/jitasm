@@ -293,7 +293,7 @@ namespace detail
 		Opd(OpdSize opdsize, const RegID& reg, uint32 reg_assignable = 0xFFFFFFFF) : opdtype_(O_TYPE_REG), opdsize_(opdsize), reg_(reg), reg_assignable_(reg_assignable) {}
 		/// MEM
 		Opd(OpdSize opdsize, OpdSize addrsize, const RegID& base, const RegID& index, sint64 scale, sint64 disp)
-			: opdtype_(O_TYPE_MEM), opdsize_(opdsize), addrsize_(addrsize), base_(base), index_(index), scale_(scale), disp_(disp) {}
+			: opdtype_(O_TYPE_MEM), opdsize_(opdsize), base_(base), index_(index), scale_(scale), disp_(disp), addrsize_(addrsize) {}
 	protected:
 		/// IMM
 		explicit Opd(OpdSize opdsize, sint64 imm) : opdtype_(O_TYPE_IMM), opdsize_(opdsize), imm_(imm) {}
@@ -922,7 +922,7 @@ struct Backend
 		reg &= 0x7;
 
 		if (r_m.IsReg()) {
-			db(0xC0 | reg << 3 | r_m.GetReg().id & 0x7);
+			db(0xC0 | (reg << 3) | (r_m.GetReg().id & 0x7));
 		} else if (r_m.IsMem()) {
 			JITASM_ASSERT(r_m.GetBase().type == R_TYPE_GP && r_m.GetIndex().type == R_TYPE_GP);
 			int base = r_m.GetBase().id; if (base != INVALID) base &= 0x7;
@@ -948,7 +948,7 @@ struct Backend
 
 				// ModR/M
 				uint8 mod = 0;
-				if (r_m.GetDisp() == 0 || sib && base == INVALID) mod = base != EBP ? 0 : 1;
+				if (r_m.GetDisp() == 0 || (sib && base == INVALID)) mod = base != EBP ? 0 : 1;
 				else if (detail::IsInt8(r_m.GetDisp())) mod = 1;
 				else if (detail::IsInt32(r_m.GetDisp())) mod = 2;
 				else JITASM_ASSERT(0);
@@ -1087,7 +1087,7 @@ struct Backend
 		JITASM_ASSERT(reg.IsReg() && mem.IsMem());
 
 		if (reg.GetReg().id == EAX && mem.GetBase().IsInvalid() && mem.GetIndex().IsInvalid()) {
-			uint32 opcode = 0xA0 | ~instr.opcode_ & 0x2 | instr.opcode_ & 1;
+			uint32 opcode = 0xA0 | (~instr.opcode_ & 0x2) | (instr.opcode_ & 1);
 			Encode(Instr(instr.GetID(), opcode, instr.encoding_flag_, Imm32((sint32) mem.GetDisp())));
 		} else {
 			Encode(instr);

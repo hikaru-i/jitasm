@@ -11,7 +11,7 @@ JITASM_H		:= $(JITASM_INCLUDE)jitasm.h
 TARGET			:= fibonacci
 OBJS			:= fibonacci.o
 CXX				:= g++
-CXXFLAGS		:= -fno-operator-names -I$(JITASM_INCLUDE)
+CXXFLAGS		:= -fno-operator-names -Wall -I$(JITASM_INCLUDE)
 ifeq ($(MODE), 64)
 	CXXFLAGS	+= -m64
 	LDFLAGS		+= -m64
