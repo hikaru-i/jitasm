@@ -2,6 +2,9 @@ MODE			:= 32
 ifeq ($(shell uname -m), x86_64)
 	MODE		:= 64
 endif
+ifeq ($(shell uname -s), Darwin)
+	MODE		:= 64
+endif
 
 JITASM_INCLUDE	:= ../
 JITASM_H		:= $(JITASM_INCLUDE)jitasm.h
