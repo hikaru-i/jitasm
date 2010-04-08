@@ -32,7 +32,7 @@
 #define JITASM_H
 
 #if defined(_WIN32)
-#define JITASM_WIN
+#define JITASM_WIN		// Windows
 #endif
 
 #if (defined(_WIN64) && (defined(_M_AMD64) || defined(_M_X64))) || defined(__x86_64__)
@@ -43,9 +43,28 @@
 #define JITASM_GCC
 #endif
 
-#define JITASM_MMINTRIN
-#define JITASM_XMMINTRIN
-#define JITASM_EMMINTRIN
+#if !defined(JITASM_MMINTRIN)
+	#if !defined(__GNUC__) || defined(__MMX__)
+	#define JITASM_MMINTRIN 1
+	#else
+	#define JITASM_MMINTRIN 0
+	#endif
+#endif
+#if !defined(JITASM_XMMINTRIN)
+	#if !defined(__GNUC__) || defined(__SSE__)
+	#define JITASM_XMMINTRIN 1
+	#else
+	#define JITASM_XMMINTRIN 0
+	#endif
+#endif
+#if !defined(JITASM_EMMINTRIN)
+	#if !defined(__GNUC__) || defined(__SSE2__)
+	#define JITASM_EMMINTRIN 1
+	#else
+	#define JITASM_EMMINTRIN 0
+	#endif
+#endif
+
 
 #include <string>
 #include <deque>
@@ -56,19 +75,19 @@
 
 #if defined(JITASM_WIN)
 #include <windows.h>
-#else	// defined(JITASM_WIN)
+#else
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/mman.h>
-#endif	// defined(JITASM_WIN)
+#endif
 
-#if defined(JITASM_MMINTRIN)
+#if JITASM_MMINTRIN
 	#include <mmintrin.h>
 #endif
-#if defined(JITASM_XMMINTRIN)
+#if JITASM_XMMINTRIN
 	#include <xmmintrin.h>
 #endif
-#if defined(JITASM_EMMINTRIN)
+#if JITASM_EMMINTRIN
 	#include <emmintrin.h>
 #endif
 
@@ -76,9 +95,11 @@
 #include <intrin.h>
 #endif
 
+#if defined(_MSC_VER)
 #pragma warning( push )
 #pragma warning( disable : 4127 )	// conditional expression is constant.
 #pragma warning( disable : 4201 )	// nonstandard extension used : nameless struct/union
+#endif
 
 #ifdef ASSERT
 #define JITASM_ASSERT ASSERT
@@ -6450,17 +6471,17 @@ namespace detail {
 		};
 	};
 
-#ifdef JITASM_MMINTRIN
+#if JITASM_MMINTRIN
 	// specialization for __m64
 	template<int N> struct ArgTraits_cdecl<N, __m64, 8> {enum {stack_size = 0, flag = ARG_IN_MMX | ARG_TYPE_VALUE, reg_id = MM0};};
 #endif
 
-#ifdef JITASM_XMMINTRIN
+#if JITASM_XMMINTRIN
 	// specialization for __m128
 	template<int N> struct ArgTraits_cdecl<N, __m128, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_SP | ARG_TYPE_VALUE, reg_id = XMM0};};
 #endif
 
-#ifdef JITASM_EMMINTRIN
+#if JITASM_EMMINTRIN
 	// specialization for __m128d
 	template<int N> struct ArgTraits_cdecl<N, __m128d, 16> {enum {stack_size = 0, flag = ARG_IN_XMM_DP | ARG_TYPE_VALUE, reg_id = XMM0};};
 
@@ -6520,7 +6541,7 @@ namespace detail {
 	template<class T> struct ArgTraits_win64<2, T, 8> : ArgTraits_win64_reg<R8, ARG_IN_REG | ARG_TYPE_VALUE> {};
 	template<class T> struct ArgTraits_win64<3, T, 8> : ArgTraits_win64_reg<R9, ARG_IN_REG | ARG_TYPE_VALUE> {};
 
-#ifdef JITASM_MMINTRIN
+#if JITASM_MMINTRIN
 	// specialization for __m64
 	template<> struct ArgTraits_win64<0, __m64, 8> : ArgTraits_win64_reg<RCX, ARG_IN_REG | ARG_TYPE_VALUE> {};
 	template<> struct ArgTraits_win64<1, __m64, 8> : ArgTraits_win64_reg<RDX, ARG_IN_REG | ARG_TYPE_VALUE> {};
@@ -6584,13 +6605,13 @@ namespace detail {
 
 	template<int N> struct ArgTraits_linux64<N, float,	 sizeof(float)>   : ArgTraits_linux64_sse<ARG_IN_XMM_SP | ARG_TYPE_VALUE> {};
 	template<int N> struct ArgTraits_linux64<N, double,  sizeof(double)>  : ArgTraits_linux64_sse<ARG_IN_XMM_DP | ARG_TYPE_VALUE> {};
-#ifdef JITASM_MMINTRIN
+#if JITASM_MMINTRIN
 	template<int N> struct ArgTraits_linux64<N, __m64,	 sizeof(__m64)>   : ArgTraits_linux64_sse<ARG_IN_XMM_INT | ARG_TYPE_VALUE> {};
 #endif
-#ifdef JITASM_XMMINTRIN
+#if JITASM_XMMINTRIN
 	template<int N> struct ArgTraits_linux64<N, __m128,	 sizeof(__m128)>  : ArgTraits_linux64_sse<ARG_IN_XMM_SP | ARG_TYPE_VALUE> {};
 #endif
-#ifdef JITASM_EMMINTRIN
+#if JITASM_EMMINTRIN
 	template<int N> struct ArgTraits_linux64<N, __m128d, sizeof(__m128d)> : ArgTraits_linux64_sse<ARG_IN_XMM_DP | ARG_TYPE_VALUE> {};
 	template<int N> struct ArgTraits_linux64<N, __m128i, sizeof(__m128i)> : ArgTraits_linux64_sse<ARG_IN_XMM_INT | ARG_TYPE_VALUE> {};
 #endif
@@ -6967,7 +6988,7 @@ namespace detail {
 	};
 
 
-#ifdef JITASM_MMINTRIN
+#if JITASM_MMINTRIN
 	// specialization for __m64
 	template<>
 	struct ResultT<__m64, 8> {
@@ -6999,7 +7020,7 @@ namespace detail {
 	};
 #endif	// JITASM_MMINTRIN
 
-#ifdef JITASM_XMMINTRIN
+#if JITASM_XMMINTRIN
 	// specialization for __m128
 	template<>
 	struct ResultT<__m128, 16> {
@@ -7023,7 +7044,7 @@ namespace detail {
 	};
 #endif	// JITASM_XMMINTRIN
 
-#ifdef JITASM_EMMINTRIN
+#if JITASM_EMMINTRIN
 	// specialization for __m128d
 	template<>
 	struct ResultT<__m128d, 16> {
@@ -7306,7 +7327,7 @@ namespace detail {
 			}
 		};
 
-#ifdef JITASM_MMINTRIN
+#if JITASM_MMINTRIN
 		// specialization for __m64
 		template<>
 		struct Arg<__m64, 8>
@@ -7374,7 +7395,7 @@ namespace detail {
 		};
 #endif	// JITASM_MMINTRIN
 
-#ifdef JITASM_XMMINTRIN
+#if JITASM_XMMINTRIN
 		// specialization for __m128
 		template<>
 		struct Arg<__m128, 16>
@@ -7425,7 +7446,7 @@ namespace detail {
 		};
 #endif	// JITASM_XMMINTRIN
 
-#ifdef JITASM_EMMINTRIN
+#if JITASM_EMMINTRIN
 		// specialization for __m128d, __m128i
 		template<> struct Arg<__m128d, 16> : Arg<__m128, 16> {
 			Arg(Frontend& f, const ArgInfo& arg_info) : Arg<__m128, 16>(f, arg_info) {}
@@ -7949,6 +7970,8 @@ struct function : function_cdecl<R, Derived, A1, A2, A3, A4, A5, A6, A7, A8, A9,
 
 }	// namespace jitasm
 
+#if defined(_MSC_VER)
 #pragma warning( pop )
+#endif
 
 #endif	// #ifndef JITASM_H
