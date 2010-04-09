@@ -6288,6 +6288,7 @@ namespace detail
 {
 	struct CondExpr {
 		virtual void operator()(Frontend& f, size_t beg, size_t end) const = 0;
+		virtual ~CondExpr() {}
 	};
 
 	// &&
