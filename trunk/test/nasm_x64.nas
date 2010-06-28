@@ -329,6 +329,18 @@ nasm_test_avx_d:
 
 global	nasm_test_avx_r
 nasm_test_avx_r:
+	vucomisd xmm4, xmm6
+	vucomisd xmm3, qword [ebp]
+	vucomiss xmm0, xmm7
+	vucomiss xmm1, dword [ebx]
+	vunpckhpd xmm1, xmm2, xmm3
+	vunpckhpd xmm1, xmm2, oword [edi]
+	vunpckhpd ymm1, ymm2, ymm4
+	vunpckhpd ymm1, ymm2, yword [esi]
+	vunpckhps xmm1, xmm2, xmm3
+	vunpckhps xmm1, xmm2, oword [edi]
+	vunpckhps ymm1, ymm2, ymm4
+	vunpckhps ymm1, ymm2, yword [esi]
 	vunpcklpd xmm1, xmm2, xmm3
 	vunpcklpd xmm1, xmm2, oword [edi]
 	vunpcklpd ymm1, ymm2, ymm4

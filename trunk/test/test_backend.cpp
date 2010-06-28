@@ -4305,6 +4305,18 @@ struct test_avx_r : jitasm::function<void, test_avx_r>
 {
 	void naked_main()
 	{
+		vucomisd(xmm4, xmm6);
+		vucomisd(xmm3, qword_ptr[ebp]);
+		vucomiss(xmm0, xmm7);
+		vucomiss(xmm1, dword_ptr[ebx]);
+		vunpckhpd(xmm1, xmm2, xmm3);
+		vunpckhpd(xmm1, xmm2, xmmword_ptr[edi]);
+		vunpckhpd(ymm1, ymm2, ymm4);
+		vunpckhpd(ymm1, ymm2, ymmword_ptr[esi]);
+		vunpckhps(xmm1, xmm2, xmm3);
+		vunpckhps(xmm1, xmm2, xmmword_ptr[edi]);
+		vunpckhps(ymm1, ymm2, ymm4);
+		vunpckhps(ymm1, ymm2, ymmword_ptr[esi]);
 		vunpcklpd(xmm1, xmm2, xmm3);
 		vunpcklpd(xmm1, xmm2, xmmword_ptr[edi]);
 		vunpcklpd(ymm1, ymm2, ymm4);
