@@ -31,7 +31,9 @@ nasm_test_avx_a:
 	vaddps xmm1, xmm2, [edx]
 	vaddps ymm1, ymm2, ymm3
 	vaddps ymm1, ymm2, [edx]
+	vaddsd xmm1, xmm2, xmm4
 	vaddsd xmm1, xmm2, [edx]
+	vaddss xmm1, xmm2, xmm5
 	vaddss xmm1, xmm2, [edx]
 	vaddsubpd xmm1, xmm2, xmm3
 	vaddsubpd xmm1, xmm2, [edx]
@@ -329,6 +331,18 @@ nasm_test_avx_d:
 
 global	nasm_test_avx_r
 nasm_test_avx_r:
+	vsubpd xmm1, xmm2, xmm3
+	vsubpd xmm1, xmm2, [edx]
+	vsubpd ymm1, ymm2, ymm3
+	vsubpd ymm1, ymm2, [edx]
+	vsubps xmm1, xmm2, xmm3
+	vsubps xmm1, xmm2, [edx]
+	vsubps ymm1, ymm2, ymm3
+	vsubps ymm1, ymm2, [edx]
+	vsubsd xmm1, xmm2, xmm4
+	vsubsd xmm1, xmm2, [edx]
+	vsubss xmm1, xmm2, xmm5
+	vsubss xmm1, xmm2, [edx]
 	vucomisd xmm4, xmm6
 	vucomisd xmm3, qword [ebp]
 	vucomiss xmm0, xmm7
