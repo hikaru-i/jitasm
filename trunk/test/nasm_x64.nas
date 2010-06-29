@@ -328,6 +328,12 @@ nasm_test_avx_d:
 	vpavgw xmm1, xmm2, oword [edx]
 	vpblendvb xmm1, xmm2, oword [edx], xmm4
 	vpblendvb xmm1, xmm2, xmm3, xmm4
+	vpblendw xmm1, xmm2, oword [edx], 5
+	vpblendw xmm1, xmm2, xmm3, 5
+	pclmulqdq xmm1, oword [edx], 1
+	pclmulqdq xmm1, xmm2, 1
+	vpclmulqdq xmm1, xmm2, oword [edx], 1
+	vpclmulqdq xmm1, xmm2, xmm3, 1
 
 global	nasm_test_avx_r
 nasm_test_avx_r:

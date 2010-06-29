@@ -38,28 +38,28 @@ _nasm_test_avx_a:
 	vaddsubps xmm1, xmm2, [edx]
 	vaddsubps ymm1, ymm2, ymm3
 	vaddsubps ymm1, ymm2, [edx]
-	;aesenc xmm1, xmm2
-	;aesenc xmm1, [edx]
+	aesenc xmm1, xmm2
+	aesenc xmm1, [edx]
 	vaesenc xmm1, xmm2, xmm3
 	vaesenc xmm1, xmm2, [edx]
-	;aesenclast xmm1, xmm2
-	;aesenclast xmm1, [edx]
+	aesenclast xmm1, xmm2
+	aesenclast xmm1, [edx]
 	vaesenclast xmm1, xmm2, xmm3
 	vaesenclast xmm1, xmm2, [edx]
-	;aesdec xmm1, xmm2
-	;aesdec xmm1, [edx]
+	aesdec xmm1, xmm2
+	aesdec xmm1, [edx]
 	vaesdec xmm1, xmm2, xmm3
 	vaesdec xmm1, xmm2, [edx]
-	;aesdeclast xmm1, xmm2
-	;aesdeclast xmm1, [edx]
+	aesdeclast xmm1, xmm2
+	aesdeclast xmm1, [edx]
 	vaesdeclast xmm1, xmm2, xmm3
 	vaesdeclast xmm1, xmm2, [edx]
-	;aesimc xmm1, xmm2
-	;aesimc xmm1, [edx]
+	aesimc xmm1, xmm2
+	aesimc xmm1, [edx]
 	vaesimc xmm1, xmm2
 	vaesimc xmm1, [edx]
-	;aeskeygenassist xmm1, xmm2, 3
-	;aeskeygenassist xmm1, [edx], 3
+	aeskeygenassist xmm1, xmm2, 3
+	aeskeygenassist xmm1, [edx], 3
 	vaeskeygenassist xmm1, xmm2, 3
 	vaeskeygenassist xmm1, [edx], 3
 	vandpd xmm1, xmm2, xmm3
@@ -276,6 +276,12 @@ _nasm_test_avx_d:
 	vpavgw xmm1, xmm2, oword [edx]
 	vpblendvb xmm1, xmm2, oword [edx], xmm4
 	vpblendvb xmm1, xmm2, xmm3, xmm4
+	vpblendw xmm1, xmm2, oword [edx], 5
+	vpblendw xmm1, xmm2, xmm3, 5
+	pclmulqdq xmm1, oword [edx], 1
+	pclmulqdq xmm1, xmm2, 1
+	vpclmulqdq xmm1, xmm2, oword [edx], 1
+	vpclmulqdq xmm1, xmm2, xmm3, 1
 
 global	_nasm_test_avx_r
 _nasm_test_avx_r:

@@ -740,6 +740,7 @@ enum InstrID
 	I_VBROADCASTSS, I_VBROADCASTSD, I_VBROADCASTF128, I_VEXTRACTF128, I_VINSERTF128, I_VZEROALL, I_VZEROUPPER,
 
 	I_AESENC, I_AESENCLAST, I_AESDEC, I_AESDECLAST, I_AESIMC, I_AESKEYGENASSIST,
+	I_PCLMULQDQ,
 
 	// jitasm compiler instructions
 	I_COMPILER_DECLARE_REG_ARG,		///< Declare register argument
@@ -4117,6 +4118,12 @@ struct Frontend
 	void vpavgw(const XmmReg& dst, const XmmReg& src1, const Mem128& src2) 	{AppendInstr(I_PAVGW, 0xE3, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
 	void vpblendvb(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2, const XmmReg& mask) 	{AppendInstr(I_PBLENDVB, 0x4C, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), R(src1), R(mask));}
 	void vpblendvb(const XmmReg& dst, const XmmReg& src1, const Mem128& src2, const XmmReg& mask) 	{AppendInstr(I_PBLENDVB, 0x4C, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), R(src1), R(mask));}
+	void vpblendw(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2, const Imm8& mask) 		{AppendInstr(I_PBLENDW, 0x0E, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), R(src1), R(mask));}
+	void vpblendw(const XmmReg& dst, const XmmReg& src1, const Mem128& src2, const Imm8& mask) 		{AppendInstr(I_PBLENDW, 0x0E, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), R(src1), R(mask));}
+	void pclmulqdq(const XmmReg& dst, const XmmReg& src, const Imm8& mask) 	{AppendInstr(I_PCLMULQDQ, 0x0F3A44, E_MANDATORY_PREFIX_66, RW(dst), R(src), R(mask));}
+	void pclmulqdq(const XmmReg& dst, const Mem128& src, const Imm8& mask) 	{AppendInstr(I_PCLMULQDQ, 0x0F3A44, E_MANDATORY_PREFIX_66, RW(dst), R(src), R(mask));}
+	void vpclmulqdq(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2, const Imm8& mask) 	{AppendInstr(I_PCLMULQDQ, 0x44, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), R(src1), R(mask));}
+	void vpclmulqdq(const XmmReg& dst, const XmmReg& src1, const Mem128& src2, const Imm8& mask) 	{AppendInstr(I_PCLMULQDQ, 0x44, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), R(src1), R(mask));}
 
 	void vsubpd(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_SUBPD, 0x5C, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
 	void vsubpd(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_SUBPD, 0x5C, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
