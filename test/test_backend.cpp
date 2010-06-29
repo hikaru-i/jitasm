@@ -3970,7 +3970,9 @@ struct test_avx_a : jitasm::function<void, test_avx_a>
 		vaddps(xmm1, xmm2, xmmword_ptr[edx]);
 		vaddps(ymm1, ymm2, ymm3);
 		vaddps(ymm1, ymm2, ymmword_ptr[edx]);
+		vaddsd(xmm1, xmm2, xmm4);
 		vaddsd(xmm1, xmm2, qword_ptr[edx]);
+		vaddss(xmm1, xmm2, xmm5);
 		vaddss(xmm1, xmm2, dword_ptr[edx]);
 		vaddsubpd(xmm1, xmm2, xmm3);
 		vaddsubpd(xmm1, xmm2, xmmword_ptr[edx]);
@@ -4305,6 +4307,18 @@ struct test_avx_r : jitasm::function<void, test_avx_r>
 {
 	void naked_main()
 	{
+		vsubpd(xmm1, xmm2, xmm3);
+		vsubpd(xmm1, xmm2, xmmword_ptr[edx]);
+		vsubpd(ymm1, ymm2, ymm3);
+		vsubpd(ymm1, ymm2, ymmword_ptr[edx]);
+		vsubps(xmm1, xmm2, xmm3);
+		vsubps(xmm1, xmm2, xmmword_ptr[edx]);
+		vsubps(ymm1, ymm2, ymm3);
+		vsubps(ymm1, ymm2, ymmword_ptr[edx]);
+		vsubsd(xmm1, xmm2, xmm4);
+		vsubsd(xmm1, xmm2, qword_ptr[edx]);
+		vsubss(xmm1, xmm2, xmm5);
+		vsubss(xmm1, xmm2, dword_ptr[edx]);
 		vucomisd(xmm4, xmm6);
 		vucomisd(xmm3, qword_ptr[ebp]);
 		vucomiss(xmm0, xmm7);
