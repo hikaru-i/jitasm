@@ -285,6 +285,7 @@ _nasm_test_avx_d:
 
 global	_nasm_test_avx_r
 _nasm_test_avx_r:
+	vstmxcsr dword [esi]
 	vsubpd xmm1, xmm2, xmm3
 	vsubpd xmm1, xmm2, [edx]
 	vsubpd ymm1, ymm2, ymm3
