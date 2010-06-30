@@ -4125,6 +4125,18 @@ struct Frontend
 	void vpclmulqdq(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2, const Imm8& mask) 	{AppendInstr(I_PCLMULQDQ, 0x44, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), R(src1), R(mask));}
 	void vpclmulqdq(const XmmReg& dst, const XmmReg& src1, const Mem128& src2, const Imm8& mask) 	{AppendInstr(I_PCLMULQDQ, 0x44, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), R(src1), R(mask));}
 
+	void vsqrtpd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_SQRTPD, 0x51, E_VEX_128 | E_VEX_66_0F, W(dst), R(src));}
+	void vsqrtpd(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_SQRTPD, 0x51, E_VEX_128 | E_VEX_66_0F, W(dst), R(src));}
+	void vsqrtpd(const YmmReg& dst, const YmmReg& src)	{AppendInstr(I_SQRTPD, 0x51, E_VEX_256 | E_VEX_66_0F, W(dst), R(src));}
+	void vsqrtpd(const YmmReg& dst, const Mem256& src)	{AppendInstr(I_SQRTPD, 0x51, E_VEX_256 | E_VEX_66_0F, W(dst), R(src));}
+	void vsqrtps(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_SQRTPS, 0x51, E_VEX_128 | E_VEX_0F, W(dst), R(src));}
+	void vsqrtps(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_SQRTPS, 0x51, E_VEX_128 | E_VEX_0F, W(dst), R(src));}
+	void vsqrtps(const YmmReg& dst, const YmmReg& src)	{AppendInstr(I_SQRTPS, 0x51, E_VEX_256 | E_VEX_0F, W(dst), R(src));}
+	void vsqrtps(const YmmReg& dst, const Mem256& src)	{AppendInstr(I_SQRTPS, 0x51, E_VEX_256 | E_VEX_0F, W(dst), R(src));}
+	void vsqrtsd(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_SQRTSD, 0x51, E_VEX_128 | E_VEX_F2_0F, W(dst), R(src2), R(src1));}
+	void vsqrtsd(const XmmReg& dst, const XmmReg& src1, const Mem64& src2)	{AppendInstr(I_SQRTSD, 0x51, E_VEX_128 | E_VEX_F2_0F, W(dst), R(src2), R(src1));}
+	void vsqrtss(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_SQRTSS, 0x51, E_VEX_128 | E_VEX_F3_0F, W(dst), R(src2), R(src1));}
+	void vsqrtss(const XmmReg& dst, const XmmReg& src1, const Mem32& src2)	{AppendInstr(I_SQRTSS, 0x51, E_VEX_128 | E_VEX_F3_0F, W(dst), R(src2), R(src1));}
 	void vstmxcsr(const Mem32& dst)											{AppendInstr(I_STMXCSR,	0xAE, E_VEX_128 | E_VEX_0F, Imm8(3), W(dst));}
 	void vsubpd(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_SUBPD, 0x5C, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
 	void vsubpd(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_SUBPD, 0x5C, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
