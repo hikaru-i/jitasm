@@ -337,6 +337,18 @@ nasm_test_avx_d:
 
 global	nasm_test_avx_r
 nasm_test_avx_r:
+	vsqrtpd xmm7, xmm3
+	vsqrtpd xmm7, [edx]
+	vsqrtpd ymm7, ymm3
+	vsqrtpd ymm7, [edx]
+	vsqrtps xmm7, xmm3
+	vsqrtps xmm7, [edx]
+	vsqrtps ymm7, ymm3
+	vsqrtps ymm7, [edx]
+	vsqrtsd xmm7, xmm2, xmm4
+	vsqrtsd xmm7, xmm2, [edx]
+	vsqrtss xmm7, xmm2, xmm5
+	vsqrtss xmm7, xmm2, [edx]
 	vstmxcsr dword [esi]
 	vsubpd xmm1, xmm2, xmm3
 	vsubpd xmm1, xmm2, [edx]
