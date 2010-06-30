@@ -4313,6 +4313,7 @@ struct test_avx_r : jitasm::function<void, test_avx_r>
 {
 	void naked_main()
 	{
+		vstmxcsr(dword_ptr[esi]);
 		vsubpd(xmm1, xmm2, xmm3);
 		vsubpd(xmm1, xmm2, xmmword_ptr[edx]);
 		vsubpd(ymm1, ymm2, ymm3);
