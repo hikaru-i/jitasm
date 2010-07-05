@@ -4302,6 +4302,14 @@ struct test_avx_d : jitasm::function<void, test_avx_d>
 		pclmulqdq(xmm1, xmm2, 1);
 		vpclmulqdq(xmm1, xmm2, xmmword_ptr[edx], 1);
 		vpclmulqdq(xmm1, xmm2, xmm3, 1);
+		vpcmpestri(zcx, xmm2, zax, xmm1, zdx, 0);
+		vpcmpestri(zcx, xmm2, zax, xmmword_ptr[esi], zdx, 0);
+		vpcmpestrm(xmm0, xmm2, zax, xmm1, zdx, 1);
+		vpcmpestrm(xmm0, xmm2, zax, xmmword_ptr[esi], zdx, 1);
+		vpcmpistri(zcx, xmm2, xmm1, 0);
+		vpcmpistri(zcx, xmm2, xmmword_ptr[esi], 0);
+		vpcmpistrm(xmm0, xmm2, xmm1, 1);
+		vpcmpistrm(xmm0, xmm2, xmmword_ptr[esi], 1);
 	}
 };
 
