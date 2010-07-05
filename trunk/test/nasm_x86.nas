@@ -282,6 +282,14 @@ _nasm_test_avx_d:
 	pclmulqdq xmm1, xmm2, 1
 	vpclmulqdq xmm1, xmm2, oword [edx], 1
 	vpclmulqdq xmm1, xmm2, xmm3, 1
+	vpcmpestri xmm2, xmm1, 0
+	vpcmpestri xmm2, oword [esi], 0
+	vpcmpestrm xmm2, xmm1, 1
+	vpcmpestrm xmm2, oword [esi], 1
+	vpcmpistri xmm2, xmm1, 0
+	vpcmpistri xmm2, oword [esi], 0
+	vpcmpistrm xmm2, xmm1, 1
+	vpcmpistrm xmm2, oword [esi], 1
 
 global	_nasm_test_avx_r
 _nasm_test_avx_r:
