@@ -277,7 +277,23 @@ nasm_test_avx_d:
 	vlddqu xmm1, oword [edx]
 	vlddqu ymm1, yword [edx]
 	vldmxcsr [edx]
- 
+	vmaskmovdqu xmm1, xmm2
+	vmaskmovps xmm1, xmm2, oword [edx]
+	vmaskmovps ymm1, ymm2, yword [edx]
+	vmaskmovpd xmm1, xmm2, oword [edx]
+	vmaskmovpd ymm1, ymm2, yword [edx]
+	vmaskmovps oword [edx], xmm2, xmm3
+	db 0x67	;vmaskmovps yword [edx], ymm2, ymm3
+	db 0xC4
+	db 0xE2
+	db 0x6D
+	db 0x2E
+	db 0x1A
+	vmaskmovpd oword [edx], xmm2, xmm3
+	vmaskmovpd yword [edx], ymm2, ymm3
+
+global	nasm_test_avx_o
+nasm_test_avx_o:
 	vorpd xmm1, xmm2, xmm3
 	vorpd xmm1, xmm2, oword [edx]
 	vorpd ymm1, ymm2, ymm3
@@ -344,6 +360,17 @@ nasm_test_avx_d:
 	vpcmpistri xmm2, oword [esi], 0
 	vpcmpistrm xmm2, xmm1, 1
 	vpcmpistrm xmm2, oword [esi], 1
+	db 0xC4	;vpcmpeqq xmm0, xmm1, xmm2
+	db 0xE2
+	db 0x71
+	db 0x29
+	db 0xC2
+	db 0x67	;vpcmpeqq xmm0, xmm1, oword [esi]
+	db 0xC4
+	db 0xE2
+	db 0x71
+	db 0x29
+	db 0x06
 
 global	nasm_test_avx_r
 nasm_test_avx_r:

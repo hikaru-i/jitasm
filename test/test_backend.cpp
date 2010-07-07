@@ -4245,7 +4245,26 @@ struct test_avx_d : jitasm::function<void, test_avx_d>
 		vlddqu(xmm1, xmmword_ptr[edx]);
 		vlddqu(ymm1, ymmword_ptr[edx]);
 		vldmxcsr(dword_ptr[edx]);
+		vmaskmovdqu(xmm1, xmm2, zdi);
+		vmaskmovps(xmm1, xmm2, xmmword_ptr[edx]);
+		vmaskmovps(ymm1, ymm2, ymmword_ptr[edx]);
+		vmaskmovpd(xmm1, xmm2, xmmword_ptr[edx]);
+		vmaskmovpd(ymm1, ymm2, ymmword_ptr[edx]);
+		vmaskmovps(xmmword_ptr[edx], xmm2, xmm3);
+		vmaskmovps(ymmword_ptr[edx], ymm2, ymm3);
+		vmaskmovpd(xmmword_ptr[edx], xmm2, xmm3);
+		vmaskmovpd(ymmword_ptr[edx], ymm2, ymm3);
+	}
+};
 
+//----------------------------------------
+// AVX O~
+//----------------------------------------
+extern "C" void nasm_test_avx_o();
+struct test_avx_o : jitasm::function<void, test_avx_o>
+{
+	void naked_main()
+	{
 		vorpd(xmm1, xmm2, xmm3);
 		vorpd(xmm1, xmm2, xmmword_ptr[edx]);
 		vorpd(ymm1, ymm2, ymm3);
@@ -4310,6 +4329,14 @@ struct test_avx_d : jitasm::function<void, test_avx_d>
 		vpcmpistri(zcx, xmm2, xmmword_ptr[esi], 0);
 		vpcmpistrm(xmm0, xmm2, xmm1, 1);
 		vpcmpistrm(xmm0, xmm2, xmmword_ptr[esi], 1);
+		vpcmpeqb(xmm0, xmm1, xmm2);
+		vpcmpeqb(xmm0, xmm1, xmmword_ptr[esi]);
+		vpcmpeqw(xmm0, xmm1, xmm2);
+		vpcmpeqw(xmm0, xmm1, xmmword_ptr[esi]);
+		vpcmpeqd(xmm0, xmm1, xmm2);
+		vpcmpeqd(xmm0, xmm1, xmmword_ptr[esi]);
+		vpcmpeqq(xmm0, xmm1, xmm2);
+		vpcmpeqq(xmm0, xmm1, xmmword_ptr[esi]);
 	}
 };
 
@@ -4434,6 +4461,6 @@ void test_backend()
 	TEST_N(test_avx_a);
 	TEST_N(test_avx_b);
 	TEST_N(test_avx_d);
-
+	TEST_N(test_avx_o);
 	TEST_N(test_avx_r);
 }
