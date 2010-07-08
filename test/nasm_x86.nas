@@ -238,6 +238,18 @@ _nasm_test_avx_d:
 	db 0x1A
 	vmaskmovpd oword [edx], xmm2, xmm3
 	vmaskmovpd yword [edx], ymm2, ymm3
+	vmaxpd xmm1, xmm2, xmm3
+	vmaxpd xmm1, xmm2, oword [edx]
+	vmaxpd ymm1, ymm2, ymm3
+	vmaxpd ymm1, ymm2, yword [edx]
+	vmaxps xmm1, xmm2, xmm3
+	vmaxps xmm1, xmm2, oword [edx]
+	vmaxps ymm1, ymm2, ymm3
+	vmaxps ymm1, ymm2, yword [edx]
+	vmaxsd xmm1, xmm2, xmm3
+	vmaxsd xmm1, xmm2, qword [edx]
+	vmaxss xmm1, xmm2, xmm3
+	vmaxss xmm1, xmm2, dword [edx]
 
 global	_nasm_test_avx_o
 _nasm_test_avx_o:

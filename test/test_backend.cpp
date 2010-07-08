@@ -4254,6 +4254,18 @@ struct test_avx_d : jitasm::function<void, test_avx_d>
 		vmaskmovps(ymmword_ptr[edx], ymm2, ymm3);
 		vmaskmovpd(xmmword_ptr[edx], xmm2, xmm3);
 		vmaskmovpd(ymmword_ptr[edx], ymm2, ymm3);
+		vmaxpd(xmm1, xmm2, xmm3);
+		vmaxpd(xmm1, xmm2, xmmword_ptr[edx]);
+		vmaxpd(ymm1, ymm2, ymm3);
+		vmaxpd(ymm1, ymm2, ymmword_ptr[edx]);
+		vmaxps(xmm1, xmm2, xmm3);
+		vmaxps(xmm1, xmm2, xmmword_ptr[edx]);
+		vmaxps(ymm1, ymm2, ymm3);
+		vmaxps(ymm1, ymm2, ymmword_ptr[edx]);
+		vmaxsd(xmm1, xmm2, xmm3);
+		vmaxsd(xmm1, xmm2, qword_ptr[edx]);
+		vmaxss(xmm1, xmm2, xmm3);
+		vmaxss(xmm1, xmm2, dword_ptr[edx]);
 	}
 };
 
