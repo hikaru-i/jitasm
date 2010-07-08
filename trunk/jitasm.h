@@ -877,7 +877,6 @@ struct Backend
 
 			uint8 wrxb = GetWRXB(flag & E_VEX_W, reg, r_m);
 			if (wrxb & 0xB || (flag & (E_VEX_0F38 | E_VEX_0F3A))) {
-			//if (wrxb & 0xB || (flag & (E_VEX_0F3A))) {
 				uint8 mmmmm = 0;
 				if (flag & E_VEX_0F) mmmmm = 1;
 				else if (flag & E_VEX_0F38) mmmmm = 2;
@@ -4074,6 +4073,18 @@ struct Frontend
 	void vmaskmovps(const Mem256& dst, const YmmReg& mask, const YmmReg& src)	{AppendInstr(I_VMASKMOVPS, 0x2E, E_VEX_256 | E_VEX_66_0F38, R(src), W(dst), R(mask));}
 	void vmaskmovpd(const Mem128& dst, const XmmReg& mask, const XmmReg& src)	{AppendInstr(I_VMASKMOVPD, 0x2F, E_VEX_128 | E_VEX_66_0F38, R(src), W(dst), R(mask));}
 	void vmaskmovpd(const Mem256& dst, const YmmReg& mask, const YmmReg& src)	{AppendInstr(I_VMASKMOVPD, 0x2F, E_VEX_256 | E_VEX_66_0F38, R(src), W(dst), R(mask));}
+	void vmaxpd(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_MAXPD, 0x5F, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
+	void vmaxpd(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_MAXPD, 0x5F, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
+	void vmaxpd(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2)	{AppendInstr(I_MAXPD, 0x5F, E_VEX_256 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
+	void vmaxpd(const YmmReg& dst, const YmmReg& src1, const Mem256& src2)	{AppendInstr(I_MAXPD, 0x5F, E_VEX_256 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
+	void vmaxps(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_MAXPS, 0x5F, E_VEX_128 | E_VEX_0F, W(dst), R(src2), R(src1));}
+	void vmaxps(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_MAXPS, 0x5F, E_VEX_128 | E_VEX_0F, W(dst), R(src2), R(src1));}
+	void vmaxps(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2)	{AppendInstr(I_MAXPS, 0x5F, E_VEX_256 | E_VEX_0F, W(dst), R(src2), R(src1));}
+	void vmaxps(const YmmReg& dst, const YmmReg& src1, const Mem256& src2)	{AppendInstr(I_MAXPS, 0x5F, E_VEX_256 | E_VEX_0F, W(dst), R(src2), R(src1));}
+	void vmaxsd(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_MAXSD, 0x5F, E_VEX_128 | E_VEX_F2_0F, W(dst), R(src2), R(src1));}
+	void vmaxsd(const XmmReg& dst, const XmmReg& src1, const Mem64& src2)	{AppendInstr(I_MAXSD, 0x5F, E_VEX_128 | E_VEX_F2_0F, W(dst), R(src2), R(src1));}
+	void vmaxss(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_MAXSS, 0x5F, E_VEX_128 | E_VEX_F3_0F, W(dst), R(src2), R(src1));}
+	void vmaxss(const XmmReg& dst, const XmmReg& src1, const Mem32& src2)	{AppendInstr(I_MAXSS, 0x5F, E_VEX_128 | E_VEX_F3_0F, W(dst), R(src2), R(src1));}
 
 	void vmovaps(const XmmReg& dst, const XmmReg& src)		{AppendInstr(I_MOVAPS, 0x28, E_VEX_128 | E_VEX_0F, W(dst), R(src));}
 	void vmovaps(const XmmReg& dst, const Mem128& src)		{AppendInstr(I_MOVAPS, 0x28, E_VEX_128 | E_VEX_0F, W(dst), R(src));}
