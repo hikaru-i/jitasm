@@ -362,8 +362,6 @@ nasm_test_avx_o:
 	pclmulqdq xmm1, xmm2, 1
 	vpclmulqdq xmm1, xmm2, oword [edx], 1
 	vpclmulqdq xmm1, xmm2, xmm3, 1
-	vpclmulqdq xmm1, xmm2, oword [edx], 1
-	vpclmulqdq xmm1, xmm2, xmm3, 1
 	vpcmpestri xmm2, xmm1, 0
 	vpcmpestri xmm2, oword [esi], 0
 	vpcmpestrm xmm2, xmm1, 1
@@ -372,6 +370,12 @@ nasm_test_avx_o:
 	vpcmpistri xmm2, oword [esi], 0
 	vpcmpistrm xmm2, xmm1, 1
 	vpcmpistrm xmm2, oword [esi], 1
+	vpcmpeqb xmm0, xmm1, xmm2
+	vpcmpeqb xmm0, xmm1, oword [esi]
+	vpcmpeqw xmm0, xmm1, xmm2
+	vpcmpeqw xmm0, xmm1, oword [esi]
+	vpcmpeqd xmm0, xmm1, xmm2
+	vpcmpeqd xmm0, xmm1, oword [esi]
 	db 0xC4	;vpcmpeqq xmm0, xmm1, xmm2
 	db 0xE2
 	db 0x71
@@ -386,6 +390,14 @@ nasm_test_avx_o:
 
 global	nasm_test_avx_r
 nasm_test_avx_r:
+	vshufpd xmm1, xmm3, xmm4, 1
+	vshufpd xmm1, xmm3, [esi], 2
+	vshufpd ymm2, ymm0, ymm5, 3
+	vshufpd ymm2, ymm0, [esi], 4
+	vshufps xmm1, xmm3, xmm5, 5
+	vshufps xmm1, xmm3, [esi], 6
+	vshufps ymm2, ymm0, ymm6, 7
+	vshufps ymm2, ymm0, [esi], 8
 	vsqrtpd xmm7, xmm3
 	vsqrtpd xmm7, [edx]
 	vsqrtpd ymm7, ymm3

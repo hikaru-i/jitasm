@@ -4360,6 +4360,14 @@ struct test_avx_r : jitasm::function<void, test_avx_r>
 {
 	void naked_main()
 	{
+		vshufpd(xmm1, xmm3, xmm4, 1);
+		vshufpd(xmm1, xmm3, xmmword_ptr[esi], 2);
+		vshufpd(ymm2, ymm0, ymm5, 3);
+		vshufpd(ymm2, ymm0, ymmword_ptr[esi], 4);
+		vshufps(xmm1, xmm3, xmm5, 5);
+		vshufps(xmm1, xmm3, xmmword_ptr[esi], 6);
+		vshufps(ymm2, ymm0, ymm6, 7);
+		vshufps(ymm2, ymm0, ymmword_ptr[esi], 8);
 		vsqrtpd(xmm7, xmm3);
 		vsqrtpd(xmm7, xmmword_ptr[edx]);
 		vsqrtpd(ymm7, ymm3);

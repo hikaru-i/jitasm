@@ -4166,6 +4166,14 @@ struct Frontend
 	void vpcmpeqq(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_PCMPEQQ,	0x29, E_VEX_128 | E_VEX_66_0F38, W(dst), R(src2), R(src1));}
 	void vpcmpeqq(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_PCMPEQQ,	0x29, E_VEX_128 | E_VEX_66_0F38, W(dst), R(src2), R(src1));}
 
+	void vshufpd(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2, const Imm8& sel)	{AppendInstr(I_SHUFPD, 0xC6, E_VEX_128 | E_VEX_66_0F, RW(dst), R(src2), R(src1), sel);}
+	void vshufpd(const XmmReg& dst, const XmmReg& src1, const Mem128& src2, const Imm8& sel)	{AppendInstr(I_SHUFPD, 0xC6, E_VEX_128 | E_VEX_66_0F, RW(dst), R(src2), R(src1), sel);}
+	void vshufpd(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2, const Imm8& sel)	{AppendInstr(I_SHUFPD, 0xC6, E_VEX_256 | E_VEX_66_0F, RW(dst), R(src2), R(src1), sel);}
+	void vshufpd(const YmmReg& dst, const YmmReg& src1, const Mem256& src2, const Imm8& sel)	{AppendInstr(I_SHUFPD, 0xC6, E_VEX_256 | E_VEX_66_0F, RW(dst), R(src2), R(src1), sel);}
+	void vshufps(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2, const Imm8& sel)	{AppendInstr(I_SHUFPS, 0xC6, E_VEX_128 | E_VEX_0F, RW(dst), R(src2), R(src1), sel);}
+	void vshufps(const XmmReg& dst, const XmmReg& src1, const Mem128& src2, const Imm8& sel)	{AppendInstr(I_SHUFPS, 0xC6, E_VEX_128 | E_VEX_0F, RW(dst), R(src2), R(src1), sel);}
+	void vshufps(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2, const Imm8& sel)	{AppendInstr(I_SHUFPS, 0xC6, E_VEX_256 | E_VEX_0F, RW(dst), R(src2), R(src1), sel);}
+	void vshufps(const YmmReg& dst, const YmmReg& src1, const Mem256& src2, const Imm8& sel)	{AppendInstr(I_SHUFPS, 0xC6, E_VEX_256 | E_VEX_0F, RW(dst), R(src2), R(src1), sel);}
 	void vsqrtpd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_SQRTPD, 0x51, E_VEX_128 | E_VEX_66_0F, W(dst), R(src));}
 	void vsqrtpd(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_SQRTPD, 0x51, E_VEX_128 | E_VEX_66_0F, W(dst), R(src));}
 	void vsqrtpd(const YmmReg& dst, const YmmReg& src)	{AppendInstr(I_SQRTPD, 0x51, E_VEX_256 | E_VEX_66_0F, W(dst), R(src));}

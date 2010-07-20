@@ -336,6 +336,14 @@ _nasm_test_avx_o:
 
 global	_nasm_test_avx_r
 _nasm_test_avx_r:
+	vshufpd xmm1, xmm3, xmm4, 1
+	vshufpd xmm1, xmm3, [esi], 2
+	vshufpd ymm2, ymm0, ymm5, 3
+	vshufpd ymm2, ymm0, [esi], 4
+	vshufps xmm1, xmm3, xmm5, 5
+	vshufps xmm1, xmm3, [esi], 6
+	vshufps ymm2, ymm0, ymm6, 7
+	vshufps ymm2, ymm0, [esi], 8
 	vsqrtpd xmm7, xmm3
 	vsqrtpd xmm7, [edx]
 	vsqrtpd ymm7, ymm3
