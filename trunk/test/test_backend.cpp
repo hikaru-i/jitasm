@@ -4266,6 +4266,30 @@ struct test_avx_d : jitasm::function<void, test_avx_d>
 		vmaxsd(xmm1, xmm2, qword_ptr[edx]);
 		vmaxss(xmm1, xmm2, xmm3);
 		vmaxss(xmm1, xmm2, dword_ptr[edx]);
+		vminpd(xmm1, xmm2, xmm3);
+		vminpd(xmm1, xmm2, xmmword_ptr[edx]);
+		vminpd(ymm1, ymm2, ymm3);
+		vminpd(ymm1, ymm2, ymmword_ptr[edx]);
+		vminps(xmm1, xmm2, xmm3);
+		vminps(xmm1, xmm2, xmmword_ptr[edx]);
+		vminps(ymm1, ymm2, ymm3);
+		vminps(ymm1, ymm2, ymmword_ptr[edx]);
+		vminsd(xmm1, xmm2, xmm3);
+		vminsd(xmm1, xmm2, qword_ptr[edx]);
+		vminss(xmm1, xmm2, xmm3);
+		vminss(xmm1, xmm2, dword_ptr[edx]);
+		vmovapd(xmm1, xmm2);
+		vmovapd(xmm1, xmmword_ptr[edx]);
+		vmovapd(xmmword_ptr[edx], xmm2);
+		vmovapd(ymm1, ymm2);
+		vmovapd(ymm1, ymmword_ptr[edx]);
+		vmovapd(ymmword_ptr[edx], ymm2);
+		vmovaps(xmm1, xmm2);
+		vmovaps(xmm1, xmmword_ptr[edx]);
+		vmovaps(xmmword_ptr[edx], xmm2);
+		vmovaps(ymm1, ymm2);
+		vmovaps(ymm1, ymmword_ptr[edx]);
+		vmovaps(ymmword_ptr[edx], ymm2);
 	}
 };
 
