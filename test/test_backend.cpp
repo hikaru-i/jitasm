@@ -4290,6 +4290,16 @@ struct test_avx_d : jitasm::function<void, test_avx_d>
 		vmovaps(ymm1, ymm2);
 		vmovaps(ymm1, ymmword_ptr[edx]);
 		vmovaps(ymmword_ptr[edx], ymm2);
+		vmovd(xmm1, edx);
+		vmovd(xmm1, dword_ptr[edx]);
+		vmovd(edx, xmm2);
+		vmovd(dword_ptr[edx], xmm2);
+#ifdef JITASM64
+		vmovq(xmm1, rdx);
+		vmovq(xmm1, qword_ptr[rdx]);
+		vmovq(rdx, xmm2);
+		vmovq(qword_ptr[rdx], xmm2);
+#endif
 	}
 };
 

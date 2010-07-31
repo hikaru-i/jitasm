@@ -4109,6 +4109,16 @@ struct Frontend
 	void vmovaps(const YmmReg& dst, const YmmReg& src)	{AppendInstr(I_MOVAPS, 0x28, E_VEX_256 | E_VEX_0F, W(dst), R(src));}
 	void vmovaps(const YmmReg& dst, const Mem256& src)	{AppendInstr(I_MOVAPS, 0x28, E_VEX_256 | E_VEX_0F, W(dst), R(src));}
 	void vmovaps(const Mem256& dst, const YmmReg& src)	{AppendInstr(I_MOVAPS, 0x29, E_VEX_256 | E_VEX_0F, R(src), W(dst));}
+	void vmovd(const XmmReg& dst, const Reg32& src)		{AppendInstr(I_MOVD, 0x6E, E_VEX_128 | E_VEX_66_0F | E_VEX_W0, W(dst), R(src));}
+	void vmovd(const XmmReg& dst, const Mem32& src)		{AppendInstr(I_MOVD, 0x6E, E_VEX_128 | E_VEX_66_0F | E_VEX_W0, W(dst), R(src));}
+	void vmovd(const Reg32& dst, const XmmReg& src)		{AppendInstr(I_MOVD, 0x7E, E_VEX_128 | E_VEX_66_0F | E_VEX_W0, R(src), W(dst));}
+	void vmovd(const Mem32& dst, const XmmReg& src)		{AppendInstr(I_MOVD, 0x7E, E_VEX_128 | E_VEX_66_0F | E_VEX_W0, R(src), W(dst));}
+#ifdef JITASM64
+	void vmovq(const XmmReg& dst, const Reg64& src)		{AppendInstr(I_MOVQ, 0x6E, E_VEX_128 | E_VEX_66_0F | E_VEX_W1, W(dst), W(dst));}
+	void vmovq(const XmmReg& dst, const Mem64& src)		{AppendInstr(I_MOVQ, 0x6E, E_VEX_128 | E_VEX_66_0F | E_VEX_W1, W(dst), R(src));}
+	void vmovq(const Mem64& dst, const XmmReg& src)		{AppendInstr(I_MOVQ, 0x7E, E_VEX_128 | E_VEX_66_0F | E_VEX_W1, R(src), W(dst));}
+	void vmovq(const Reg64& dst, const XmmReg& src)		{AppendInstr(I_MOVQ, 0x7E, E_VEX_128 | E_VEX_66_0F | E_VEX_W1, R(src), W(dst));}
+#endif
 
 	void vorpd(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_ORPD, 0x56, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
 	void vorpd(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_ORPD, 0x56, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1));}
