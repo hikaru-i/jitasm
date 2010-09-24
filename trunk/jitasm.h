@@ -4193,14 +4193,26 @@ struct Frontend
 	void vpcmpeqq(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_PCMPEQQ,	0x29, E_VEX_128 | E_VEX_66_0F38, W(dst), R(src2), R(src1));}
 	void vpcmpeqq(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_PCMPEQQ,	0x29, E_VEX_128 | E_VEX_66_0F38, W(dst), R(src2), R(src1));}
 
-	void vshufpd(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2, const Imm8& sel)	{AppendInstr(I_SHUFPD, 0xC6, E_VEX_128 | E_VEX_66_0F, RW(dst), R(src2), R(src1), sel);}
-	void vshufpd(const XmmReg& dst, const XmmReg& src1, const Mem128& src2, const Imm8& sel)	{AppendInstr(I_SHUFPD, 0xC6, E_VEX_128 | E_VEX_66_0F, RW(dst), R(src2), R(src1), sel);}
-	void vshufpd(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2, const Imm8& sel)	{AppendInstr(I_SHUFPD, 0xC6, E_VEX_256 | E_VEX_66_0F, RW(dst), R(src2), R(src1), sel);}
-	void vshufpd(const YmmReg& dst, const YmmReg& src1, const Mem256& src2, const Imm8& sel)	{AppendInstr(I_SHUFPD, 0xC6, E_VEX_256 | E_VEX_66_0F, RW(dst), R(src2), R(src1), sel);}
-	void vshufps(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2, const Imm8& sel)	{AppendInstr(I_SHUFPS, 0xC6, E_VEX_128 | E_VEX_0F, RW(dst), R(src2), R(src1), sel);}
-	void vshufps(const XmmReg& dst, const XmmReg& src1, const Mem128& src2, const Imm8& sel)	{AppendInstr(I_SHUFPS, 0xC6, E_VEX_128 | E_VEX_0F, RW(dst), R(src2), R(src1), sel);}
-	void vshufps(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2, const Imm8& sel)	{AppendInstr(I_SHUFPS, 0xC6, E_VEX_256 | E_VEX_0F, RW(dst), R(src2), R(src1), sel);}
-	void vshufps(const YmmReg& dst, const YmmReg& src1, const Mem256& src2, const Imm8& sel)	{AppendInstr(I_SHUFPS, 0xC6, E_VEX_256 | E_VEX_0F, RW(dst), R(src2), R(src1), sel);}
+	void vroundpd(const XmmReg& dst, const XmmReg& src, const Imm8& mode)	{AppendInstr(I_ROUNDPD,	0x09, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src), mode);}
+	void vroundpd(const XmmReg& dst, const Mem128& src, const Imm8& mode)	{AppendInstr(I_ROUNDPD,	0x09, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src), mode);}
+	void vroundpd(const YmmReg& dst, const YmmReg& src, const Imm8& mode)	{AppendInstr(I_ROUNDPD,	0x09, E_VEX_256 | E_VEX_66_0F3A, W(dst), R(src), mode);}
+	void vroundpd(const YmmReg& dst, const Mem256& src, const Imm8& mode)	{AppendInstr(I_ROUNDPD,	0x09, E_VEX_256 | E_VEX_66_0F3A, W(dst), R(src), mode);}
+	void vroundps(const XmmReg& dst, const XmmReg& src, const Imm8& mode)	{AppendInstr(I_ROUNDPS,	0x08, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src), mode);}
+	void vroundps(const XmmReg& dst, const Mem128& src, const Imm8& mode)	{AppendInstr(I_ROUNDPS,	0x08, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src), mode);}
+	void vroundps(const YmmReg& dst, const YmmReg& src, const Imm8& mode)	{AppendInstr(I_ROUNDPS,	0x08, E_VEX_256 | E_VEX_66_0F3A, W(dst), R(src), mode);}
+	void vroundps(const YmmReg& dst, const Mem256& src, const Imm8& mode)	{AppendInstr(I_ROUNDPS,	0x08, E_VEX_256 | E_VEX_66_0F3A, W(dst), R(src), mode);}
+	void vroundsd(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2, const Imm8& mode)	{AppendInstr(I_ROUNDSD,	0x0B, E_VEX_128 | E_VEX_66_0F3A, RW(dst), R(src2), R(src1), mode);}
+	void vroundsd(const XmmReg& dst, const XmmReg& src1, const Mem64& src2, const Imm8& mode)	{AppendInstr(I_ROUNDSD,	0x0B, E_VEX_128 | E_VEX_66_0F3A, RW(dst), R(src2), R(src1), mode);}
+	void vroundss(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2, const Imm8& mode)	{AppendInstr(I_ROUNDSS,	0x0A, E_VEX_128 | E_VEX_66_0F3A, RW(dst), R(src2), R(src1), mode);}
+	void vroundss(const XmmReg& dst, const XmmReg& src1, const Mem32& src2, const Imm8& mode)	{AppendInstr(I_ROUNDSS,	0x0A, E_VEX_128 | E_VEX_66_0F3A, RW(dst), R(src2), R(src1), mode);}
+	void vshufpd(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2, const Imm8& sel)	{AppendInstr(I_SHUFPD, 0xC6, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1), sel);}
+	void vshufpd(const XmmReg& dst, const XmmReg& src1, const Mem128& src2, const Imm8& sel)	{AppendInstr(I_SHUFPD, 0xC6, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1), sel);}
+	void vshufpd(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2, const Imm8& sel)	{AppendInstr(I_SHUFPD, 0xC6, E_VEX_256 | E_VEX_66_0F, W(dst), R(src2), R(src1), sel);}
+	void vshufpd(const YmmReg& dst, const YmmReg& src1, const Mem256& src2, const Imm8& sel)	{AppendInstr(I_SHUFPD, 0xC6, E_VEX_256 | E_VEX_66_0F, W(dst), R(src2), R(src1), sel);}
+	void vshufps(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2, const Imm8& sel)	{AppendInstr(I_SHUFPS, 0xC6, E_VEX_128 | E_VEX_0F, W(dst), R(src2), R(src1), sel);}
+	void vshufps(const XmmReg& dst, const XmmReg& src1, const Mem128& src2, const Imm8& sel)	{AppendInstr(I_SHUFPS, 0xC6, E_VEX_128 | E_VEX_0F, W(dst), R(src2), R(src1), sel);}
+	void vshufps(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2, const Imm8& sel)	{AppendInstr(I_SHUFPS, 0xC6, E_VEX_256 | E_VEX_0F, W(dst), R(src2), R(src1), sel);}
+	void vshufps(const YmmReg& dst, const YmmReg& src1, const Mem256& src2, const Imm8& sel)	{AppendInstr(I_SHUFPS, 0xC6, E_VEX_256 | E_VEX_0F, W(dst), R(src2), R(src1), sel);}
 	void vsqrtpd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_SQRTPD, 0x51, E_VEX_128 | E_VEX_66_0F, W(dst), R(src));}
 	void vsqrtpd(const XmmReg& dst, const Mem128& src)	{AppendInstr(I_SQRTPD, 0x51, E_VEX_128 | E_VEX_66_0F, W(dst), R(src));}
 	void vsqrtpd(const YmmReg& dst, const YmmReg& src)	{AppendInstr(I_SQRTPD, 0x51, E_VEX_256 | E_VEX_66_0F, W(dst), R(src));}

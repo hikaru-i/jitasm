@@ -422,6 +422,18 @@ nasm_test_avx_o:
 
 global	nasm_test_avx_r
 nasm_test_avx_r:
+	vroundpd xmm1, xmm3, 1
+	vroundpd xmm1, [rsi], 2
+	vroundpd ymm1, ymm2, 1
+	vroundpd ymm1, [rsi], 3
+	vroundps xmm1, xmm3, 0
+	vroundps xmm1, [rsi], 1
+	vroundps ymm1, ymm2, 2
+	vroundps ymm1, [rsi], 0
+	vroundsd xmm1, xmm2, xmm3, 1
+	vroundsd xmm1, xmm2, [rsi], 2
+	vroundss xmm1, xmm2, xmm3, 3
+	vroundss xmm1, xmm2, [rdx], 1
 	vshufpd xmm1, xmm3, xmm4, 1
 	vshufpd xmm1, xmm3, [esi], 2
 	vshufpd ymm2, ymm0, ymm5, 3
