@@ -4394,6 +4394,12 @@ struct test_avx_r : jitasm::function<void, test_avx_r>
 {
 	void naked_main()
 	{
+		vrsqrtps(xmm5, xmm0);
+		vrsqrtps(xmm5, xmmword_ptr[zsi]);
+		vrsqrtps(ymm4, ymm0);
+		vrsqrtps(ymm4, ymmword_ptr[zsi]);
+		vrsqrtss(xmm5, xmm3, xmm0);
+		vrsqrtss(xmm5, xmm3, dword_ptr[zsi]);
 		vroundpd(xmm1, xmm3, 1);
 		vroundpd(xmm1, xmmword_ptr[zsi], 2);
 		vroundpd(ymm1, ymm2, 1);
