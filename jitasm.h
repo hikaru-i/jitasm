@@ -4193,6 +4193,12 @@ struct Frontend
 	void vpcmpeqq(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_PCMPEQQ,	0x29, E_VEX_128 | E_VEX_66_0F38, W(dst), R(src2), R(src1));}
 	void vpcmpeqq(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_PCMPEQQ,	0x29, E_VEX_128 | E_VEX_66_0F38, W(dst), R(src2), R(src1));}
 
+	void vrsqrtps(const XmmReg& dst, const XmmReg& src)							{AppendInstr(I_RSQRTPS,	0x52, E_VEX_128 | E_VEX_0F, W(dst), R(src));}
+	void vrsqrtps(const XmmReg& dst, const Mem128& src)							{AppendInstr(I_RSQRTPS,	0x52, E_VEX_128 | E_VEX_0F, W(dst), R(src));}
+	void vrsqrtps(const YmmReg& dst, const YmmReg& src)							{AppendInstr(I_RSQRTPS,	0x52, E_VEX_256 | E_VEX_0F, W(dst), R(src));}
+	void vrsqrtps(const YmmReg& dst, const Mem256& src)							{AppendInstr(I_RSQRTPS,	0x52, E_VEX_256 | E_VEX_0F, W(dst), R(src));}
+	void vrsqrtss(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_RSQRTSS,	0x52, E_VEX_128 | E_VEX_F3_0F, W(dst), R(src2), R(src1));}
+	void vrsqrtss(const XmmReg& dst, const XmmReg& src1, const Mem32& src2)		{AppendInstr(I_RSQRTSS,	0x52, E_VEX_128 | E_VEX_F3_0F, W(dst), R(src2), R(src1));}
 	void vroundpd(const XmmReg& dst, const XmmReg& src, const Imm8& mode)	{AppendInstr(I_ROUNDPD,	0x09, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src), mode);}
 	void vroundpd(const XmmReg& dst, const Mem128& src, const Imm8& mode)	{AppendInstr(I_ROUNDPD,	0x09, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src), mode);}
 	void vroundpd(const YmmReg& dst, const YmmReg& src, const Imm8& mode)	{AppendInstr(I_ROUNDPD,	0x09, E_VEX_256 | E_VEX_66_0F3A, W(dst), R(src), mode);}

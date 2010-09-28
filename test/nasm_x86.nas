@@ -368,6 +368,12 @@ _nasm_test_avx_o:
 
 global	_nasm_test_avx_r
 _nasm_test_avx_r:
+	vrsqrtps xmm5, xmm0
+	vrsqrtps xmm5, [esi]
+	vrsqrtps ymm4, ymm0
+	vrsqrtps ymm4, [esi]
+	vrsqrtss xmm5, xmm3, xmm0
+	vrsqrtss xmm5, xmm3, [esi]
 	vroundpd xmm1, xmm3, 1
 	vroundpd xmm1, [esi], 2
 	vroundpd ymm1, ymm2, 1
