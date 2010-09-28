@@ -422,6 +422,12 @@ nasm_test_avx_o:
 
 global	nasm_test_avx_r
 nasm_test_avx_r:
+	vrcpps xmm5, xmm0
+	vrcpps xmm5, [rsi]
+	vrcpps ymm4, ymm0
+	vrcpps ymm4, [rsi]
+	vrcpss xmm5, xmm3, xmm0
+	vrcpss xmm5, xmm3, [rsi]
 	vrsqrtps xmm5, xmm0
 	vrsqrtps xmm5, [rsi]
 	vrsqrtps ymm4, ymm0
