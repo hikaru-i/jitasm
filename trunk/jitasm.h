@@ -781,6 +781,7 @@ enum EncodingFlags
 
 	E_VEX_128		= E_VEX,
 	E_VEX_256		= E_VEX | E_VEX_L,
+	E_VEX_LIG		= E_VEX,
 	E_VEX_66_0F		= E_VEX_66 | E_VEX_0F,
 	E_VEX_66_0F38	= E_VEX_66 | E_VEX_0F38,
 	E_VEX_66_0F3A	= E_VEX_66 | E_VEX_0F3A,
@@ -792,6 +793,7 @@ enum EncodingFlags
 	E_VEX_F3_0F3A	= E_VEX_F3 | E_VEX_0F3A,
 	E_VEX_W0		= 0,
 	E_VEX_W1		= E_VEX_W,
+	E_VEX_WIG		= 0,
 };
 
 /// Instruction
@@ -4114,10 +4116,10 @@ struct Frontend
 	void vmovd(const Reg32& dst, const XmmReg& src)		{AppendInstr(I_MOVD, 0x7E, E_VEX_128 | E_VEX_66_0F | E_VEX_W0, R(src), W(dst));}
 	void vmovd(const Mem32& dst, const XmmReg& src)		{AppendInstr(I_MOVD, 0x7E, E_VEX_128 | E_VEX_66_0F | E_VEX_W0, R(src), W(dst));}
 #ifdef JITASM64
-	void vmovq(const XmmReg& dst, const Reg64& src)		{AppendInstr(I_MOVQ, 0x6E, E_VEX_128 | E_VEX_66_0F | E_VEX_W1, W(dst), W(dst));}
-	void vmovq(const XmmReg& dst, const Mem64& src)		{AppendInstr(I_MOVQ, 0x6E, E_VEX_128 | E_VEX_66_0F | E_VEX_W1, W(dst), R(src));}
-	void vmovq(const Mem64& dst, const XmmReg& src)		{AppendInstr(I_MOVQ, 0x7E, E_VEX_128 | E_VEX_66_0F | E_VEX_W1, R(src), W(dst));}
+	void vmovq(const XmmReg& dst, const Reg64& src)		{AppendInstr(I_MOVQ, 0x6E, E_VEX_128 | E_VEX_66_0F | E_VEX_W1, W(dst), W(src));}
+	void vmovq(const XmmReg& dst, const Mem64& src)		{AppendInstr(I_MOVQ, 0x7E, E_VEX_128 | E_VEX_F3_0F | E_VEX_WIG, W(dst), R(src));}
 	void vmovq(const Reg64& dst, const XmmReg& src)		{AppendInstr(I_MOVQ, 0x7E, E_VEX_128 | E_VEX_66_0F | E_VEX_W1, R(src), W(dst));}
+	void vmovq(const Mem64& dst, const XmmReg& src)		{AppendInstr(I_MOVQ, 0xD6, E_VEX_128 | E_VEX_66_0F | E_VEX_WIG, R(src), W(dst));}
 #endif
 
 	void vorpd(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_ORPD, 0x56, E_VEX_128 | E_VEX_66_0F, W(dst), R(src2), R(src1));}

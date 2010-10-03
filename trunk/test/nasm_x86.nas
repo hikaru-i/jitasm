@@ -223,7 +223,7 @@ _nasm_test_avx_d:
 	vinsertps xmm1, xmm2, xmm3, 1
 	vinsertps xmm1, xmm2, [edx], 1
 	vlddqu xmm1, oword [edx]
-	vlddqu ymm1, yword [edx]
+;	vlddqu ymm1, yword [edx]
 	vldmxcsr [edx]
 	vmaskmovdqu xmm1, xmm2
 	vmaskmovps xmm1, xmm2, oword [edx]
