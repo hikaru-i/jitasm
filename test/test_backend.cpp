@@ -4243,7 +4243,7 @@ struct test_avx_d : jitasm::function<void, test_avx_d>
 		vinsertps(xmm1, xmm2, xmm3, 1);
 		vinsertps(xmm1, xmm2, dword_ptr[edx], 1);
 		vlddqu(xmm1, xmmword_ptr[edx]);
-		vlddqu(ymm1, ymmword_ptr[edx]);
+//		vlddqu(ymm1, ymmword_ptr[edx]);
 		vldmxcsr(dword_ptr[edx]);
 		vmaskmovdqu(xmm1, xmm2, zdi);
 		vmaskmovps(xmm1, xmm2, xmmword_ptr[edx]);
