@@ -365,6 +365,24 @@ _nasm_test_avx_o:
 	db 0x71
 	db 0x29
 	db 0x06
+	vpunpckhbw xmm1, xmm2, xmm3
+	vpunpckhbw xmm1, xmm2, [esi]
+	vpunpckhwd xmm1, xmm2, xmm3
+	vpunpckhwd xmm1, xmm2, [esi]
+	vpunpckhdq xmm1, xmm2, xmm3
+	vpunpckhdq xmm1, xmm2, [esi]
+	vpunpckhqdq xmm1, xmm2, xmm3
+	vpunpckhqdq xmm1, xmm2, [esi]
+	vpunpcklbw xmm1, xmm2, xmm3
+	vpunpcklbw xmm1, xmm2, [esi]
+	vpunpcklwd xmm1, xmm2, xmm3
+	vpunpcklwd xmm1, xmm2, [esi]
+	vpunpckldq xmm1, xmm2, xmm3
+	vpunpckldq xmm1, xmm2, [esi]
+	vpunpcklqdq xmm1, xmm2, xmm3
+	vpunpcklqdq xmm1, xmm2, [esi]
+	vpxor xmm1, xmm2, xmm3
+	vpxor xmm1, xmm2, [esi]
 
 global	_nasm_test_avx_r
 _nasm_test_avx_r:
