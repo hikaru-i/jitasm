@@ -4383,6 +4383,25 @@ struct test_avx_o : jitasm::function<void, test_avx_o>
 		vpcmpeqd(xmm0, xmm1, xmmword_ptr[esi]);
 		vpcmpeqq(xmm0, xmm1, xmm2);
 		vpcmpeqq(xmm0, xmm1, xmmword_ptr[esi]);
+
+		vpunpckhbw(xmm1, xmm2, xmm3);
+		vpunpckhbw(xmm1, xmm2, xmmword_ptr[zsi]);
+		vpunpckhwd(xmm1, xmm2, xmm3);
+		vpunpckhwd(xmm1, xmm2, xmmword_ptr[zsi]);
+		vpunpckhdq(xmm1, xmm2, xmm3);
+		vpunpckhdq(xmm1, xmm2, xmmword_ptr[zsi]);
+		vpunpckhqdq(xmm1, xmm2, xmm3);
+		vpunpckhqdq(xmm1, xmm2, xmmword_ptr[zsi]);
+		vpunpcklbw(xmm1, xmm2, xmm3);
+		vpunpcklbw(xmm1, xmm2, xmmword_ptr[zsi]);
+		vpunpcklwd(xmm1, xmm2, xmm3);
+		vpunpcklwd(xmm1, xmm2, xmmword_ptr[zsi]);
+		vpunpckldq(xmm1, xmm2, xmm3);
+		vpunpckldq(xmm1, xmm2, xmmword_ptr[zsi]);
+		vpunpcklqdq(xmm1, xmm2, xmm3);
+		vpunpcklqdq(xmm1, xmm2, xmmword_ptr[zsi]);
+		vpxor(xmm1, xmm2, xmm3);
+		vpxor(xmm1, xmm2, xmmword_ptr[zsi]);
 	}
 };
 
