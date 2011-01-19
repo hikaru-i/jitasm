@@ -277,15 +277,15 @@ _nasm_test_avx_d:
 	vmovaps ymm1, ymm2
 	vmovaps ymm1, yword [edx]
 	vmovaps yword [edx], ymm2
-	vmovd xmm1, edx
-	vmovd xmm1, dword [edx]
-	vmovd edx, xmm2
-	vmovd dword [edx], xmm2
-	vmovq xmm1, xmm2
-	vmovq xmm1, qword [edx]
-	vmovq qword [edx], xmm2
-	;vmovq xmm1, rdx
-	;vmovq rdx, xmm2
+	vmovd xmm3, edx
+	vmovd xmm3, dword [edx]
+	vmovd eax, xmm4
+	vmovd dword [eax], xmm4
+	vmovq xmm3, xmm4
+	vmovq xmm3, qword [edx]
+	vmovq qword [eax], xmm4
+	;vmovq xmm3, rdx
+	;vmovq rax, xmm4
 
 global	_nasm_test_avx_o
 _nasm_test_avx_o:
