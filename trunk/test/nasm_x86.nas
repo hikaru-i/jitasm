@@ -312,6 +312,27 @@ _nasm_test_avx_d:
 	vmovlpd qword [eax], xmm4
 	vmovlps xmm3, xmm4, qword [edx]
 	vmovlps qword [eax], xmm4
+	vmovmskpd eax, xmm5
+	vmovmskpd eax, ymm5
+	;vmovmskpd rax, xmm5
+	;vmovmskpd rax, ymm5
+	vmovmskps eax, xmm5
+	vmovmskps eax, ymm5
+	;vmovmskps rax, xmm5
+	;vmovmskps rax, ymm5
+	vmovntdq oword [eax], xmm5
+	vmovntdq yword [eax], ymm5
+	vmovntdqa xmm3, oword [edi]
+	vmovntpd oword [eax], xmm5
+	vmovntpd yword [eax], ymm5
+	vmovntps oword [eax], xmm5
+	db 0xC5 ; vmovntps yword [eax], ymm5
+	db 0xFC
+	db 0x2B
+	db 0x28
+	vmovsd xmm3, xmm5, xmm6
+	vmovsd xmm3, qword [edi]
+	vmovsd qword [eax], xmm5
 
 global	_nasm_test_avx_o
 _nasm_test_avx_o:
