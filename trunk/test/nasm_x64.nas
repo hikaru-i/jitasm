@@ -368,12 +368,12 @@ nasm_test_avx_d:
 	vmovlps qword [eax], xmm4
 	vmovmskpd eax, xmm5
 	vmovmskpd eax, ymm5
-	vmovmskpd rax, xmm5;
-	vmovmskpd rax, ymm5;
+	vmovmskpd rax, xmm5
+	vmovmskpd rax, ymm5
 	vmovmskps eax, xmm5
 	vmovmskps eax, ymm5
-	vmovmskps rax, xmm5;
-	vmovmskps rax, ymm5;
+	vmovmskps rax, xmm5
+	vmovmskps rax, ymm5
 	vmovntdq oword [eax], xmm5
 	vmovntdq yword [eax], ymm5
 	vmovntdqa xmm3, oword [edi]
