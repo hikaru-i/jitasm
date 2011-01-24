@@ -388,6 +388,31 @@ nasm_test_avx_d:
 	vmovsd xmm3, xmm5, xmm6
 	vmovsd xmm3, qword [edi]
 	vmovsd qword [eax], xmm5
+	vmovshdup xmm3, xmm5
+	vmovshdup xmm3, oword [edi]
+	vmovshdup ymm3, ymm5
+	vmovshdup ymm3, yword [edi]
+	vmovsldup xmm3, xmm5
+	vmovsldup xmm3, oword [edi]
+	vmovsldup ymm3, ymm5
+	vmovsldup ymm3, yword [edi]
+	vmovss xmm3, xmm5, xmm6
+	vmovss xmm3, [edi]
+	vmovss [eax], xmm5
+	vmovupd xmm3, xmm5
+	vmovupd xmm3, oword [edi]
+	vmovupd oword [eax], xmm3
+	vmovupd ymm3, ymm5
+	vmovupd ymm3, yword [edi]
+	vmovupd yword [eax], ymm3
+	vmovups xmm3, xmm5
+	vmovups xmm3, oword [edi]
+	vmovups oword [eax], xmm3
+	vmovups ymm3, ymm5
+	vmovups ymm3, yword [edi]
+	vmovups yword [eax], ymm3
+	vmpsadbw xmm3, xmm5, xmm6, 2
+	vmpsadbw xmm3, xmm5, oword [edi], 2
 
 global	nasm_test_avx_o
 nasm_test_avx_o:
