@@ -4349,6 +4349,31 @@ struct test_avx_d : jitasm::function<void, test_avx_d>
 		vmovsd(xmm3, xmm5, xmm6);
 		vmovsd(xmm3, qword_ptr[edi]);
 		vmovsd(qword_ptr[eax], xmm5);
+		vmovshdup(xmm3, xmm5);
+		vmovshdup(xmm3, xmmword_ptr[edi]);
+		vmovshdup(ymm3, ymm5);
+		vmovshdup(ymm3, ymmword_ptr[edi]);
+		vmovsldup(xmm3, xmm5);
+		vmovsldup(xmm3, xmmword_ptr[edi]);
+		vmovsldup(ymm3, ymm5);
+		vmovsldup(ymm3, ymmword_ptr[edi]);
+		vmovss(xmm3, xmm5, xmm6);
+		vmovss(xmm3, dword_ptr[edi]);
+		vmovss(dword_ptr[eax], xmm5);
+		vmovupd(xmm3, xmm5);
+		vmovupd(xmm3, xmmword_ptr[edi]);
+		vmovupd(xmmword_ptr[eax], xmm3);
+		vmovupd(ymm3, ymm5);
+		vmovupd(ymm3, ymmword_ptr[edi]);
+		vmovupd(ymmword_ptr[eax], ymm3);
+		vmovups(xmm3, xmm5);
+		vmovups(xmm3, xmmword_ptr[edi]);
+		vmovups(xmmword_ptr[eax], xmm3);
+		vmovups(ymm3, ymm5);
+		vmovups(ymm3, ymmword_ptr[edi]);
+		vmovups(ymmword_ptr[eax], ymm3);
+		vmpsadbw(xmm3, xmm5, xmm6, 2);
+		vmpsadbw(xmm3, xmm5, xmmword_ptr[edi], 2);
 	}
 };
 
