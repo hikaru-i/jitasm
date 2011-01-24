@@ -472,6 +472,92 @@ nasm_test_avx_o:
 	db 0x71
 	db 0x29
 	db 0x06
+	vpmulhuw xmm2, xmm3, xmm4
+	vpmulhuw xmm2, xmm3, [rsi]
+	vpmulhrsw xmm2, xmm3, xmm4
+	vpmulhrsw xmm2, xmm3, [rsi]
+	vpmulhw xmm2, xmm3, xmm4
+	vpmulhw xmm2, xmm3, [rsi]
+	vpmullw xmm2, xmm3, xmm4
+	vpmullw xmm2, xmm3, [rsi]
+	vpmulld xmm2, xmm3, xmm4
+	vpmulld xmm2, xmm3, [rsi]
+	vpmuludq xmm2, xmm3, xmm4
+	vpmuludq xmm2, xmm3, [rsi]
+	vpmuldq xmm2, xmm3, xmm4
+	vpmuldq xmm2, xmm3, [rsi]
+	vpor xmm2, xmm3, xmm4
+	vpor xmm2, xmm3, [rsi]
+	vpsadbw xmm2, xmm3, xmm4
+	vpsadbw xmm2, xmm3, [rsi]
+	vpshufb xmm2, xmm3, xmm4
+	vpshufb xmm2, xmm3, [rsi]
+	vpshufd xmm2, xmm3, 1
+	vpshufd xmm2, [rsi], 2
+	vpshufhw xmm2, xmm3, 3
+	vpshufhw xmm2, [rsi], 4
+	vpshuflw xmm2, xmm3, 5
+	vpshuflw xmm2, [rsi], 6
+	vpsignb xmm5, xmm0, xmm1
+	vpsignb xmm5, xmm0, [rsi]
+	vpsignw xmm5, xmm0, xmm1
+	vpsignw xmm5, xmm0, [rsi]
+	vpsignd xmm5, xmm0, xmm1
+	vpsignd xmm5, xmm0, [rsi]
+	vpsllw xmm7, xmm5, xmm2
+	vpsllw xmm7, xmm5, [rsi]
+	vpsllw xmm7, xmm5, 1
+	vpslld xmm7, xmm5, xmm2
+	vpslld xmm7, xmm5, [rsi]
+	vpslld xmm7, xmm5, 1
+	vpsllq xmm7, xmm5, xmm2
+	vpsllq xmm7, xmm5, [rsi]
+	vpsllq xmm7, xmm5, 1
+	vpslldq xmm7, xmm5, 1
+	vpsraw xmm7, xmm5, xmm2
+	vpsraw xmm7, xmm5, [rsi]
+	vpsraw xmm7, xmm5, 1
+	vpsrad xmm7, xmm5, xmm2
+	vpsrad xmm7, xmm5, [rsi]
+	vpsrad xmm7, xmm5, 1
+	vpsrlw xmm7, xmm5, xmm2
+	vpsrlw xmm7, xmm5, [rsi]
+	vpsrlw xmm7, xmm5, 1
+	vpsrld xmm7, xmm5, xmm2
+	vpsrld xmm7, xmm5, [rsi]
+	vpsrld xmm7, xmm5, 1
+	vpsrlq xmm7, xmm5, xmm2
+	vpsrlq xmm7, xmm5, [rsi]
+	vpsrlq xmm7, xmm5, 1
+	vpsrldq xmm7, xmm5, 1
+	vptest xmm1, xmm0
+	vptest xmm1, [rsi]
+	vptest ymm1, ymm0
+	vptest ymm1, [rsi]
+	vtestps xmm1, xmm0
+	vtestps xmm1, [rsi]
+	vtestps ymm1, ymm0
+	vtestps ymm1, [rsi]
+	vtestpd xmm1, xmm0
+	vtestpd xmm1, [rsi]
+	vtestpd ymm1, ymm0
+	vtestpd ymm1, [rsi]
+	vpsubb xmm2, xmm3, xmm7
+	vpsubb xmm2, xmm3, [rsi]
+	vpsubw xmm2, xmm3, xmm7
+	vpsubw xmm2, xmm3, [rsi]
+	vpsubd xmm2, xmm3, xmm7
+	vpsubd xmm2, xmm3, [rsi]
+	vpsubq xmm2, xmm3, xmm7
+	vpsubq xmm2, xmm3, [rsi]
+	vpsubsb xmm2, xmm3, xmm7
+	vpsubsb xmm2, xmm3, [rsi]
+	vpsubsw xmm2, xmm3, xmm7
+	vpsubsw xmm2, xmm3, [rsi]
+	vpsubusb xmm2, xmm3, xmm7
+	vpsubusb xmm2, xmm3, [rsi]
+	vpsubusw xmm2, xmm3, xmm7
+	vpsubusw xmm2, xmm3, [rsi]
 	vpunpckhbw xmm1, xmm2, xmm3
 	vpunpckhbw xmm1, xmm2, [rsi]
 	vpunpckhwd xmm1, xmm2, xmm3
