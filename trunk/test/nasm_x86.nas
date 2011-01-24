@@ -441,6 +441,30 @@ _nasm_test_avx_o:
 	db 0x71
 	db 0x29
 	db 0x06
+	vpmovsxbw xmm1, xmm2
+	vpmovsxbw xmm1, qword [esp]
+	vpmovsxbd xmm1, xmm2
+	vpmovsxbd xmm1, dword [esp]
+	vpmovsxbq xmm1, xmm2
+	vpmovsxbq xmm1, word [esp]
+	vpmovsxwd xmm1, xmm2
+	vpmovsxwd xmm1, qword [esp]
+	vpmovsxwq xmm1, xmm2
+	vpmovsxwq xmm1, dword [esp]
+	vpmovsxdq xmm1, xmm2
+	vpmovsxdq xmm1, qword [esp]
+	vpmovzxbw xmm1, xmm2
+	vpmovzxbw xmm1, qword [esp]
+	vpmovzxbd xmm1, xmm2
+	vpmovzxbd xmm1, dword [esp]
+	vpmovzxbq xmm1, xmm2
+	vpmovzxbq xmm1, word [esp]
+	vpmovzxwd xmm1, xmm2
+	vpmovzxwd xmm1, qword [esp]
+	vpmovzxwq xmm1, xmm2
+	vpmovzxwq xmm1, dword [esp]
+	vpmovzxdq xmm1, xmm2
+	vpmovzxdq xmm1, qword [esp]
 	vpmulhuw xmm2, xmm3, xmm4
 	vpmulhuw xmm2, xmm3, [esi]
 	vpmulhrsw xmm2, xmm3, xmm4
