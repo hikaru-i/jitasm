@@ -4279,7 +4279,34 @@ struct Frontend
 	void vpcmpeqq(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_PCMPEQQ,	0x29, E_VEX_128_66_0F38_WIG, W(dst), R(src2), R(src1));}
 	void vpcmpeqq(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_PCMPEQQ,	0x29, E_VEX_128_66_0F38_WIG, W(dst), R(src2), R(src1));}
 
-
+	void vpmaxsb(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_PMAXSB, 0x3C, E_VEX_128_66_0F38_WIG, W(dst), R(src2), R(src1));}
+	void vpmaxsb(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_PMAXSB, 0x3C, E_VEX_128_66_0F38_WIG, W(dst), R(src2), R(src1));}
+	void vpmaxsw(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_PMAXSW, 0xEE, E_VEX_128_66_0F_WIG, W(dst), R(src2), R(src1));}
+	void vpmaxsw(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_PMAXSW, 0xEE, E_VEX_128_66_0F_WIG, W(dst), R(src2), R(src1));}
+	void vpmaxsd(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_PMAXSD, 0x3D, E_VEX_128_66_0F38_WIG, W(dst), R(src2), R(src1));}
+	void vpmaxsd(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_PMAXSD, 0x3D, E_VEX_128_66_0F38_WIG, W(dst), R(src2), R(src1));}
+	void vpmaxub(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_PMAXUB, 0xDE, E_VEX_128_66_0F_WIG, W(dst), R(src2), R(src1));}
+	void vpmaxub(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_PMAXUB, 0xDE, E_VEX_128_66_0F_WIG, W(dst), R(src2), R(src1));}
+	void vpmaxuw(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_PMAXUW, 0x3E, E_VEX_128_66_0F38_WIG, W(dst), R(src2), R(src1));}
+	void vpmaxuw(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_PMAXUW, 0x3E, E_VEX_128_66_0F38_WIG, W(dst), R(src2), R(src1));}
+	void vpmaxud(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_PMAXUD, 0x3F, E_VEX_128_66_0F38_WIG, W(dst), R(src2), R(src1));}
+	void vpmaxud(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_PMAXUD, 0x3F, E_VEX_128_66_0F38_WIG, W(dst), R(src2), R(src1));}
+	void vpminsb(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_PMINSB, 0x38, E_VEX_128_66_0F38_WIG, W(dst), R(src2), R(src1));}
+	void vpminsb(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_PMINSB, 0x38, E_VEX_128_66_0F38_WIG, W(dst), R(src2), R(src1));}
+	void vpminsw(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_PMINSW, 0xEA, E_VEX_128_66_0F_WIG, W(dst), R(src2), R(src1));}
+	void vpminsw(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_PMINSW, 0xEA, E_VEX_128_66_0F_WIG, W(dst), R(src2), R(src1));}
+	void vpminsd(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_PMINSD, 0x39, E_VEX_128_66_0F38_WIG, W(dst), R(src2), R(src1));}
+	void vpminsd(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_PMINSD, 0x39, E_VEX_128_66_0F38_WIG, W(dst), R(src2), R(src1));}
+	void vpminub(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_PMINUB, 0xDA, E_VEX_128_66_0F_WIG, W(dst), R(src2), R(src1));}
+	void vpminub(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_PMINUB, 0xDA, E_VEX_128_66_0F_WIG, W(dst), R(src2), R(src1));}
+	void vpminuw(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_PMINUW, 0x3A, E_VEX_128_66_0F38_WIG, W(dst), R(src2), R(src1));}
+	void vpminuw(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_PMINUW, 0x3A, E_VEX_128_66_0F38_WIG, W(dst), R(src2), R(src1));}
+	void vpminud(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_PMINUD, 0x3B, E_VEX_128_66_0F38_WIG, W(dst), R(src2), R(src1));}
+	void vpminud(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_PMINUD, 0x3B, E_VEX_128_66_0F38_WIG, W(dst), R(src2), R(src1));}
+	void vpmovmskb(const Reg32& dst, const XmmReg& src)						{AppendInstr(I_PMOVMSKB, 0xD7, E_VEX_128_66_0F_WIG, W(dst), R(src));}
+#ifdef JITASM64
+	void vpmovmskb(const Reg64& dst, const XmmReg& src)						{AppendInstr(I_PMOVMSKB, 0xD7, E_VEX_128_66_0F_WIG | E_REXW_PREFIX, W(dst), R(src));}
+#endif
 	void vpmovsxbw(const XmmReg& dst, const XmmReg& src)					{AppendInstr(I_PMOVSXBW, 0x20, E_VEX_128_66_0F38_WIG, W(dst), R(src));}
 	void vpmovsxbw(const XmmReg& dst, const Mem64& src)						{AppendInstr(I_PMOVSXBW, 0x20, E_VEX_128_66_0F38_WIG, W(dst), R(src));}
 	void vpmovsxbd(const XmmReg& dst, const XmmReg& src)					{AppendInstr(I_PMOVSXBD, 0x21, E_VEX_128_66_0F38_WIG, W(dst), R(src));}

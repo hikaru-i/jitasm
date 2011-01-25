@@ -497,6 +497,32 @@ nasm_test_avx_o:
 	db 0x71
 	db 0x29
 	db 0x06
+	vpmaxsb xmm6, xmm5, xmm4
+	vpmaxsb xmm6, xmm5, oword [rsi]
+	vpmaxsw xmm6, xmm5, xmm4
+	vpmaxsw xmm6, xmm5, oword [rsi]
+	vpmaxsd xmm6, xmm5, xmm4
+	vpmaxsd xmm6, xmm5, oword [rsi]
+	vpmaxub xmm6, xmm5, xmm4
+	vpmaxub xmm6, xmm5, oword [rsi]
+	vpmaxuw xmm6, xmm5, xmm4
+	vpmaxuw xmm6, xmm5, oword [rsi]
+	vpmaxud xmm6, xmm5, xmm4
+	vpmaxud xmm6, xmm5, oword [rsi]
+	vpminsb xmm6, xmm5, xmm4
+	vpminsb xmm6, xmm5, oword [rsi]
+	vpminsw xmm6, xmm5, xmm4
+	vpminsw xmm6, xmm5, oword [rsi]
+	vpminsd xmm6, xmm5, xmm4
+	vpminsd xmm6, xmm5, oword [rsi]
+	vpminub xmm6, xmm5, xmm4
+	vpminub xmm6, xmm5, oword [rsi]
+	vpminuw xmm6, xmm5, xmm4
+	vpminuw xmm6, xmm5, oword [rsi]
+	vpminud xmm6, xmm5, xmm4
+	vpminud xmm6, xmm5, oword [rsi]
+	vpmovmskb ecx, xmm5
+	vpmovmskb rax, xmm5
 	vpmovsxbw xmm1, xmm2
 	vpmovsxbw xmm1, qword [esp]
 	vpmovsxbd xmm1, xmm2
