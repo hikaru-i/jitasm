@@ -453,6 +453,16 @@ _nasm_test_avx_o:
 	db 0x71
 	db 0x29
 	db 0x06
+	vpinsrb xmm2, xmm0, ebx, 15
+	vpinsrb xmm2, xmm0, byte [esi], 7
+	vpinsrw xmm2, xmm0, ecx, 6
+	vpinsrw xmm2, xmm0, word [edi], 5
+	vpinsrd xmm2, xmm1, eax, 3
+	vpinsrd xmm2, xmm0, dword [esp], 2
+	vpmaddwd xmm2, xmm1, xmm6
+	vpmaddwd xmm2, xmm1, oword [esi]
+	vpmaddubsw xmm2, xmm1, xmm5
+	vpmaddubsw xmm2, xmm1, oword[esi]
 	vpmaxsb xmm6, xmm5, xmm4
 	vpmaxsb xmm6, xmm5, oword [esi]
 	vpmaxsw xmm6, xmm5, xmm4

@@ -3456,6 +3456,7 @@ masm_test_sse4_1 proc
 	pextrd r9d, xmm9, 3
 	pextrd dword ptr[r8], xmm9, 2
 	pextrb rax, xmm9, 2
+	pextrd r8d, xmm9, 3
 	pextrq r9, xmm9, 1
 	pextrq qword ptr[r8], xmm9, 1
 	pinsrb xmm8, r8d, 0
@@ -3463,6 +3464,7 @@ masm_test_sse4_1 proc
 	pinsrd xmm8, r9d, 1
 	pinsrd xmm8, dword ptr[r8], 0
 	pinsrb xmm8, rax, 10
+	pinsrd xmm6, r8d, 2
 	pinsrq xmm8, r10, 1
 	pinsrq xmm8, qword ptr[r8], 0
 	pmaxsb xmm8, xmm9
