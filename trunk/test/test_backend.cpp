@@ -3827,6 +3827,7 @@ struct test_sse4_1 : jitasm::function<void, test_sse4_1>
 		pextrd(r9d, xmm9, 3);
 		pextrd(dword_ptr[r8], xmm9, 2);
 		pextrb(rax, xmm9, 2);
+		pextrd(r8, xmm9, 3);
 		pextrq(r9, xmm9, 1);
 		pextrq(qword_ptr[r8], xmm9, 1);
 		pinsrb(xmm8, r8d, 0);
@@ -3834,6 +3835,7 @@ struct test_sse4_1 : jitasm::function<void, test_sse4_1>
 		pinsrd(xmm8, r9d, 1);
 		pinsrd(xmm8, dword_ptr[r8], 0);
 		pinsrb(xmm8, rax, 10);
+		pinsrd(xmm6, r8, 2);
 		pinsrq(xmm8, r10, 1);
 		pinsrq(xmm8, qword_ptr[r8], 0);
 		pmaxsb(xmm8, xmm9);
@@ -4470,6 +4472,23 @@ struct test_avx_o : jitasm::function<void, test_avx_o>
 		vpcmpeqq(xmm0, xmm1, xmm2);
 		vpcmpeqq(xmm0, xmm1, xmmword_ptr[esi]);
 
+		vpinsrb(xmm2, xmm0, ebx, 15);
+		vpinsrb(xmm2, xmm0, byte_ptr[zsi], 7);
+		vpinsrw(xmm2, xmm0, ecx, 6);
+		vpinsrw(xmm2, xmm0, word_ptr[zdi], 5);
+		vpinsrd(xmm2, xmm1, eax, 3);
+		vpinsrd(xmm2, xmm0, dword_ptr[esp], 2);
+#ifdef JITASM64
+		vpinsrb(xmm7, xmm0, r9, 13);
+		vpinsrw(xmm9, xmm0, r10, 4);
+		vpinsrd(xmm10, xmm0, r11, 1);
+		vpinsrq(xmm11, xmm0, rcx, 1);
+		vpinsrq(xmm12, xmm0, qword_ptr[r12], 0);
+#endif
+		vpmaddwd(xmm2, xmm1, xmm6);
+		vpmaddwd(xmm2, xmm1, xmmword_ptr[esi]);
+		vpmaddubsw(xmm2, xmm1, xmm5);
+		vpmaddubsw(xmm2, xmm1, xmmword_ptr[zsi]);
 		vpmaxsb(xmm6, xmm5, xmm4);
 		vpmaxsb(xmm6, xmm5, xmmword_ptr[zsi]);
 		vpmaxsw(xmm6, xmm5, xmm4);
