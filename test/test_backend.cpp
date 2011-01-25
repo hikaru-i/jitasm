@@ -4458,6 +4458,34 @@ struct test_avx_o : jitasm::function<void, test_avx_o>
 		vpcmpeqq(xmm0, xmm1, xmm2);
 		vpcmpeqq(xmm0, xmm1, xmmword_ptr[esi]);
 
+		vpmaxsb(xmm6, xmm5, xmm4);
+		vpmaxsb(xmm6, xmm5, xmmword_ptr[zsi]);
+		vpmaxsw(xmm6, xmm5, xmm4);
+		vpmaxsw(xmm6, xmm5, xmmword_ptr[zsi]);
+		vpmaxsd(xmm6, xmm5, xmm4);
+		vpmaxsd(xmm6, xmm5, xmmword_ptr[zsi]);
+		vpmaxub(xmm6, xmm5, xmm4);
+		vpmaxub(xmm6, xmm5, xmmword_ptr[zsi]);
+		vpmaxuw(xmm6, xmm5, xmm4);
+		vpmaxuw(xmm6, xmm5, xmmword_ptr[zsi]);
+		vpmaxud(xmm6, xmm5, xmm4);
+		vpmaxud(xmm6, xmm5, xmmword_ptr[zsi]);
+		vpminsb(xmm6, xmm5, xmm4);
+		vpminsb(xmm6, xmm5, xmmword_ptr[zsi]);
+		vpminsw(xmm6, xmm5, xmm4);
+		vpminsw(xmm6, xmm5, xmmword_ptr[zsi]);
+		vpminsd(xmm6, xmm5, xmm4);
+		vpminsd(xmm6, xmm5, xmmword_ptr[zsi]);
+		vpminub(xmm6, xmm5, xmm4);
+		vpminub(xmm6, xmm5, xmmword_ptr[zsi]);
+		vpminuw(xmm6, xmm5, xmm4);
+		vpminuw(xmm6, xmm5, xmmword_ptr[zsi]);
+		vpminud(xmm6, xmm5, xmm4);
+		vpminud(xmm6, xmm5, xmmword_ptr[zsi]);
+		vpmovmskb(ecx, xmm5);
+#ifdef JITASM64
+		vpmovmskb(rax, xmm5);
+#endif
 		vpmovsxbw(xmm1, xmm2);
 		vpmovsxbw(xmm1, qword_ptr[esp]);
 		vpmovsxbd(xmm1, xmm2);
