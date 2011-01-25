@@ -358,6 +358,18 @@ _nasm_test_avx_d:
 	vmovups yword [eax], ymm3
 	vmpsadbw xmm3, xmm5, xmm6, 2
 	vmpsadbw xmm3, xmm5, oword [edi], 2
+	vmulpd xmm3, xmm5, xmm6
+	vmulpd xmm3, xmm5, oword [edi]
+	vmulpd ymm3, ymm5, ymm6
+	vmulpd ymm3, ymm5, yword [edi]
+	vmulps xmm3, xmm5, xmm6
+	vmulps xmm3, xmm5, oword [edi]
+	vmulps ymm3, ymm5, ymm6
+	vmulps ymm3, ymm5, yword [edi]
+	vmulsd xmm3, xmm5, xmm6
+	vmulsd xmm3, xmm5, [edi]
+	vmulss xmm3, xmm5, xmm6
+	vmulss xmm3, xmm5, [edi]
 
 global	_nasm_test_avx_o
 _nasm_test_avx_o:
