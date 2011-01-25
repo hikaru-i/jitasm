@@ -4374,6 +4374,18 @@ struct test_avx_d : jitasm::function<void, test_avx_d>
 		vmovups(ymmword_ptr[eax], ymm3);
 		vmpsadbw(xmm3, xmm5, xmm6, 2);
 		vmpsadbw(xmm3, xmm5, xmmword_ptr[edi], 2);
+		vmulpd(xmm3, xmm5, xmm6);
+		vmulpd(xmm3, xmm5, xmmword_ptr[edi]);
+		vmulpd(ymm3, ymm5, ymm6);
+		vmulpd(ymm3, ymm5, ymmword_ptr[edi]);
+		vmulps(xmm3, xmm5, xmm6);
+		vmulps(xmm3, xmm5, xmmword_ptr[edi]);
+		vmulps(ymm3, ymm5, ymm6);
+		vmulps(ymm3, ymm5, ymmword_ptr[edi]);
+		vmulsd(xmm3, xmm5, xmm6);
+		vmulsd(xmm3, xmm5, qword_ptr[edi]);
+		vmulss(xmm3, xmm5, xmm6);
+		vmulss(xmm3, xmm5, dword_ptr[edi]);
 	}
 };
 
