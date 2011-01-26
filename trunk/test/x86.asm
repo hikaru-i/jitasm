@@ -2273,6 +2273,8 @@ masm_test_sse4_1 proc
 	pextrw word ptr[esp], xmm2, 1
 	pextrd eax, xmm2, 3
 	pextrd dword ptr[esp], xmm2, 2
+	phminposuw xmm2, xmm4
+	phminposuw xmm3, xmmword ptr[esp]
 	pinsrb xmm1, eax, 0
 	pinsrb xmm1, byte ptr[esp], 2
 	pinsrd xmm1, eax, 1
