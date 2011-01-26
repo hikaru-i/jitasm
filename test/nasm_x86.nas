@@ -429,14 +429,6 @@ _nasm_test_avx_o:
 	pclmulqdq xmm1, xmm2, 1
 	vpclmulqdq xmm1, xmm2, oword [edx], 1
 	vpclmulqdq xmm1, xmm2, xmm3, 1
-	vpcmpestri xmm2, xmm1, 0
-	vpcmpestri xmm2, oword [esi], 0
-	vpcmpestrm xmm2, xmm1, 1
-	vpcmpestrm xmm2, oword [esi], 1
-	vpcmpistri xmm2, xmm1, 0
-	vpcmpistri xmm2, oword [esi], 0
-	vpcmpistrm xmm2, xmm1, 1
-	vpcmpistrm xmm2, oword [esi], 1
 	vpcmpeqb xmm0, xmm1, xmm2
 	vpcmpeqb xmm0, xmm1, oword [esi]
 	vpcmpeqw xmm0, xmm1, xmm2
@@ -453,6 +445,74 @@ _nasm_test_avx_o:
 	db 0x71
 	db 0x29
 	db 0x06
+	vpcmpgtb xmm0, xmm1, xmm2
+	vpcmpgtb xmm0, xmm1, oword [esi]
+	vpcmpgtw xmm0, xmm1, xmm2
+	vpcmpgtw xmm0, xmm1, oword [esi]
+	vpcmpgtd xmm0, xmm1, xmm2
+	vpcmpgtd xmm0, xmm1, oword [esi]
+	db 0xC4	;vpcmpgtq xmm0, xmm1, xmm2
+	db 0xE2
+	db 0x71
+	db 0x37
+	db 0xC2
+	db 0xC4	;vpcmpgtq xmm0, xmm1, oword [esi]
+	db 0xE2
+	db 0x71
+	db 0x37
+	db 0x06
+	vpcmpestri xmm2, xmm1, 0
+	vpcmpestri xmm2, oword [esi], 0
+	vpcmpestrm xmm2, xmm1, 1
+	vpcmpestrm xmm2, oword [esi], 1
+	vpcmpistri xmm2, xmm1, 0
+	vpcmpistri xmm2, oword [esi], 0
+	vpcmpistrm xmm2, xmm1, 1
+	vpcmpistrm xmm2, oword [esi], 1
+	vpermilpd xmm1, xmm2, xmm3
+	vpermilpd xmm1, xmm2, oword [esi]
+	vpermilpd ymm4, ymm5, ymm6
+	vpermilpd ymm4, ymm5, yword [esp]
+	vpermilpd xmm1, xmm2, 1
+	vpermilpd xmm1, oword [esi], 2
+	vpermilpd ymm4, ymm5, 3
+	vpermilpd ymm4, yword [esp], 4
+	vpermilps xmm1, xmm2, xmm3
+	vpermilps xmm1, xmm2, oword [esi]
+	vpermilps ymm4, ymm5, ymm6
+	vpermilps ymm4, ymm5, yword [esp]
+	vpermilps xmm1, xmm2, 3
+	vpermilps xmm1, oword [esp], 2
+	vpermilps ymm4, ymm5, 1
+	vpermilps ymm4, yword [esp], 1
+	vperm2f128 ymm4, ymm5, ymm6, 1
+	vperm2f128 ymm4, ymm5, yword [esp], 2
+	vpextrb ecx, xmm7, 13
+	vpextrb byte[esi], xmm7, 5
+	vpextrw edx, xmm7, 6
+	db 0xC4 ;vpextrw word[esp], xmm7, 4
+	db 0xE3 ;nasm-Bugs-3143040
+	db 0x79
+	db 0x15
+	db 0x3C
+	db 0x24
+	db 0x04
+	vpextrd eax, xmm7, 3
+	vpextrd dword[esp], xmm7, 2
+	vphaddw xmm7, xmm6, xmm5
+	vphaddw xmm7, xmm6, oword[esp]
+	vphaddd xmm7, xmm6, xmm5
+	vphaddd xmm7, xmm6, oword[esp]
+	vphaddsw xmm7, xmm6, xmm5
+	vphaddsw xmm7, xmm6, oword[esp]
+	vphminposuw xmm7, xmm5
+	vphminposuw xmm7, oword[esp]
+	vphsubw xmm7, xmm6, xmm5
+	vphsubw xmm7, xmm6, oword[esp]
+	vphsubd xmm7, xmm6, xmm5
+	vphsubd xmm7, xmm6, oword[esp]
+	vphsubsw xmm7, xmm6, xmm5
+	vphsubsw xmm7, xmm6, oword[esp]
 	vpinsrb xmm2, xmm0, ebx, 15
 	vpinsrb xmm2, xmm0, byte [esi], 7
 	vpinsrw xmm2, xmm0, ecx, 6
