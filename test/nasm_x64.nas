@@ -834,3 +834,198 @@ nasm_test_avx_r:
 	vxorps ymm1, ymm2, yword [esi]
 	vzeroall
 	vzeroupper
+
+global	nasm_test_fma
+nasm_test_fma:
+	vfmadd132pd xmm1, xmm3, xmm5
+	vfmadd132pd xmm1, xmm3, oword [edi]
+	vfmadd132pd ymm1, ymm3, ymm5
+	vfmadd132pd ymm1, ymm3, yword [edi]
+	vfmadd213pd xmm1, xmm3, xmm5
+	vfmadd213pd xmm1, xmm3, oword [edi]
+	vfmadd213pd ymm1, ymm3, ymm5
+	vfmadd213pd ymm1, ymm3, yword [edi]
+	vfmadd231pd xmm1, xmm3, xmm5
+	vfmadd231pd xmm1, xmm3, oword [edi]
+	vfmadd231pd ymm1, ymm3, ymm5
+	vfmadd231pd ymm1, ymm3, yword [edi]
+	vfmadd132ps xmm1, xmm3, xmm5
+	vfmadd132ps xmm1, xmm3, oword [edi]
+	vfmadd132ps ymm1, ymm3, ymm5
+	vfmadd132ps ymm1, ymm3, yword [edi]
+	vfmadd213ps xmm1, xmm3, xmm5
+	vfmadd213ps xmm1, xmm3, oword [edi]
+	vfmadd213ps ymm1, ymm3, ymm5
+	vfmadd213ps ymm1, ymm3, yword [edi]
+	vfmadd231ps xmm1, xmm3, xmm5
+	vfmadd231ps xmm1, xmm3, oword [edi]
+	vfmadd231ps ymm1, ymm3, ymm5
+	vfmadd231ps ymm1, ymm3, yword [edi]
+	vfmadd132sd xmm1, xmm3, xmm5
+	vfmadd132sd xmm1, xmm3, [edi]
+	vfmadd213sd xmm1, xmm3, xmm5
+	vfmadd213sd xmm1, xmm3, [edi]
+	vfmadd231sd xmm1, xmm3, xmm5
+	vfmadd231sd xmm1, xmm3, [edi]
+	vfmadd132ss xmm1, xmm3, xmm5
+	vfmadd132ss xmm1, xmm3, [edi]
+	vfmadd213ss xmm1, xmm3, xmm5
+	vfmadd213ss xmm1, xmm3, [edi]
+	vfmadd231ss xmm1, xmm3, xmm5
+	vfmadd231ss xmm1, xmm3, [edi]
+	vfmaddsub132pd xmm1, xmm3, xmm5
+	vfmaddsub132pd xmm1, xmm3, oword [edi]
+	vfmaddsub132pd ymm1, ymm3, ymm5
+	vfmaddsub132pd ymm1, ymm3, yword [edi]
+	vfmaddsub213pd xmm1, xmm3, xmm5
+	vfmaddsub213pd xmm1, xmm3, oword [edi]
+	vfmaddsub213pd ymm1, ymm3, ymm5
+	vfmaddsub213pd ymm1, ymm3, yword [edi]
+	vfmaddsub231pd xmm1, xmm3, xmm5
+	vfmaddsub231pd xmm1, xmm3, oword [edi]
+	vfmaddsub231pd ymm1, ymm3, ymm5
+	vfmaddsub231pd ymm1, ymm3, yword [edi]
+	vfmaddsub132ps xmm1, xmm3, xmm5
+	vfmaddsub132ps xmm1, xmm3, oword [edi]
+	vfmaddsub132ps ymm1, ymm3, ymm5
+	vfmaddsub132ps ymm1, ymm3, yword [edi]
+	vfmaddsub213ps xmm1, xmm3, xmm5
+	vfmaddsub213ps xmm1, xmm3, oword [edi]
+	vfmaddsub213ps ymm1, ymm3, ymm5
+	vfmaddsub213ps ymm1, ymm3, yword [edi]
+	vfmaddsub231ps xmm1, xmm3, xmm5
+	vfmaddsub231ps xmm1, xmm3, oword [edi]
+	vfmaddsub231ps ymm1, ymm3, ymm5
+	vfmaddsub231ps ymm1, ymm3, yword [edi]
+	vfmsubadd132pd xmm1, xmm3, xmm5
+	vfmsubadd132pd xmm1, xmm3, oword [edi]
+	vfmsubadd132pd ymm1, ymm3, ymm5
+	vfmsubadd132pd ymm1, ymm3, yword [edi]
+	vfmsubadd213pd xmm1, xmm3, xmm5
+	vfmsubadd213pd xmm1, xmm3, oword [edi]
+	vfmsubadd213pd ymm1, ymm3, ymm5
+	vfmsubadd213pd ymm1, ymm3, yword [edi]
+	vfmsubadd231pd xmm1, xmm3, xmm5
+	vfmsubadd231pd xmm1, xmm3, oword [edi]
+	vfmsubadd231pd ymm1, ymm3, ymm5
+	vfmsubadd231pd ymm1, ymm3, yword [edi]
+	vfmsubadd132ps xmm1, xmm3, xmm5
+	vfmsubadd132ps xmm1, xmm3, oword [edi]
+	vfmsubadd132ps ymm1, ymm3, ymm5
+	vfmsubadd132ps ymm1, ymm3, yword [edi]
+	vfmsubadd213ps xmm1, xmm3, xmm5
+	vfmsubadd213ps xmm1, xmm3, oword [edi]
+	vfmsubadd213ps ymm1, ymm3, ymm5
+	vfmsubadd213ps ymm1, ymm3, yword [edi]
+	vfmsubadd231ps xmm1, xmm3, xmm5
+	vfmsubadd231ps xmm1, xmm3, oword [edi]
+	vfmsubadd231ps ymm1, ymm3, ymm5
+	vfmsubadd231ps ymm1, ymm3, yword [edi]
+	vfmsub132pd xmm1, xmm3, xmm5
+	vfmsub132pd xmm1, xmm3, oword [edi]
+	vfmsub132pd ymm1, ymm3, ymm5
+	vfmsub132pd ymm1, ymm3, yword [edi]
+	vfmsub213pd xmm1, xmm3, xmm5
+	vfmsub213pd xmm1, xmm3, oword [edi]
+	vfmsub213pd ymm1, ymm3, ymm5
+	vfmsub213pd ymm1, ymm3, yword [edi]
+	vfmsub231pd xmm1, xmm3, xmm5
+	vfmsub231pd xmm1, xmm3, oword [edi]
+	vfmsub231pd ymm1, ymm3, ymm5
+	vfmsub231pd ymm1, ymm3, yword [edi]
+	vfmsub132ps xmm1, xmm3, xmm5
+	vfmsub132ps xmm1, xmm3, oword [edi]
+	vfmsub132ps ymm1, ymm3, ymm5
+	vfmsub132ps ymm1, ymm3, yword [edi]
+	vfmsub213ps xmm1, xmm3, xmm5
+	vfmsub213ps xmm1, xmm3, oword [edi]
+	vfmsub213ps ymm1, ymm3, ymm5
+	vfmsub213ps ymm1, ymm3, yword [edi]
+	vfmsub231ps xmm1, xmm3, xmm5
+	vfmsub231ps xmm1, xmm3, oword [edi]
+	vfmsub231ps ymm1, ymm3, ymm5
+	vfmsub231ps ymm1, ymm3, yword [edi]
+	vfmsub132sd xmm1, xmm3, xmm5
+	vfmsub132sd xmm1, xmm3, [edi]
+	vfmsub213sd xmm1, xmm3, xmm5
+	vfmsub213sd xmm1, xmm3, [edi]
+	vfmsub231sd xmm1, xmm3, xmm5
+	vfmsub231sd xmm1, xmm3, [edi]
+	vfmsub132ss xmm1, xmm3, xmm5
+	vfmsub132ss xmm1, xmm3, [edi]
+	vfmsub213ss xmm1, xmm3, xmm5
+	vfmsub213ss xmm1, xmm3, [edi]
+	vfmsub231ss xmm1, xmm3, xmm5
+	vfmsub231ss xmm1, xmm3, [edi]
+	vfnmadd132pd xmm1, xmm3, xmm5
+	vfnmadd132pd xmm1, xmm3, oword [edi]
+	vfnmadd132pd ymm1, ymm3, ymm5
+	vfnmadd132pd ymm1, ymm3, yword [edi]
+	vfnmadd213pd xmm1, xmm3, xmm5
+	vfnmadd213pd xmm1, xmm3, oword [edi]
+	vfnmadd213pd ymm1, ymm3, ymm5
+	vfnmadd213pd ymm1, ymm3, yword [edi]
+	vfnmadd231pd xmm1, xmm3, xmm5
+	vfnmadd231pd xmm1, xmm3, oword [edi]
+	vfnmadd231pd ymm1, ymm3, ymm5
+	vfnmadd231pd ymm1, ymm3, yword [edi]
+	vfnmadd132ps xmm1, xmm3, xmm5
+	vfnmadd132ps xmm1, xmm3, oword [edi]
+	vfnmadd132ps ymm1, ymm3, ymm5
+	vfnmadd132ps ymm1, ymm3, yword [edi]
+	vfnmadd213ps xmm1, xmm3, xmm5
+	vfnmadd213ps xmm1, xmm3, oword [edi]
+	vfnmadd213ps ymm1, ymm3, ymm5
+	vfnmadd213ps ymm1, ymm3, yword [edi]
+	vfnmadd231ps xmm1, xmm3, xmm5
+	vfnmadd231ps xmm1, xmm3, oword [edi]
+	vfnmadd231ps ymm1, ymm3, ymm5
+	vfnmadd231ps ymm1, ymm3, yword [edi]
+	vfnmadd132sd xmm1, xmm3, xmm5
+	vfnmadd132sd xmm1, xmm3, [edi]
+	vfnmadd213sd xmm1, xmm3, xmm5
+	vfnmadd213sd xmm1, xmm3, [edi]
+	vfnmadd231sd xmm1, xmm3, xmm5
+	vfnmadd231sd xmm1, xmm3, [edi]
+	vfnmadd132ss xmm1, xmm3, xmm5
+	vfnmadd132ss xmm1, xmm3, [edi]
+	vfnmadd213ss xmm1, xmm3, xmm5
+	vfnmadd213ss xmm1, xmm3, [edi]
+	vfnmadd231ss xmm1, xmm3, xmm5
+	vfnmadd231ss xmm1, xmm3, [edi]
+	vfnmsub132pd xmm1, xmm3, xmm5
+	vfnmsub132pd xmm1, xmm3, oword [edi]
+	vfnmsub132pd ymm1, ymm3, ymm5
+	vfnmsub132pd ymm1, ymm3, yword [edi]
+	vfnmsub213pd xmm1, xmm3, xmm5
+	vfnmsub213pd xmm1, xmm3, oword [edi]
+	vfnmsub213pd ymm1, ymm3, ymm5
+	vfnmsub213pd ymm1, ymm3, yword [edi]
+	vfnmsub231pd xmm1, xmm3, xmm5
+	vfnmsub231pd xmm1, xmm3, oword [edi]
+	vfnmsub231pd ymm1, ymm3, ymm5
+	vfnmsub231pd ymm1, ymm3, yword [edi]
+	vfnmsub132ps xmm1, xmm3, xmm5
+	vfnmsub132ps xmm1, xmm3, oword [edi]
+	vfnmsub132ps ymm1, ymm3, ymm5
+	vfnmsub132ps ymm1, ymm3, yword [edi]
+	vfnmsub213ps xmm1, xmm3, xmm5
+	vfnmsub213ps xmm1, xmm3, oword [edi]
+	vfnmsub213ps ymm1, ymm3, ymm5
+	vfnmsub213ps ymm1, ymm3, yword [edi]
+	vfnmsub231ps xmm1, xmm3, xmm5
+	vfnmsub231ps xmm1, xmm3, oword [edi]
+	vfnmsub231ps ymm1, ymm3, ymm5
+	vfnmsub231ps ymm1, ymm3, yword [edi]
+	vfnmsub132sd xmm1, xmm3, xmm5
+	vfnmsub132sd xmm1, xmm3, [edi]
+	vfnmsub213sd xmm1, xmm3, xmm5
+	vfnmsub213sd xmm1, xmm3, [edi]
+	vfnmsub231sd xmm1, xmm3, xmm5
+	vfnmsub231sd xmm1, xmm3, [edi]
+	vfnmsub132ss xmm1, xmm3, xmm5
+	vfnmsub132ss xmm1, xmm3, [edi]
+	vfnmsub213ss xmm1, xmm3, xmm5
+	vfnmsub213ss xmm1, xmm3, [edi]
+	vfnmsub231ss xmm1, xmm3, xmm5
+	vfnmsub231ss xmm1, xmm3, [edi]
