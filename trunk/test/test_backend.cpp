@@ -3963,7 +3963,7 @@ struct test_sse4_2 : jitasm::function<void, test_sse4_2>
 //----------------------------------------
 // AVX A~
 //----------------------------------------
-extern "C" void nasm_test_avx_a();
+extern "C" void masm_test_avx_a();
 struct test_avx_a : jitasm::function<void, test_avx_a>
 {
 	void naked_main()
@@ -4082,7 +4082,7 @@ struct test_avx_a : jitasm::function<void, test_avx_a>
 //----------------------------------------
 // AVX B~
 //----------------------------------------
-extern "C" void nasm_test_avx_b();
+extern "C" void masm_test_avx_b();
 struct test_avx_b : jitasm::function<void, test_avx_b>
 {
 	void naked_main()
@@ -4201,7 +4201,7 @@ struct test_avx_b : jitasm::function<void, test_avx_b>
 //----------------------------------------
 // AVX D~
 //----------------------------------------
-extern "C" void nasm_test_avx_d();
+extern "C" void masm_test_avx_d();
 struct test_avx_d : jitasm::function<void, test_avx_d>
 {
 	void naked_main()
@@ -4398,7 +4398,7 @@ struct test_avx_d : jitasm::function<void, test_avx_d>
 //----------------------------------------
 // AVX O~
 //----------------------------------------
-extern "C" void nasm_test_avx_o();
+extern "C" void masm_test_avx_o();
 struct test_avx_o : jitasm::function<void, test_avx_o>
 {
 	void naked_main()
@@ -4707,7 +4707,7 @@ struct test_avx_o : jitasm::function<void, test_avx_o>
 //----------------------------------------
 // AVX R~
 //----------------------------------------
-extern "C" void nasm_test_avx_r();
+extern "C" void masm_test_avx_r();
 struct test_avx_r : jitasm::function<void, test_avx_r>
 {
 	void naked_main()
@@ -5005,6 +5005,271 @@ struct test_fma : jitasm::function<void, test_fma>
 	}
 };
 
+//----------------------------------------
+// XOP
+//----------------------------------------
+extern "C" void nasm_test_xop();
+struct test_xop : jitasm::function<void, test_xop>
+{
+	void naked_main()
+	{
+		vfrczpd(xmm1, xmm3);
+		vfrczpd(xmm1, xmmword_ptr[edx]);
+		vfrczpd(ymm1, ymm3);
+		vfrczpd(ymm1, ymmword_ptr[edx]);
+		vfrczps(xmm1, xmm3);
+		vfrczps(xmm1, xmmword_ptr[edx]);
+		vfrczps(ymm1, ymm3);
+		vfrczps(ymm1, ymmword_ptr[edx]);
+		vfrczsd(xmm1, xmm3);
+		vfrczsd(xmm1, qword_ptr[edx]);
+		vfrczss(xmm1, xmm3);
+		vfrczss(xmm1, dword_ptr[edx]);
+		vpcmov(xmm1, xmm3, xmm5, xmm7);
+		vpcmov(xmm1, xmm3, xmmword_ptr[esp], xmm7);
+		vpcmov(xmm1, xmm3, xmm5, xmmword_ptr[esi]);
+		vpcmov(ymm1, ymm3, ymm5, ymm7);
+		vpcmov(ymm1, ymm3, ymmword_ptr[esp], ymm7);
+		vpcmov(ymm1, ymm3, ymm5, ymmword_ptr[esi]);
+		vpcomb(xmm1, xmm3, xmm5, 2);
+		vpcomb(xmm1, xmm3, xmmword_ptr[esp], 2);
+		vpcomd(xmm1, xmm3, xmm5, 2);
+		vpcomd(xmm1, xmm3, xmmword_ptr[esp], 2);
+		vpcomq(xmm1, xmm3, xmm5, 2);
+		vpcomq(xmm1, xmm3, xmmword_ptr[esp], 2);
+		//vpcomub(xmm1, xmm3, xmm5, 2);
+		//vpcomub(xmm1, xmm3, xmmword_ptr[esp], 2);
+		//vpcomud(xmm1, xmm3, xmm5, 2);
+		//vpcomud(xmm1, xmm3, xmmword_ptr[esp], 2);
+		//vpcomuq(xmm1, xmm3, xmm5, 2);
+		//vpcomuq(xmm1, xmm3, xmmword_ptr[esp], 2);
+		//vpcomuw(xmm1, xmm3, xmm5, 2);
+		//vpcomuw(xmm1, xmm3, xmmword_ptr[esp], 2);
+		//vpcomw(xmm1, xmm3, xmm5, 2);
+		//vpcomw(xmm1, xmm3, xmmword_ptr[esp], 2);
+		//vpermil2pd(xmm1, xmm3, xmm5, xmm7);
+		//vpermil2pd(xmm1, xmm3, xmmword_ptr[esp], xmm7);
+		//vpermil2pd(xmm1, xmm3, xmm5, xmmword_ptr[esi]);
+		//vpermil2pd(ymm1, ymm3, ymm5, ymm7);
+		//vpermil2pd(ymm1, ymm3, ymmword_ptr[esp], ymm7);
+		//vpermil2pd(ymm1, ymm3, ymm5, ymmword_ptr[esi]);
+		//vpermil2ps(xmm1, xmm3, xmm5, xmm7);
+		//vpermil2ps(xmm1, xmm3, xmmword_ptr[esp], xmm7);
+		//vpermil2ps(xmm1, xmm3, xmm5, xmmword_ptr[esi]);
+		//vpermil2ps(ymm1, ymm3, ymm5, ymm7);
+		//vpermil2ps(ymm1, ymm3, ymmword_ptr[esp], ymm7);
+		//vpermil2ps(ymm1, ymm3, ymm5, ymmword_ptr[esi]);
+		vphaddbd(xmm1, xmm3);
+		vphaddbd(xmm1, xmmword_ptr[edx]);
+		vphaddbq(xmm1, xmm3);
+		vphaddbq(xmm1, xmmword_ptr[edx]);
+		vphaddbw(xmm1, xmm3);
+		vphaddbw(xmm1, xmmword_ptr[edx]);
+		vphadddq(xmm1, xmm3);
+		vphadddq(xmm1, xmmword_ptr[edx]);
+		vphaddubd(xmm1, xmm3);
+		vphaddubd(xmm1, xmmword_ptr[edx]);
+		vphaddubq(xmm1, xmm3);
+		vphaddubq(xmm1, xmmword_ptr[edx]);
+		vphaddubw(xmm1, xmm3);
+		vphaddubw(xmm1, xmmword_ptr[edx]);
+		//vphaddudq(xmm1, xmm3);
+		//vphaddudq(xmm1, xmmword_ptr[edx]);
+		vphadduwd(xmm1, xmm3);
+		vphadduwd(xmm1, xmmword_ptr[edx]);
+		vphadduwq(xmm1, xmm3);
+		vphadduwq(xmm1, xmmword_ptr[edx]);
+		vphaddwd(xmm1, xmm3);
+		vphaddwd(xmm1, xmmword_ptr[edx]);
+		vphaddwq(xmm1, xmm3);
+		vphaddwq(xmm1, xmmword_ptr[edx]);
+		vphsubbw(xmm1, xmm3);
+		vphsubbw(xmm1, xmmword_ptr[edx]);
+		//vphsubdq(xmm1, xmm3);
+		//vphsubdq(xmm1, xmmword_ptr[edx]);
+		vphsubwd(xmm1, xmm3);
+		vphsubwd(xmm1, xmmword_ptr[edx]);
+		vpmacsdd(xmm1, xmm3, xmm5, xmm7);
+		vpmacsdd(xmm1, xmm3, xmmword_ptr[esp], xmm7);
+		vpmacsdqh(xmm1, xmm3, xmm5, xmm7);
+		vpmacsdqh(xmm1, xmm3, xmmword_ptr[esp], xmm7);
+		vpmacsdql(xmm1, xmm3, xmm5, xmm7);
+		vpmacsdql(xmm1, xmm3, xmmword_ptr[esp], xmm7);
+		vpmacssdd(xmm1, xmm3, xmm5, xmm7);
+		vpmacssdd(xmm1, xmm3, xmmword_ptr[esp], xmm7);
+		vpmacssdqh(xmm1, xmm3, xmm5, xmm7);
+		vpmacssdqh(xmm1, xmm3, xmmword_ptr[esp], xmm7);
+		vpmacssdql(xmm1, xmm3, xmm5, xmm7);
+		vpmacssdql(xmm1, xmm3, xmmword_ptr[esp], xmm7);
+		vpmacsswd(xmm1, xmm3, xmm5, xmm7);
+		vpmacsswd(xmm1, xmm3, xmmword_ptr[esp], xmm7);
+		vpmacssww(xmm1, xmm3, xmm5, xmm7);
+		vpmacssww(xmm1, xmm3, xmmword_ptr[esp], xmm7);
+		vpmacswd(xmm1, xmm3, xmm5, xmm7);
+		vpmacswd(xmm1, xmm3, xmmword_ptr[esp], xmm7);
+		vpmacsww(xmm1, xmm3, xmm5, xmm7);
+		vpmacsww(xmm1, xmm3, xmmword_ptr[esp], xmm7);
+		vpmadcsswd(xmm1, xmm3, xmm5, xmm7);
+		vpmadcsswd(xmm1, xmm3, xmmword_ptr[esp], xmm7);
+		vpmadcswd(xmm1, xmm3, xmm5, xmm7);
+		vpmadcswd(xmm1, xmm3, xmmword_ptr[esp], xmm7);
+		vpperm(xmm1, xmm3, xmm5, xmm7);
+		vpperm(xmm1, xmm3, xmmword_ptr[esp], xmm7);
+		vpperm(xmm1, xmm3, xmm5, xmmword_ptr[esi]);
+		vprotb(xmm1, xmm3, xmm5);
+		vprotb(xmm1, xmmword_ptr[edx], xmm5);
+		vprotb(xmm1, xmm3, xmmword_ptr[esp]);
+		vprotb(xmm1, xmm3, 2);
+		vprotb(xmm1, xmmword_ptr[edx], 2);
+		vprotd(xmm1, xmm3, xmm5);
+		vprotd(xmm1, xmmword_ptr[edx], xmm5);
+		vprotd(xmm1, xmm3, xmmword_ptr[esp]);
+		vprotd(xmm1, xmm3, 2);
+		vprotd(xmm1, xmmword_ptr[edx], 2);
+		vprotq(xmm1, xmm3, xmm5);
+		vprotq(xmm1, xmmword_ptr[edx], xmm5);
+		vprotq(xmm1, xmm3, xmmword_ptr[esp]);
+		vprotq(xmm1, xmm3, 2);
+		vprotq(xmm1, xmmword_ptr[edx], 2);
+		vprotw(xmm1, xmm3, xmm5);
+		vprotw(xmm1, xmmword_ptr[edx], xmm5);
+		vprotw(xmm1, xmm3, xmmword_ptr[esp]);
+		vprotw(xmm1, xmm3, 2);
+		vprotw(xmm1, xmmword_ptr[edx], 2);
+		vpshab(xmm1, xmm3, xmm5);
+		vpshab(xmm1, xmmword_ptr[edx], xmm5);
+		vpshab(xmm1, xmm3, xmmword_ptr[esp]);
+		vpshad(xmm1, xmm3, xmm5);
+		vpshad(xmm1, xmmword_ptr[edx], xmm5);
+		vpshad(xmm1, xmm3, xmmword_ptr[esp]);
+		vpshaq(xmm1, xmm3, xmm5);
+		vpshaq(xmm1, xmmword_ptr[edx], xmm5);
+		vpshaq(xmm1, xmm3, xmmword_ptr[esp]);
+		vpshaw(xmm1, xmm3, xmm5);
+		vpshaw(xmm1, xmmword_ptr[edx], xmm5);
+		vpshaw(xmm1, xmm3, xmmword_ptr[esp]);
+		vpshlb(xmm1, xmm3, xmm5);
+		vpshlb(xmm1, xmmword_ptr[edx], xmm5);
+		vpshlb(xmm1, xmm3, xmmword_ptr[esp]);
+		vpshld(xmm1, xmm3, xmm5);
+		vpshld(xmm1, xmmword_ptr[edx], xmm5);
+		vpshld(xmm1, xmm3, xmmword_ptr[esp]);
+		vpshlq(xmm1, xmm3, xmm5);
+		vpshlq(xmm1, xmmword_ptr[edx], xmm5);
+		vpshlq(xmm1, xmm3, xmmword_ptr[esp]);
+		vpshlw(xmm1, xmm3, xmm5);
+		vpshlw(xmm1, xmmword_ptr[edx], xmm5);
+		vpshlw(xmm1, xmm3, xmmword_ptr[esp]);
+	}
+};
+
+//----------------------------------------
+// FMA4
+//----------------------------------------
+extern "C" void nasm_test_fma4();
+struct test_fma4 : jitasm::function<void, test_fma4>
+{
+	void naked_main()
+	{
+		vfmaddpd(xmm1, xmm3, xmm5, xmm7);
+		vfmaddpd(xmm1, xmm3, xmmword_ptr[esp], xmm7);
+		vfmaddpd(xmm1, xmm3, xmm5, xmmword_ptr[esi]);
+		vfmaddpd(ymm1, ymm3, ymm5, ymm7);
+		vfmaddpd(ymm1, ymm3, ymmword_ptr[esp], ymm7);
+		vfmaddpd(ymm1, ymm3, ymm5, ymmword_ptr[esi]);
+		vfmaddps(xmm1, xmm3, xmm5, xmm7);
+		vfmaddps(xmm1, xmm3, xmmword_ptr[esp], xmm7);
+		vfmaddps(xmm1, xmm3, xmm5, xmmword_ptr[esi]);
+		vfmaddps(ymm1, ymm3, ymm5, ymm7);
+		vfmaddps(ymm1, ymm3, ymmword_ptr[esp], ymm7);
+		vfmaddps(ymm1, ymm3, ymm5, ymmword_ptr[esi]);
+		vfmaddsd(xmm1, xmm3, xmm5, xmm7);
+		vfmaddsd(xmm1, xmm3, qword_ptr[esp], xmm7);
+		vfmaddsd(xmm1, xmm3, xmm5, qword_ptr[esi]);
+		vfmaddss(xmm1, xmm3, xmm5, xmm7);
+		vfmaddss(xmm1, xmm3, dword_ptr[esp], xmm7);
+		vfmaddss(xmm1, xmm3, xmm5, dword_ptr[esi]);
+		vfmaddsubpd(xmm1, xmm3, xmm5, xmm7);
+		vfmaddsubpd(xmm1, xmm3, xmmword_ptr[esp], xmm7);
+		vfmaddsubpd(xmm1, xmm3, xmm5, xmmword_ptr[esi]);
+		vfmaddsubpd(ymm1, ymm3, ymm5, ymm7);
+		vfmaddsubpd(ymm1, ymm3, ymmword_ptr[esp], ymm7);
+		vfmaddsubpd(ymm1, ymm3, ymm5, ymmword_ptr[esi]);
+		vfmaddsubps(xmm1, xmm3, xmm5, xmm7);
+		vfmaddsubps(xmm1, xmm3, xmmword_ptr[esp], xmm7);
+		vfmaddsubps(xmm1, xmm3, xmm5, xmmword_ptr[esi]);
+		vfmaddsubps(ymm1, ymm3, ymm5, ymm7);
+		vfmaddsubps(ymm1, ymm3, ymmword_ptr[esp], ymm7);
+		vfmaddsubps(ymm1, ymm3, ymm5, ymmword_ptr[esi]);
+		vfmsubaddpd(xmm1, xmm3, xmm5, xmm7);
+		vfmsubaddpd(xmm1, xmm3, xmmword_ptr[esp], xmm7);
+		vfmsubaddpd(xmm1, xmm3, xmm5, xmmword_ptr[esi]);
+		vfmsubaddpd(ymm1, ymm3, ymm5, ymm7);
+		vfmsubaddpd(ymm1, ymm3, ymmword_ptr[esp], ymm7);
+		vfmsubaddpd(ymm1, ymm3, ymm5, ymmword_ptr[esi]);
+		vfmsubaddps(xmm1, xmm3, xmm5, xmm7);
+		vfmsubaddps(xmm1, xmm3, xmmword_ptr[esp], xmm7);
+		vfmsubaddps(xmm1, xmm3, xmm5, xmmword_ptr[esi]);
+		vfmsubaddps(ymm1, ymm3, ymm5, ymm7);
+		vfmsubaddps(ymm1, ymm3, ymmword_ptr[esp], ymm7);
+		vfmsubaddps(ymm1, ymm3, ymm5, ymmword_ptr[esi]);
+		vfmsubpd(xmm1, xmm3, xmm5, xmm7);
+		vfmsubpd(xmm1, xmm3, xmmword_ptr[esp], xmm7);
+		vfmsubpd(xmm1, xmm3, xmm5, xmmword_ptr[esi]);
+		vfmsubpd(ymm1, ymm3, ymm5, ymm7);
+		vfmsubpd(ymm1, ymm3, ymmword_ptr[esp], ymm7);
+		vfmsubpd(ymm1, ymm3, ymm5, ymmword_ptr[esi]);
+		vfmsubps(xmm1, xmm3, xmm5, xmm7);
+		vfmsubps(xmm1, xmm3, xmmword_ptr[esp], xmm7);
+		vfmsubps(xmm1, xmm3, xmm5, xmmword_ptr[esi]);
+		vfmsubps(ymm1, ymm3, ymm5, ymm7);
+		vfmsubps(ymm1, ymm3, ymmword_ptr[esp], ymm7);
+		vfmsubps(ymm1, ymm3, ymm5, ymmword_ptr[esi]);
+		vfmsubsd(xmm1, xmm3, xmm5, xmm7);
+		vfmsubsd(xmm1, xmm3, qword_ptr[esp], xmm7);
+		vfmsubsd(xmm1, xmm3, xmm5, qword_ptr[esi]);
+		vfmsubss(xmm1, xmm3, xmm5, xmm7);
+		vfmsubss(xmm1, xmm3, dword_ptr[esp], xmm7);
+		vfmsubss(xmm1, xmm3, xmm5, dword_ptr[esi]);
+		vfnmaddpd(xmm1, xmm3, xmm5, xmm7);
+		vfnmaddpd(xmm1, xmm3, xmmword_ptr[esp], xmm7);
+		vfnmaddpd(xmm1, xmm3, xmm5, xmmword_ptr[esi]);
+		vfnmaddpd(ymm1, ymm3, ymm5, ymm7);
+		vfnmaddpd(ymm1, ymm3, ymmword_ptr[esp], ymm7);
+		vfnmaddpd(ymm1, ymm3, ymm5, ymmword_ptr[esi]);
+		vfnmaddps(xmm1, xmm3, xmm5, xmm7);
+		vfnmaddps(xmm1, xmm3, xmmword_ptr[esp], xmm7);
+		vfnmaddps(xmm1, xmm3, xmm5, xmmword_ptr[esi]);
+		vfnmaddps(ymm1, ymm3, ymm5, ymm7);
+		vfnmaddps(ymm1, ymm3, ymmword_ptr[esp], ymm7);
+		vfnmaddps(ymm1, ymm3, ymm5, ymmword_ptr[esi]);
+		vfnmaddsd(xmm1, xmm3, xmm5, xmm7);
+		vfnmaddsd(xmm1, xmm3, qword_ptr[esp], xmm7);
+		vfnmaddsd(xmm1, xmm3, xmm5, qword_ptr[esi]);
+		vfnmaddss(xmm1, xmm3, xmm5, xmm7);
+		vfnmaddss(xmm1, xmm3, dword_ptr[esp], xmm7);
+		vfnmaddss(xmm1, xmm3, xmm5, dword_ptr[esi]);
+		vfnmsubpd(xmm1, xmm3, xmm5, xmm7);
+		vfnmsubpd(xmm1, xmm3, xmmword_ptr[esp], xmm7);
+		vfnmsubpd(xmm1, xmm3, xmm5, xmmword_ptr[esi]);
+		vfnmsubpd(ymm1, ymm3, ymm5, ymm7);
+		vfnmsubpd(ymm1, ymm3, ymmword_ptr[esp], ymm7);
+		vfnmsubpd(ymm1, ymm3, ymm5, ymmword_ptr[esi]);
+		vfnmsubps(xmm1, xmm3, xmm5, xmm7);
+		vfnmsubps(xmm1, xmm3, xmmword_ptr[esp], xmm7);
+		vfnmsubps(xmm1, xmm3, xmm5, xmmword_ptr[esi]);
+		vfnmsubps(ymm1, ymm3, ymm5, ymm7);
+		vfnmsubps(ymm1, ymm3, ymmword_ptr[esp], ymm7);
+		vfnmsubps(ymm1, ymm3, ymm5, ymmword_ptr[esi]);
+		vfnmsubsd(xmm1, xmm3, xmm5, xmm7);
+		vfnmsubsd(xmm1, xmm3, qword_ptr[esp], xmm7);
+		vfnmsubsd(xmm1, xmm3, xmm5, qword_ptr[esi]);
+		vfnmsubss(xmm1, xmm3, xmm5, xmm7);
+		vfnmsubss(xmm1, xmm3, dword_ptr[esp], xmm7);
+		vfnmsubss(xmm1, xmm3, xmm5, dword_ptr[esi]);
+	}
+};
+
 void test_backend()
 {
 	TEST_M(test_sal);
@@ -5055,12 +5320,15 @@ void test_backend()
 	TEST_M(test_ssse3);
 	TEST_M(test_sse4_1);
 	TEST_M(test_sse4_2);
+	TEST_M(test_avx_a);
+	TEST_M(test_avx_a);
+	TEST_M(test_avx_b);
+	TEST_M(test_avx_d);
+	TEST_M(test_avx_o);
+	TEST_M(test_avx_r);
 
 	// AVX
-	TEST_N(test_avx_a);
-	TEST_N(test_avx_b);
-	TEST_N(test_avx_d);
-	TEST_N(test_avx_o);
-	TEST_N(test_avx_r);
 	TEST_N(test_fma);
+	TEST_N(test_xop);
+	TEST_N(test_fma4);
 }
