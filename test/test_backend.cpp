@@ -5006,6 +5006,42 @@ struct test_fma : jitasm::function<void, test_fma>
 };
 
 //----------------------------------------
+// F16C
+//----------------------------------------
+extern "C" void nasm_test_f16c();
+struct test_f16c : jitasm::function<void, test_f16c>
+{
+	void naked_main()
+	{
+#ifdef JITASM64
+		rdfsbase(ecx);
+		rdfsbase(rcx);
+		rdgsbase(ecx);
+		rdgsbase(rcx);
+#endif
+		rdrand(cx);
+		rdrand(ecx);
+#ifdef JITASM64
+		rdrand(rcx);
+#endif
+#ifdef JITASM64
+		wrfsbase(ecx);
+		wrfsbase(rcx);
+		wrgsbase(ecx);
+		wrgsbase(rcx);
+#endif
+		vcvtph2ps(ymm1, xmm3);
+		vcvtph2ps(ymm1, xmmword_ptr[edx]);
+		vcvtph2ps(xmm1, xmm3);
+		vcvtph2ps(xmm1, qword_ptr[edx]);
+		vcvtps2ph(xmm1, ymm3, 5);
+		vcvtps2ph(xmmword_ptr[edx], ymm3, 5);
+		vcvtps2ph(xmm1, xmm3, 5);
+		vcvtps2ph(qword_ptr[edx], xmm3, 5);
+	}
+};
+
+//----------------------------------------
 // XOP
 //----------------------------------------
 extern "C" void nasm_test_xop();
@@ -5326,9 +5362,8 @@ void test_backend()
 	TEST_M(test_avx_d);
 	TEST_M(test_avx_o);
 	TEST_M(test_avx_r);
-
-	// AVX
 	TEST_N(test_fma);
+	TEST_N(test_f16c);
 	TEST_N(test_xop);
 	TEST_N(test_fma4);
 }

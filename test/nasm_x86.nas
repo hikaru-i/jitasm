@@ -211,6 +211,28 @@ _nasm_test_fma:
 	vfnmsub231ss xmm1, xmm3, xmm5
 	vfnmsub231ss xmm1, xmm3, [edi]
 
+global	_nasm_test_f16c
+_nasm_test_f16c:
+	;rdfsbase ecx
+	;rdfsbase rcx
+	;rdgsbase ecx
+	;rdgsbase rcx
+	rdrand cx
+	rdrand ecx
+	;rdrand rcx
+	;wrfsbase ecx
+	;wrfsbase rcx
+	;wrgsbase ecx
+	;wrgsbase rcx
+	vcvtph2ps ymm1, xmm3
+	vcvtph2ps ymm1, oword[edx]
+	vcvtph2ps xmm1, xmm3
+	vcvtph2ps xmm1, qword[edx]
+	vcvtps2ph xmm1, ymm3, 5
+	vcvtps2ph oword[edx], ymm3, 5
+	vcvtps2ph xmm1, xmm3, 5
+	vcvtps2ph qword[edx], xmm3, 5
+
 global	_nasm_test_xop
 _nasm_test_xop:
 	vfrczpd xmm1, xmm3
