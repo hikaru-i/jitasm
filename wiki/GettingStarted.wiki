@@ -1,0 +1,22 @@
+#labels Featured
+= Build =
+
+jitasm is header-only library. You just copy and include _jitasm.h_ to use. Please build when you want to try jitasm sample or test.
+
+jitasm supports following compilers:
+  * Microsoft Visual C++ 2005 or later
+  * GCC 4.1 or later
+
+
+== Microsoft Visual C++ ==
+To build samples, please open _samples/samples.sln_. The _pixel_calc_ sample needs [http://www.boost.org/ Boost C++ Library].
+
+To build test, please open _test/test.sln_. It needs Microsoft Visual C++ 2010 and [http://www.tortall.net/projects/yasm/ yasm].
+
+== GCC ==
+jitasm needs some compiler options:
+  * *-fno-operator-names*
+  * *-march=i686* for 32bit
+  * *-mmmx*/*-msse*/*-msse2* when you use `__m64`/`__m128`/`__m128d`/`__m128i` as jitasm function argument or result.
+
+To build samples, please _make_ in each subdirectories. The _pixel_calc_ sample doe's not support gcc.
