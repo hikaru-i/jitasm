@@ -379,99 +379,77 @@
     <CustomBuild Include="nasm_x64.nas">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|x64'">true</ExcludedFromBuild>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|x64'">nasm &gt; assembling...</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|x64'">nasm.exe -f win64 -o $(IntDir)%(Filename).obj %(FullPath)
-</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|x64'">$(IntDir)%(Filename).obj;%(Outputs)</Outputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|x64'">[yasm] assembling...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|x64'">yasm-1.1.0-win64.exe --arch=x86 --parser=nasm --preproc=nasm --oformat=win64 --lformat=nasm --list="$(IntDir)%(Filename).lst" --objfile="$(IntDir)%(Filename).obj" --machine=amd64 "%(FullPath)"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|x64'">$(IntDir)%(Filename).obj;$(IntDir)%(Filename).lst;%(Outputs)</Outputs>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">yasm &gt; assembling...</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">yasm-1.1.0-win64.exe --arch=x86 --parser=nasm --preproc=nasm --oformat=win64 --lformat=nasm --list="$(IntDir)%(Filename).lst" --objfile="$(IntDir)%(Filename).obj" --machine=amd64 "%(FullPath)"
-</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">[yasm] assembling...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">yasm-1.1.0-win64.exe --arch=x86 --parser=nasm --preproc=nasm --oformat=win64 --lformat=nasm --list="$(IntDir)%(Filename).lst" --objfile="$(IntDir)%(Filename).obj" --machine=amd64 "%(FullPath)"</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)%(Filename).obj;$(IntDir)%(Filename).lst;%(Outputs)</Outputs>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|x64'">true</ExcludedFromBuild>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|x64'">nasm &gt; assembling...</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|x64'">nasm.exe -f win64 -o $(IntDir)%(Filename).obj %(FullPath)
-</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|x64'">$(IntDir)%(Filename).obj;%(Outputs)</Outputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|x64'">[yasm] assembling...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|x64'">yasm-1.1.0-win64.exe --arch=x86 --parser=nasm --preproc=nasm --oformat=win64 --lformat=nasm --list="$(IntDir)%(Filename).lst" --objfile="$(IntDir)%(Filename).obj" --machine=amd64 "%(FullPath)"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|x64'">$(IntDir)%(Filename).obj;$(IntDir)%(Filename).lst;%(Outputs)</Outputs>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">nasm &gt; assembling...</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">nasm.exe -f win64 -o "$(IntDir)%(Filename).obj" "%(FullPath)"
-</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)%(Filename).obj;%(Outputs)</Outputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">[yasm] assembling...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">yasm-1.1.0-win64.exe --arch=x86 --parser=nasm --preproc=nasm --oformat=win64 --lformat=nasm --list="$(IntDir)%(Filename).lst" --objfile="$(IntDir)%(Filename).obj" --machine=amd64 "%(FullPath)"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)%(Filename).obj;$(IntDir)%(Filename).lst;%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="nasm_x86.nas">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|Win32'">true</ExcludedFromBuild>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|Win32'">nasm &gt; assembling...</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|Win32'">nasm.exe -f win32 -o $(IntDir)%(Filename).obj %(FullPath)
-</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|Win32'">$(IntDir)%(Filename).obj;%(Outputs)</Outputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|Win32'">[yasm] assembling...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|Win32'">yasm-1.1.0-win32.exe --arch=x86 --parser=nasm --preproc=nasm --oformat=win32 --lformat=nasm --list="$(IntDir)%(Filename).lst" --objfile="$(IntDir)%(Filename).obj" --machine=x86 "%(FullPath)"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|Win32'">$(IntDir)%(Filename).obj;$(IntDir)%(Filename).lst;%(Outputs)</Outputs>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|x64'">true</ExcludedFromBuild>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">yasm &gt; assembling...</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">yasm-1.1.0-win32.exe --arch=x86 --parser=nasm --preproc=nasm --oformat=win32 --lformat=nasm --list="$(IntDir)%(Filename).lst" --objfile="$(IntDir)%(Filename).obj" --machine=x86 "%(FullPath)"
-</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">[yasm] assembling...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">yasm-1.1.0-win32.exe --arch=x86 --parser=nasm --preproc=nasm --oformat=win32 --lformat=nasm --list="$(IntDir)%(Filename).lst" --objfile="$(IntDir)%(Filename).obj" --machine=x86 "%(FullPath)"</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)%(Filename).obj;$(IntDir)%(Filename).lst;%(Outputs)</Outputs>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|Win32'">true</ExcludedFromBuild>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|Win32'">nasm &gt; assembling...</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|Win32'">nasm.exe -f win32 -o $(IntDir)%(Filename).obj %(FullPath)
-</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|Win32'">$(IntDir)%(Filename).obj;%(Outputs)</Outputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|Win32'">[yasm] assembling...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|Win32'">yasm-1.1.0-win32.exe --arch=x86 --parser=nasm --preproc=nasm --oformat=win32 --lformat=nasm --list="$(IntDir)%(Filename).lst" --objfile="$(IntDir)%(Filename).obj" --machine=x86 "%(FullPath)"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|Win32'">$(IntDir)%(Filename).obj;$(IntDir)%(Filename).lst;%(Outputs)</Outputs>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|x64'">true</ExcludedFromBuild>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">nasm &gt; assembling...</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">nasm.exe -f win32 -o "$(IntDir)%(Filename).obj" "%(FullPath)"
-</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)%(Filename).obj;%(Outputs)</Outputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">[yasm] assembling...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">yasm-1.1.0-win32.exe --arch=x86 --parser=nasm --preproc=nasm --oformat=win32 --lformat=nasm --list="$(IntDir)%(Filename).lst" --objfile="$(IntDir)%(Filename).obj" --machine=x86 "%(FullPath)"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)%(Filename).obj;$(IntDir)%(Filename).lst;%(Outputs)</Outputs>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </CustomBuild>
     <CustomBuild Include="x64.asm">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|Win32'">true</ExcludedFromBuild>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|x64'">ml64 &gt; assembling...</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|x64'">"$(VSInstallDir)VC\bin\x86_amd64\ml64" /c /Zi /Sa "/Fl%(RootDir)%(Directory)\%(Filename).lst" "/Fo$(IntDir)%(Filename).obj" "%(FullPath)"
-"$(VSInstallDir)VC\bin\x86_amd64\dumpbin.exe" /DISASM:BYTES "$(IntDir)%(Filename).obj" /OUT:"%(RootDir)%(Directory)\%(Filename).disasm"
-</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|x64'">$(IntDir)%(Filename).obj;%(Outputs)</Outputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|x64'">[masm] assembling...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|x64'">"$(VSInstallDir)VC\bin\x86_amd64\ml64" /c /Zi /Sa "/Fl$(IntDir)%(Filename).lst" "/Fo$(IntDir)%(Filename).obj" "%(FullPath)"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|x64'">$(IntDir)%(Filename).obj;$(IntDir)%(Filename).lst;%(Outputs)</Outputs>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ml64 &gt; assembling...</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(VSInstallDir)VC\bin\x86_amd64\ml64" /c /Zi /Sa "/Fl$(IntDir)%(Filename).lst" "/Fo$(IntDir)%(Filename).obj" "%(FullPath)"
-</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">[masm] assembling...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(VSInstallDir)VC\bin\x86_amd64\ml64" /c /Zi /Sa "/Fl$(IntDir)%(Filename).lst" "/Fo$(IntDir)%(Filename).obj" "%(FullPath)"</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)%(Filename).obj;$(IntDir)%(Filename).lst;%(Outputs)</Outputs>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|Win32'">true</ExcludedFromBuild>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|x64'">ml64 &gt; assembling...</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|x64'">"$(VSInstallDir)VC\bin\x86_amd64\ml64" /c /Zi /Sa "/Fl%(RootDir)%(Directory)\%(Filename).lst" "/Fo$(IntDir)%(Filename).obj" "%(FullPath)"
-"$(VSInstallDir)VC\bin\x86_amd64\dumpbin.exe" /DISASM:BYTES "$(IntDir)%(Filename).obj" /OUT:"%(RootDir)%(Directory)\%(Filename).disasm"
-</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|x64'">$(IntDir)%(Filename).obj;%(Outputs)</Outputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|x64'">[masm] assembling...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|x64'">"$(VSInstallDir)VC\bin\x86_amd64\ml64" /c /Zi /Sa "/Fl$(IntDir)%(Filename).lst" "/Fo$(IntDir)%(Filename).obj" "%(FullPath)"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|x64'">$(IntDir)%(Filename).obj;$(IntDir)%(Filename).lst;%(Outputs)</Outputs>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">ml64 &gt; assembling...</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(VSInstallDir)VC\bin\x86_amd64\ml64" /c /Zi /Sa "/Fl%(RootDir)%(Directory)\%(Filename).lst" "/Fo$(IntDir)%(Filename).obj" "%(FullPath)"
-"$(VSInstallDir)VC\bin\x86_amd64\dumpbin.exe" /DISASM:BYTES "$(IntDir)%(Filename).obj" /OUT:"%(RootDir)%(Directory)\%(Filename).disasm"
-</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)%(Filename).obj;%(Outputs)</Outputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">[masm] assembling...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(VSInstallDir)VC\bin\x86_amd64\ml64" /c /Zi /Sa "/Fl$(IntDir)%(Filename).lst" "/Fo$(IntDir)%(Filename).obj" "%(FullPath)"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)%(Filename).obj;$(IntDir)%(Filename).lst;%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="x86.asm">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|Win32'">ml &gt; assembling...</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|Win32'">"$(VSInstallDir)VC\bin\ml" /c /Zi /Sa "/Fl%(RootDir)%(Directory)\%(Filename).lst" "/Fo$(IntDir)%(Filename).obj" "%(FullPath)"
-"$(VSInstallDir)VC\bin\dumpbin.exe" /DISASM:BYTES "$(IntDir)%(Filename).obj" /OUT:"%(RootDir)%(Directory)\%(Filename).disasm"
-</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|Win32'">$(IntDir)%(Filename).obj;%(Outputs)</Outputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|Win32'">[masm] assembling...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|Win32'">"$(VSInstallDir)VC\bin\ml" /c /Zi /Sa "/Fl$(IntDir)%(Filename).lst" "/Fo$(IntDir)%(Filename).obj" "%(FullPath)"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|Win32'">$(IntDir)%(Filename).obj;$(IntDir)%(Filename).lst;%(Outputs)</Outputs>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|x64'">true</ExcludedFromBuild>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">ml &gt; assembling...</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(VSInstallDir)VC\bin\ml" /c /Zi /Sa "/Fl$(IntDir)%(Filename).lst" "/Fo$(IntDir)%(Filename).obj" "%(FullPath)"
-</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">[masm] assembling...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">"$(VSInstallDir)VC\bin\ml" /c /Zi /Sa "/Fl$(IntDir)%(Filename).lst" "/Fo$(IntDir)%(Filename).obj" "%(FullPath)"</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)%(Filename).obj;$(IntDir)%(Filename).lst;%(Outputs)</Outputs>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|Win32'">ml &gt; assembling...</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|Win32'">"$(VSInstallDir)VC\bin\ml" /c /Zi /Sa "/Fl%(RootDir)%(Directory)\%(Filename).lst" "/Fo$(IntDir)%(Filename).obj" "%(FullPath)"
-"$(VSInstallDir)VC\bin\dumpbin.exe" /DISASM:BYTES "$(IntDir)%(Filename).obj" /OUT:"%(RootDir)%(Directory)\%(Filename).disasm"
-</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|Win32'">$(IntDir)%(Filename).obj;%(Outputs)</Outputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|Win32'">[masm] assembling...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|Win32'">"$(VSInstallDir)VC\bin\ml" /c /Zi /Sa "/Fl$(IntDir)%(Filename).lst" "/Fo$(IntDir)%(Filename).obj" "%(FullPath)"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|Win32'">$(IntDir)%(Filename).obj;$(IntDir)%(Filename).lst;%(Outputs)</Outputs>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|x64'">true</ExcludedFromBuild>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">ml &gt; assembling...</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(VSInstallDir)VC\bin\ml" /c /Zi /Sa "/Fl%(RootDir)%(Directory)\%(Filename).lst" "/Fo$(IntDir)%(Filename).obj" "%(FullPath)"
-"$(VSInstallDir)VC\bin\dumpbin.exe" /DISASM:BYTES "$(IntDir)%(Filename).obj" /OUT:"%(RootDir)%(Directory)\%(Filename).disasm"
-</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)%(Filename).obj;%(Outputs)</Outputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">[masm] assembling...</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">"$(VSInstallDir)VC\bin\ml" /c /Zi /Sa "/Fl$(IntDir)%(Filename).lst" "/Fo$(IntDir)%(Filename).obj" "%(FullPath)"</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)%(Filename).obj;$(IntDir)%(Filename).lst;%(Outputs)</Outputs>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </CustomBuild>
   </ItemGroup>

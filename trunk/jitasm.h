@@ -760,6 +760,9 @@ enum InstrID
 	I_VFNMSUB132PD, I_VFNMSUB213PD, I_VFNMSUB231PD, I_VFNMSUB132PS, I_VFNMSUB213PS, I_VFNMSUB231PS,
 	I_VFNMSUB132SD, I_VFNMSUB213SD, I_VFNMSUB231SD, I_VFNMSUB132SS, I_VFNMSUB213SS, I_VFNMSUB231SS,
 
+	// F16C
+	I_RDFSBASE, I_RDGSBASE, I_RDRAND, I_WRFSBASE, I_WRGSBASE, I_VCVTPH2PS, I_VCVTPS2PH,
+
 	// XOP
 	I_VFRCZPD, I_VFRCZPS, I_VFRCZSD, I_VFRCZSS,
 	I_VPCMOV, I_VPCOMB, I_VPCOMD, I_VPCOMQ, I_VPCOMUB, I_VPCOMUD, I_VPCOMUQ, I_VPCOMUW, I_VPCOMW, I_VPERMIL2PD, I_VPERMIL2PS,
@@ -852,6 +855,8 @@ enum EncodingFlags
 	E_VEX_256_66_0F38_W0 = E_VEX_256 | E_VEX_66_0F38 | E_VEX_W0,
 	E_VEX_128_66_0F38_W1 = E_VEX_128 | E_VEX_66_0F38 | E_VEX_W1,
 	E_VEX_256_66_0F38_W1 = E_VEX_256 | E_VEX_66_0F38 | E_VEX_W1,
+	E_VEX_128_66_0F3A_W0 = E_VEX_128 | E_VEX_66_0F3A | E_VEX_W0,
+	E_VEX_256_66_0F3A_W0 = E_VEX_256 | E_VEX_66_0F3A | E_VEX_W0,
 };
 
 /// Instruction
@@ -930,7 +935,7 @@ struct Backend
 #endif
 			uint8 vvvv = vex.IsReg() ? 0xF - (uint8) vex.GetReg().id : 0xF;
 			uint8 mmmmm = (flag & E_VEX_MMMMM_MASK) >> E_VEX_MMMMM_SHIFT;
-			uint8 pp = (flag & E_VEX_PP_MASK) >> E_VEX_PP_SHIFT;
+			uint8 pp = static_cast<uint8>((flag & E_VEX_PP_MASK) >> E_VEX_PP_SHIFT);
 			uint8 wrxb = GetWRXB(flag & E_VEX_W, reg, r_m);
 			if (flag & E_XOP) {
 				db(0x8F);
@@ -4842,6 +4847,33 @@ struct Frontend
 	void vfnmsub213ss(const XmmReg& dst, const XmmReg& src1, const Mem64& src2)		{AppendInstr(I_VFNMSUB213SS, 0xAF, E_VEX_128_66_0F38_W0, RW(dst), R(src2), R(src1));}
 	void vfnmsub231ss(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_VFNMSUB231SS, 0xBF, E_VEX_128_66_0F38_W0, RW(dst), R(src2), R(src1));}
 	void vfnmsub231ss(const XmmReg& dst, const XmmReg& src1, const Mem64& src2)		{AppendInstr(I_VFNMSUB231SS, 0xBF, E_VEX_128_66_0F38_W0, RW(dst), R(src2), R(src1));}
+
+	// F16C
+#ifdef JITASM64
+	void rdfsbase(const Reg32& dst)	{AppendInstr(I_RDFSBASE, 0x0FAE, E_MANDATORY_PREFIX_F3, Imm8(0), W(dst));}
+	void rdfsbase(const Reg64& dst)	{AppendInstr(I_RDFSBASE, 0x0FAE, E_MANDATORY_PREFIX_F3 | E_REXW_PREFIX, Imm8(0), W(dst));}
+	void rdgsbase(const Reg32& dst)	{AppendInstr(I_RDGSBASE, 0x0FAE, E_MANDATORY_PREFIX_F3, Imm8(1), W(dst));}
+	void rdgsbase(const Reg64& dst)	{AppendInstr(I_RDGSBASE, 0x0FAE, E_MANDATORY_PREFIX_F3 | E_REXW_PREFIX, Imm8(1), W(dst));}
+#endif
+	void rdrand(const Reg16& dst)	{AppendInstr(I_RDRAND, 0x0FC7, E_OPERAND_SIZE_PREFIX, Imm8(6), W(dst));}
+	void rdrand(const Reg32& dst)	{AppendInstr(I_RDRAND, 0x0FC7, 0, Imm8(6), W(dst));}
+#ifdef JITASM64
+	void rdrand(const Reg64& dst)	{AppendInstr(I_RDRAND, 0x0FC7, E_REXW_PREFIX, Imm8(6), W(dst));}
+#endif
+#ifdef JITASM64
+	void wrfsbase(const Reg32& src)	{AppendInstr(I_WRFSBASE, 0x0FAE, E_MANDATORY_PREFIX_F3, Imm8(2), R(src));}
+	void wrfsbase(const Reg64& src)	{AppendInstr(I_WRFSBASE, 0x0FAE, E_MANDATORY_PREFIX_F3 | E_REXW_PREFIX, Imm8(2), R(src));}
+	void wrgsbase(const Reg32& src)	{AppendInstr(I_WRGSBASE, 0x0FAE, E_MANDATORY_PREFIX_F3, Imm8(3), R(src));}
+	void wrgsbase(const Reg64& src)	{AppendInstr(I_WRGSBASE, 0x0FAE, E_MANDATORY_PREFIX_F3 | E_REXW_PREFIX, Imm8(3), R(src));}
+#endif
+	void vcvtph2ps(const YmmReg& dst, const XmmReg& src)	{AppendInstr(I_VCVTPH2PS, 0x13, E_VEX_256_66_0F38_W0, W(dst), R(src));}
+	void vcvtph2ps(const YmmReg& dst, const Mem128& src)	{AppendInstr(I_VCVTPH2PS, 0x13, E_VEX_256_66_0F38_W0, W(dst), R(src));}
+	void vcvtph2ps(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_VCVTPH2PS, 0x13, E_VEX_128_66_0F38_W0, W(dst), R(src));}
+	void vcvtph2ps(const XmmReg& dst, const Mem64& src)		{AppendInstr(I_VCVTPH2PS, 0x13, E_VEX_128_66_0F38_W0, W(dst), R(src));}
+	void vcvtps2ph(const XmmReg& dst, const YmmReg& src, const Imm8& rc)	{AppendInstr(I_VCVTPS2PH, 0x1D, E_VEX_256_66_0F3A_W0, R(src), W(dst), rc);}
+	void vcvtps2ph(const Mem128& dst, const YmmReg& src, const Imm8& rc)	{AppendInstr(I_VCVTPS2PH, 0x1D, E_VEX_256_66_0F3A_W0, R(src), W(dst), rc);}
+	void vcvtps2ph(const XmmReg& dst, const XmmReg& src, const Imm8& rc)	{AppendInstr(I_VCVTPS2PH, 0x1D, E_VEX_128_66_0F3A_W0, R(src), W(dst), rc);}
+	void vcvtps2ph(const Mem64& dst, const XmmReg& src, const Imm8& rc)		{AppendInstr(I_VCVTPS2PH, 0x1D, E_VEX_128_66_0F3A_W0, R(src), W(dst), rc);}
 
 	// XOP
 	void vfrczpd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_VFRCZPD, 0x81, E_XOP_128 | E_XOP_M01001 | E_XOP_W0 | E_XOP_P00, W(dst), R(src));}
