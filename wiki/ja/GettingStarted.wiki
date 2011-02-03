@@ -1,0 +1,27 @@
+#labels Featured
+= ビルド =
+
+jitasmはヘッダファイル１つのライブラリですので、「jitasmのビルド」は必要ありません。
+jitasm.hをインクルードパスの通った場所へコピーしてincludeするだけです。
+
+jitasmのサンプルやテストを実行する際のみビルドが必要です。
+
+jitasmは下記のコンパイラをサポートしています。
+  * Microsoft Visual C++ 2005 以降
+  * GCC 4.1 以降
+
+
+== Microsoft Visual C++ ==
+サンプルのビルドを行うには samples/samples.sln を開いてください。
+サンプルに含まれる pixel_calc プロジェクトをビルドするには [http://www.boost.org/ Boost C++ Library] が必要です。
+
+テストのビルドを行うには test/test.sln を開いてください。なお、Microsoft Visual C++ 2010以降と[http://www.tortall.net/projects/yasm/ yasm]が必要です。
+
+== GCC ==
+GCCでビルドする場合は状況に応じて下記のコンパイルオプションの指定が必要です。
+  * *-fno-operator-names* は常に指定してください。
+  * 32bitでは *-march=i686* を指定してください。
+  * もしjitasm関数の引数か戻り値として `__m64`/`__m128`/`__m128d`/`__m128i` を使用したい場合は *-mmmx*/*-msse*/*-msse2* を指定してください。
+
+
+サンプルのビルドを行うには、samplesの各サブディレクトリ内で make を実行してください。サンプルに含まれる pixel_calc プロジェクトはGCCには対応していません。
