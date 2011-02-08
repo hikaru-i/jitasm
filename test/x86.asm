@@ -2819,7 +2819,11 @@ masm_test_avx_o proc
 	vperm2f128 ymm4, ymm5, ymmword ptr[esp], 2
 	vpextrb ecx, xmm7, 13
 	vpextrb byte ptr[esi], xmm7, 5
-	vpextrw edx, xmm7, 6
+	db 0C5h ; vpextrw edx, xmm7, 6
+	db 0F9h
+	db 0C5h
+	db 0D7h
+	db 006h
 	vpextrw word ptr[esp], xmm7, 4
 	vpextrd eax, xmm7, 3
 	vpextrd dword ptr[esp], xmm7, 2
