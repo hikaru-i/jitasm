@@ -4368,13 +4368,13 @@ struct Frontend
 	void vperm2f128(const YmmReg& dst, const YmmReg& src1, const Mem256& src2, const Imm8& ctrl)	{AppendInstr(I_VPERM2F128, 0x06, E_VEX_256 | E_VEX_66_0F3A | E_VEX_W0, W(dst), R(src2), R(src1), ctrl);}
 	void vpextrb(const Reg32& dst, const XmmReg& src, const Imm8& i)			{AppendInstr(I_PEXTRB,	0x14, E_VEX_128 | E_VEX_66_0F3A | E_VEX_W0, R(src), W(dst), i);}
 	void vpextrb(const Mem8& dst, const XmmReg& src, const Imm8& i)				{AppendInstr(I_PEXTRB,	0x14, E_VEX_128 | E_VEX_66_0F3A | E_VEX_W0, R(src), W(dst), i);}
-	void vpextrw(const Reg32& dst, const XmmReg& src, const Imm8& i)			{AppendInstr(I_PEXTRW,	0xC5, E_VEX_128 | E_VEX_66_0F | E_VEX_W0, R(src), W(dst), i);}
+	void vpextrw(const Reg32& dst, const XmmReg& src, const Imm8& i)			{AppendInstr(I_PEXTRW,	0xC5, E_VEX_128 | E_VEX_66_0F | E_VEX_W0, W(dst), R(src), i);}
 	void vpextrw(const Mem16& dst, const XmmReg& src, const Imm8& i)			{AppendInstr(I_PEXTRW,	0x15, E_VEX_128 | E_VEX_66_0F3A | E_VEX_W0, R(src), W(dst), i);}
 	void vpextrd(const Reg32& dst, const XmmReg& src, const Imm8& i)			{AppendInstr(I_PEXTRD,	0x16, E_VEX_128 | E_VEX_66_0F3A | E_VEX_W0, R(src), W(dst), i);}
 	void vpextrd(const Mem32& dst, const XmmReg& src, const Imm8& i)			{AppendInstr(I_PEXTRD,	0x16, E_VEX_128 | E_VEX_66_0F3A | E_VEX_W0, R(src), W(dst), i);}
 #ifdef JITASM64
 	void vpextrb(const Reg64& dst, const XmmReg& src, const Imm8& i)			{AppendInstr(I_PEXTRB,	0x14, E_VEX_128 | E_VEX_66_0F3A | E_VEX_W0, R(src), W(dst), i);}
-	void vpextrw(const Reg64& dst, const XmmReg& src, const Imm8& i)			{AppendInstr(I_PEXTRW,	0xC5, E_VEX_128 | E_VEX_66_0F | E_VEX_W0, R(src), W(dst), i);}
+	void vpextrw(const Reg64& dst, const XmmReg& src, const Imm8& i)			{AppendInstr(I_PEXTRW,	0xC5, E_VEX_128 | E_VEX_66_0F | E_VEX_W0, W(dst), R(src), i);}
 	void vpextrd(const Reg64& dst, const XmmReg& src, const Imm8& i)			{AppendInstr(I_PEXTRD,	0x16, E_VEX_128 | E_VEX_66_0F3A | E_VEX_W0, R(src), W(dst), i);}
 	void vpextrq(const Reg64& dst, const XmmReg& src, const Imm8& i)			{AppendInstr(I_PEXTRQ,	0x16, E_VEX_128 | E_VEX_66_0F3A | E_VEX_W1, R(src), W(dst), i);}
 	void vpextrq(const Mem64& dst, const XmmReg& src, const Imm8& i)			{AppendInstr(I_PEXTRQ,	0x16, E_VEX_128 | E_VEX_66_0F3A | E_VEX_W1, R(src), W(dst), i);}
