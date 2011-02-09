@@ -4100,7 +4100,7 @@ struct Frontend
 	void vdpps(const XmmReg& dst, const XmmReg& src1, const Mem128& src2, const Imm8& mask)	{AppendInstr(I_DPPS, 0x40, E_VEX_128 | E_VEX_66_0F3A, W(dst), R(src2), R(src1), mask);}
 	void vdpps(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2, const Imm8& mask)	{AppendInstr(I_DPPS, 0x40, E_VEX_256 | E_VEX_66_0F3A, W(dst), R(src2), R(src1), mask);}
 	void vdpps(const YmmReg& dst, const YmmReg& src1, const Mem256& src2, const Imm8& mask)	{AppendInstr(I_DPPS, 0x40, E_VEX_256 | E_VEX_66_0F3A, W(dst), R(src2), R(src1), mask);}
-	void vextractf128(const XmmReg& dst, const YmmReg& src, const Imm8& i)	{AppendInstr(I_VEXTRACTF128, 0x19, E_VEX_256 | E_VEX_66_0F3A | E_VEX_W0, W(dst), R(src), i);}
+	void vextractf128(const XmmReg& dst, const YmmReg& src, const Imm8& i)	{AppendInstr(I_VEXTRACTF128, 0x19, E_VEX_256 | E_VEX_66_0F3A | E_VEX_W0, R(src), W(dst), i);}
 	void vextractf128(const Mem128& dst, const YmmReg& src, const Imm8& i)	{AppendInstr(I_VEXTRACTF128, 0x19, E_VEX_256 | E_VEX_66_0F3A | E_VEX_W0, R(src), W(dst), i);}
 	void vextractps(const Reg32& dst, const XmmReg& src, const Imm8& i)		{AppendInstr(I_EXTRACTPS, 0x17, E_VEX_128 | E_VEX_66_0F3A, R(src), W(dst), i);}
 	void vextractps(const Mem32& dst, const XmmReg& src, const Imm8& i)		{AppendInstr(I_EXTRACTPS, 0x17, E_VEX_128 | E_VEX_66_0F3A, R(src), W(dst), i);}
