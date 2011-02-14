@@ -6399,7 +6399,6 @@ namespace compiler
 	{
 		// Instructions
 		// SUB, SBB, XOR, PXOR, XORPS, XORPD, PANDN, PSUBxx, PCMPxx
-		// TODO: Add AVX instructions
 		const InstrID id = instr.GetID();
 		if (id == I_SUB || id == I_SBB || id == I_XOR || id == I_PXOR || id == I_XORPS || id == I_XORPD || id == I_PANDN ||
 			id == I_PSUBB || id == I_PSUBW || id == I_PSUBD || id == I_PSUBQ || id == I_PSUBSB || id == I_PSUBSW || id == I_PSUBUSB || id == I_PSUBUSW ||
@@ -6918,6 +6917,7 @@ namespace compiler
 	{
 		avoid_unused_warn(preserved_reg_stack);
 
+		// Save & Make frame pointer
 		f.push(f.zbp);
 		f.mov(f.zbp, f.zsp);
 
@@ -7013,7 +7013,9 @@ namespace compiler
 			reg_mask &= ~(1 << reg_id);
 		}
 
+		// Restore frame pointer
 		f.pop(f.zbp);
+
 		f.ret();
 	}
 
@@ -7200,14 +7202,19 @@ namespace compiler
 		// Available registers : rax, rcx, rdx, rsi, rdi, r8 ~ r15, mm0 ~ mm7, xmm0/ymm0 ~ xmm15/ymm15
 		const uint32 available_reg[3] = {0xFFC7, 0xFF, 0xFFFF};
 
-		// Preserved registers : rbx, rsi, rdi, r12 ~ r15, xmm6 ~ xmm15
-		uint32 preserved_reg[3] = {0xF0C8, 0, 0xFFC0};
+#ifdef JITASM_WIN
+		// Win64 preserved registers : rbx, rsi, rdi, r12 ~ r15, xmm6 ~ xmm15
+		uint32 preserved_reg[3] = {(1<<RBX)|(1<<RSI)|(1<<RDI)|(1<<R12)|(1<<R13)|(1<<R14)|(1<<R15), 0, 0xFFC0};
+#else
+		// x64 Linux preserved registers : rbx, r12 ~ r15, xmm6 ~ xmm15
+		uint32 preserved_reg[3] = {(1<<RBX)|(1<<R12)|(1<<R13)|(1<<R14)|(1<<R15), 0, 0xFFC0};
+#endif
 #else
 		// Available registers : eax, ecx, edx, esi, edi, mm0 ~ mm7, xmm0/ymm0 ~ xmm7/ymm7
-		const uint32 available_reg[3] = {0xC7, 0xFF, 0xFF};
+		const uint32 available_reg[3] = {(1<<EAX)|(1<<ECX)|(1<<EDX)|(1<<ESI)|(1<<EDI), 0xFF, 0xFF};
 
 		// Preserved registers : ebx, esi, edi
-		uint32 preserved_reg[3] = {0xC8, 0, 0};
+		uint32 preserved_reg[3] = {(1<<EBX)|(1<<ESI)|(1<<EDI), 0, 0};
 #endif
 
 		uint32 used_physical_reg[3];
