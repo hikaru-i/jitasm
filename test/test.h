@@ -19,9 +19,9 @@
 #endif
 #define TEST_EQUAL(actual, expected) {long long int beg_time = get_time(); test_equal_impl(TOSTR(actual), (actual), (expected), beg_time);}
 
-extern size_t	g_test_succeeded;
-extern size_t	g_test_failed;
-extern int		g_assemble_time;	// us
+extern int	g_test_succeeded;
+extern int	g_test_failed;
+extern int	g_assemble_time;	// us
 
 inline long long int get_time()
 {
