@@ -7,9 +7,9 @@
 #include "jitasm.h"
 #include "test.h"
 
-size_t	g_test_succeeded = 0;
-size_t	g_test_failed = 0;
-int		g_assemble_time = 0;	// us
+int g_test_succeeded = 0;
+int g_test_failed = 0;
+int g_assemble_time = 0;	// us
 
 
 struct test_mmx_sse2 : jitasm::function<void, test_mmx_sse2>
