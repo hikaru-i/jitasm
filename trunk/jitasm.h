@@ -292,7 +292,8 @@ namespace detail
 				RegID	index_;
 				sint64	scale_;
 				sint64	disp_;
-				uint8	addrsize_;	// OpdSize
+				uint8	base_size_  : 4;		// OpdSize
+				uint8	index_size_ : 4;	// OpdSize
 			};
 			// IMM
 			sint64 imm_;
@@ -303,8 +304,8 @@ namespace detail
 		/// REG
 		Opd(OpdSize opdsize, const RegID& reg, uint32 reg_assignable = 0xFFFFFFFF) : opdtype_(O_TYPE_REG), opdsize_(static_cast<uint8>(opdsize)), reg_(reg), reg_assignable_(reg_assignable) {}
 		/// MEM
-		Opd(OpdSize opdsize, OpdSize addrsize, const RegID& base, const RegID& index, sint64 scale, sint64 disp)
-			: opdtype_(O_TYPE_MEM), opdsize_(static_cast<uint8>(opdsize)), base_(base), index_(index), scale_(scale), disp_(disp), addrsize_(static_cast<uint8>(addrsize)) {}
+		Opd(OpdSize opdsize, OpdSize base_size, OpdSize index_size, const RegID& base, const RegID& index, sint64 scale, sint64 disp)
+			: opdtype_(O_TYPE_MEM), opdsize_(static_cast<uint8>(opdsize)), base_(base), index_(index), scale_(scale), disp_(disp), base_size_(static_cast<uint8>(base_size)), index_size_(static_cast<uint8>(index_size)) {}
 	protected:
 		/// IMM
 		explicit Opd(OpdSize opdsize, sint64 imm) : opdtype_(O_TYPE_IMM), opdsize_(static_cast<uint8>(opdsize)), imm_(imm) {}
@@ -325,7 +326,8 @@ namespace detail
 
 		OpdType GetType() const		{return static_cast<OpdType>(opdtype_);}
 		OpdSize	GetSize() const		{return static_cast<OpdSize>(opdsize_);}
-		OpdSize	GetAddressSize() const	{return static_cast<OpdSize>(addrsize_);}
+		OpdSize	GetAddressBaseSize() const	{return static_cast<OpdSize>(base_size_);}
+		OpdSize	GetAddressIndexSize() const	{return static_cast<OpdSize>(index_size_);}
 		RegID	GetReg() const		{JITASM_ASSERT(IsReg()); return reg_;}
 		RegID	GetBase() const		{JITASM_ASSERT(IsMem()); return base_;}
 		RegID	GetIndex() const	{JITASM_ASSERT(IsMem()); return index_;}
@@ -337,7 +339,7 @@ namespace detail
 		{
 			if ((opdtype_ & O_TYPE_TYPE_MASK) != (rhs.opdtype_ & O_TYPE_TYPE_MASK) || opdsize_ != opdsize_) {return false;}
 			if (IsReg()) {return reg_ == rhs.reg_ && reg_assignable_ == rhs.reg_assignable_;}
-			if (IsMem()) {return base_ == rhs.base_ && index_ == rhs.index_ && scale_ == rhs.scale_ && disp_ == rhs.disp_ && addrsize_ == rhs.addrsize_;}
+			if (IsMem()) {return base_ == rhs.base_ && index_ == rhs.index_ && scale_ == rhs.scale_ && disp_ == rhs.disp_ && base_size_ == rhs.base_size_ && index_size_ == rhs.index_size_;}
 			if (IsImm()) {return imm_ == rhs.imm_;}
 			return true;
 		}
@@ -408,8 +410,8 @@ namespace detail
 		/// REG
 		explicit OpdT(const RegID& reg, uint32 reg_assignable = 0xFFFFFFFF) : Opd(ToOpdSize<Size>(), reg, reg_assignable) {}
 		/// MEM
-		OpdT(OpdSize addrsize, const RegID& base, const RegID& index, sint64 scale, sint64 disp)
-			: Opd(ToOpdSize<Size>(), addrsize, base, index, scale, disp) {}
+		OpdT(OpdSize base_size, OpdSize index_size, const RegID& base, const RegID& index, sint64 scale, sint64 disp)
+			: Opd(ToOpdSize<Size>(), base_size, index_size, base, index, scale, disp) {}
 	protected:
 		/// IMM
 		OpdT(sint64 imm) : Opd(ToOpdSize<Size>(), imm) {}
@@ -478,7 +480,7 @@ struct FpuReg_st0 : FpuReg {FpuReg_st0() : FpuReg(ST0) {}};
 template<class OpdN>
 struct MemT : OpdN
 {
-	MemT(OpdSize addrsize, const RegID& base, const RegID& index, sint64 scale, sint64 disp) : OpdN(addrsize, base, index, scale, disp) {}
+	MemT(OpdSize base_size, OpdSize index_size, const RegID& base, const RegID& index, sint64 scale, sint64 disp) : OpdN(base_size, index_size, base, index, scale, disp) {}
 };
 typedef MemT<Opd8>		Mem8;
 typedef MemT<Opd16>		Mem16;
@@ -490,6 +492,16 @@ typedef MemT<Opd224>	Mem224;		// FPU environment
 typedef MemT<Opd256>	Mem256;
 typedef MemT<Opd864>	Mem864;		// FPU state
 typedef MemT<Opd4096>	Mem4096;	// FPU, MMX, XMM, MXCSR state
+
+template<class OpdN, OpdSize IndexSize>
+struct VecMemT : OpdN
+{
+	VecMemT(OpdSize base_size, const RegID& base, const RegID& index, sint64 scale, sint64 disp) : OpdN(base_size, IndexSize, base, index, scale, disp) {}
+};
+typedef VecMemT<Opd32, O_SIZE_128>	Mem32vx;
+typedef VecMemT<Opd32, O_SIZE_256>	Mem32vy;
+typedef VecMemT<Opd64, O_SIZE_128>	Mem64vx;
+typedef VecMemT<Opd64, O_SIZE_256>	Mem64vy;
 
 struct MemOffset64
 {
@@ -517,7 +529,6 @@ namespace detail
 	inline Opd ImmXor8(const Imm32& imm)	{return IsInt8(imm.GetImm()) ? (Opd) Imm8((sint8) imm.GetImm()) : (Opd) imm;}
 	inline Opd ImmXor8(const Imm64& imm)	{return IsInt8(imm.GetImm()) ? (Opd) Imm8((sint8) imm.GetImm()) : (Opd) imm;}
 }	// namespace detail
-
 
 /// 32bit address (base, displacement)
 struct Addr32
@@ -577,6 +588,68 @@ inline Addr32SIB operator+(const Addr32SI& lhs, const Addr32& rhs) {return rhs +
 inline Addr32SIB operator+(const Addr32SIB& lhs, sint64 rhs) {return Addr32SIB(lhs.base_, lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
 inline Addr32SIB operator+(sint64 lhs, const Addr32SIB& rhs) {return rhs + lhs;}
 inline Addr32SIB operator-(const Addr32SIB& lhs, sint64 rhs) {return lhs + -rhs;}
+
+/// Address (xmm index, scale, displacement)
+struct AddrXmmSI
+{
+	RegID index_;
+	sint64 scale_;
+	sint64 disp_;
+	AddrXmmSI(const RegID& index, sint64 scale, sint64 disp) : index_(index), scale_(scale), disp_(disp) {}
+};
+inline AddrXmmSI operator*(const XmmReg& lhs, sint64 rhs) {return AddrXmmSI(lhs.reg_, rhs, 0);}
+inline AddrXmmSI operator*(sint64 lhs, const XmmReg& rhs) {return rhs * lhs;}
+inline AddrXmmSI operator*(const AddrXmmSI& lhs, sint64 rhs) {return AddrXmmSI(lhs.index_, lhs.scale_ * rhs, lhs.disp_);}
+inline AddrXmmSI operator*(sint64 lhs, const AddrXmmSI& rhs) {return rhs * lhs;}
+inline AddrXmmSI operator+(const AddrXmmSI& lhs, sint64 rhs) {return AddrXmmSI(lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
+inline AddrXmmSI operator+(sint64 lhs, const AddrXmmSI& rhs) {return rhs + lhs;}
+inline AddrXmmSI operator-(const AddrXmmSI& lhs, sint64 rhs) {return lhs + -rhs;}
+
+/// 32bit address (base, xmm index, scale, displacement)
+struct Addr32XmmSIB
+{
+	RegID base_;
+	RegID index_;
+	sint64 scale_;
+	sint64 disp_;
+	Addr32XmmSIB(const RegID& base, const RegID& index, sint64 scale, sint64 disp) : base_(base), index_(index), scale_(scale), disp_(disp) {}
+};
+inline Addr32XmmSIB operator+(const Addr32& lhs, const AddrXmmSI& rhs) {return Addr32XmmSIB(lhs.reg_, rhs.index_, rhs.scale_, lhs.disp_ + rhs.disp_);}
+inline Addr32XmmSIB operator+(const AddrXmmSI& lhs, const Addr32& rhs) {return rhs + lhs;}
+inline Addr32XmmSIB operator+(const Addr32XmmSIB& lhs, sint64 rhs) {return Addr32XmmSIB(lhs.base_, lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
+inline Addr32XmmSIB operator+(sint64 lhs, const Addr32XmmSIB& rhs) {return rhs + lhs;}
+inline Addr32XmmSIB operator-(const Addr32XmmSIB& lhs, sint64 rhs) {return lhs + -rhs;}
+
+/// Address (ymm index, scale, displacement)
+struct AddrYmmSI
+{
+	RegID index_;
+	sint64 scale_;
+	sint64 disp_;
+	AddrYmmSI(const RegID& index, sint64 scale, sint64 disp) : index_(index), scale_(scale), disp_(disp) {}
+};
+inline AddrYmmSI operator*(const YmmReg& lhs, sint64 rhs) {return AddrYmmSI(lhs.reg_, rhs, 0);}
+inline AddrYmmSI operator*(sint64 lhs, const YmmReg& rhs) {return rhs * lhs;}
+inline AddrYmmSI operator*(const AddrYmmSI& lhs, sint64 rhs) {return AddrYmmSI(lhs.index_, lhs.scale_ * rhs, lhs.disp_);}
+inline AddrYmmSI operator*(sint64 lhs, const AddrYmmSI& rhs) {return rhs * lhs;}
+inline AddrYmmSI operator+(const AddrYmmSI& lhs, sint64 rhs) {return AddrYmmSI(lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
+inline AddrYmmSI operator+(sint64 lhs, const AddrYmmSI& rhs) {return rhs + lhs;}
+inline AddrYmmSI operator-(const AddrYmmSI& lhs, sint64 rhs) {return lhs + -rhs;}
+
+/// 32bit address (base, ymm index, scale, displacement)
+struct Addr32YmmSIB
+{
+	RegID base_;
+	RegID index_;
+	sint64 scale_;
+	sint64 disp_;
+	Addr32YmmSIB(const RegID& base, const RegID& index, sint64 scale, sint64 disp) : base_(base), index_(index), scale_(scale), disp_(disp) {}
+};
+inline Addr32YmmSIB operator+(const Addr32& lhs, const AddrYmmSI& rhs) {return Addr32YmmSIB(lhs.reg_, rhs.index_, rhs.scale_, lhs.disp_ + rhs.disp_);}
+inline Addr32YmmSIB operator+(const AddrYmmSI& lhs, const Addr32& rhs) {return rhs + lhs;}
+inline Addr32YmmSIB operator+(const Addr32YmmSIB& lhs, sint64 rhs) {return Addr32YmmSIB(lhs.base_, lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
+inline Addr32YmmSIB operator+(sint64 lhs, const Addr32YmmSIB& rhs) {return rhs + lhs;}
+inline Addr32YmmSIB operator-(const Addr32YmmSIB& lhs, sint64 rhs) {return lhs + -rhs;}
 
 #ifdef JITASM64
 /// 64bit address (base, displacement)
@@ -638,6 +711,36 @@ inline Addr64SIB operator+(const Addr64SIB& lhs, sint64 rhs) {return Addr64SIB(l
 inline Addr64SIB operator+(sint64 lhs, const Addr64SIB& rhs) {return rhs + lhs;}
 inline Addr64SIB operator-(const Addr64SIB& lhs, sint64 rhs) {return lhs + -rhs;}
 
+/// 64bit address (base, xmm index, scale, displacement)
+struct Addr64XmmSIB
+{
+	RegID base_;
+	RegID index_;
+	sint64 scale_;
+	sint64 disp_;
+	Addr64XmmSIB(const RegID& base, const RegID& index, sint64 scale, sint64 disp) : base_(base), index_(index), scale_(scale), disp_(disp) {}
+};
+inline Addr64XmmSIB operator+(const Addr64& lhs, const AddrXmmSI& rhs) {return Addr64XmmSIB(lhs.reg_, rhs.index_, rhs.scale_, lhs.disp_ + rhs.disp_);}
+inline Addr64XmmSIB operator+(const AddrXmmSI& lhs, const Addr64& rhs) {return rhs + lhs;}
+inline Addr64XmmSIB operator+(const Addr64XmmSIB& lhs, sint64 rhs) {return Addr64XmmSIB(lhs.base_, lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
+inline Addr64XmmSIB operator+(sint64 lhs, const Addr64XmmSIB& rhs) {return rhs + lhs;}
+inline Addr64XmmSIB operator-(const Addr64XmmSIB& lhs, sint64 rhs) {return lhs + -rhs;}
+
+/// 64bit address (base, ymm index, scale, displacement)
+struct Addr64YmmSIB
+{
+	RegID base_;
+	RegID index_;
+	sint64 scale_;
+	sint64 disp_;
+	Addr64YmmSIB(const RegID& base, const RegID& index, sint64 scale, sint64 disp) : base_(base), index_(index), scale_(scale), disp_(disp) {}
+};
+inline Addr64YmmSIB operator+(const Addr64& lhs, const AddrYmmSI& rhs) {return Addr64YmmSIB(lhs.reg_, rhs.index_, rhs.scale_, lhs.disp_ + rhs.disp_);}
+inline Addr64YmmSIB operator+(const AddrYmmSI& lhs, const Addr64& rhs) {return rhs + lhs;}
+inline Addr64YmmSIB operator+(const Addr64YmmSIB& lhs, sint64 rhs) {return Addr64YmmSIB(lhs.base_, lhs.index_, lhs.scale_, lhs.disp_ + rhs);}
+inline Addr64YmmSIB operator+(sint64 lhs, const Addr64YmmSIB& rhs) {return rhs + lhs;}
+inline Addr64YmmSIB operator-(const Addr64YmmSIB& lhs, sint64 rhs) {return lhs + -rhs;}
+
 typedef Addr64		Addr;
 typedef Addr64BI	AddrBI;
 typedef Addr64SI	AddrSI;
@@ -653,26 +756,31 @@ template<typename OpdN>
 struct AddressingPtr
 {
 	// 32bit-Addressing
-	MemT<OpdN> operator[](const Addr32& obj)	{return MemT<OpdN>(O_SIZE_32, obj.reg_, RegID::Invalid(), 0, obj.disp_);}
-	MemT<OpdN> operator[](const Addr32BI& obj)	{return MemT<OpdN>(O_SIZE_32, obj.base_, obj.index_, 0, obj.disp_);}
-	MemT<OpdN> operator[](const Addr32SI& obj)	{return MemT<OpdN>(O_SIZE_32, RegID::Invalid(), obj.index_, obj.scale_, obj.disp_);}
-	MemT<OpdN> operator[](const Addr32SIB& obj)	{return MemT<OpdN>(O_SIZE_32, obj.base_, obj.index_, obj.scale_, obj.disp_);}
-#ifdef JITASM64
-	MemT<OpdN> operator[](sint32 disp)			{return MemT<OpdN>(O_SIZE_64, RegID::Invalid(), RegID::Invalid(), 0, disp);}
-	MemT<OpdN> operator[](uint32 disp)			{return MemT<OpdN>(O_SIZE_64, RegID::Invalid(), RegID::Invalid(), 0, (sint32) disp);}
-#else
-	MemT<OpdN> operator[](sint32 disp)			{return MemT<OpdN>(O_SIZE_32, RegID::Invalid(), RegID::Invalid(), 0, disp);}
-	MemT<OpdN> operator[](uint32 disp)			{return MemT<OpdN>(O_SIZE_32, RegID::Invalid(), RegID::Invalid(), 0, (sint32) disp);}
-#endif
+	MemT<OpdN> operator[](const Addr32& obj)	{return MemT<OpdN>(O_SIZE_32, O_SIZE_32, obj.reg_, RegID::Invalid(), 0, obj.disp_);}
+	MemT<OpdN> operator[](const Addr32BI& obj)	{return MemT<OpdN>(O_SIZE_32, O_SIZE_32, obj.base_, obj.index_, 0, obj.disp_);}
+	MemT<OpdN> operator[](const Addr32SI& obj)	{return MemT<OpdN>(O_SIZE_32, O_SIZE_32, RegID::Invalid(), obj.index_, obj.scale_, obj.disp_);}
+	MemT<OpdN> operator[](const Addr32SIB& obj)	{return MemT<OpdN>(O_SIZE_32, O_SIZE_32, obj.base_, obj.index_, obj.scale_, obj.disp_);}
+	VecMemT<OpdN, O_SIZE_128> operator[](const Addr32XmmSIB& obj)	{return VecMemT<OpdN, O_SIZE_128>(O_SIZE_32, obj.base_, obj.index_, obj.scale_, obj.disp_);}
+	VecMemT<OpdN, O_SIZE_256> operator[](const Addr32YmmSIB& obj)	{return VecMemT<OpdN, O_SIZE_256>(O_SIZE_32, obj.base_, obj.index_, obj.scale_, obj.disp_);}
 
 #ifdef JITASM64
 	// 64bit-Addressing
-	MemT<OpdN> operator[](const Addr64& obj)	{return MemT<OpdN>(O_SIZE_64, obj.reg_, RegID::Invalid(), 0, obj.disp_);}
-	MemT<OpdN> operator[](const Addr64BI& obj)	{return MemT<OpdN>(O_SIZE_64, obj.base_, obj.index_, 0, obj.disp_);}
-	MemT<OpdN> operator[](const Addr64SI& obj)	{return MemT<OpdN>(O_SIZE_64, RegID::Invalid(), obj.index_, obj.scale_, obj.disp_);}
-	MemT<OpdN> operator[](const Addr64SIB& obj)	{return MemT<OpdN>(O_SIZE_64, obj.base_, obj.index_, obj.scale_, obj.disp_);}
+	MemT<OpdN> operator[](const Addr64& obj)	{return MemT<OpdN>(O_SIZE_64, O_SIZE_64, obj.reg_, RegID::Invalid(), 0, obj.disp_);}
+	MemT<OpdN> operator[](const Addr64BI& obj)	{return MemT<OpdN>(O_SIZE_64, O_SIZE_64, obj.base_, obj.index_, 0, obj.disp_);}
+	MemT<OpdN> operator[](const Addr64SI& obj)	{return MemT<OpdN>(O_SIZE_64, O_SIZE_64, RegID::Invalid(), obj.index_, obj.scale_, obj.disp_);}
+	MemT<OpdN> operator[](const Addr64SIB& obj)	{return MemT<OpdN>(O_SIZE_64, O_SIZE_64, obj.base_, obj.index_, obj.scale_, obj.disp_);}
 	MemOffset64 operator[](sint64 offset)		{return MemOffset64(offset);}
 	MemOffset64 operator[](uint64 offset)		{return MemOffset64((sint64) offset);}
+	VecMemT<OpdN, O_SIZE_128> operator[](const Addr64XmmSIB& obj)	{return VecMemT<OpdN, O_SIZE_128>(O_SIZE_64, obj.base_, obj.index_, obj.scale_, obj.disp_);}
+	VecMemT<OpdN, O_SIZE_256> operator[](const Addr64YmmSIB& obj)	{return VecMemT<OpdN, O_SIZE_256>(O_SIZE_64, obj.base_, obj.index_, obj.scale_, obj.disp_);}
+#endif
+
+#ifdef JITASM64
+	MemT<OpdN> operator[](sint32 disp)			{return MemT<OpdN>(O_SIZE_64, O_SIZE_64, RegID::Invalid(), RegID::Invalid(), 0, disp);}
+	MemT<OpdN> operator[](uint32 disp)			{return MemT<OpdN>(O_SIZE_64, O_SIZE_64, RegID::Invalid(), RegID::Invalid(), 0, (sint32) disp);}
+#else
+	MemT<OpdN> operator[](sint32 disp)			{return MemT<OpdN>(O_SIZE_32, O_SIZE_32, RegID::Invalid(), RegID::Invalid(), 0, disp);}
+	MemT<OpdN> operator[](uint32 disp)			{return MemT<OpdN>(O_SIZE_32, O_SIZE_32, RegID::Invalid(), RegID::Invalid(), 0, (sint32) disp);}
 #endif
 };
 
@@ -799,6 +907,9 @@ enum InstrID
 	I_VFMSUBPD, I_VFMSUBPS, I_VFMSUBSD, I_VFMSUBSS,
 	I_VFNMADDPD, I_VFNMADDPS, I_VFNMADDSD, I_VFNMADDSS,
 	I_VFNMSUBPD, I_VFNMSUBPS, I_VFNMSUBSD, I_VFNMSUBSS,
+
+	// AVX2
+	I_VGATHERDPS, I_VGATHERQPS,
 
 	// jitasm compiler instructions
 	I_COMPILER_DECLARE_REG_ARG,		///< Declare register argument
@@ -951,7 +1062,7 @@ struct Backend
 		if (flag & (E_VEX | E_XOP)) {
 			// Encode VEX prefix
 #ifdef JITASM64
-			if (r_m.IsMem() && r_m.GetAddressSize() != O_SIZE_64) db(0x67);
+			if (r_m.IsMem() && r_m.GetAddressBaseSize() != O_SIZE_64) db(0x67);
 #endif
 			uint8 vvvv = vex.IsReg() ? 0xF - (uint8) vex.GetReg().id : 0xF;
 			uint8 mmmmm = (flag & E_VEX_MMMMM_MASK) >> E_VEX_MMMMM_SHIFT;
@@ -978,7 +1089,7 @@ struct Backend
 
 				if (flag & E_REP_PREFIX) db(0xF3);
 #ifdef JITASM64
-				if (r_m.IsMem() && r_m.GetAddressSize() != O_SIZE_64) db(0x67);
+				if (r_m.IsMem() && r_m.GetAddressBaseSize() != O_SIZE_64) db(0x67);
 #endif
 				if (flag & E_OPERAND_SIZE_PREFIX) db(0x66);
 
@@ -994,7 +1105,7 @@ struct Backend
 
 				if (flag & E_REP_PREFIX) db(0xF3);
 #ifdef JITASM64
-				if (r_m.IsMem() && r_m.GetAddressSize() != O_SIZE_64) db(0x67);
+				if (r_m.IsMem() && r_m.GetAddressBaseSize() != O_SIZE_64) db(0x67);
 #endif
 				if (flag & E_OPERAND_SIZE_PREFIX) db(0x66);
 			}
@@ -1008,7 +1119,7 @@ struct Backend
 		if (r_m.IsReg()) {
 			db(0xC0 | (reg << 3) | (r_m.GetReg().id & 0x7));
 		} else if (r_m.IsMem()) {
-			JITASM_ASSERT(r_m.GetBase().type == R_TYPE_GP && r_m.GetIndex().type == R_TYPE_GP);
+			JITASM_ASSERT(r_m.GetBase().type == R_TYPE_GP && (r_m.GetIndex().type == R_TYPE_GP || r_m.GetIndex().type == R_TYPE_XMM || r_m.GetIndex().type == R_TYPE_YMM));
 			int base = r_m.GetBase().id; if (base != INVALID) base &= 0x7;
 			int index = r_m.GetIndex().id; if (index != INVALID) index &= 0x7;
 
@@ -4633,10 +4744,10 @@ struct Frontend
 	void vunpcklps(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_UNPCKLPS, 0x14, E_VEX_128_0F_WIG, W(dst), R(src2), R(src1));}
 	void vunpcklps(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2)	{AppendInstr(I_UNPCKLPS, 0x14, E_VEX_256_0F_WIG, W(dst), R(src2), R(src1));}
 	void vunpcklps(const YmmReg& dst, const YmmReg& src1, const Mem256& src2)	{AppendInstr(I_UNPCKLPS, 0x14, E_VEX_256_0F_WIG, W(dst), R(src2), R(src1));}
-	void vxorpd(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_XORPS, 0x57, E_VEX_128_66_0F_WIG, W(dst), R(src2), R(src1));}
-	void vxorpd(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_XORPS, 0x57, E_VEX_128_66_0F_WIG, W(dst), R(src2), R(src1));}
-	void vxorpd(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2)	{AppendInstr(I_XORPS, 0x57, E_VEX_256_66_0F_WIG, W(dst), R(src2), R(src1));}
-	void vxorpd(const YmmReg& dst, const YmmReg& src1, const Mem256& src2)	{AppendInstr(I_XORPS, 0x57, E_VEX_256_66_0F_WIG, W(dst), R(src2), R(src1));}
+	void vxorpd(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_XORPD, 0x57, E_VEX_128_66_0F_WIG, W(dst), R(src2), R(src1));}
+	void vxorpd(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_XORPD, 0x57, E_VEX_128_66_0F_WIG, W(dst), R(src2), R(src1));}
+	void vxorpd(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2)	{AppendInstr(I_XORPD, 0x57, E_VEX_256_66_0F_WIG, W(dst), R(src2), R(src1));}
+	void vxorpd(const YmmReg& dst, const YmmReg& src1, const Mem256& src2)	{AppendInstr(I_XORPD, 0x57, E_VEX_256_66_0F_WIG, W(dst), R(src2), R(src1));}
 	void vxorps(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2)	{AppendInstr(I_XORPS, 0x57, E_VEX_128_0F_WIG, W(dst), R(src2), R(src1));}
 	void vxorps(const XmmReg& dst, const XmmReg& src1, const Mem128& src2)	{AppendInstr(I_XORPS, 0x57, E_VEX_128_0F_WIG, W(dst), R(src2), R(src1));}
 	void vxorps(const YmmReg& dst, const YmmReg& src1, const YmmReg& src2)	{AppendInstr(I_XORPS, 0x57, E_VEX_256_0F_WIG, W(dst), R(src2), R(src1));}
@@ -5111,6 +5222,12 @@ struct Frontend
 	void vfnmsubss(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2, const XmmReg& src3)	{AppendInstr(I_VFNMSUBSS, 0x7E, E_VEX_128 | E_VEX_0F3A | E_VEX_66 | E_VEX_W0, W(dst), R(src2), R(src1), R(src3));}
 	void vfnmsubss(const XmmReg& dst, const XmmReg& src1, const Mem32& src2, const XmmReg& src3)	{AppendInstr(I_VFNMSUBSS, 0x7E, E_VEX_128 | E_VEX_0F3A | E_VEX_66 | E_VEX_W0, W(dst), R(src2), R(src1), R(src3));}
 	void vfnmsubss(const XmmReg& dst, const XmmReg& src1, const XmmReg& src2, const Mem32& src3)	{AppendInstr(I_VFNMSUBSS, 0x7E, E_VEX_128 | E_VEX_0F3A | E_VEX_66 | E_VEX_W1, W(dst), R(src3), R(src1), R(src2));}
+
+	// AVX2
+	void vgatherdps(const XmmReg& dst, const Mem32vx& src, const XmmReg& mask)	{AppendInstr(I_VGATHERDPS, 0x92, E_VEX_128_66_0F38_W0, RW(dst), R(src), R(mask));}
+	void vgatherdps(const YmmReg& dst, const Mem32vy& src, const YmmReg& mask)	{AppendInstr(I_VGATHERDPS, 0x92, E_VEX_256_66_0F38_W0, RW(dst), R(src), R(mask));}
+	void vgatherqps(const XmmReg& dst, const Mem32vx& src, const XmmReg& mask)	{AppendInstr(I_VGATHERQPS, 0x93, E_VEX_128_66_0F38_W0, RW(dst), R(src), R(mask));}
+	void vgatherqps(const YmmReg& dst, const Mem32vy& src, const YmmReg& mask)	{AppendInstr(I_VGATHERQPS, 0x93, E_VEX_256_66_0F38_W0, RW(dst), R(src), R(mask));}
 
 	struct ControlState
 	{
@@ -6620,13 +6737,13 @@ namespace compiler
 							// Memory operand
 							const RegID& base = opd.GetBase();
 							if (!base.IsInvalid()) {
-								block->GetLifetime(R_TYPE_GP).AddUsePoint(instr_offset, base, static_cast<OpdType>(O_TYPE_REG | O_TYPE_READ), opd.GetAddressSize(), 0xFFFFFFFF);
-								var_manager.UpdateVarSize(R_TYPE_GP, base.id, opd.GetAddressSize());
+								block->GetLifetime(R_TYPE_GP).AddUsePoint(instr_offset, base, static_cast<OpdType>(O_TYPE_REG | O_TYPE_READ), opd.GetAddressBaseSize(), 0xFFFFFFFF);
+								var_manager.UpdateVarSize(R_TYPE_GP, base.id, opd.GetAddressBaseSize());
 							}
 							const RegID& index = opd.GetIndex();
 							if (!index.IsInvalid()) {
-								block->GetLifetime(R_TYPE_GP).AddUsePoint(instr_offset, index, static_cast<OpdType>(O_TYPE_REG | O_TYPE_READ), opd.GetAddressSize(), 0xFFFFFFFF);
-								var_manager.UpdateVarSize(R_TYPE_GP, index.id, opd.GetAddressSize());
+								block->GetLifetime(R_TYPE_GP).AddUsePoint(instr_offset, index, static_cast<OpdType>(O_TYPE_REG | O_TYPE_READ), opd.GetAddressBaseSize(), 0xFFFFFFFF);
+								var_manager.UpdateVarSize(R_TYPE_GP, index.id, opd.GetAddressBaseSize());
 							}
 						}
 					}
@@ -7981,8 +8098,8 @@ namespace detail {
 #else
 			if (val_.IsMem()) {
 				// from memory
-				Mem32 lo(val_.GetAddressSize(), val_.GetBase(), val_.GetIndex(), val_.GetScale(), val_.GetDisp());
-				Mem32 hi(val_.GetAddressSize(), val_.GetBase(), val_.GetIndex(), val_.GetScale(), val_.GetDisp() + 4);
+				Mem32 lo(val_.GetAddressBaseSize(), val_.GetBase(), val_.GetIndex(), val_.GetScale(), val_.GetDisp());
+				Mem32 hi(val_.GetAddressBaseSize(), val_.GetBase(), val_.GetIndex(), val_.GetScale(), val_.GetDisp() + 4);
 				f.mov(f.eax, lo);
 				f.mov(f.edx, hi);
 			} else if (val_.IsImm()) {
