@@ -5306,6 +5306,21 @@ struct test_fma4 : jitasm::function<void, test_fma4>
 	}
 };
 
+//----------------------------------------
+// AVX2
+//----------------------------------------
+extern "C" void nasm_test_avx2();
+struct test_avx2 : jitasm::function<void, test_avx2>
+{
+	void naked_main()
+	{
+		vgatherdps(xmm1, dword_ptr[ebp + xmm7 * 2 + 1], xmm2);
+		vgatherdps(ymm1, dword_ptr[ebp + ymm7 * 2 + 1], ymm2);
+		vgatherqps(xmm1, dword_ptr[ebp + xmm7 * 2 + 1], xmm2);
+		//vgatherqps(ymm1, dword_ptr[ebp + ymm7 * 2 + 1], ymm2);
+	}
+};
+
 void test_backend()
 {
 	TEST_M(test_sal);
@@ -5366,4 +5381,5 @@ void test_backend()
 	TEST_N(test_f16c);
 	TEST_N(test_xop);
 	TEST_N(test_fma4);
+	TEST_N(test_avx2);
 }
