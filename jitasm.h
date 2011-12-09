@@ -891,6 +891,9 @@ enum InstrID
 	// F16C
 	I_RDFSBASE, I_RDGSBASE, I_RDRAND, I_WRFSBASE, I_WRGSBASE, I_VCVTPH2PS, I_VCVTPS2PH,
 
+	// BMI
+	I_ANDN, I_BEXR, I_BLSI,
+
 	// XOP
 	I_VFRCZPD, I_VFRCZPS, I_VFRCZSD, I_VFRCZSS,
 	I_VPCMOV, I_VPCOMB, I_VPCOMD, I_VPCOMQ, I_VPCOMUB, I_VPCOMUD, I_VPCOMUQ, I_VPCOMUW, I_VPCOMW, I_VPERMIL2PD, I_VPERMIL2PS,
@@ -4975,6 +4978,26 @@ struct Frontend
 	void vcvtps2ph(const Mem128& dst, const YmmReg& src, const Imm8& rc)	{AppendInstr(I_VCVTPS2PH, 0x1D, E_VEX_256_66_0F3A_W0, R(src), W(dst), rc);}
 	void vcvtps2ph(const XmmReg& dst, const XmmReg& src, const Imm8& rc)	{AppendInstr(I_VCVTPS2PH, 0x1D, E_VEX_128_66_0F3A_W0, R(src), W(dst), rc);}
 	void vcvtps2ph(const Mem64& dst, const XmmReg& src, const Imm8& rc)		{AppendInstr(I_VCVTPS2PH, 0x1D, E_VEX_128_66_0F3A_W0, R(src), W(dst), rc);}
+
+	// BMI
+	void andn(const Reg32& dst, const Reg32& src1, const Reg32& src2)	{AppendInstr(I_ANDN, 0xF2, E_VEX_LZ | E_VEX_0F38 | E_VEX_W0, W(dst), R(src2), R(src1));}
+	void andn(const Reg32& dst, const Reg32& src1, const Mem32& src2)	{AppendInstr(I_ANDN, 0xF2, E_VEX_LZ | E_VEX_0F38 | E_VEX_W0, W(dst), R(src2), R(src1));}
+#ifdef JITASM64
+	void andn(const Reg64& dst, const Reg64& src1, const Reg64& src2)	{AppendInstr(I_ANDN, 0xF2, E_VEX_LZ | E_VEX_0F38 | E_VEX_W1, W(dst), R(src2), R(src1));}
+	void andn(const Reg64& dst, const Reg64& src1, const Mem64& src2)	{AppendInstr(I_ANDN, 0xF2, E_VEX_LZ | E_VEX_0F38 | E_VEX_W1, W(dst), R(src2), R(src1));}
+#endif
+	void bexr(const Reg32& dst, const Reg32& src1, const Reg32& src2)	{AppendInstr(I_BEXR, 0xF7, E_VEX_LZ | E_VEX_0F38 | E_VEX_W0, W(dst), R(src1), R(src2));}
+	void bexr(const Reg32& dst, const Mem32& src1, const Reg32& src2)	{AppendInstr(I_BEXR, 0xF7, E_VEX_LZ | E_VEX_0F38 | E_VEX_W0, W(dst), R(src1), R(src2));}
+#ifdef JITASM64
+	void bexr(const Reg64& dst, const Reg64& src1, const Reg64& src2)	{AppendInstr(I_BEXR, 0xF7, E_VEX_LZ | E_VEX_0F38 | E_VEX_W1, W(dst), R(src1), R(src2));}
+	void bexr(const Reg64& dst, const Mem64& src1, const Reg64& src2)	{AppendInstr(I_BEXR, 0xF7, E_VEX_LZ | E_VEX_0F38 | E_VEX_W1, W(dst), R(src1), R(src2));}
+#endif
+	void blsi(const Reg32& dst, const Reg32& src)	{AppendInstr(I_BLSI, 0xF3, E_VEX_LZ | E_VEX_0F38 | E_VEX_W0, Imm8(3), R(src), W(dst));}
+	void blsi(const Reg32& dst, const Mem32& src)	{AppendInstr(I_BLSI, 0xF3, E_VEX_LZ | E_VEX_0F38 | E_VEX_W0, Imm8(3), R(src), W(dst));}
+#ifdef JITASM64
+	void blsi(const Reg64& dst, const Reg64& src)	{AppendInstr(I_BLSI, 0xF3, E_VEX_LZ | E_VEX_0F38 | E_VEX_W1, Imm8(3), R(src), W(dst));}
+	void blsi(const Reg64& dst, const Mem64& src)	{AppendInstr(I_BLSI, 0xF3, E_VEX_LZ | E_VEX_0F38 | E_VEX_W1, Imm8(3), R(src), W(dst));}
+#endif
 
 	// XOP
 	void vfrczpd(const XmmReg& dst, const XmmReg& src)	{AppendInstr(I_VFRCZPD, 0x81, E_XOP_128 | E_XOP_M01001 | E_XOP_W0 | E_XOP_P00, W(dst), R(src));}

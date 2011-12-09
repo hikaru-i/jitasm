@@ -482,6 +482,21 @@ _nasm_test_fma4:
 	vfnmsubss xmm1, xmm3, dword [esp], xmm7
 	vfnmsubss xmm1, xmm3, xmm5, dword [esi]
 
+global _nasm_test_bmi
+_nasm_test_bmi:
+	andn ebx, edi, esp
+	andn ebx, edi, dword [esp]
+;	andn rbx, rdi, rsp
+;	andn rbx, rdi, dword [rsp]
+;	bexr ebx, edi, esp
+;	bexr ebx, dword [edi], esp
+;	bexr rbx, rdi, rsp
+;	bexr rbx, qword [rdi], rsp
+	blsi ebx, edi
+	blsi ebx, dword [edi]
+;	blsi rbx, rdi
+;	blsi rbx, qword [rdi]
+
 global	_nasm_test_avx2
 _nasm_test_avx2:
 	vgatherdps xmm1, dword [ebp + xmm7 * 2 + 1], xmm2

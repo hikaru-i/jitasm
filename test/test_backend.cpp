@@ -5307,6 +5307,35 @@ struct test_fma4 : jitasm::function<void, test_fma4>
 };
 
 //----------------------------------------
+// BMI
+//----------------------------------------
+extern "C" void nasm_test_bmi();
+struct test_bmi : jitasm::function<void, test_bmi>
+{
+	void naked_main()
+	{
+		andn(ebx, edi, esp);
+		andn(ebx, edi, dword_ptr[esp]);
+#ifdef JITASM64
+		andn(rbx, rdi, rsp);
+		andn(rbx, rdi, qword_ptr[rsp]);
+#endif
+//		bexr(ebx, edi, esp);
+//		bexr(ebx, dword_ptr[edi], esp);
+#ifdef JITASM64
+//		bexr(rbx, rdi, rsp);
+//		bexr(rbx, qword_ptr[rdi], rsp);
+#endif
+		blsi(ebx, edi);
+		blsi(ebx, dword_ptr[edi]);
+#ifdef JITASM64
+		blsi(rbx, rdi);
+		blsi(rbx, qword_ptr[rdi]);
+#endif
+	}
+};
+
+//----------------------------------------
 // AVX2
 //----------------------------------------
 extern "C" void nasm_test_avx2();
@@ -5381,5 +5410,6 @@ void test_backend()
 	TEST_N(test_f16c);
 	TEST_N(test_xop);
 	TEST_N(test_fma4);
+	TEST_N(test_bmi);
 	TEST_N(test_avx2);
 }
