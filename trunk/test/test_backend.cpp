@@ -5317,7 +5317,7 @@ struct test_avx2 : jitasm::function<void, test_avx2>
 		vgatherdps(xmm1, dword_ptr[ebp + xmm7 * 2 + 1], xmm2);
 		vgatherdps(ymm1, dword_ptr[ebp + ymm7 * 2 + 1], ymm2);
 		vgatherqps(xmm1, dword_ptr[ebp + xmm7 * 2 + 1], xmm2);
-		//vgatherqps(ymm1, dword_ptr[ebp + ymm7 * 2 + 1], ymm2);
+		vgatherqps(xmm1, dword_ptr[ebp + ymm7 * 2 + 1], xmm2);
 	}
 };
 

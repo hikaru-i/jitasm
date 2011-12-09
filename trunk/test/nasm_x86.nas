@@ -482,9 +482,9 @@ _nasm_test_fma4:
 	vfnmsubss xmm1, xmm3, dword [esp], xmm7
 	vfnmsubss xmm1, xmm3, xmm5, dword [esi]
 
-global	nasm_test_avx2
-nasm_test_avx2:
+global	_nasm_test_avx2
+_nasm_test_avx2:
 	vgatherdps xmm1, dword [ebp + xmm7 * 2 + 1], xmm2
 	vgatherdps ymm1, dword [ebp + ymm7 * 2 + 1], ymm2
 	vgatherqps xmm1, dword [ebp + xmm7 * 2 + 1], xmm2
-	;vgatherqps ymm1, dword [ebp + ymm7 * 2 + 1], ymm2
+	vgatherqps xmm1, dword [ebp + ymm7 * 2 + 1], xmm2

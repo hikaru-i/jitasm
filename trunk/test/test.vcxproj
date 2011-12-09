@@ -380,26 +380,26 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|x64'">true</ExcludedFromBuild>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|x64'">[yasm] assembling...</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|x64'">yasm-1.1.0-win64.exe --arch=x86 --parser=nasm --preproc=nasm --oformat=win64 --lformat=nasm --list="$(IntDir)%(Filename).lst" --objfile="$(IntDir)%(Filename).obj" --machine=amd64 "%(FullPath)"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|x64'">yasm-1.2.0-win32.exe --arch=x86 --parser=nasm --preproc=nasm --oformat=win64 --lformat=nasm --list="$(IntDir)%(Filename).lst" --objfile="$(IntDir)%(Filename).obj" --machine=amd64 "%(FullPath)"</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|x64'">$(IntDir)%(Filename).obj;$(IntDir)%(Filename).lst;%(Outputs)</Outputs>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">[yasm] assembling...</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">yasm-1.2.0-win64.exe --arch=x86 --parser=nasm --preproc=nasm --oformat=win64 --lformat=nasm --list="$(IntDir)%(Filename).lst" --objfile="$(IntDir)%(Filename).obj" --machine=amd64 "%(FullPath)"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">yasm-1.2.0-win32.exe --arch=x86 --parser=nasm --preproc=nasm --oformat=win64 --lformat=nasm --list="$(IntDir)%(Filename).lst" --objfile="$(IntDir)%(Filename).obj" --machine=amd64 "%(FullPath)"</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)%(Filename).obj;$(IntDir)%(Filename).lst;%(Outputs)</Outputs>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|x64'">true</ExcludedFromBuild>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|x64'">[yasm] assembling...</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|x64'">yasm-1.1.0-win64.exe --arch=x86 --parser=nasm --preproc=nasm --oformat=win64 --lformat=nasm --list="$(IntDir)%(Filename).lst" --objfile="$(IntDir)%(Filename).obj" --machine=amd64 "%(FullPath)"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|x64'">yasm-1.2.0-win32.exe --arch=x86 --parser=nasm --preproc=nasm --oformat=win64 --lformat=nasm --list="$(IntDir)%(Filename).lst" --objfile="$(IntDir)%(Filename).obj" --machine=amd64 "%(FullPath)"</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|x64'">$(IntDir)%(Filename).obj;$(IntDir)%(Filename).lst;%(Outputs)</Outputs>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">[yasm] assembling...</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">yasm-1.1.0-win64.exe --arch=x86 --parser=nasm --preproc=nasm --oformat=win64 --lformat=nasm --list="$(IntDir)%(Filename).lst" --objfile="$(IntDir)%(Filename).obj" --machine=amd64 "%(FullPath)"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">yasm-1.2.0-win32.exe --arch=x86 --parser=nasm --preproc=nasm --oformat=win64 --lformat=nasm --list="$(IntDir)%(Filename).lst" --objfile="$(IntDir)%(Filename).obj" --machine=amd64 "%(FullPath)"</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)%(Filename).obj;$(IntDir)%(Filename).lst;%(Outputs)</Outputs>
     </CustomBuild>
     <CustomBuild Include="nasm_x86.nas">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|Win32'">true</ExcludedFromBuild>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|Win32'">[yasm] assembling...</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|Win32'">yasm-1.1.0-win32.exe --arch=x86 --parser=nasm --preproc=nasm --oformat=win32 --lformat=nasm --list="$(IntDir)%(Filename).lst" --objfile="$(IntDir)%(Filename).obj" --machine=x86 "%(FullPath)"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|Win32'">yasm-1.2.0-win32.exe --arch=x86 --parser=nasm --preproc=nasm --oformat=win32 --lformat=nasm --list="$(IntDir)%(Filename).lst" --objfile="$(IntDir)%(Filename).obj" --machine=x86 "%(FullPath)"</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|Win32'">$(IntDir)%(Filename).obj;$(IntDir)%(Filename).lst;%(Outputs)</Outputs>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - No NASM|x64'">true</ExcludedFromBuild>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">[yasm] assembling...</Message>
@@ -408,11 +408,11 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|Win32'">true</ExcludedFromBuild>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|Win32'">[yasm] assembling...</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|Win32'">yasm-1.1.0-win32.exe --arch=x86 --parser=nasm --preproc=nasm --oformat=win32 --lformat=nasm --list="$(IntDir)%(Filename).lst" --objfile="$(IntDir)%(Filename).obj" --machine=x86 "%(FullPath)"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|Win32'">yasm-1.2.0-win32.exe --arch=x86 --parser=nasm --preproc=nasm --oformat=win32 --lformat=nasm --list="$(IntDir)%(Filename).lst" --objfile="$(IntDir)%(Filename).obj" --machine=x86 "%(FullPath)"</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|Win32'">$(IntDir)%(Filename).obj;$(IntDir)%(Filename).lst;%(Outputs)</Outputs>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release - No NASM|x64'">true</ExcludedFromBuild>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">[yasm] assembling...</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">yasm-1.1.0-win32.exe --arch=x86 --parser=nasm --preproc=nasm --oformat=win32 --lformat=nasm --list="$(IntDir)%(Filename).lst" --objfile="$(IntDir)%(Filename).obj" --machine=x86 "%(FullPath)"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">yasm-1.2.0-win32.exe --arch=x86 --parser=nasm --preproc=nasm --oformat=win32 --lformat=nasm --list="$(IntDir)%(Filename).lst" --objfile="$(IntDir)%(Filename).obj" --machine=x86 "%(FullPath)"</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)%(Filename).obj;$(IntDir)%(Filename).lst;%(Outputs)</Outputs>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </CustomBuild>

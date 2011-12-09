@@ -5227,7 +5227,7 @@ struct Frontend
 	void vgatherdps(const XmmReg& dst, const Mem32vx& src, const XmmReg& mask)	{AppendInstr(I_VGATHERDPS, 0x92, E_VEX_128_66_0F38_W0, RW(dst), R(src), R(mask));}
 	void vgatherdps(const YmmReg& dst, const Mem32vy& src, const YmmReg& mask)	{AppendInstr(I_VGATHERDPS, 0x92, E_VEX_256_66_0F38_W0, RW(dst), R(src), R(mask));}
 	void vgatherqps(const XmmReg& dst, const Mem32vx& src, const XmmReg& mask)	{AppendInstr(I_VGATHERQPS, 0x93, E_VEX_128_66_0F38_W0, RW(dst), R(src), R(mask));}
-	void vgatherqps(const YmmReg& dst, const Mem32vy& src, const YmmReg& mask)	{AppendInstr(I_VGATHERQPS, 0x93, E_VEX_256_66_0F38_W0, RW(dst), R(src), R(mask));}
+	void vgatherqps(const XmmReg& dst, const Mem32vy& src, const XmmReg& mask)	{AppendInstr(I_VGATHERQPS, 0x93, E_VEX_256_66_0F38_W0, RW(dst), R(src), R(mask));}
 
 	struct ControlState
 	{
