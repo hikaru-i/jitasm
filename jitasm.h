@@ -892,7 +892,7 @@ enum InstrID
 	I_RDFSBASE, I_RDGSBASE, I_RDRAND, I_WRFSBASE, I_WRGSBASE, I_VCVTPH2PS, I_VCVTPS2PH,
 
 	// BMI
-	I_ANDN, I_BEXR, I_BLSI,
+	I_ANDN, I_BEXTR, I_BLSI, I_BLSMSK, I_BLSR, I_BZHI, I_LZCNT, I_MULX, I_PDEP, I_PEXT, I_RORX, I_SARX, I_SHLX, I_SHRX, I_TZCNT, I_INVPCID,
 
 	// XOP
 	I_VFRCZPD, I_VFRCZPS, I_VFRCZSD, I_VFRCZSS,
@@ -4986,17 +4986,98 @@ struct Frontend
 	void andn(const Reg64& dst, const Reg64& src1, const Reg64& src2)	{AppendInstr(I_ANDN, 0xF2, E_VEX_LZ | E_VEX_0F38 | E_VEX_W1, W(dst), R(src2), R(src1));}
 	void andn(const Reg64& dst, const Reg64& src1, const Mem64& src2)	{AppendInstr(I_ANDN, 0xF2, E_VEX_LZ | E_VEX_0F38 | E_VEX_W1, W(dst), R(src2), R(src1));}
 #endif
-	void bexr(const Reg32& dst, const Reg32& src1, const Reg32& src2)	{AppendInstr(I_BEXR, 0xF7, E_VEX_LZ | E_VEX_0F38 | E_VEX_W0, W(dst), R(src1), R(src2));}
-	void bexr(const Reg32& dst, const Mem32& src1, const Reg32& src2)	{AppendInstr(I_BEXR, 0xF7, E_VEX_LZ | E_VEX_0F38 | E_VEX_W0, W(dst), R(src1), R(src2));}
+	void bextr(const Reg32& dst, const Reg32& src1, const Reg32& src2)	{AppendInstr(I_BEXTR, 0xF7, E_VEX_LZ | E_VEX_0F38 | E_VEX_W0, W(dst), R(src1), R(src2));}
+	void bextr(const Reg32& dst, const Mem32& src1, const Reg32& src2)	{AppendInstr(I_BEXTR, 0xF7, E_VEX_LZ | E_VEX_0F38 | E_VEX_W0, W(dst), R(src1), R(src2));}
 #ifdef JITASM64
-	void bexr(const Reg64& dst, const Reg64& src1, const Reg64& src2)	{AppendInstr(I_BEXR, 0xF7, E_VEX_LZ | E_VEX_0F38 | E_VEX_W1, W(dst), R(src1), R(src2));}
-	void bexr(const Reg64& dst, const Mem64& src1, const Reg64& src2)	{AppendInstr(I_BEXR, 0xF7, E_VEX_LZ | E_VEX_0F38 | E_VEX_W1, W(dst), R(src1), R(src2));}
+	void bextr(const Reg64& dst, const Reg64& src1, const Reg64& src2)	{AppendInstr(I_BEXTR, 0xF7, E_VEX_LZ | E_VEX_0F38 | E_VEX_W1, W(dst), R(src1), R(src2));}
+	void bextr(const Reg64& dst, const Mem64& src1, const Reg64& src2)	{AppendInstr(I_BEXTR, 0xF7, E_VEX_LZ | E_VEX_0F38 | E_VEX_W1, W(dst), R(src1), R(src2));}
 #endif
 	void blsi(const Reg32& dst, const Reg32& src)	{AppendInstr(I_BLSI, 0xF3, E_VEX_LZ | E_VEX_0F38 | E_VEX_W0, Imm8(3), R(src), W(dst));}
 	void blsi(const Reg32& dst, const Mem32& src)	{AppendInstr(I_BLSI, 0xF3, E_VEX_LZ | E_VEX_0F38 | E_VEX_W0, Imm8(3), R(src), W(dst));}
 #ifdef JITASM64
 	void blsi(const Reg64& dst, const Reg64& src)	{AppendInstr(I_BLSI, 0xF3, E_VEX_LZ | E_VEX_0F38 | E_VEX_W1, Imm8(3), R(src), W(dst));}
 	void blsi(const Reg64& dst, const Mem64& src)	{AppendInstr(I_BLSI, 0xF3, E_VEX_LZ | E_VEX_0F38 | E_VEX_W1, Imm8(3), R(src), W(dst));}
+#endif
+	void blsmsk(const Reg32& dst, const Reg32& src)	{AppendInstr(I_BLSMSK, 0xF3, E_VEX_LZ | E_VEX_0F38 | E_VEX_W0, Imm8(2), R(src), W(dst));}
+	void blsmsk(const Reg32& dst, const Mem32& src)	{AppendInstr(I_BLSMSK, 0xF3, E_VEX_LZ | E_VEX_0F38 | E_VEX_W0, Imm8(2), R(src), W(dst));}
+#ifdef JITASM64
+	void blsmsk(const Reg64& dst, const Reg64& src)	{AppendInstr(I_BLSMSK, 0xF3, E_VEX_LZ | E_VEX_0F38 | E_VEX_W1, Imm8(2), R(src), W(dst));}
+	void blsmsk(const Reg64& dst, const Mem64& src)	{AppendInstr(I_BLSMSK, 0xF3, E_VEX_LZ | E_VEX_0F38 | E_VEX_W1, Imm8(2), R(src), W(dst));}
+#endif
+	void blsr(const Reg32& dst, const Reg32& src)	{AppendInstr(I_BLSR, 0xF3, E_VEX_LZ | E_VEX_0F38 | E_VEX_W0, Imm8(1), R(src), W(dst));}
+	void blsr(const Reg32& dst, const Mem32& src)	{AppendInstr(I_BLSR, 0xF3, E_VEX_LZ | E_VEX_0F38 | E_VEX_W0, Imm8(1), R(src), W(dst));}
+#ifdef JITASM64
+	void blsr(const Reg64& dst, const Reg64& src)	{AppendInstr(I_BLSR, 0xF3, E_VEX_LZ | E_VEX_0F38 | E_VEX_W1, Imm8(1), R(src), W(dst));}
+	void blsr(const Reg64& dst, const Mem64& src)	{AppendInstr(I_BLSR, 0xF3, E_VEX_LZ | E_VEX_0F38 | E_VEX_W1, Imm8(1), R(src), W(dst));}
+#endif
+	void bzhi(const Reg32& dst, const Reg32& src1, const Reg32& src2)	{AppendInstr(I_BZHI, 0xF5, E_VEX_LZ | E_VEX_0F38 | E_VEX_W0, W(dst), R(src1), R(src2));}
+	void bzhi(const Reg32& dst, const Mem32& src1, const Reg32& src2)	{AppendInstr(I_BZHI, 0xF5, E_VEX_LZ | E_VEX_0F38 | E_VEX_W0, W(dst), R(src1), R(src2));}
+#ifdef JITASM64
+	void bzhi(const Reg64& dst, const Reg64& src1, const Reg64& src2)	{AppendInstr(I_BZHI, 0xF5, E_VEX_LZ | E_VEX_0F38 | E_VEX_W1, W(dst), R(src1), R(src2));}
+	void bzhi(const Reg64& dst, const Mem64& src1, const Reg64& src2)	{AppendInstr(I_BZHI, 0xF5, E_VEX_LZ | E_VEX_0F38 | E_VEX_W1, W(dst), R(src1), R(src2));}
+#endif
+	void lzcnt(const Reg16& dst, const Reg16& src)	{AppendInstr(I_LZCNT, 0x0FBD, E_MANDATORY_PREFIX_F3 | E_OPERAND_SIZE_PREFIX, W(dst), R(src));}
+	void lzcnt(const Reg16& dst, const Mem16& src)	{AppendInstr(I_LZCNT, 0x0FBD, E_MANDATORY_PREFIX_F3 | E_OPERAND_SIZE_PREFIX, W(dst), R(src));}
+	void lzcnt(const Reg32& dst, const Reg32& src)	{AppendInstr(I_LZCNT, 0x0FBD, E_MANDATORY_PREFIX_F3, W(dst), R(src));}
+	void lzcnt(const Reg32& dst, const Mem32& src)	{AppendInstr(I_LZCNT, 0x0FBD, E_MANDATORY_PREFIX_F3, W(dst), R(src));}
+#ifdef JITASM64
+	void lzcnt(const Reg64& dst, const Reg64& src)	{AppendInstr(I_LZCNT, 0x0FBD, E_MANDATORY_PREFIX_F3 | E_REXW_PREFIX, W(dst), R(src));}
+	void lzcnt(const Reg64& dst, const Mem64& src)	{AppendInstr(I_LZCNT, 0x0FBD, E_MANDATORY_PREFIX_F3 | E_REXW_PREFIX, W(dst), R(src));}
+#endif
+	void mulx(const Reg32& dst, const Reg32& src1, const Reg32& src2)	{AppendInstr(I_MULX, 0xF6, E_VEX_LZ | E_VEX_F2 | E_VEX_0F38 | E_VEX_W0, W(dst), R(src2), R(src1));}
+	void mulx(const Reg32& dst, const Reg32& src1, const Mem32& src2)	{AppendInstr(I_MULX, 0xF6, E_VEX_LZ | E_VEX_F2 | E_VEX_0F38 | E_VEX_W0, W(dst), R(src2), R(src1));}
+#ifdef JITASM64
+	void mulx(const Reg64& dst, const Reg64& src1, const Reg64& src2)	{AppendInstr(I_MULX, 0xF6, E_VEX_LZ | E_VEX_F2 | E_VEX_0F38 | E_VEX_W1, W(dst), R(src2), R(src1));}
+	void mulx(const Reg64& dst, const Reg64& src1, const Mem64& src2)	{AppendInstr(I_MULX, 0xF6, E_VEX_LZ | E_VEX_F2 | E_VEX_0F38 | E_VEX_W1, W(dst), R(src2), R(src1));}
+#endif
+	void pdep(const Reg32& dst, const Reg32& src1, const Reg32& src2)	{AppendInstr(I_PDEP, 0xF5, E_VEX_LZ | E_VEX_F2 | E_VEX_0F38 | E_VEX_W0, W(dst), R(src2), R(src1));}
+	void pdep(const Reg32& dst, const Reg32& src1, const Mem32& src2)	{AppendInstr(I_PDEP, 0xF5, E_VEX_LZ | E_VEX_F2 | E_VEX_0F38 | E_VEX_W0, W(dst), R(src2), R(src1));}
+#ifdef JITASM64
+	void pdep(const Reg64& dst, const Reg64& src1, const Reg64& src2)	{AppendInstr(I_PDEP, 0xF5, E_VEX_LZ | E_VEX_F2 | E_VEX_0F38 | E_VEX_W1, W(dst), R(src2), R(src1));}
+	void pdep(const Reg64& dst, const Reg64& src1, const Mem64& src2)	{AppendInstr(I_PDEP, 0xF5, E_VEX_LZ | E_VEX_F2 | E_VEX_0F38 | E_VEX_W1, W(dst), R(src2), R(src1));}
+#endif
+	void pext(const Reg32& dst, const Reg32& src1, const Reg32& src2)	{AppendInstr(I_PEXT, 0xF5, E_VEX_LZ | E_VEX_F3 | E_VEX_0F38 | E_VEX_W0, W(dst), R(src2), R(src1));}
+	void pext(const Reg32& dst, const Reg32& src1, const Mem32& src2)	{AppendInstr(I_PEXT, 0xF5, E_VEX_LZ | E_VEX_F3 | E_VEX_0F38 | E_VEX_W0, W(dst), R(src2), R(src1));}
+#ifdef JITASM64
+	void pext(const Reg64& dst, const Reg64& src1, const Reg64& src2)	{AppendInstr(I_PEXT, 0xF5, E_VEX_LZ | E_VEX_F3 | E_VEX_0F38 | E_VEX_W1, W(dst), R(src2), R(src1));}
+	void pext(const Reg64& dst, const Reg64& src1, const Mem64& src2)	{AppendInstr(I_PEXT, 0xF5, E_VEX_LZ | E_VEX_F3 | E_VEX_0F38 | E_VEX_W1, W(dst), R(src2), R(src1));}
+#endif
+	void rorx(const Reg32& dst, const Reg32& src, const Imm8& shift)	{AppendInstr(I_RORX, 0xF0, E_VEX_LZ | E_VEX_F2 | E_VEX_0F3A | E_VEX_W0, W(dst), R(src), shift);}
+	void rorx(const Reg32& dst, const Mem32& src, const Imm8& shift)	{AppendInstr(I_RORX, 0xF0, E_VEX_LZ | E_VEX_F2 | E_VEX_0F3A | E_VEX_W0, W(dst), R(src), shift);}
+#ifdef JITASM64
+	void rorx(const Reg64& dst, const Reg64& src, const Imm8& shift)	{AppendInstr(I_RORX, 0xF0, E_VEX_LZ | E_VEX_F2 | E_VEX_0F3A | E_VEX_W1, W(dst), R(src), shift);}
+	void rorx(const Reg64& dst, const Mem64& src, const Imm8& shift)	{AppendInstr(I_RORX, 0xF0, E_VEX_LZ | E_VEX_F2 | E_VEX_0F3A | E_VEX_W1, W(dst), R(src), shift);}
+#endif
+	void sarx(const Reg32& dst, const Reg32& src1, const Reg32& src2)	{AppendInstr(I_SARX, 0xF7, E_VEX_LZ | E_VEX_F3 | E_VEX_0F38 | E_VEX_W0, W(dst), R(src1), R(src2));}
+	void sarx(const Reg32& dst, const Mem32& src1, const Reg32& src2)	{AppendInstr(I_SARX, 0xF7, E_VEX_LZ | E_VEX_F3 | E_VEX_0F38 | E_VEX_W0, W(dst), R(src1), R(src2));}
+#ifdef JITASM64
+	void sarx(const Reg64& dst, const Reg64& src1, const Reg64& src2)	{AppendInstr(I_SARX, 0xF7, E_VEX_LZ | E_VEX_F3 | E_VEX_0F38 | E_VEX_W1, W(dst), R(src1), R(src2));}
+	void sarx(const Reg64& dst, const Mem64& src1, const Reg64& src2)	{AppendInstr(I_SARX, 0xF7, E_VEX_LZ | E_VEX_F3 | E_VEX_0F38 | E_VEX_W1, W(dst), R(src1), R(src2));}
+#endif
+	void shlx(const Reg32& dst, const Reg32& src1, const Reg32& src2)	{AppendInstr(I_SHLX, 0xF7, E_VEX_LZ | E_VEX_66 | E_VEX_0F38 | E_VEX_W0, W(dst), R(src1), R(src2));}
+	void shlx(const Reg32& dst, const Mem32& src1, const Reg32& src2)	{AppendInstr(I_SHLX, 0xF7, E_VEX_LZ | E_VEX_66 | E_VEX_0F38 | E_VEX_W0, W(dst), R(src1), R(src2));}
+#ifdef JITASM64
+	void shlx(const Reg64& dst, const Reg64& src1, const Reg64& src2)	{AppendInstr(I_SHLX, 0xF7, E_VEX_LZ | E_VEX_66 | E_VEX_0F38 | E_VEX_W1, W(dst), R(src1), R(src2));}
+	void shlx(const Reg64& dst, const Mem64& src1, const Reg64& src2)	{AppendInstr(I_SHLX, 0xF7, E_VEX_LZ | E_VEX_66 | E_VEX_0F38 | E_VEX_W1, W(dst), R(src1), R(src2));}
+#endif
+	void shrx(const Reg32& dst, const Reg32& src1, const Reg32& src2)	{AppendInstr(I_SHRX, 0xF7, E_VEX_LZ | E_VEX_F2 | E_VEX_0F38 | E_VEX_W0, W(dst), R(src1), R(src2));}
+	void shrx(const Reg32& dst, const Mem32& src1, const Reg32& src2)	{AppendInstr(I_SHRX, 0xF7, E_VEX_LZ | E_VEX_F2 | E_VEX_0F38 | E_VEX_W0, W(dst), R(src1), R(src2));}
+#ifdef JITASM64
+	void shrx(const Reg64& dst, const Reg64& src1, const Reg64& src2)	{AppendInstr(I_SHRX, 0xF7, E_VEX_LZ | E_VEX_F2 | E_VEX_0F38 | E_VEX_W1, W(dst), R(src1), R(src2));}
+	void shrx(const Reg64& dst, const Mem64& src1, const Reg64& src2)	{AppendInstr(I_SHRX, 0xF7, E_VEX_LZ | E_VEX_F2 | E_VEX_0F38 | E_VEX_W1, W(dst), R(src1), R(src2));}
+#endif
+	void tzcnt(const Reg16& dst, const Reg16& src)	{AppendInstr(I_TZCNT, 0x0FBC, E_MANDATORY_PREFIX_F3 | E_OPERAND_SIZE_PREFIX, W(dst), R(src));}
+	void tzcnt(const Reg16& dst, const Mem16& src)	{AppendInstr(I_TZCNT, 0x0FBC, E_MANDATORY_PREFIX_F3 | E_OPERAND_SIZE_PREFIX, W(dst), R(src));}
+	void tzcnt(const Reg32& dst, const Reg32& src)	{AppendInstr(I_TZCNT, 0x0FBC, E_MANDATORY_PREFIX_F3, W(dst), R(src));}
+	void tzcnt(const Reg32& dst, const Mem32& src)	{AppendInstr(I_TZCNT, 0x0FBC, E_MANDATORY_PREFIX_F3, W(dst), R(src));}
+#ifdef JITASM64
+	void tzcnt(const Reg64& dst, const Reg64& src)	{AppendInstr(I_TZCNT, 0x0FBC, E_MANDATORY_PREFIX_F3 | E_REXW_PREFIX, W(dst), R(src));}
+	void tzcnt(const Reg64& dst, const Mem64& src)	{AppendInstr(I_TZCNT, 0x0FBC, E_MANDATORY_PREFIX_F3 | E_REXW_PREFIX, W(dst), R(src));}
+#endif
+#ifndef JITASM64
+	void invpcid(const Reg32& type, const Mem128& desc)	{AppendInstr(I_INVPCID, 0x0F3882, E_MANDATORY_PREFIX_66, W(type), R(desc));}
+#else
+	void invpcid(const Reg64& type, const Mem128& desc)	{AppendInstr(I_INVPCID, 0x0F3882, E_MANDATORY_PREFIX_66, W(type), R(desc));}
 #endif
 
 	// XOP

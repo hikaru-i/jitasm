@@ -1426,7 +1426,7 @@ struct test_movs : jitasm::function<void, test_movs>
 };
 
 //----------------------------------------
-// mov with disp
+// mov withsp
 //----------------------------------------
 extern "C" void nasm_test_mov_disp();
 struct test_mov_disp : jitasm::function<void, test_mov_disp>
@@ -5314,23 +5314,96 @@ struct test_bmi : jitasm::function<void, test_bmi>
 {
 	void naked_main()
 	{
-		andn(ebx, edi, esp);
-		andn(ebx, edi, dword_ptr[esp]);
+		andn(edi, ecx, eax);
+		andn(edi, ecx, dword_ptr[eax]);
 #ifdef JITASM64
-		andn(rbx, rdi, rsp);
-		andn(rbx, rdi, qword_ptr[rsp]);
+		andn(rdi, rcx, rax);
+		andn(rdi, rcx, qword_ptr[rax]);
 #endif
-//		bexr(ebx, edi, esp);
-//		bexr(ebx, dword_ptr[edi], esp);
+		bextr(edi, ecx, eax);
+		bextr(edi, dword_ptr[ecx], eax);
 #ifdef JITASM64
-//		bexr(rbx, rdi, rsp);
-//		bexr(rbx, qword_ptr[rdi], rsp);
+		bextr(rdi, rcx, rax);
+		bextr(rdi, qword_ptr[rcx], rax);
 #endif
-		blsi(ebx, edi);
-		blsi(ebx, dword_ptr[edi]);
+		blsi(edi, ecx);
+		blsi(edi, dword_ptr[ecx]);
 #ifdef JITASM64
-		blsi(rbx, rdi);
-		blsi(rbx, qword_ptr[rdi]);
+		blsi(rdi, rcx);
+		blsi(rdi, qword_ptr[rcx]);
+#endif
+		blsmsk(edi, ecx);
+		blsmsk(edi, dword_ptr[ecx]);
+#ifdef JITASM64
+		blsmsk(rdi, rcx);
+		blsmsk(rdi, qword_ptr[rcx]);
+#endif
+		blsr(edi, ecx);
+		blsr(edi, dword_ptr[ecx]);
+#ifdef JITASM64
+		blsr(rdi, rcx);
+		blsr(rdi, qword_ptr[rcx]);
+#endif
+		bzhi(edi, ecx, eax);
+		bzhi(edi, dword_ptr[ecx], eax);
+#ifdef JITASM64
+		bzhi(rdi, rcx, rax);
+		bzhi(rdi, qword_ptr[rcx], rax);
+#endif
+		//lzcnt(di, cx);
+		//lzcnt(di, word_ptr[ecx]);
+		lzcnt(zdi, zcx);
+		lzcnt(zdi, ptr[zcx]);
+		mulx(edi, ecx, eax);
+		mulx(edi, ecx, dword_ptr[eax]);
+#ifdef JITASM64
+		mulx(rdi, rcx, rax);
+		mulx(rdi, rcx, qword_ptr[rax]);
+#endif
+		pdep(edi, ecx, eax);
+		pdep(edi, ecx, dword_ptr[eax]);
+#ifdef JITASM64
+		pdep(rdi, rcx, rax);
+		pdep(rdi, rcx, qword_ptr[rax]);
+#endif
+		pext(edi, ecx, eax);
+		pext(edi, ecx, dword_ptr[eax]);
+#ifdef JITASM64
+		pext(rdi, rcx, rax);
+		pext(rdi, rcx, qword_ptr[rax]);
+#endif
+		rorx(edi, ecx, 1);
+		rorx(edi, dword_ptr[ecx], 1);
+#ifdef JITASM64
+		rorx(rdi, rcx, 1);
+		rorx(rdi, qword_ptr[rcx], 1);
+#endif
+		sarx(edi, ecx, eax);
+		sarx(edi, dword_ptr[ecx], eax);
+#ifdef JITASM64
+		sarx(rdi, rcx, rax);
+		sarx(rdi, qword_ptr[rcx], rax);
+#endif
+		shlx(edi, ecx, eax);
+		shlx(edi, dword_ptr[ecx], eax);
+#ifdef JITASM64
+		shlx(rdi, rcx, rax);
+		shlx(rdi, qword_ptr[rcx], rax);
+#endif
+		shrx(edi, ecx, eax);
+		shrx(edi, dword_ptr[ecx], eax);
+#ifdef JITASM64
+		shrx(rdi, rcx, rax);
+		shrx(rdi, qword_ptr[rcx], rax);
+#endif
+		//tzcnt(di, cx);
+		//tzcnt(di, word_ptr[ecx]);
+		tzcnt(zdi, zcx);
+		tzcnt(zdi, ptr[zcx]);
+#ifndef JITASM64
+		invpcid(edi, xmmword_ptr[ecx]);
+#else
+		invpcid(rdi, xmmword_ptr[rcx]);
 #endif
 	}
 };
