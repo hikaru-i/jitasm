@@ -489,18 +489,72 @@ nasm_test_fma4:
 
 global nasm_test_bmi
 nasm_test_bmi:
-	andn ebx, edi, esp
-	andn ebx, edi, dword [esp]
-	andn rbx, rdi, rsp
-	andn rbx, rdi, qword [rsp]
-;	bexr ebx, edi, esp
-;	bexr ebx, dword [edi], esp
-;	bexr rbx, rdi, rsp
-;	bexr rbx, qword [rdi], rsp
-	blsi ebx, edi
-	blsi ebx, dword [edi]
-	blsi rbx, rdi
-	blsi rbx, qword [rdi]
+	andn edi, ecx, eax
+	andn edi, ecx, dword [eax]
+	andn rdi, rcx, rax
+	andn rdi, rcx, qword [rax]
+	bextr edi, ecx, eax
+	bextr edi, dword [ecx], eax
+	bextr rdi, rcx, rax
+	bextr rdi, qword [rcx], rax
+	blsi edi, ecx
+	blsi edi, dword [ecx]
+	blsi rdi, rcx
+	blsi rdi, qword [rcx]
+	blsmsk edi, ecx
+	blsmsk edi, dword [ecx]
+	blsmsk rdi, rcx
+	blsmsk rdi, qword [rcx]
+	blsr edi, ecx
+	blsr edi, dword [ecx]
+	blsr rdi, rcx
+	blsr rdi, qword [rcx]
+	bzhi edi, ecx, eax
+	bzhi edi, dword [ecx], eax
+	bzhi rdi, rcx, rax
+	bzhi rdi, qword [rcx], rax
+;	lzcnt di, cx
+;	lzcnt di, word [ecx]
+;	lzcnt edi, ecx
+;	lzcnt edi, dword [ecx]
+	lzcnt rdi, rcx
+	lzcnt rdi, qword [rcx]
+	mulx edi, ecx, eax
+	mulx edi, ecx, dword [eax]
+	mulx rdi, rcx, rax
+	mulx rdi, rcx, qword [rax]
+	pdep edi, ecx, eax
+	pdep edi, ecx, dword [eax]
+	pdep rdi, rcx, rax
+	pdep rdi, rcx, qword [rax]
+	pext edi, ecx, eax
+	pext edi, ecx, dword [eax]
+	pext rdi, rcx, rax
+	pext rdi, rcx, qword [rax]
+	rorx edi, ecx, 1
+	rorx edi, dword [ecx], 1
+	rorx rdi, rcx, 1
+	rorx rdi, qword [rcx], 1
+	sarx edi, ecx, eax
+	sarx edi, dword [ecx], eax
+	sarx rdi, rcx, rax
+	sarx rdi, qword [rcx], rax
+	shlx edi, ecx, eax
+	shlx edi, dword [ecx], eax
+	shlx rdi, rcx, rax
+	shlx rdi, qword [rcx], rax
+	shrx edi, ecx, eax
+	shrx edi, dword [ecx], eax
+	shrx rdi, rcx, rax
+	shrx rdi, qword [rcx], rax
+;	tzcnt di, cx
+;	tzcnt di, word [ecx]
+;	tzcnt edi, ecx
+;	tzcnt edi, dword [ecx]
+	tzcnt rdi, rcx
+	tzcnt rdi, qword [rcx]
+	;invpcid edi, oword [ecx]
+	invpcid rdi, oword [rcx]
 
 global	nasm_test_avx2
 nasm_test_avx2:
