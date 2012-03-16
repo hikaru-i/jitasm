@@ -118,8 +118,8 @@
 
 //#define JITASM_DEBUG_DUMP
 #ifdef JITASM_DEBUG_DUMP
-	#if defined(JITASM_GCC)
 	#include <stdio.h>
+	#if defined(JITASM_GCC)
 	#define JITASM_TRACE	printf
 	#else
 	#define JITASM_TRACE	jitasm::detail::Trace
@@ -1432,7 +1432,7 @@ namespace detail
 		str.append(1, static_cast<char>('0' + num % 10));
 	}
 
-#if defined(JITASM_WIN)
+#if defined(JITASM_DEBUG_DUMP) && defined(JITASM_WIN)
 	/// Debug trace
 	inline void Trace(const char *format, ...)
 	{
