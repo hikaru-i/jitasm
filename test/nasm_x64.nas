@@ -562,3 +562,13 @@ nasm_test_avx2:
 	vgatherdps ymm1, dword [ebp + ymm7 * 2 + 1], ymm2
 	vgatherqps xmm1, dword [ebp + xmm7 * 2 + 1], xmm2
 	vgatherqps xmm1, dword [ebp + ymm7 * 2 + 1], xmm2
+
+
+global	nasm_test_regalloc_vsib
+nasm_test_regalloc_vsib:
+	vpxor xmm3, xmm3, xmm3
+	vgatherdps xmm0, dword [ebp + xmm3 * 2 + 1], xmm2
+	vgatherqps xmm0, dword [ebp + xmm3 * 2 + 1], xmm2
+	vxorps ymm2, ymm2, ymm2
+	vgatherdps ymm1, dword [ebp + ymm2 * 2 + 1], ymm0
+	vgatherqps xmm1, dword [ebp + ymm2 * 2 + 1], xmm0

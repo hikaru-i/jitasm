@@ -174,6 +174,26 @@ struct test_regalloc_reassign_physical_reg : jitasm::function<void, test_regallo
 };
 
 //----------------------------------------
+// VSIB register allocation
+//----------------------------------------
+extern "C" void nasm_test_regalloc_vsib();
+struct test_regalloc_vsib : jitasm::function<void, test_regalloc_vsib>
+{
+	void naked_main()
+	{
+		jitasm::XmmReg xmm_index;
+		vpxor(xmm_index, xmm_index, xmm_index);
+		vgatherdps(xmm0, dword_ptr[ebp + xmm_index * 2 + 1], xmm2);
+		vgatherqps(xmm0, dword_ptr[ebp + xmm_index * 2 + 1], xmm2);
+
+		jitasm::YmmReg ymm_index;
+		vxorps(ymm_index, ymm_index, ymm_index);
+		vgatherdps(ymm1, dword_ptr[ebp + ymm_index * 2 + 1], ymm0);
+		vgatherqps(xmm1, dword_ptr[ebp + ymm_index * 2 + 1], xmm0);
+	}
+};
+
+//----------------------------------------
 // function_cdecl<char>
 //----------------------------------------
 struct test_function_return_char : jitasm::function_cdecl<char, test_function_return_char, char>
@@ -417,6 +437,7 @@ struct test_function_return_m128i_ptr : jitasm::function_cdecl<__m128i, test_fun
 void test_register_allocation()
 {
 	TEST_M(test_regalloc_reassign_physical_reg);
+	TEST_N(test_regalloc_vsib);
 }
 
 void test_calling_convention()
