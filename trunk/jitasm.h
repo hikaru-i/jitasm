@@ -217,7 +217,7 @@ struct RegID
 	bool operator!=(const RegID& rhs) const {return !(*this == rhs);}
 	bool operator<(const RegID& rhs) const {return type != rhs.type ? type < rhs.type : id < rhs.id;}
 	bool IsInvalid() const	{return type == R_TYPE_GP && id == INVALID;}
-	bool IsSymbolic() const {return type == R_TYPE_SYMBOLIC_GP || type == R_TYPE_SYMBOLIC_MMX || type == R_TYPE_SYMBOLIC_XMM;}
+	bool IsSymbolic() const {return type == R_TYPE_SYMBOLIC_GP || type == R_TYPE_SYMBOLIC_MMX || type == R_TYPE_SYMBOLIC_XMM || type == R_TYPE_SYMBOLIC_YMM;}
 	RegType GetType() const {return static_cast<RegType>(type);}
 
 	static RegID Invalid() {
@@ -6723,7 +6723,7 @@ namespace compiler
 
 					const RegID& index = opd.GetIndex();
 					if (index.IsSymbolic()) {
-						opd.index_.id = reg_id_map[0].GetNormalizedID(index.id);
+						opd.index_.id = reg_id_map[GetRegFamily(index.GetType())].GetNormalizedID(index.id);
 					}
 				}
 			}
@@ -6846,8 +6846,8 @@ namespace compiler
 							}
 							const RegID& index = opd.GetIndex();
 							if (!index.IsInvalid()) {
-								block->GetLifetime(R_TYPE_GP).AddUsePoint(instr_offset, index, static_cast<OpdType>(O_TYPE_REG | O_TYPE_READ), opd.GetAddressBaseSize(), 0xFFFFFFFF);
-								var_manager.UpdateVarSize(R_TYPE_GP, index.id, opd.GetAddressBaseSize());
+								block->GetLifetime(index.GetType()).AddUsePoint(instr_offset, index, static_cast<OpdType>(O_TYPE_REG | O_TYPE_READ), opd.GetAddressIndexSize(), 0xFFFFFFFF);
+								var_manager.UpdateVarSize(index.GetType(), index.id, opd.GetAddressIndexSize());
 							}
 						}
 					}
@@ -7466,8 +7466,10 @@ namespace compiler
 								opd.base_.id = interval_range[0].first->assignment_table[opd.base_.id];
 							}
 							if (opd.index_.IsSymbolic()) {
-								opd.index_.type = R_TYPE_GP;
-								opd.index_.id = interval_range[0].first->assignment_table[opd.index_.id];
+								if (opd.index_.type == R_TYPE_SYMBOLIC_GP)						opd.index_.type = R_TYPE_GP;
+								else if (opd.index_.type == R_TYPE_SYMBOLIC_XMM)				opd.index_.type = R_TYPE_XMM;
+								else { JITASM_ASSERT(opd.index_.type == R_TYPE_SYMBOLIC_YMM);	opd.index_.type = R_TYPE_YMM; }
+								opd.index_.id = interval_range[GetRegFamily(opd.index_.GetType())].first->assignment_table[opd.index_.id];
 							}
 						}
 					}
