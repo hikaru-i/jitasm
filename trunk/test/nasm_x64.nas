@@ -556,13 +556,24 @@ nasm_test_bmi:
 	;invpcid edi, oword [ecx]
 	invpcid rdi, oword [rcx]
 
-global	nasm_test_avx2
-nasm_test_avx2:
-	vgatherdps xmm1, dword [ebp + xmm7 * 2 + 1], xmm2
-	vgatherdps ymm1, dword [ebp + ymm7 * 2 + 1], ymm2
-	vgatherqps xmm1, dword [ebp + xmm7 * 2 + 1], xmm2
-	vgatherqps xmm1, dword [ebp + ymm7 * 2 + 1], xmm2
-
+global	nasm_test_avx2_gather
+nasm_test_avx2_gather:
+	vgatherdps xmm2, dword [ebp + xmm5 * 2 + 1], xmm3
+	vgatherdps ymm5, dword [ebp + ymm5 * 2 + 1], ymm4
+	vgatherqps xmm2, dword [ebp + xmm6 * 2 + 1], xmm3
+	vgatherqps xmm2, dword [ebp + ymm6 * 2 + 1], xmm3
+	vgatherdpd xmm2, qword [ebp + xmm5 * 2 + 1], xmm3
+	vgatherdpd ymm5, qword [ebp + xmm5 * 2 + 1], ymm4
+	vgatherqpd xmm2, qword [ebp + xmm6 * 2 + 1], xmm3
+	vgatherqpd ymm5, qword [ebp + ymm6 * 2 + 1], ymm4
+	vpgatherdd xmm2, dword [ebp + xmm5 * 2 + 1], xmm3
+	vpgatherdd ymm5, dword [ebp + ymm5 * 2 + 1], ymm4
+	vpgatherqd xmm2, dword [ebp + xmm6 * 2 + 1], xmm3
+	vpgatherqd xmm2, dword [ebp + ymm6 * 2 + 1], xmm3
+	vpgatherdq xmm2, qword [ebp + xmm5 * 2 + 1], xmm3
+	vpgatherdq ymm5, qword [ebp + xmm5 * 2 + 1], ymm4
+	vpgatherqq xmm2, qword [ebp + xmm6 * 2 + 1], xmm3
+	vpgatherqq ymm5, qword [ebp + ymm6 * 2 + 1], ymm4
 
 global	nasm_test_regalloc_vsib
 nasm_test_regalloc_vsib:

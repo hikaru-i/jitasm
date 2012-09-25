@@ -33,11 +33,13 @@
     <CustomBuild Include="nasm_x86.nas">
       <Filter>Source Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="x64.asm">
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="x86.asm">
       <Filter>Source Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="x86.asm">
+    </MASM>
+    <MASM Include="x64.asm">
       <Filter>Source Files</Filter>
-    </CustomBuild>
+    </MASM>
   </ItemGroup>
 </Project>

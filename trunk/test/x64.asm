@@ -4166,7 +4166,10 @@ masm_test_avx_o proc
 	vpminud xmm6, xmm5, xmm4
 	vpminud xmm6, xmm5, xmmword ptr[rsi]
 	vpmovmskb ecx, xmm5
-	vpmovmskb rax, xmm5
+	db 0C5h ;vpmovmskb rax, xmm5
+	db 0F9h
+	db 0D7h
+	db 0C5h
 	vpmovsxbw xmm1, xmm2
 	vpmovsxbw xmm1, qword ptr[esp]
 	vpmovsxbd xmm1, xmm2
@@ -4395,6 +4398,302 @@ masm_test_avx_r proc
 	vzeroall
 	vzeroupper
 masm_test_avx_r endp
+
+;----------------------------------------
+; AVX2
+;----------------------------------------
+masm_test_avx2 proc
+	vbroadcastss xmm1, xmm2
+	vbroadcastss ymm7, xmm2
+	vbroadcastsd ymm7, xmm2
+	vbroadcasti128 ymm7, oword ptr[ecx]
+	vextracti128 xmm2, ymm4, 1
+	vextracti128 xmmword ptr[edi], ymm3, 0
+	vinserti128 ymm3, ymm2, xmm1, 1
+	vinserti128 ymm3, ymm2, xmmword ptr[esi], 0
+	vmovntdqa ymm5, ymmword ptr[esi]
+	vmpsadbw ymm6, ymm4, ymm3, 1
+	vmpsadbw ymm6, ymm4, ymmword ptr[esi], 2
+	vpabsb ymm6, ymm5
+	vpabsb ymm6, ymmword ptr[ecx]
+	vpabsw ymm6, ymm5
+	vpabsw ymm6, ymmword ptr[ecx]
+	vpabsd ymm6, ymm5
+	vpabsd ymm6, ymmword ptr[ecx]
+	vpacksswb ymm6, ymm4, ymm3
+	vpacksswb ymm6, ymm4, ymmword ptr[esi]
+	vpackssdw ymm6, ymm4, ymm3
+	vpackssdw ymm6, ymm4, ymmword ptr[esi]
+	vpackuswb ymm6, ymm4, ymm3
+	vpackuswb ymm6, ymm4, ymmword ptr[esi]
+	vpackusdw ymm6, ymm4, ymm3
+	vpackusdw ymm6, ymm4, ymmword ptr[esi]
+	vpaddb ymm6, ymm4, ymm3
+	vpaddb ymm6, ymm4, ymmword ptr[esi]
+	vpaddw ymm6, ymm4, ymm3
+	vpaddw ymm6, ymm4, ymmword ptr[esi]
+	vpaddd ymm6, ymm4, ymm3
+	vpaddd ymm6, ymm4, ymmword ptr[esi]
+	vpaddq ymm6, ymm4, ymm3
+	vpaddq ymm6, ymm4, ymmword ptr[esi]
+	vpaddsb ymm6, ymm4, ymm3
+	vpaddsb ymm6, ymm4, ymmword ptr[esi]
+	vpaddsw ymm6, ymm4, ymm3
+	vpaddsw ymm6, ymm4, ymmword ptr[esi]
+	vpaddusb ymm6, ymm4, ymm3
+	vpaddusb ymm6, ymm4, ymmword ptr[esi]
+	vpaddusw ymm6, ymm4, ymm3
+	vpaddusw ymm6, ymm4, ymmword ptr[esi]
+	vpalignr ymm6, ymm4, ymm3, 2
+	vpalignr ymm6, ymm4, ymmword ptr[esi], 3
+	vpand ymm6, ymm4, ymm3
+	vpand ymm6, ymm4, ymmword ptr[esi]
+	vpandn ymm6, ymm4, ymm3
+	vpandn ymm6, ymm4, ymmword ptr[esi]
+	vpavgb ymm6, ymm4, ymm3
+	vpavgb ymm6, ymm4, ymmword ptr[esi]
+	vpavgw ymm6, ymm4, ymm3
+	vpavgw ymm6, ymm4, ymmword ptr[esi]
+	vpblendvb ymm6, ymm4, ymm3, ymm2
+	vpblendvb ymm6, ymm4, ymmword ptr[esi], ymm2
+	vpblendw ymm6, ymm4, ymm3, 0Fh
+	vpblendw ymm6, ymm4, ymmword ptr[esi], 0F0h
+	vpblendd xmm3, xmm2, xmm1, 0Ah
+	vpblendd xmm3, xmm2, xmmword ptr[eax], 03h
+	vpblendd ymm6, ymm4, ymm3, 22h
+	vpblendd ymm6, ymm4, ymmword ptr[esi], 33h
+	vpbroadcastb xmm1, xmm2
+	vpbroadcastb xmm1, byte ptr[esi]
+	vpbroadcastb ymm7, xmm2
+	vpbroadcastb ymm7, byte ptr[edi]
+	vpbroadcastw xmm1, xmm2
+	vpbroadcastw xmm1, word ptr[eax]
+	vpbroadcastw ymm7, xmm2
+	vpbroadcastw ymm7, word ptr[esi]
+	vpbroadcastd xmm1, xmm2
+	vpbroadcastd xmm1, dword ptr[edx]
+	vpbroadcastd ymm7, xmm2
+	vpbroadcastd ymm7, dword ptr[eax]
+	vpbroadcastq xmm1, xmm2
+	vpbroadcastq xmm1, qword ptr[esi]
+	vpbroadcastq ymm7, xmm2
+	vpbroadcastq ymm7, qword ptr[esi]
+	vpcmpeqb ymm0, ymm1, ymm2
+	vpcmpeqb ymm0, ymm1, ymmword ptr[ecx]
+	vpcmpeqw ymm0, ymm1, ymm2
+	vpcmpeqw ymm0, ymm1, ymmword ptr[ecx]
+	vpcmpeqd ymm0, ymm1, ymm2
+	vpcmpeqd ymm0, ymm1, ymmword ptr[ecx]
+	vpcmpeqq ymm0, ymm1, ymm2
+	vpcmpeqq ymm0, ymm1, ymmword ptr[ecx]
+	vpcmpgtb ymm0, ymm1, ymm2
+	vpcmpgtb ymm0, ymm1, ymmword ptr[ecx]
+	vpcmpgtw ymm0, ymm1, ymm2
+	vpcmpgtw ymm0, ymm1, ymmword ptr[ecx]
+	vpcmpgtd ymm0, ymm1, ymm2
+	vpcmpgtd ymm0, ymm1, ymmword ptr[ecx]
+	vpcmpgtq ymm0, ymm1, ymm2
+	vpcmpgtq ymm0, ymm1, ymmword ptr[ecx]
+	vpermd ymm0, ymm5, ymm3
+	vpermd ymm0, ymm5, ymmword ptr[esi]
+	vpermq ymm0, ymm3, 5
+	vpermq ymm0, ymmword ptr[esi], 6
+	vpermps ymm0, ymm5, ymm3
+	vpermps ymm0, ymm5, ymmword ptr[esi]
+	vpermpd ymm0, ymm3, 9
+	vpermpd ymm0, ymmword ptr[esi], 4
+	vperm2i128 ymm0, ymm1, ymm3, 2
+	vperm2i128 ymm0, ymm1, ymmword ptr[esi], 1
+	vphaddw ymm5, ymm6, ymm4
+	vphaddw ymm5, ymm6, ymmword ptr[eax]
+	vphaddd ymm5, ymm6, ymm4
+	vphaddd ymm5, ymm6, ymmword ptr[eax]
+	vphaddsw ymm5, ymm6, ymm4
+	vphaddsw ymm5, ymm6, ymmword ptr[eax]
+	vphsubw ymm5, ymm6, ymm4
+	vphsubw ymm5, ymm6, ymmword ptr[eax]
+	vphsubd ymm5, ymm6, ymm4
+	vphsubd ymm5, ymm6, ymmword ptr[eax]
+	vphsubsw ymm5, ymm6, ymm4
+	vphsubsw ymm5, ymm6, ymmword ptr[eax]
+	vpmaddwd ymm5, ymm6, ymm4
+	vpmaddwd ymm5, ymm6, ymmword ptr[eax]
+	vpmaddubsw ymm5, ymm6, ymm4
+	vpmaddubsw ymm5, ymm6, ymmword ptr[eax]
+	vpmaskmovd xmm1, xmm0, xmmword ptr[esi]
+	vpmaskmovd ymm2, ymm7, ymmword ptr[esi]
+	vpmaskmovq xmm3, xmm0, xmmword ptr[ecx]
+	vpmaskmovq ymm4, ymm7, ymmword ptr[eax]
+	vpmaskmovd xmmword ptr[edi], xmm0, xmm1
+	vpmaskmovd ymmword ptr[eax], ymm7, ymm2
+	vpmaskmovq xmmword ptr[esp], xmm0, xmm3
+	vpmaskmovq ymmword ptr[ecx], ymm7, ymm4
+	vpmaxsb ymm1, ymm2, ymm3
+	vpmaxsb ymm1, ymm2, ymmword ptr[esi]
+	vpmaxsw ymm1, ymm2, ymm3
+	vpmaxsw ymm1, ymm2, ymmword ptr[esi]
+	vpmaxsd ymm1, ymm2, ymm3
+	vpmaxsd ymm1, ymm2, ymmword ptr[esi]
+	vpmaxub ymm1, ymm2, ymm3
+	vpmaxub ymm1, ymm2, ymmword ptr[esi]
+	vpmaxuw ymm1, ymm2, ymm3
+	vpmaxuw ymm1, ymm2, ymmword ptr[esi]
+	vpmaxud ymm1, ymm2, ymm3
+	vpmaxud ymm1, ymm2, ymmword ptr[esi]
+	vpminsb ymm1, ymm2, ymm3
+	vpminsb ymm1, ymm2, ymmword ptr[esi]
+	vpminsw ymm1, ymm2, ymm3
+	vpminsw ymm1, ymm2, ymmword ptr[esi]
+	vpminsd ymm1, ymm2, ymm3
+	vpminsd ymm1, ymm2, ymmword ptr[esi]
+	vpminub ymm1, ymm2, ymm3
+	vpminub ymm1, ymm2, ymmword ptr[esi]
+	vpminuw ymm1, ymm2, ymm3
+	vpminuw ymm1, ymm2, ymmword ptr[esi]
+	vpminud ymm1, ymm2, ymm3
+	vpminud ymm1, ymm2, ymmword ptr[esi]
+	vpmovmskb eax, ymm1
+	db 0C5h ;vpmovmskb rax, ymm2
+	db 0FDh
+	db 0D7h
+	db 0C2h
+	vpmovsxbw ymm7, xmm6
+	vpmovsxbw ymm7, qword ptr[esp]
+	vpmovsxbd ymm7, xmm6
+	vpmovsxbd ymm7, dword ptr[ecx]
+	vpmovsxbq ymm7, xmm6
+	vpmovsxbq ymm7, word ptr[esi]
+	vpmovsxwd ymm7, xmm6
+	vpmovsxwd ymm7, qword ptr[esp]
+	vpmovsxwq ymm7, xmm6
+	vpmovsxwq ymm7, dword ptr[ecx]
+	vpmovsxdq ymm7, xmm6
+	vpmovsxdq ymm7, qword ptr[esp]
+	vpmovzxbw ymm7, xmm6
+	vpmovzxbw ymm7, qword ptr[esp]
+	vpmovzxbd ymm7, xmm6
+	vpmovzxbd ymm7, dword ptr[ecx]
+	vpmovzxbq ymm7, xmm6
+	vpmovzxbq ymm7, word ptr[esi]
+	vpmovzxwd ymm7, xmm6
+	vpmovzxwd ymm7, qword ptr[esp]
+	vpmovzxwq ymm7, xmm6
+	vpmovzxwq ymm7, dword ptr[ecx]
+	vpmovzxdq ymm7, xmm6
+	vpmovzxdq ymm7, qword ptr[esp]
+	vpmulhuw ymm1, ymm2, ymm3
+	vpmulhuw ymm1, ymm2, ymmword ptr[edi]
+	vpmulhrsw ymm1, ymm2, ymm3
+	vpmulhrsw ymm1, ymm2, ymmword ptr[edi]
+	vpmulhw ymm1, ymm2, ymm3
+	vpmulhw ymm1, ymm2, ymmword ptr[edi]
+	vpmullw ymm1, ymm2, ymm3
+	vpmullw ymm1, ymm2, ymmword ptr[edi]
+	vpmulld ymm1, ymm2, ymm3
+	vpmulld ymm1, ymm2, ymmword ptr[edi]
+	vpmuludq ymm1, ymm2, ymm3
+	vpmuludq ymm1, ymm2, ymmword ptr[edi]
+	vpmuldq ymm1, ymm2, ymm3
+	vpmuldq ymm1, ymm2, ymmword ptr[edi]
+	vpor ymm3, ymm4, ymm5
+	vpor ymm3, ymm4, ymmword ptr[eax]
+	vpsadbw ymm3, ymm4, ymm5
+	vpsadbw ymm3, ymm4, ymmword ptr[eax]
+	vpshufb ymm3, ymm6, ymm7
+	vpshufb ymm3, ymm6, ymmword ptr[ebx]
+	vpshufd ymm3, ymm6, 3
+	vpshufd ymm3, ymmword ptr[ecx], 4
+	vpshufhw ymm3, ymm6, 5
+	vpshufhw ymm3, ymmword ptr[ecx], 6
+	vpshuflw ymm3, ymm6, 7
+	vpshuflw ymm3, ymmword ptr[ecx], 8
+	vpsignb ymm3, ymm4, ymm5
+	vpsignb ymm3, ymm4, ymmword ptr[eax]
+	vpsignw ymm3, ymm4, ymm5
+	vpsignw ymm3, ymm4, ymmword ptr[eax]
+	vpsignd ymm3, ymm4, ymm5
+	vpsignd ymm3, ymm4, ymmword ptr[eax]
+	vpsllw ymm3, ymm6, xmm1
+	vpsllw ymm3, ymm6, xmmword ptr[esi]
+	vpsllw ymm3, ymm6, 9
+	vpslld ymm3, ymm6, xmm1
+	vpslld ymm3, ymm6, xmmword ptr[esi]
+	vpslld ymm3, ymm6, 10
+	vpsllq ymm3, ymm6, xmm1
+	vpsllq ymm3, ymm6, xmmword ptr[esi]
+	vpsllq ymm3, ymm6, 11
+	vpslldq ymm3, ymm6, 12
+	vpsllvd xmm0, xmm2, xmm1
+	vpsllvd xmm0, xmm1, xmmword ptr[ecx]
+	vpsllvd ymm3, ymm6, ymm0
+	vpsllvd ymm3, ymm0, ymmword ptr[ecx]
+	vpsllvq xmm0, xmm2, xmm1
+	vpsllvq xmm0, xmm1, xmmword ptr[ecx]
+	vpsllvq ymm3, ymm6, ymm0
+	vpsllvq ymm3, ymm0, ymmword ptr[ecx]
+	vpsraw ymm3, ymm6, xmm1
+	vpsraw ymm3, ymm6, xmmword ptr[esi]
+	vpsraw ymm3, ymm6, 1
+	vpsrad ymm3, ymm6, xmm1
+	vpsrad ymm3, ymm6, xmmword ptr[esi]
+	vpsrad ymm3, ymm6, 2
+	vpsravd xmm0, xmm2, xmm1
+	vpsravd xmm0, xmm1, xmmword ptr[ecx]
+	vpsravd ymm3, ymm6, ymm0
+	vpsravd ymm3, ymm0, ymmword ptr[ecx]
+	vpsrlw ymm3, ymm6, xmm1
+	vpsrlw ymm3, ymm6, xmmword ptr[esi]
+	vpsrlw ymm3, ymm6, 3
+	vpsrld ymm3, ymm6, xmm1
+	vpsrld ymm3, ymm6, xmmword ptr[esi]
+	vpsrld ymm3, ymm6, 4
+	vpsrlq ymm3, ymm6, xmm1
+	vpsrlq ymm3, ymm6, xmmword ptr[esi]
+	vpsrlq ymm3, ymm6, 5
+	vpsrldq ymm3, ymm6, 6
+	vpsrlvd xmm0, xmm2, xmm1
+	vpsrlvd xmm0, xmm1, xmmword ptr[ecx]
+	vpsrlvd ymm3, ymm6, ymm0
+	vpsrlvd ymm3, ymm0, ymmword ptr[ecx]
+	vpsrlvq xmm0, xmm2, xmm1
+	vpsrlvq xmm0, xmm1, xmmword ptr[ecx]
+	vpsrlvq ymm3, ymm6, ymm0
+	vpsrlvq ymm3, ymm0, ymmword ptr[ecx]
+	vpsubb ymm1, ymm5, ymm6
+	vpsubb ymm1, ymm5, ymmword ptr[eax]
+	vpsubw ymm1, ymm5, ymm6
+	vpsubw ymm1, ymm5, ymmword ptr[eax]
+	vpsubd ymm1, ymm5, ymm6
+	vpsubd ymm1, ymm5, ymmword ptr[eax]
+	vpsubq ymm1, ymm5, ymm6
+	vpsubq ymm1, ymm5, ymmword ptr[eax]
+	vpsubsb ymm1, ymm5, ymm6
+	vpsubsb ymm1, ymm5, ymmword ptr[eax]
+	vpsubsw ymm1, ymm5, ymm6
+	vpsubsw ymm1, ymm5, ymmword ptr[eax]
+	vpsubusb ymm1, ymm5, ymm6
+	vpsubusb ymm1, ymm5, ymmword ptr[eax]
+	vpsubusw ymm1, ymm5, ymm6
+	vpsubusw ymm1, ymm5, ymmword ptr[eax]
+	vpunpckhbw ymm1, ymm5, ymm6
+	vpunpckhbw ymm1, ymm5, ymmword ptr[eax]
+	vpunpckhwd ymm1, ymm5, ymm6
+	vpunpckhwd ymm1, ymm5, ymmword ptr[eax]
+	vpunpckhdq ymm1, ymm5, ymm6
+	vpunpckhdq ymm1, ymm5, ymmword ptr[eax]
+	vpunpckhqdq ymm1, ymm5, ymm6
+	vpunpckhqdq ymm1, ymm5, ymmword ptr[eax]
+	vpunpcklbw ymm1, ymm5, ymm6
+	vpunpcklbw ymm1, ymm5, ymmword ptr[eax]
+	vpunpcklwd ymm1, ymm5, ymm6
+	vpunpcklwd ymm1, ymm5, ymmword ptr[eax]
+	vpunpckldq ymm1, ymm5, ymm6
+	vpunpckldq ymm1, ymm5, ymmword ptr[eax]
+	vpunpcklqdq ymm1, ymm5, ymm6
+	vpunpcklqdq ymm1, ymm5, ymmword ptr[eax]
+	vpxor ymm1, ymm5, ymm6
+	vpxor ymm1, ymm5, ymmword ptr[eax]
+masm_test_avx2 endp
 
 ;----------------------------------------
 ; Reassign physical register by register allocator
