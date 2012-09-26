@@ -11,7 +11,7 @@ jitasm supports following compilers:
 == Microsoft Visual C++ ==
 To build samples, please open _samples/samples.sln_. The _pixel_calc_ sample needs [http://www.boost.org/ Boost C++ Library].
 
-To build test, please open _test/test.sln_. It needs Microsoft Visual C++ 2010 and [http://www.tortall.net/projects/yasm/ yasm].
+To build test, please open _test/test.sln_. It needs Microsoft Visual C++ 2012 and [http://www.tortall.net/projects/yasm/ yasm].
 
 == GCC ==
 jitasm needs some compiler options:
