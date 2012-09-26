@@ -1,19 +1,24 @@
 #include "stdio.h"
 #include "jitasm.h"
 
-struct tutorial1 : jitasm::function<int, tutorial1, int>
+// int add1(int arg1)
+// {
+//   return arg1 + 1;
+// }
+struct add1 : jitasm::function<int, add1, int>
 {
-	Result main(Reg32 a)
+	Result main(Addr a)
 	{
-		add(a, 1);
-		return a;
+		mov(ecx, dword_ptr[a]);
+		add(ecx, 1);
+		return ecx;
 	}
 };
 
 int main()
 {
 	// Make function instance
-	tutorial1 f;
+	add1 f;
 
 	// Runtime code genaration and run
 	int result = f(99);
