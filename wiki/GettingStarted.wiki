@@ -83,4 +83,8 @@ struct add1 : jitasm::function<int, add1, int>
     ret();
   }
 };
+
+mov eax,dword ptr [esp+4] 
+add eax,1 
+ret
 }}}
