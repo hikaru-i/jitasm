@@ -72,3 +72,15 @@ ret
 }}}
 
 This is a generated code as add1 function. jitasm generates function prolog and epilog automatically.
+If you don't need prolog and epilog, you can write naked_main.
+{{{
+struct add1 : jitasm::function<int, tutorial1, int>
+{
+	void naked_main(Addr arg1)
+	{
+		mov(eax, dword_ptr[arg1]);
+		add(eax, 1);
+		ret();
+	}
+};
+}}}
