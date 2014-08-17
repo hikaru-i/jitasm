@@ -4696,6 +4696,59 @@ masm_test_avx2 proc
 masm_test_avx2 endp
 
 ;----------------------------------------
+; Register allocation
+;----------------------------------------
+masm_test_register_allocation1 proc
+	push        rbp
+	mov         rbp, rsp
+	push        rsi
+	push        rdi
+	push        r12
+	mov			eax, 2
+	mov			ecx, 1
+	xor			edx, edx
+	xor			esi, esi
+	xor			edi, edi
+	xor			r8d, r8d
+	xor			r9d, r9d
+	xor         r10d,r10d  
+	mov         r11d,0Ah  
+
+LoopHeadA:
+	cmp         r10d,5  
+	jg          L1  
+	mov         r12d,0Ah  
+	jmp         LoopB
+
+LoopB:
+	inc         r10d  
+	add         r9d,r10d  
+	add         r8d,r9d  
+	add         edi,r8d  
+	add         esi,edi  
+	dec         r12d  
+	jne         LoopB  
+	dec         r11d  
+	jne         L1  
+	jmp         LoopEndA  
+
+L1:
+	dec         r10d  
+	add         edx,esi  
+	add         ecx,edx  
+	add         eax,ecx  
+	dec         r11d  
+	jne         LoopHeadA  
+
+LoopEndA:
+	pop         r12  
+	pop         rdi  
+	pop         rsi  
+	pop         rbp  
+	ret  
+masm_test_register_allocation1 endp
+
+;----------------------------------------
 ; Reassign physical register by register allocator
 ;----------------------------------------
 masm_test_regalloc_reassign_physical_reg proc

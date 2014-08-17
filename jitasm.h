@@ -6890,17 +6890,17 @@ namespace compiler
 			initialize(f.instrs_.size());
 			size_t block_idx = 0;
 			for (size_t instr_idx = 0; instr_idx < f.instrs_.size(); ++instr_idx) {
-				BasicBlock *cur_block = blocks_[block_idx];
 				InstrID instr_id = f.instrs_[instr_idx].GetID();
 				if (Frontend::IsJump(instr_id) || instr_id == I_RET || instr_id == I_IRET) {
+					JITASM_ASSERT(block_idx == std::distance(blocks_.begin(), get_block(instr_idx)));
+					BasicBlock *cur_block = blocks_[block_idx];
+
 					// Jump instruction always terminate basic block
-					BlockList::iterator next_block;
 					if (instr_idx + 1 < cur_block->instr_end) {
 						// Split basic block
 						split(blocks_.begin() + block_idx, instr_idx + 1);
 						++block_idx;
-					}
-					else {
+					} else {
 						// Already splitted
 						++block_idx;
 					}
@@ -6911,11 +6911,13 @@ namespace compiler
 							cur_block->successor[0]->RemovePredecessor(cur_block);
 						cur_block->successor[0] = *get_exit_block();
 						(*get_exit_block())->predecessor.push_back(cur_block);
-					}
-					else {
+					} else {
 						const size_t jump_to = f.GetJumpTo(f.instrs_[instr_idx]);	// jump target instruction index
 						BlockList::iterator jump_to_block = get_block(jump_to);
-						if (static_cast<size_t>(std::distance(blocks_.begin(), jump_to_block)) < block_idx) ++block_idx;		// Adjust block_idx for split
+						const size_t jump_to_block_idx = static_cast<size_t>(std::distance(blocks_.begin(), jump_to_block));
+						if (jump_to_block_idx < block_idx && (*jump_to_block)->instr_begin != jump_to) {
+							++block_idx;		// Adjust block_idx for split
+						}
 						BasicBlock *jump_target = *split(jump_to_block, jump_to);
 
 						// Update cur_block if split cur_block
@@ -6928,8 +6930,7 @@ namespace compiler
 								cur_block->successor[0]->RemovePredecessor(cur_block);
 							cur_block->successor[0] = jump_target;
 							jump_target->predecessor.push_back(cur_block);
-						}
-						else {
+						} else {
 							JITASM_ASSERT(instr_id == I_JCC || instr_id == I_LOOP);
 							if (cur_block->successor[1])
 								cur_block->successor[1]->RemovePredecessor(cur_block);

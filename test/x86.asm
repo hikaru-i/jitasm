@@ -3398,6 +3398,100 @@ masm_test_avx2 proc
 masm_test_avx2 endp
 
 ;----------------------------------------
+; Register allocation
+;----------------------------------------
+masm_test_register_allocation1 proc
+	push        ebp
+	mov         ebp,esp
+	push        ebx
+	push        esi
+	push        edi
+	and         esp,0FFFFFFF0h
+	mov         ebx,esp
+	sub         esp,20h
+	mov         eax,2
+	mov         ecx,1
+	xor         edx,edx
+	xor         esi,esi
+	xor         edi,edi
+	mov         dword ptr [ebx-4],eax
+	xor         eax,eax
+	mov         dword ptr [ebx-8],ecx
+	xor         ecx,ecx
+	mov         dword ptr [ebx-0Ch],edx
+	xor         edx,edx
+	mov         dword ptr [ebx-10h],esi
+	mov         esi,0Ah
+	mov         dword ptr [ebx-18h],esi
+	mov         esi,dword ptr [ebx-10h]
+
+LoopHeadA:
+	cmp         edx,5
+	jg          L1
+	mov         dword ptr [ebx-10h],esi
+	mov         esi,0Ah
+	jmp         LoopB
+
+LoopB:
+	inc         edx
+	add         ecx,edx
+	add         eax,ecx
+	add         edi,eax
+	mov         dword ptr [ebx-1Ch],esi
+	mov         esi,dword ptr [ebx-10h]
+	add         esi,edi
+	mov         dword ptr [ebx-10h],esi
+	mov         esi,dword ptr [ebx-1Ch]
+	dec         esi
+	jne         LoopB
+	mov         esi,dword ptr [ebx-18h]
+	dec         esi
+	jne         L1a
+	jmp         LoopEndAa
+
+L1a:
+	mov         dword ptr [ebx-18h],esi
+	mov         esi,dword ptr [ebx-10h]
+	jmp         L1
+
+LoopEndAa:
+	jmp         LoopEndA
+
+L1:
+	dec         edx
+	mov         dword ptr [ebx-14h],edi
+	mov         edi,dword ptr [ebx-0Ch]
+	add         edi,esi
+	mov         dword ptr [ebx-10h],esi
+	mov         esi,dword ptr [ebx-8]
+	add         esi,edi
+	mov         dword ptr [ebx-0Ch],edi
+	mov         edi,dword ptr [ebx-4]
+	add         edi,esi
+	mov         dword ptr [ebx-8],esi
+	mov         dword ptr [ebx-4],edi
+	mov         esi,dword ptr [ebx-14h]
+	mov         edi,dword ptr [ebx-18h]
+	dec         edi
+	jne         LoopHeadAa
+	jmp         LoopEndA
+
+LoopHeadAa:
+	mov         dword ptr [ebx-18h],edi
+	mov         edi,esi
+	mov         esi,dword ptr [ebx-10h]
+	jmp         LoopHeadA
+
+LoopEndA:
+	lea         esp,[ebp-0Ch]
+	pop         edi
+	pop         esi
+	pop         ebx
+	pop         ebp
+	ret
+masm_test_register_allocation1 endp
+
+;----------------------------------------
 ; Reassign physical register by register allocator
 ;----------------------------------------
 masm_test_regalloc_reassign_physical_reg proc
