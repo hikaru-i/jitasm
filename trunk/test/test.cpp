@@ -110,7 +110,6 @@ struct test_mmx_sse2 : jitasm::function<void, test_mmx_sse2>
 // Register allocation
 //----------------------------------------
 extern "C" void masm_test_register_allocation1();
-extern "C" void nasm_test_register_allocation1();
 struct test_register_allocation1 : jitasm::function_cdecl<void, test_register_allocation1>
 {
 	void main()

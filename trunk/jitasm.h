@@ -337,7 +337,7 @@ namespace detail
 
 		bool operator==(const Opd& rhs) const
 		{
-			if ((opdtype_ & O_TYPE_TYPE_MASK) != (rhs.opdtype_ & O_TYPE_TYPE_MASK) || opdsize_ != opdsize_) {return false;}
+			if ((opdtype_ & O_TYPE_TYPE_MASK) != (rhs.opdtype_ & O_TYPE_TYPE_MASK) || opdsize_ != rhs.opdsize_) {return false;}
 			if (IsReg()) {return reg_ == rhs.reg_ && reg_assignable_ == rhs.reg_assignable_;}
 			if (IsMem()) {return base_ == rhs.base_ && index_ == rhs.index_ && scale_ == rhs.scale_ && disp_ == rhs.disp_ && base_size_ == rhs.base_size_ && index_size_ == rhs.index_size_;}
 			if (IsImm()) {return imm_ == rhs.imm_;}
