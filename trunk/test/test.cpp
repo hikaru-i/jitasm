@@ -109,6 +109,8 @@ struct test_mmx_sse2 : jitasm::function<void, test_mmx_sse2>
 //----------------------------------------
 // Register allocation
 //----------------------------------------
+extern "C" void masm_test_register_allocation1();
+extern "C" void nasm_test_register_allocation1();
 struct test_register_allocation1 : jitasm::function_cdecl<void, test_register_allocation1>
 {
 	void main()
@@ -133,6 +135,7 @@ struct test_register_allocation1 : jitasm::function_cdecl<void, test_register_al
 
 			jitasm::Reg32 i;
 			mov(i, 10);
+			jmp("LoopB");
 			{
 				L("LoopB");
 				inc(v1);
@@ -144,7 +147,7 @@ struct test_register_allocation1 : jitasm::function_cdecl<void, test_register_al
 				jnz("LoopB");
 			}
 			dec(a);
-			jnz("LoopHeadA");
+			jnz("L1");
 			jmp("LoopEndA");
 
 			L("L1");
@@ -436,6 +439,7 @@ struct test_function_return_m128i_ptr : jitasm::function_cdecl<__m128i, test_fun
 
 void test_register_allocation()
 {
+	TEST_M(test_register_allocation1)
 	TEST_M(test_regalloc_reassign_physical_reg);
 	TEST_N(test_regalloc_vsib);
 }
