@@ -3398,6 +3398,21 @@ masm_test_avx2 proc
 masm_test_avx2 endp
 
 ;----------------------------------------
+; Call graph
+;----------------------------------------
+masm_test_cfg1 proc
+L0:
+	mov eax, 2
+	mov edx, 1
+	cmp eax, 0
+	jle L1
+	dec edx
+L1:
+	dec eax
+	jne L0
+masm_test_cfg1 endp
+
+;----------------------------------------
 ; Register allocation
 ;----------------------------------------
 masm_test_register_allocation1 proc

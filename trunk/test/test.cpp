@@ -107,6 +107,27 @@ struct test_mmx_sse2 : jitasm::function<void, test_mmx_sse2>
 };
 
 //----------------------------------------
+// Call graph
+//----------------------------------------
+extern "C" void masm_test_cfg1();
+struct test_cfg1 : jitasm::function_cdecl<void, test_cfg1>
+{
+	void naked_main()
+	{
+		jitasm::Reg32 a;
+		L("0");
+		mov(a, 2);
+		mov(edx, 1);
+		cmp(a, 0);
+		jle("1");
+		dec(edx);
+		L("1");
+		dec(a);
+		jne("0");
+	}
+};
+
+//----------------------------------------
 // Register allocation
 //----------------------------------------
 extern "C" void masm_test_register_allocation1();
@@ -438,6 +459,7 @@ struct test_function_return_m128i_ptr : jitasm::function_cdecl<__m128i, test_fun
 
 void test_register_allocation()
 {
+	TEST_M(test_cfg1)
 	TEST_M(test_register_allocation1)
 	TEST_M(test_regalloc_reassign_physical_reg);
 	TEST_N(test_regalloc_vsib);
