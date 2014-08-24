@@ -386,6 +386,9 @@ masm_test_push_pop endp
 ; ADD
 ;----------------------------------------
 masm_test_add proc
+	add al, al
+	add ax, ax
+	add eax, eax
 	add al, 1h
 	add al, -1h
 	add ax, 1h
@@ -420,6 +423,7 @@ masm_test_add proc
 	add word ptr[eax], ax
 	add dword ptr[eax], eax
 
+	add rax, rax
 	add rax, 1h
 	add rax, 100h
 	add rax, 10000h
@@ -441,6 +445,9 @@ masm_test_add endp
 ; OR
 ;----------------------------------------
 masm_test_or proc
+	or al, al
+	or ax, ax
+	or eax, eax
 	or al, 1h
 	or al, -1h
 	or ax, 1h
@@ -475,6 +482,7 @@ masm_test_or proc
 	or word ptr[eax], ax
 	or dword ptr[eax], eax
 
+	or rax, rax
 	or rax, 1h
 	or rax, 100h
 	or rax, 10000h
@@ -496,6 +504,9 @@ masm_test_or endp
 ; ADC
 ;----------------------------------------
 masm_test_adc proc
+	adc al, al
+	adc ax, ax
+	adc eax, eax
 	adc al, 1h
 	adc al, -1h
 	adc ax, 1h
@@ -530,6 +541,7 @@ masm_test_adc proc
 	adc word ptr[eax], ax
 	adc dword ptr[eax], eax
 
+	adc rax, rax
 	adc rax, 1h
 	adc rax, 100h
 	adc rax, 10000h
@@ -551,6 +563,9 @@ masm_test_adc endp
 ; SBB
 ;----------------------------------------
 masm_test_sbb proc
+	sbb al, al
+	sbb ax, ax
+	sbb eax, eax
 	sbb al, 1h
 	sbb al, -1h
 	sbb ax, 1h
@@ -585,6 +600,7 @@ masm_test_sbb proc
 	sbb word ptr[eax], ax
 	sbb dword ptr[eax], eax
 
+	sbb rax, rax
 	sbb rax, 1h
 	sbb rax, 100h
 	sbb rax, 10000h
@@ -606,6 +622,9 @@ masm_test_sbb endp
 ; AND
 ;----------------------------------------
 masm_test_and proc
+	and al, al
+	and ax, ax
+	and eax, eax
 	and al, 1h
 	and al, -1h
 	and ax, 1h
@@ -640,6 +659,7 @@ masm_test_and proc
 	and word ptr[eax], ax
 	and dword ptr[eax], eax
 
+	and rax, rax
 	and rax, 1h
 	and rax, 100h
 	and rax, 10000h
@@ -661,6 +681,9 @@ masm_test_and endp
 ; SUB
 ;----------------------------------------
 masm_test_sub proc
+	sub al, al
+	sub ax, ax
+	sub eax, eax
 	sub al, 1h
 	sub al, -1h
 	sub ax, 1h
@@ -695,6 +718,7 @@ masm_test_sub proc
 	sub word ptr[eax], ax
 	sub dword ptr[eax], eax
 
+	sub rax, rax
 	sub rax, 1h
 	sub rax, 100h
 	sub rax, 10000h
@@ -716,6 +740,9 @@ masm_test_sub endp
 ; XOR
 ;----------------------------------------
 masm_test_xor proc
+	xor al, al
+	xor ax, ax
+	xor eax, eax
 	xor al, 1h
 	xor al, -1h
 	xor ax, 1h
@@ -750,6 +777,7 @@ masm_test_xor proc
 	xor word ptr[eax], ax
 	xor dword ptr[eax], eax
 
+	xor rax, rax
 	xor rax, 1h
 	xor rax, 100h
 	xor rax, 10000h
@@ -771,6 +799,9 @@ masm_test_xor endp
 ; CMP
 ;----------------------------------------
 masm_test_cmp proc
+	cmp al, al
+	cmp ax, ax
+	cmp eax, eax
 	cmp al, 1h
 	cmp al, -1h
 	cmp ax, 1h
@@ -805,6 +836,7 @@ masm_test_cmp proc
 	cmp word ptr[eax], ax
 	cmp dword ptr[eax], eax
 
+	cmp rax, rax
 	cmp rax, 1h
 	cmp rax, 100h
 	cmp rax, 10000h
@@ -826,6 +858,9 @@ masm_test_cmp endp
 ; XCHG
 ;----------------------------------------
 masm_test_xchg proc
+	xchg al, al
+	xchg ax, ax
+	xchg eax, eax
 	xchg al, cl
 	xchg cl, al
 	xchg ax, cx
@@ -847,6 +882,7 @@ masm_test_xchg proc
 	xchg ecx, dword ptr[eax]
 	xchg dword ptr[eax], ecx
 
+	xchg rax, rax
 	xchg rax, r8
 	xchg r8, rax
 	xchg rax, qword ptr[r8]
@@ -859,6 +895,9 @@ masm_test_xchg endp
 ; TEST
 ;----------------------------------------
 masm_test_test proc
+	test al, al
+	test ax, ax
+	test eax, eax
 	test al, 1
 	test ax, 1
 	test eax, 1
@@ -884,6 +923,7 @@ masm_test_test proc
 	test word ptr[eax], cx
 	test dword ptr[eax], ecx
 
+	test rax, rax
 	test rax, 1
 	test rax, -1
 	test r8, 1
@@ -898,6 +938,9 @@ masm_test_test endp
 ; MOV/MOVZX
 ;----------------------------------------
 masm_test_mov proc
+	mov al, al
+	mov ax, ax
+	mov eax, eax
 	mov al, cl
 	mov ax, cx
 	mov eax, ecx
@@ -923,6 +966,7 @@ masm_test_mov proc
 	movzx eax, byte ptr[ecx]
 	movzx eax, word ptr[ecx]
 
+	mov rax, rax
 	mov r8b, bl
 	mov r8w, bx
 	mov rax, r8

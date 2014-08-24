@@ -246,6 +246,9 @@ masm_test_push_pop endp
 ; ADD
 ;----------------------------------------
 masm_test_add proc
+	add al, al
+	add ax, ax
+	add eax, eax
 	add al, 1h
 	add al, -1h
 	add ax, 1h
@@ -285,6 +288,9 @@ masm_test_add endp
 ; OR
 ;----------------------------------------
 masm_test_or proc
+	or al, al
+	or ax, ax
+	or eax, eax
 	or al, 1h
 	or al, -1h
 	or ax, 1h
@@ -324,6 +330,9 @@ masm_test_or endp
 ; ADC
 ;----------------------------------------
 masm_test_adc proc
+	adc al, al
+	adc ax, ax
+	adc eax, eax
 	adc al, 1h
 	adc al, -1h
 	adc ax, 1h
@@ -363,6 +372,9 @@ masm_test_adc endp
 ; SBB
 ;----------------------------------------
 masm_test_sbb proc
+	sbb al, al
+	sbb ax, ax
+	sbb eax, eax
 	sbb al, 1h
 	sbb al, -1h
 	sbb ax, 1h
@@ -402,6 +414,9 @@ masm_test_sbb endp
 ; AND
 ;----------------------------------------
 masm_test_and proc
+	and al, al
+	and ax, ax
+	and eax, eax
 	and al, 1h
 	and al, -1h
 	and ax, 1h
@@ -441,6 +456,9 @@ masm_test_and endp
 ; SUB
 ;----------------------------------------
 masm_test_sub proc
+	sub al, al
+	sub ax, ax
+	sub eax, eax
 	sub al, 1h
 	sub al, -1h
 	sub ax, 1h
@@ -480,6 +498,9 @@ masm_test_sub endp
 ; XOR
 ;----------------------------------------
 masm_test_xor proc
+	xor al, al
+	xor ax, ax
+	xor eax, eax
 	xor al, 1h
 	xor al, -1h
 	xor ax, 1h
@@ -519,6 +540,9 @@ masm_test_xor endp
 ; CMP
 ;----------------------------------------
 masm_test_cmp proc
+	cmp al, al
+	cmp ax, ax
+	cmp eax, eax
 	cmp al, 1h
 	cmp al, -1h
 	cmp ax, 1h
@@ -558,6 +582,9 @@ masm_test_cmp endp
 ; XCHG
 ;----------------------------------------
 masm_test_xchg proc
+	xchg al, al
+	xchg ax, ax
+	xchg eax, eax
 	xchg al, cl
 	xchg cl, al
 	xchg ax, cx
@@ -584,6 +611,9 @@ masm_test_xchg endp
 ; TEST
 ;----------------------------------------
 masm_test_test proc
+	test al, al
+	test ax, ax
+	test eax, eax
 	test al, 1
 	test ax, 1
 	test eax, 1
@@ -614,6 +644,9 @@ masm_test_test endp
 ; MOV/MOVZX
 ;----------------------------------------
 masm_test_mov proc
+	mov al, al
+	mov ax, ax
+	mov eax, eax
 	mov al, cl
 	mov ax, cx
 	mov eax, ecx

@@ -459,6 +459,9 @@ struct test_add : jitasm::function<void, test_add>
 {
 	void naked_main()
 	{
+		add(al, al);
+		add(ax, ax);
+		add(eax, eax);
 		add(al, 0x1);
 		add(al, (jitasm::uint8) -0x1);
 		add(ax, 0x1);
@@ -493,6 +496,7 @@ struct test_add : jitasm::function<void, test_add>
 		add(word_ptr[eax], ax);
 		add(dword_ptr[eax], eax);
 #ifdef JITASM64
+		add(rax, rax);
 		add(rax, 0x1);
 		add(rax, 0x100);
 		add(rax, 0x10000);
@@ -520,6 +524,9 @@ struct test_or : jitasm::function<void, test_or>
 {
 	void naked_main()
 	{
+		or(al, al);
+		or(ax, ax);
+		or(eax, eax);
 		or(al, 0x1);
 		or(al, (jitasm::uint8) -0x1);
 		or(ax, 0x1);
@@ -554,6 +561,7 @@ struct test_or : jitasm::function<void, test_or>
 		or(word_ptr[eax], ax);
 		or(dword_ptr[eax], eax);
 #ifdef JITASM64
+		or(rax, rax);
 		or(rax, 0x1);
 		or(rax, 0x100);
 		or(rax, 0x10000);
@@ -581,6 +589,9 @@ struct test_adc : jitasm::function<void, test_adc>
 {
 	void naked_main()
 	{
+		adc(al, al);
+		adc(ax, ax);
+		adc(eax, eax);
 		adc(al, 0x1);
 		adc(al, (jitasm::uint8) -0x1);
 		adc(ax, 0x1);
@@ -615,6 +626,7 @@ struct test_adc : jitasm::function<void, test_adc>
 		adc(word_ptr[eax], ax);
 		adc(dword_ptr[eax], eax);
 #ifdef JITASM64
+		adc(rax, rax);
 		adc(rax, 0x1);
 		adc(rax, 0x100);
 		adc(rax, 0x10000);
@@ -642,6 +654,9 @@ struct test_sbb : jitasm::function<void, test_sbb>
 {
 	void naked_main()
 	{
+		sbb(al, al);
+		sbb(ax, ax);
+		sbb(eax, eax);
 		sbb(al, 0x1);
 		sbb(al, (jitasm::uint8) -0x1);
 		sbb(ax, 0x1);
@@ -676,6 +691,7 @@ struct test_sbb : jitasm::function<void, test_sbb>
 		sbb(word_ptr[eax], ax);
 		sbb(dword_ptr[eax], eax);
 #ifdef JITASM64
+		sbb(rax, rax);
 		sbb(rax, 0x1);
 		sbb(rax, 0x100);
 		sbb(rax, 0x10000);
@@ -703,6 +719,9 @@ struct test_and : jitasm::function<void, test_and>
 {
 	void naked_main()
 	{
+		and(al, al);
+		and(ax, ax);
+		and(eax, eax);
 		and(al, 0x1);
 		and(al, (jitasm::uint8) -0x1);
 		and(ax, 0x1);
@@ -737,6 +756,7 @@ struct test_and : jitasm::function<void, test_and>
 		and(word_ptr[eax], ax);
 		and(dword_ptr[eax], eax);
 #ifdef JITASM64
+		and(rax, rax);
 		and(rax, 0x1);
 		and(rax, 0x100);
 		and(rax, 0x10000);
@@ -764,6 +784,9 @@ struct test_sub : jitasm::function<void, test_sub>
 {
 	void naked_main()
 	{
+		sub(al, al);
+		sub(ax, ax);
+		sub(eax, eax);
 		sub(al, 0x1);
 		sub(al, (jitasm::uint8) -0x1);
 		sub(ax, 0x1);
@@ -798,6 +821,7 @@ struct test_sub : jitasm::function<void, test_sub>
 		sub(word_ptr[eax], ax);
 		sub(dword_ptr[eax], eax);
 #ifdef JITASM64
+		sub(rax, rax);
 		sub(rax, 0x1);
 		sub(rax, 0x100);
 		sub(rax, 0x10000);
@@ -825,6 +849,9 @@ struct test_xor : jitasm::function<void, test_xor>
 {
 	void naked_main()
 	{
+		xor(al, al);
+		xor(ax, ax);
+		xor(eax, eax);
 		xor(al, 0x1);
 		xor(al, (jitasm::uint8) -0x1);
 		xor(ax, 0x1);
@@ -859,6 +886,7 @@ struct test_xor : jitasm::function<void, test_xor>
 		xor(word_ptr[eax], ax);
 		xor(dword_ptr[eax], eax);
 #ifdef JITASM64
+		xor(rax, rax);
 		xor(rax, 0x1);
 		xor(rax, 0x100);
 		xor(rax, 0x10000);
@@ -886,6 +914,9 @@ struct test_cmp : jitasm::function<void, test_cmp>
 {
 	void naked_main()
 	{
+		cmp(al, al);
+		cmp(ax, ax);
+		cmp(eax, eax);
 		cmp(al, 0x1);
 		cmp(al, (jitasm::uint8) -0x1);
 		cmp(ax, 0x1);
@@ -920,6 +951,7 @@ struct test_cmp : jitasm::function<void, test_cmp>
 		cmp(word_ptr[eax], ax);
 		cmp(dword_ptr[eax], eax);
 #ifdef JITASM64
+		cmp(rax, rax);
 		cmp(rax, 0x1);
 		cmp(rax, 0x100);
 		cmp(rax, 0x10000);
@@ -947,6 +979,9 @@ struct test_xchg : jitasm::function<void, test_xchg>
 {
 	void naked_main()
 	{
+		xchg(al, al);
+		xchg(ax, ax);
+		xchg(eax, eax);
 		xchg(al, cl);
 		xchg(cl, al);
 		xchg(ax, cx);
@@ -968,6 +1003,7 @@ struct test_xchg : jitasm::function<void, test_xchg>
 		xchg(ecx, dword_ptr[eax]);
 		xchg(dword_ptr[eax], ecx);
 #ifdef JITASM64
+		xchg(rax, rax);
 		xchg(rax, r8);
 		xchg(r8, rax);
 		xchg(rax, qword_ptr[r8]);
@@ -986,6 +1022,9 @@ struct test_test : jitasm::function<void, test_test>
 {
 	void naked_main()
 	{
+		test(al, al);
+		test(ax, ax);
+		test(eax, eax);
 		test(al, 1);
 		test(ax, 1);
 		test(eax, 1);
@@ -1011,6 +1050,7 @@ struct test_test : jitasm::function<void, test_test>
 		test(word_ptr[eax], cx);
 		test(dword_ptr[eax], ecx);
 #ifdef JITASM64
+		test(rax, rax);
 		test(rax, 1);
 		test(rax, (jitasm::uint32) -1);
 		test(r8, 1);
@@ -1031,6 +1071,9 @@ struct test_mov : jitasm::function<void, test_mov>
 {
 	void naked_main()
 	{
+		mov(al, al);
+		mov(ax, ax);
+		mov(eax, eax);
 		mov(al, cl);
 		mov(ax, cx);
 		mov(eax, ecx);
@@ -1056,6 +1099,7 @@ struct test_mov : jitasm::function<void, test_mov>
 		movzx(eax, byte_ptr[ecx]);
 		movzx(eax, word_ptr[ecx]);
 #ifdef JITASM64
+		mov(rax, rax);
 		mov(r8b, bl);
 		mov(r8w, bx);
 		mov(rax, r8);
