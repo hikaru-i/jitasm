@@ -8,6 +8,16 @@ jitasm is C++ library for runtime code generation of x86/x64. You can write the 
 - Register allocation.
 - Support for Windows, Linux, FreeBSD, Mac
 
+## License
+jitasm is open source software. You can distribute it under the terms of the new BSD license.
+
+## Compiler
+- VisualC++ 2005 or later
+- GCC 4.1 or later
+
+##How to use
+You just copy and include jitasm.h.
+
 ## Example
 ```C++
 // int plus(int a, int b)
