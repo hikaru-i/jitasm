@@ -15,7 +15,7 @@ jitasm is open source software. You can distribute it under the terms of the new
 - VisualC++ 2005 or later
 - GCC 4.1 or later
 
-##How to use
+## How to use
 You just copy and include jitasm.h.
 
 ## Example
