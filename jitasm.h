@@ -2376,6 +2376,9 @@ struct Frontend
 	void iretq()	{AppendInstr(I_IRETQ, 0xCF, E_REXW_PREFIX);}
 #endif
 	void jmp(const std::string& label_name)		{AppendJmp(GetLabelID(label_name));}
+#ifdef JITASM64
+	void jmp(const Reg64& dst) { AppendInstr(I_CALL, 0xFF, 0, Imm8(4), R(dst)); }
+#endif
 	void ja(const std::string& label_name)		{AppendJcc(JCC_A, GetLabelID(label_name));}
 	void jae(const std::string& label_name)		{AppendJcc(JCC_AE, GetLabelID(label_name));}
 	void jb(const std::string& label_name)		{AppendJcc(JCC_B, GetLabelID(label_name));}
