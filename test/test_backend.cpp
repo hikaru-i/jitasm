@@ -2064,6 +2064,12 @@ struct test_gpi_e : jitasm::function<void, test_gpi_e>
 #ifdef JITASM64
 		iretq();
 #endif
+#ifndef JITASM64
+		jmp(bx);
+		jmp(ebx);
+#else
+		jmp(rbx);
+#endif
 		lar(bx, dx);
 		lar(bx, word_ptr[esp]);
 		lar(ebx, edx);

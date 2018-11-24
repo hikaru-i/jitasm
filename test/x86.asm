@@ -1273,6 +1273,8 @@ masm_test_gpi_e proc
 	iret
 	iretd
 	;iretq
+	jmp bx
+	jmp ebx
 	lar bx, dx
 	lar bx, word ptr[esp]
 	lar ebx, edx
